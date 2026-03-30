@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { format, parseISO } from "date-fns";
 import {
@@ -936,14 +936,14 @@ export function ShotListSpreadsheet({
             idx += setup.shots.length + 1;
 
             return (
-              <>
-                <SetupHeaderRow key={`hdr-${setup.id}`} setup={setup} canEdit={canEdit} onMutate={onMutate} />
+              <Fragment key={setup.id}>
+                <SetupHeaderRow setup={setup} canEdit={canEdit} onMutate={onMutate} />
 
                 {setup.shots.map((shot) => (
                   <ShotRow key={shot.id} shot={shot} deliverables={deliverables}
                     campaignId={campaignId} canEdit={canEdit} canComplete={canComplete} onMutate={onMutate} />
                 ))}
-              </>
+              </Fragment>
             );
           })}
         </tbody>

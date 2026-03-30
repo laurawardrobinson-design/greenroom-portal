@@ -69,7 +69,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
       <div className="group flex flex-col rounded-xl bg-surface border border-transparent shadow-sm hover:shadow-md hover:border-border transition-all duration-200 p-5 h-full">
         {/* WF# above name */}
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] font-mono text-text-tertiary tracking-wide">
+          <span className="text-[12px] font-mono text-text-tertiary tracking-wide">
             {campaign.wfNumber || "\u00A0"}
           </span>
           <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${pill.bg} ${pill.text}`}>
@@ -79,7 +79,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
         </div>
 
         {/* Campaign name */}
-        <h3 className="text-[15px] font-semibold text-text-primary leading-snug line-clamp-2 group-hover:text-primary transition-colors mb-3">
+        <h3 className="text-[16px] font-semibold text-text-primary leading-snug line-clamp-2 mb-3">
           {campaign.name}
         </h3>
 
@@ -89,11 +89,11 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
             <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary mb-0.5">
               Assets Due
             </p>
-            <p className={`text-[13px] font-medium ${
+            <p className={`text-[16px] font-bold ${
               assetsOverdue
                 ? "text-red-600"
                 : assetsDaysLeft !== null && assetsDaysLeft <= 7
-                ? "text-amber-600"
+                ? "text-primary"
                 : "text-text-primary"
             }`}>
               {format(parseISO(campaign.assetsDeliveryDate), "MMM d, yyyy")}
