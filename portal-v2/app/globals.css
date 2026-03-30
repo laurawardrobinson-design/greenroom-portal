@@ -1,0 +1,414 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Mobile utilities
+   ============================================================ */
+
+/* Hide scrollbar while keeping scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================================
+   Design Tokens — Creative Production Portal
+   ============================================================ */
+
+@theme inline {
+  /* Brand colors — sampled from Greenroom logo */
+  --color-sidebar: #10442B;
+  --color-sidebar-hover: #4A7458;
+  --color-sidebar-active: #0b3321;
+  --color-primary: #69A925;
+  --color-primary-hover: #5a9420;
+  --color-primary-light: #e8f5e0;
+
+  /* Neutral palette */
+  --color-surface: #ffffff;
+  --color-surface-secondary: #F5F7F5;
+  --color-surface-tertiary: #EDEFED;
+  --color-border: #D9D9D9;
+  --color-border-light: #CFCFCF;
+  --color-text-primary: #1F1F1F;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #9ca3af;
+  --color-text-inverse: #ffffff;
+
+  /* Status colors */
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-info: #2563eb;
+
+  /* Shadows — 4 levels, soft and editorial */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+
+  /* Typography — Inter */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Spacing grid: 8px base (Tailwind's default scale aligns) */
+  /* Animation */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================================
+   Base styles
+   ============================================================ */
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   Smooth transitions on interactive elements
+   ============================================================ */
+
+button,
+a,
+input,
+select,
+textarea {
+  transition-property: color, background-color, border-color, box-shadow, opacity;
+  transition-duration: var(--duration-fast);
+  transition-timing-function: var(--ease-out);
+}
+
+/* ============================================================
+   Scrollbar styling (webkit) — subtle, not distracting
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+/* ============================================================
+   Focus ring — accessible and editorial
+   ============================================================ */
+
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   Selection color
+   ============================================================ */
+
+::selection {
+  background: var(--color-primary-light);
+  color: var(--color-text-primary);
+}
+
+/* ============================================================
+   Mutant Menagerie — creature animations
+   ============================================================ */
+
+.gator-waddle {
+  animation: gatorWaddle 0.3s ease-in-out infinite;
+}
+.gator-jaw {
+  animation: gatorJaw 0.4s ease-in-out infinite;
+  transform-origin: left center;
+}
+.gator-credit {
+  animation: gatorCredit 5.5s ease-in-out forwards;
+}
+.critter-line {
+  animation: critterLine 2s ease-in-out forwards;
+}
+@keyframes critterLine {
+  0%        { opacity: 0; transform: translateY(2px); }
+  30%       { opacity: 1; transform: translateY(0); }
+  70%       { opacity: 1; }
+  100%      { opacity: 0; }
+}
+
+@keyframes gatorWalk {
+  0%   { right: 0; opacity: 1; }
+  80%  { opacity: 1; }
+  100% { right: calc(100% + 40px); opacity: 0; }
+}
+.gator-walk {
+  animation: gatorWalk 3.5s ease-in-out forwards;
+}
+@keyframes gatorWaddle {
+  0%, 100% { transform: rotate(-2deg); }
+  50%      { transform: rotate(2deg); }
+}
+@keyframes gatorJaw {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(8deg); }
+}
+@keyframes gatorCredit {
+  0%, 35%   { opacity: 0; }
+  50%       { opacity: 1; }
+  85%       { opacity: 1; }
+  95%, 100% { opacity: 0; }
+}
+
+/* --- Creature walk-across (shared pattern) --- */
+@keyframes creatureWalkLR {
+  0%   { left: -60px; opacity: 0; }
+  5%   { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { left: calc(100% + 60px); opacity: 0; }
+}
+.creature-walk {
+  animation: creatureWalkLR 5s ease-in-out forwards;
+}
+
+/* --- Pretentious Peacock --- */
+.peacock-tail-fan {
+  animation: peacockFan 1.5s ease-out forwards;
+  transform-origin: 18px 26px;
+}
+@keyframes peacockFan {
+  0%   { transform: scaleY(0.3) scaleX(0.5); opacity: 0.3; }
+  40%  { transform: scaleY(0.6) scaleX(0.7); opacity: 0.7; }
+  100% { transform: scaleY(1) scaleX(1); opacity: 1; }
+}
+.peacock-tail-sway {
+  animation: peacockTailSway 1.8s ease-in-out infinite;
+  transform-origin: 18px 26px;
+}
+@keyframes peacockTailSway {
+  0%, 100% { transform: rotate(-3deg) scale(1); }
+  50%      { transform: rotate(4.5deg) translateY(-0.5px) scale(1.025); }
+}
+.peacock-card-dance {
+  animation: peacockCardDance 2.4s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+@keyframes peacockCardDance {
+  0%, 100% { transform: rotate(-1deg); }
+  50%      { transform: rotate(1deg); }
+}
+.peacock-card-dance-discovery {
+  animation: peacockCardDanceDiscovery 1.9s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+@keyframes peacockCardDanceDiscovery {
+  0%, 100% { transform: rotate(-2.2deg) scale(1); }
+  50%      { transform: rotate(2.4deg) scale(1.02); }
+}
+.peacock-tail-sway-discovery {
+  animation: peacockTailSwayDiscovery 1.9s ease-in-out infinite;
+  transform-origin: 18px 26px;
+}
+@keyframes peacockTailSwayDiscovery {
+  0%, 100% { transform: rotate(-5deg) scale(1); }
+  50%      { transform: rotate(7.5deg) translateY(-0.5px) scale(1.045); }
+}
+/* Peacock scene: planted in place, only fades around the posture loop */
+.peacock-appear {
+  animation: peacockAppear 0.6s ease-out forwards;
+}
+@keyframes peacockAppear {
+  0%   { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.peacock-disappear {
+  animation: peacockDisappear 0.6s ease-in forwards;
+}
+@keyframes peacockDisappear {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.96); }
+}
+
+/* --- Mothy --- */
+.moth-flutter {
+  animation: mothFloat 2s ease-in-out infinite;
+}
+@keyframes mothFloat {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  25%      { transform: translateY(-6px) rotate(2deg); }
+  50%      { transform: translateY(-2px) rotate(-2deg); }
+  75%      { transform: translateY(-8px) rotate(3deg); }
+}
+.moth-wing-left {
+  animation: mothWingL 0.15s ease-in-out infinite;
+  transform-origin: 21px 21px;
+}
+.moth-wing-right {
+  animation: mothWingR 0.15s ease-in-out infinite;
+  transform-origin: 27px 21px;
+}
+@keyframes mothWingL {
+  0%, 100% { transform: scaleX(1) rotate(0deg); }
+  50%      { transform: scaleX(0.7) rotate(8deg); }
+}
+@keyframes mothWingR {
+  0%, 100% { transform: scaleX(1) rotate(0deg); }
+  50%      { transform: scaleX(0.7) rotate(-8deg); }
+}
+/* Moth scene: flutter in, orbit the light word, fly off upward */
+.moth-arrive {
+  animation: mothArrive 0.6s ease-out forwards;
+}
+@keyframes mothArrive {
+  0%   { transform: translate(100px, 60px) scale(0.3); opacity: 0; }
+  100% { transform: translate(0, 0) scale(1); opacity: 1; }
+}
+.moth-orbit {
+  animation: mothOrbit 2.5s ease-in-out infinite;
+}
+@keyframes mothOrbit {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  25%  { transform: translate(20px, -15px) rotate(5deg); }
+  50%  { transform: translate(0, -25px) rotate(-3deg); }
+  75%  { transform: translate(-20px, -10px) rotate(-5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.moth-flyoff {
+  animation: mothFlyoff 0.6s ease-in forwards;
+}
+@keyframes mothFlyoff {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(60px, -120px) scale(0.3); opacity: 0; }
+}
+
+/* --- Craft Services Raccoon --- */
+.raccoon-rummage {
+  animation: raccoonRummage 0.8s ease-in-out infinite;
+}
+@keyframes raccoonRummage {
+  0%, 100% { transform: rotate(-2deg); }
+  50%      { transform: rotate(2deg); }
+}
+.raccoon-chew {
+  animation: raccoonChew 0.4s ease-in-out infinite;
+  transform-origin: center top;
+}
+@keyframes raccoonChew {
+  0%, 100% { transform: scaleY(1); }
+  50%      { transform: scaleY(0.6); }
+}
+.raccoon-paws {
+  animation: raccoonGrab 0.6s ease-in-out infinite;
+}
+@keyframes raccoonGrab {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+/* Raccoon scene: waddle in, dig frantically, dive into garbage can */
+.raccoon-enter {
+  animation: raccoonEnter 0.6s ease-out forwards;
+}
+@keyframes raccoonEnter {
+  0%   { transform: translateX(-60px) scale(0.5); opacity: 0; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}
+.raccoon-dig {
+  animation: raccoonDig 0.4s ease-in-out infinite;
+}
+@keyframes raccoonDig {
+  0%, 100% { transform: rotate(-5deg) translateY(0); }
+  25%      { transform: rotate(5deg) translateY(-4px); }
+  50%      { transform: rotate(-8deg) translateY(2px); }
+  75%      { transform: rotate(6deg) translateY(-2px); }
+}
+.raccoon-exit {
+  animation: raccoonExit 0.4s ease-in forwards;
+}
+@keyframes raccoonExit {
+  0%   { transform: scale(1); opacity: 1; }
+  60%  { transform: scale(1.1) translateY(-5px); opacity: 0.8; }
+  100% { transform: scale(0) translateY(10px); opacity: 0; }
+}
+
+/* --- Discovery sparkle effect --- */
+@keyframes discoverySparkle {
+  0%   { opacity: 0; transform: scale(0.5); }
+  50%  { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(0.5); }
+}
+.discovery-sparkle {
+  animation: discoverySparkle 0.6s ease-out forwards;
+}
+
+/* --- Discovery toast --- */
+@keyframes discoveryToast {
+  0%        { opacity: 0; transform: translateY(10px); }
+  15%, 70%  { opacity: 1; transform: translateY(0); }
+  100%      { opacity: 0; transform: translateY(-5px); }
+}
+.discovery-toast {
+  animation: discoveryToast 3.5s ease-out forwards;
+}
+
+/* --- Trophy case glow --- */
+@keyframes trophyGlow {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(245, 208, 96, 0.4)); }
+  50%      { filter: drop-shadow(0 0 8px rgba(245, 208, 96, 0.7)); }
+}
+.trophy-glow {
+  animation: trophyGlow 3s ease-in-out infinite;
+}
+
+/* --- Zookeeper --- */
+@keyframes zookeeperWalk {
+  0%   { left: -20px; opacity: 1; }
+  90%  { opacity: 1; }
+  100% { left: calc(100% + 40px); opacity: 0; }
+}
+.zookeeper-walk {
+  animation: zookeeperWalk 3.5s linear forwards;
+}
+.zookeeper-stride {
+  animation: zookeeperStep 0.3s ease-in-out infinite;
+}
+@keyframes zookeeperStep {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-2px) rotate(3deg); }
+}
+@keyframes zookeeperText {
+  0%, 45%   { opacity: 0; }
+  50%       { opacity: 1; }
+  80%       { opacity: 1; }
+  95%, 100% { opacity: 0; }
+}
+.zookeeper-text {
+  animation: zookeeperText 4s ease-in-out forwards;
+}
+
+/* --- Card flip --- */
+.backface-hidden {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+.preserve-3d {
+  transform-style: preserve-3d;
+}

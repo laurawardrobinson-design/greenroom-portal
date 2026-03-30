@@ -1,0 +1,963 @@
+"use client";
+
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { format, parseISO } from "date-fns";
+import {
+  Check, AlertTriangle, Plus, X, Download, Upload, ChevronLeft, Trash2,
+} from "lucide-react";
+import { useToast } from "@/components/ui/toast";
+import { generateOverlayPng } from "@/lib/utils/overlay-generator";
+import { CHANNEL_TEMPLATES, SPEC_DIMENSIONS } from "@/lib/constants/channels";
+import type { ChannelTemplate } from "@/lib/constants/channels";
+import type { ShotListSetup, ShotListShot, CampaignDeliverable } from "@/types/domain";
+import { ShotDetailModal } from "@/components/campaigns/shot-detail-modal";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface DraftDeliverableSel { channel: string; spec: string }
+
+// ─── Portal panel hook — escapes overflow:hidden/auto ancestors ───────────────
+// Auto-flips upward when panel would clip the bottom of the viewport.
+const PANEL_ESTIMATE_H = 340; // conservative max panel height in px
+
+function usePortalPanel<T extends HTMLElement>() {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0, openUp: false });
+  const anchorRef = useRef<T>(null);
+
+  function calcPos() {
+    if (!anchorRef.current) return;
+    const r = anchorRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - r.bottom;
+    const openUp = spaceBelow < PANEL_ESTIMATE_H && r.top > PANEL_ESTIMATE_H;
+    setPos({
+      top: openUp ? r.top - 4 : r.bottom + 4,
+      left: r.left,
+      openUp,
+    });
+  }
+
+  const toggle = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!open) calcPos();
+    setOpen((v) => !v);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const close = useCallback(() => setOpen(false), []);
+
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", calcPos, true);
+    window.addEventListener("resize", calcPos);
+    return () => {
+      window.removeEventListener("scroll", calcPos, true);
+      window.removeEventListener("resize", calcPos);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // When openUp, the panel bottom aligns with the anchor top — use translateY(-100%)
+  const panelStyle: React.CSSProperties = {
+    position: "fixed",
+    top: pos.top,
+    left: pos.left,
+    zIndex: 9999,
+    ...(pos.openUp ? { transform: "translateY(-100%)" } : {}),
+  };
+
+  return { anchorRef, panelStyle, open, toggle, close };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function buildShotName(wf: string | undefined, date: string | undefined, n: number) {
+  const w = (wf || "").replace(/\s/g, "");
+  const d = date ? format(parseISO(date), "MMdd") : "";
+  const num = String(n).padStart(2, "0");
+  if (w || d) return `${w}${d}-Shot${num}`;
+  return `Shot${num}`;
+}
+
+// ─── CSS overlay preview ──────────────────────────────────────────────────────
+function OverlayPreview({ spec }: { spec: string }) {
+  let w = 1, h = 1;
+  const colonParts = spec.split(":");
+  const crossParts = spec.split("×");
+  if (colonParts.length === 2) {
+    w = parseFloat(colonParts[0]);
+    h = parseFloat(colonParts[1]);
+  } else if (crossParts.length === 2) {
+    w = parseInt(crossParts[0]);
+    h = parseInt(crossParts[1]);
+  }
+  if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) {
+    return (
+      <div className="flex items-center justify-center h-20 rounded-lg bg-neutral-600/30 text-text-tertiary text-xs font-mono">
+        {spec}
+      </div>
+    );
+  }
+  const MAX_W = 148, MAX_H = 172;
+  const scale = Math.min(MAX_W / w, MAX_H / h);
+  const dW = Math.round(w * scale);
+  const dH = Math.round(h * scale);
+  const labelSize = Math.max(7, Math.round(dH * 0.065));
+
+  return (
+    <div className="flex items-center justify-center py-1">
+      <div className="relative rounded overflow-hidden bg-neutral-600 shadow-sm" style={{ width: dW, height: dH }}>
+        {/* Rule of thirds */}
+        <div className="absolute inset-0" style={{
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.12) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.12) 1px,transparent 1px)",
+          backgroundSize: "33.33% 33.33%",
+        }} />
+        {/* Title-safe border */}
+        <div className="absolute border border-white/40" style={{ inset: "5%" }} />
+        {/* Crosshair */}
+        <div className="absolute bg-white/35" style={{ top: "50%", left: "44%", right: "44%", height: 1 }} />
+        <div className="absolute bg-white/35" style={{ left: "50%", top: "44%", bottom: "44%", width: 1 }} />
+        {/* Spec label */}
+        <div className="absolute bottom-1 left-1.5 font-mono text-white/55" style={{ fontSize: labelSize }}>
+          {spec}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Channel picker panel (list → detail, shared by draft & saved rows) ───────
+function ChannelPickerPanel({
+  selected,
+  onToggle,
+  onClose,
+}: {
+  selected: DraftDeliverableSel[];
+  onToggle: (sel: DraftDeliverableSel) => void;
+  onClose: () => void;
+}) {
+  const [view, setView] = useState<"list" | "detail">("list");
+  const [active, setActive] = useState<ChannelTemplate | null>(null);
+  const [detailSpec, setDetailSpec] = useState<string>("");
+
+  function openDetail(tmpl: ChannelTemplate) {
+    setActive(tmpl);
+    setDetailSpec(tmpl.specs[0]);
+    setView("detail");
+  }
+
+  function isSel(channel: string, spec: string) {
+    return selected.some((s) => s.channel === channel && s.spec === spec);
+  }
+
+  function triggerDownload() {
+    if (!active || !detailSpec) return;
+    const dims = SPEC_DIMENSIONS[detailSpec] ?? { width: 1080, height: 1080 };
+    generateOverlayPng({
+      width: dims.width, height: dims.height,
+      channel: active.name, format: detailSpec, aspectRatio: detailSpec,
+    });
+  }
+
+  // ── Detail view ──
+  if (view === "detail" && active) {
+    const alreadySel = isSel(active.name, detailSpec);
+    return (
+      <div className="w-60">
+        {/* Back header */}
+        <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border">
+          <button type="button" onClick={() => setView("list")}
+            className="flex h-5 w-5 items-center justify-center rounded hover:bg-surface-secondary text-text-tertiary transition-colors">
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <span className="text-xs font-semibold text-text-primary">{active.name}</span>
+        </div>
+
+        {/* Spec tabs */}
+        {active.specs.length > 1 && (
+          <div className="flex flex-wrap gap-1 px-3 pt-2.5">
+            {active.specs.map((spec) => (
+              <button key={spec} type="button" onClick={() => setDetailSpec(spec)}
+                className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold transition-colors ${
+                  detailSpec === spec
+                    ? "bg-primary text-white"
+                    : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
+                }`}>
+                {spec}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Overlay preview */}
+        <div className="px-3 pt-2 pb-1">
+          <OverlayPreview spec={detailSpec} />
+        </div>
+
+        {/* Download */}
+        <div className="px-3 pb-2">
+          <button type="button" onClick={triggerDownload}
+            className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-secondary px-2.5 py-2 text-xs font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors">
+            <Download className="h-3 w-3 shrink-0" />
+            Capture One Overlay
+            <span className="ml-auto font-mono text-[9px] text-text-tertiary">{detailSpec}</span>
+          </button>
+        </div>
+
+        {/* Add / remove */}
+        <div className="px-3 pb-3 pt-1 border-t border-border">
+          <button type="button"
+            onClick={() => { onToggle({ channel: active.name, spec: detailSpec }); setView("list"); }}
+            className={`w-full rounded-lg py-1.5 text-xs font-semibold transition-colors ${
+              alreadySel
+                ? "bg-red-50 text-red-500 hover:bg-red-100 border border-red-200"
+                : "bg-primary text-white hover:bg-primary/90"
+            }`}>
+            {alreadySel ? "Remove from shot" : `Add ${active.name}`}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── List view — one tile per channel+spec ──
+  const tiles = CHANNEL_TEMPLATES.flatMap((tmpl) =>
+    tmpl.specs.map((spec) => ({ tmpl, spec }))
+  );
+
+  return (
+    <div className="w-64">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+        <span className="text-xs font-semibold text-text-primary">Add channels</span>
+        <button type="button" onClick={onClose}
+          className="flex h-5 w-5 items-center justify-center rounded hover:bg-surface-secondary text-text-tertiary transition-colors">
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+      <div className="grid grid-cols-3 gap-1 p-2 max-h-[320px] overflow-y-auto">
+        {tiles.map(({ tmpl, spec }) => {
+          const sel = isSel(tmpl.name, spec);
+          return (
+            <button key={`${tmpl.name}|${spec}`} type="button"
+              onClick={() => onToggle({ channel: tmpl.name, spec })}
+              className={`flex flex-col items-center justify-center rounded-lg border py-1.5 px-1 transition-all ${
+                sel
+                  ? "border-primary/50 bg-primary/10 text-primary"
+                  : "border-border text-text-secondary hover:border-primary/30 hover:bg-surface-secondary"
+              }`}>
+              <span className="text-[10px] font-semibold leading-snug text-center">{tmpl.abbr ?? tmpl.name} {spec}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Draft channel chip (click = info popup, hover X = remove) ───────────────
+function DraftChannelChip({ sel, tmpl, onRemove }: {
+  sel: DraftDeliverableSel;
+  tmpl: ChannelTemplate | undefined;
+  onRemove: () => void;
+}) {
+  const { anchorRef, panelStyle, open, toggle, close } = usePortalPanel<HTMLButtonElement>();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        anchorRef.current && !anchorRef.current.contains(e.target as Node)
+      ) close();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open, close, anchorRef]);
+
+  return (
+    <span className="relative inline-block">
+      <button ref={anchorRef} type="button" onClick={toggle}
+        className="group inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary hover:bg-primary/20 transition-colors">
+        {tmpl?.abbr ?? sel.channel} <span className="font-mono font-normal opacity-70">{sel.spec}</span>
+        <span onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="inline-flex opacity-0 group-hover:opacity-100 h-3 w-3 items-center justify-center rounded-full hover:bg-primary/30 transition-opacity">
+          <X className="h-2 w-2" />
+        </span>
+      </button>
+      {open && typeof document !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={close} />
+          <div ref={panelRef} style={{ ...panelStyle, width: 240 }}
+            className="rounded-xl border border-border bg-surface shadow-lg overflow-hidden">
+            <div className="px-3 pt-2.5 pb-1">
+              <p className="text-[11px] font-semibold text-text-primary">{tmpl?.name ?? sel.channel}</p>
+              <p className="font-mono text-[10px] text-text-tertiary mt-0.5">{sel.spec}</p>
+            </div>
+            <div className="px-3 pt-1 pb-1">
+              <OverlayPreview spec={sel.spec} />
+            </div>
+            <div className="px-3 pb-3">
+              <button type="button"
+                onClick={() => {
+                  const dims = SPEC_DIMENSIONS[sel.spec] ?? { width: 1080, height: 1080 };
+                  generateOverlayPng({ width: dims.width, height: dims.height, channel: sel.channel, format: sel.spec, aspectRatio: sel.spec });
+                  close();
+                }}
+                className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-secondary px-2.5 py-2 text-xs font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors">
+                <Download className="h-3 w-3 shrink-0" />
+                Capture One Overlay
+                <span className="ml-auto font-mono text-[9px] text-text-tertiary">{sel.spec}</span>
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </span>
+  );
+}
+
+// ─── Draft channel cell (used in draft / ghost rows) ─────────────────────────
+function DraftChannelCell({
+  selected,
+  onToggle,
+}: {
+  selected: DraftDeliverableSel[];
+  onToggle: (sel: DraftDeliverableSel) => void;
+}) {
+  const { anchorRef, panelStyle, open, toggle, close } = usePortalPanel<HTMLButtonElement>();
+
+  // Close on outside click
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        anchorRef.current && !anchorRef.current.contains(e.target as Node)
+      ) close();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open, close, anchorRef]);
+
+  return (
+    <div className="flex flex-wrap items-center gap-1 px-2 py-1.5 min-h-[32px]">
+      {selected.map((s) => {
+        const tmpl = CHANNEL_TEMPLATES.find((t) => t.name === s.channel);
+        return (
+          <DraftChannelChip key={`${s.channel}|${s.spec}`} sel={s} tmpl={tmpl} onRemove={() => onToggle(s)} />
+        );
+      })}
+
+      <button ref={anchorRef} type="button" onClick={toggle}
+        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-text-tertiary border border-dashed border-border/70 hover:border-primary hover:text-primary hover:bg-primary/3 transition-colors">
+        <Plus className="h-2.5 w-2.5" />
+        {selected.length === 0 && <span>Add channel</span>}
+      </button>
+
+      {open && typeof document !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={close} />
+          <div ref={panelRef} style={panelStyle} className="rounded-xl border border-border bg-surface shadow-xl overflow-hidden">
+            <ChannelPickerPanel selected={selected} onToggle={onToggle} onClose={close} />
+          </div>
+        </>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+// ─── Deliverable chip (on saved shots) ────────────────────────────────────────
+function DeliverableChip({ del, canEdit, onRemove }: {
+  del: CampaignDeliverable; canEdit: boolean; onRemove: () => void;
+}) {
+  const { anchorRef, panelStyle, open, toggle, close } = usePortalPanel<HTMLButtonElement>();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        anchorRef.current && !anchorRef.current.contains(e.target as Node)
+      ) close();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open, close, anchorRef]);
+
+  const channelLabel = CHANNEL_TEMPLATES.find((t) => t.name === del.channel)?.abbr ?? del.channel;
+
+  return (
+    <span className="relative inline-block">
+      <button ref={anchorRef} type="button" onClick={toggle}
+        className="group inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary hover:bg-primary/20 transition-colors">
+        {channelLabel} <span className="font-mono font-normal opacity-70">{del.aspectRatio}</span>
+        {canEdit && (
+          <span onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            className="inline-flex opacity-0 group-hover:opacity-100 h-3 w-3 items-center justify-center rounded-full hover:bg-primary/30 transition-opacity">
+            <X className="h-2 w-2" />
+          </span>
+        )}
+      </button>
+
+      {open && typeof document !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={close} />
+          <div ref={panelRef} style={{ ...panelStyle, width: 240 }}
+            className="rounded-xl border border-border bg-surface shadow-lg overflow-hidden">
+            <div className="px-3 pt-2.5 pb-1">
+              <p className="text-[11px] font-semibold text-text-primary">{del.channel}</p>
+              <p className="font-mono text-[10px] text-text-tertiary mt-0.5">{del.format} · {del.width}×{del.height}</p>
+            </div>
+            <div className="px-3 pt-1 pb-1">
+              <OverlayPreview spec={del.aspectRatio} />
+            </div>
+            <div className="px-3 pb-3">
+              <button type="button"
+                onClick={() => {
+                  const dims = SPEC_DIMENSIONS[del.aspectRatio] ?? { width: del.width, height: del.height };
+                  generateOverlayPng({ width: dims.width, height: dims.height, channel: del.channel, format: del.format, aspectRatio: del.aspectRatio });
+                  close();
+                }}
+                className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-secondary px-2.5 py-2 text-xs font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors">
+                <Download className="h-3 w-3 shrink-0" />
+                Capture One Overlay
+                <span className="ml-auto font-mono text-[9px] text-text-tertiary">{del.aspectRatio}</span>
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </span>
+  );
+}
+
+// ─── Deliverable cell (saved shots) ───────────────────────────────────────────
+function DeliverableCell({ shot, deliverables, canEdit, onMutate }: {
+  shot: ShotListShot; deliverables: CampaignDeliverable[]; canEdit: boolean; onMutate: () => void;
+}) {
+  const { toast } = useToast();
+  const { anchorRef: addRef, panelStyle, open, toggle, close } = usePortalPanel<HTMLDivElement>();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        addRef.current && !addRef.current.contains(e.target as Node)
+      ) close();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open, close, addRef]);
+
+  const linkedIds = new Set(shot.deliverableLinks.map((l) => l.deliverableId));
+  const linked: DraftDeliverableSel[] = shot.deliverableLinks
+    .map((lnk) => {
+      const d = deliverables.find((x) => x.id === lnk.deliverableId);
+      return d ? { channel: d.channel, spec: d.aspectRatio } : null;
+    })
+    .filter(Boolean) as DraftDeliverableSel[];
+
+  async function unlink(id: string) {
+    try {
+      await fetch(`/api/shot-list/shots/${shot.id}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deliverableId: id, action: "unlink" }),
+      });
+      onMutate();
+    } catch { toast("error", "Failed to unlink"); }
+  }
+
+  async function toggleSel(sel: DraftDeliverableSel) {
+    const existing = deliverables.find(
+      (d) => d.channel === sel.channel && d.aspectRatio === sel.spec
+    );
+    if (existing && linkedIds.has(existing.id)) {
+      await unlink(existing.id);
+      return;
+    }
+    try {
+      let delId: string;
+      if (existing) {
+        delId = existing.id;
+      } else {
+        const dims = SPEC_DIMENSIONS[sel.spec] ?? { width: 1080, height: 1080 };
+        const r = await fetch("/api/deliverables", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            campaignId: shot.campaignId, channel: sel.channel, format: sel.spec,
+            width: dims.width, height: dims.height, aspectRatio: sel.spec, quantity: 1,
+          }),
+        });
+        if (!r.ok) throw new Error();
+        delId = (await r.json()).id;
+      }
+      await fetch(`/api/shot-list/shots/${shot.id}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deliverableId: delId }),
+      });
+      onMutate();
+    } catch { toast("error", "Failed to add channel"); }
+    close();
+  }
+
+  return (
+    <div ref={addRef} className="flex flex-wrap items-center gap-1 px-2 py-1.5 min-h-[32px] h-full"
+      onClick={canEdit ? toggle : undefined}
+      style={canEdit ? { cursor: "cell" } : undefined}>
+      {shot.deliverableLinks.map((lnk) => {
+        const del = deliverables.find((d) => d.id === lnk.deliverableId);
+        if (!del) return null;
+        return (
+          <DeliverableChip key={lnk.id} del={del} canEdit={canEdit}
+            onRemove={() => unlink(del.id)} />
+        );
+      })}
+
+      {open && typeof document !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={close} />
+          <div ref={panelRef} style={panelStyle} className="rounded-xl border border-border bg-surface shadow-xl overflow-hidden">
+            <ChannelPickerPanel selected={linked} onToggle={toggleSel} onClose={close} />
+          </div>
+        </>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+// ─── Spreadsheet cell ─────────────────────────────────────────────────────────
+function Cell({ value, placeholder, onSave, readOnly = false, mono = false, className = "" }: {
+  value: string; placeholder?: string; onSave?: (v: string) => void;
+  readOnly?: boolean; mono?: boolean; className?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
+
+  function commit() {
+    setEditing(false);
+    if (draft !== value && onSave) onSave(draft);
+  }
+
+  if (readOnly) {
+    return (
+      <div className={`px-2 py-1.5 h-full min-h-[32px] text-xs text-text-primary ${mono ? "font-mono" : ""} ${className}`}>
+        {value || "—"}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative h-full min-h-[32px] cursor-cell group ${className}`}
+      onClick={() => { if (!editing) { setDraft(value); setEditing(true); setTimeout(() => inputRef.current?.select(), 0); } }}
+    >
+      {editing ? (
+        <input ref={inputRef} autoFocus value={draft}
+          onChange={(e) => setDraft(e.target.value)} onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); commit(); }
+            if (e.key === "Escape") { setDraft(value); setEditing(false); }
+          }}
+          className={`absolute inset-0 px-2 py-1.5 text-xs bg-white dark:bg-surface outline-none z-10 ring-2 ring-inset ring-primary text-text-primary ${mono ? "font-mono" : ""}`}
+          placeholder={placeholder}
+        />
+      ) : (
+        <div className={`px-2 py-1.5 text-xs h-full ${
+          value ? (mono ? "font-mono text-text-primary" : "text-text-primary") : "text-text-tertiary/40"
+        } group-hover:bg-primary/3 transition-colors`}>
+          {value || placeholder}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Ref image upload cell ────────────────────────────────────────────────────
+function RefCell({ shotId, campaignId, value, canEdit, onMutate }: {
+  shotId: string; campaignId: string; value: string | null; canEdit: boolean; onMutate: () => void;
+}) {
+  const { toast } = useToast();
+  const { anchorRef, panelStyle, open, toggle, close } = usePortalPanel<HTMLButtonElement>();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        anchorRef.current && !anchorRef.current.contains(e.target as Node)
+      ) close();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open, close, anchorRef]);
+
+  async function upload(file: File) {
+    if (!file.type.startsWith("image/")) { toast("error", "Please select an image file"); return; }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file); fd.append("campaignId", campaignId); fd.append("category", "reference");
+      const res = await fetch("/api/files", { method: "POST", body: fd });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      await fetch(`/api/shot-list/shots/${shotId}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referenceImageUrl: data.url }),
+      });
+      onMutate(); close();
+    } catch { toast("error", "Upload failed"); }
+    finally { setUploading(false); }
+  }
+
+  async function clear() {
+    await fetch(`/api/shot-list/shots/${shotId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ referenceImageUrl: null }),
+    });
+    onMutate();
+  }
+
+  return (
+    <div className="flex items-center justify-center min-h-[32px] px-1">
+      {value ? (
+        <div className="group relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={value} alt="Ref" onClick={() => window.open(value, "_blank")}
+            className="w-8 h-8 rounded object-cover border border-border cursor-pointer hover:opacity-80 transition-opacity" />
+          {canEdit && (
+            <button onClick={clear}
+              className="absolute -top-1 -right-1 hidden group-hover:flex h-3.5 w-3.5 items-center justify-center rounded-full bg-surface border border-border text-text-tertiary hover:text-red-500">
+              <X className="h-2 w-2" />
+            </button>
+          )}
+        </div>
+      ) : canEdit ? (
+        <button ref={anchorRef} type="button" onClick={toggle}
+          className="flex h-7 w-7 items-center justify-center rounded border border-dashed border-border text-text-tertiary hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors"
+          title="Upload reference image">
+          <Upload className="h-3 w-3" />
+        </button>
+      ) : null}
+
+      {open && typeof document !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={close} />
+          <div ref={panelRef} style={{ ...panelStyle, width: 256 }}>
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) upload(f); }}
+              onClick={() => inputRef.current?.click()}
+              className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 cursor-pointer transition-colors ${
+                dragging ? "border-primary bg-primary/5" : "border-border bg-surface hover:border-primary/50 hover:bg-primary/3"
+              }`}>
+              {uploading
+                ? <span className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                : <Upload className={`h-6 w-6 ${dragging ? "text-primary" : "text-text-tertiary"}`} />}
+              <p className="text-xs font-medium text-text-secondary text-center">
+                {uploading ? "Uploading…" : "Drop image here or click to browse"}
+              </p>
+              <p className="text-[10px] text-text-tertiary">JPG, PNG, WEBP, HEIC</p>
+            </div>
+            <input ref={inputRef} type="file" accept="image/*" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
+          </div>
+        </>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+// ─── Setup header row (editable name + delete) ────────────────────────────────
+function SetupHeaderRow({ setup, canEdit, onMutate }: {
+  setup: ShotListSetup; canEdit: boolean; onMutate: () => void;
+}) {
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(setup.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { if (!editing) setName(setup.name); }, [setup.name, editing]);
+
+  async function saveName() {
+    setEditing(false);
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === setup.name) { setName(setup.name); return; }
+    try {
+      await fetch(`/api/shot-list/setups/${setup.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      onMutate();
+    } catch { toast("error", "Failed to update setup"); setName(setup.name); }
+  }
+
+  async function handleDelete() {
+    try {
+      await fetch(`/api/shot-list/setups/${setup.id}`, { method: "DELETE" });
+      onMutate();
+    } catch { toast("error", "Failed to delete setup"); }
+  }
+
+  const done = setup.shots.filter((s) => s.status === "Complete").length;
+
+  return (
+    <tr className="group">
+      <td colSpan={6} className="border border-border/60 bg-primary/[0.06] border-l-2 border-l-primary px-3 py-1.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {canEdit && editing ? (
+              <input
+                ref={inputRef} autoFocus value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={saveName}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); saveName(); }
+                  if (e.key === "Escape") { setName(setup.name); setEditing(false); }
+                }}
+                className="text-xs font-semibold text-primary bg-transparent border-b border-primary outline-none min-w-[80px]"
+              />
+            ) : (
+              <span
+                onClick={() => canEdit && setEditing(true)}
+                className={`text-xs font-semibold text-primary ${canEdit ? "cursor-pointer hover:opacity-70 transition-opacity" : ""}`}
+              >
+                {setup.name}
+              </span>
+            )}
+            {setup.location && (
+              <span className="text-[10px] text-primary/60 font-medium">{setup.location}</span>
+            )}
+            <span className="text-[10px] text-primary/50">{done}/{setup.shots.length}</span>
+          </div>
+          {canEdit && (
+            <button type="button" onClick={handleDelete} title="Delete setup"
+              className="flex h-5 w-5 items-center justify-center rounded text-text-tertiary/30 hover:text-red-500 hover:bg-red-50 transition-colors">
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+// ─── Saved shot row ───────────────────────────────────────────────────────────
+function ShotRow({ shot, deliverables, campaignId, canEdit, canComplete, onMutate }: {
+  shot: ShotListShot; deliverables: CampaignDeliverable[];
+  campaignId: string; canEdit: boolean; canComplete: boolean; onMutate: () => void;
+}) {
+  const { toast } = useToast();
+  const [showDetail, setShowDetail] = useState(false);
+
+  async function patch(u: Record<string, unknown>) {
+    try {
+      await fetch(`/api/shot-list/shots/${shot.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u),
+      });
+      onMutate();
+    } catch { toast("error", "Failed to save"); }
+  }
+
+  async function handleDelete() {
+    try {
+      await fetch(`/api/shot-list/shots/${shot.id}`, { method: "DELETE" });
+      onMutate();
+    } catch { toast("error", "Failed to delete shot"); }
+  }
+
+  const done = shot.status === "Complete";
+  const retouch = shot.status === "Needs Retouching";
+
+  return (
+    <>
+      {showDetail && (
+        <ShotDetailModal
+          shot={shot}
+          open={showDetail}
+          onClose={() => setShowDetail(false)}
+          onSaved={() => { onMutate(); setShowDetail(false); }}
+        />
+      )}
+    <tr className={`group transition-colors ${
+      done ? "bg-emerald-50/40" : retouch ? "bg-amber-50/40" : "bg-white hover:bg-primary/[0.015]"
+    }`}>
+      <td className="border border-border/60 w-9 text-center p-0">
+        <div className="flex items-center justify-center min-h-[32px]">
+          {canComplete && (
+            <button type="button" onClick={() => patch({ status: done ? "Pending" : "Complete" })}
+              className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${
+                done    ? "border-emerald-500 bg-emerald-500 text-white" :
+                retouch ? "border-amber-400 bg-amber-400 text-white" :
+                          "border-border hover:border-emerald-400 hover:bg-emerald-50"
+              }`}>
+              {done && <Check className="h-3 w-3" />}
+              {retouch && <AlertTriangle className="h-2.5 w-2.5" />}
+            </button>
+          )}
+        </div>
+      </td>
+      <td className="border border-border/60 p-0 w-28">
+        <button
+          type="button"
+          onClick={() => setShowDetail(true)}
+          className="w-full text-left px-2 py-1.5 min-h-[32px] text-xs font-mono text-text-primary hover:bg-primary/5 transition-colors"
+        >
+          {shot.name || <span className="text-text-tertiary/40">Shot name…</span>}
+        </button>
+      </td>
+      <td className="border border-border/60 p-0 w-52">
+        <DeliverableCell shot={shot} deliverables={deliverables} canEdit={canEdit} onMutate={onMutate} />
+      </td>
+      <td className="border border-border/60 p-0">
+        <Cell value={shot.description} placeholder="Description…" onSave={(v) => patch({ description: v })} />
+      </td>
+      <td className="border border-border/60 p-0 w-12">
+        <RefCell shotId={shot.id} campaignId={campaignId} value={shot.referenceImageUrl} canEdit={canEdit} onMutate={onMutate} />
+      </td>
+      <td className="border border-border/60 p-0 w-8">
+        <div className="flex items-center justify-center min-h-[32px]">
+          {canEdit && (
+            <button type="button" onClick={handleDelete} title="Delete shot"
+              className="flex h-5 w-5 items-center justify-center rounded text-text-tertiary/30 hover:text-red-500 hover:bg-red-50 transition-colors">
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+    </>
+  );
+}
+
+
+// ─── Bottom bar ───────────────────────────────────────────────────────────────
+function BottomBar({ setups, campaignId, wf, date, onMutate }: {
+  setups: ShotListSetup[]; campaignId: string;
+  wf?: string; date?: string; onMutate: () => void;
+}) {
+  const { toast } = useToast();
+  const [addingShot, setAddingShot] = useState(false);
+  const lastSetup = setups[setups.length - 1];
+
+  let globalIdx = 1;
+  for (const s of setups) globalIdx += s.shots.length + 1;
+  const nextShotIdx = globalIdx - 1;
+
+  async function addShot() {
+    if (!lastSetup) return;
+    setAddingShot(true);
+    try {
+      const res = await fetch("/api/shot-list/shots", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          setupId: lastSetup.id, campaignId,
+          name: buildShotName(wf, date, nextShotIdx),
+          sortOrder: lastSetup.shots.length,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      onMutate();
+    } catch { toast("error", "Failed to add shot"); }
+    finally { setAddingShot(false); }
+  }
+
+  return (
+    <div className="border-t border-border/40 px-3 py-2">
+      <button type="button" onClick={addShot} disabled={addingShot || !lastSetup}
+        className="flex items-center gap-1.5 text-xs font-medium text-text-tertiary hover:text-primary transition-colors disabled:opacity-40">
+        {addingShot
+          ? <span className="h-3 w-3 rounded-full border border-current border-t-transparent animate-spin" />
+          : <Plus className="h-3 w-3" />}
+        Add Shot
+      </button>
+    </div>
+  );
+}
+
+// ─── Main spreadsheet ─────────────────────────────────────────────────────────
+interface Props {
+  setups: ShotListSetup[];
+  deliverables: CampaignDeliverable[];
+  campaignId: string;
+  wfNumber?: string;
+  firstShootDate?: string;
+  canEdit: boolean;
+  canComplete: boolean;
+  onAddSetup: () => void;
+  onMutate: () => void;
+}
+
+export function ShotListSpreadsheet({
+  setups, deliverables, campaignId, wfNumber, firstShootDate,
+  canEdit, canComplete, onAddSetup, onMutate,
+}: Props) {
+  let idx = 1;
+
+  if (setups.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-10 px-5">
+        {canEdit && (
+          <button type="button" onClick={onAddSetup}
+            className="inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-xs font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors">
+            <Plus className="h-3 w-3" />
+            Add Scene
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[600px] border-collapse">
+        <thead>
+          <tr className="bg-surface-secondary/80">
+            <th className="border border-border/60 w-9 px-2 py-2" />
+            <th className="border border-border/60 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-text-tertiary w-28">Shot</th>
+            <th className="border border-border/60 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-text-tertiary w-52">Channel</th>
+            <th className="border border-border/60 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Description</th>
+            <th className="border border-border/60 px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wider text-text-tertiary w-12">Ref</th>
+            <th className="border border-border/60 w-8" />
+          </tr>
+        </thead>
+        <tbody>
+          {setups.map((setup) => {
+            const startIdx = idx;
+            idx += setup.shots.length + 1;
+
+            return (
+              <>
+                <SetupHeaderRow key={`hdr-${setup.id}`} setup={setup} canEdit={canEdit} onMutate={onMutate} />
+
+                {setup.shots.map((shot) => (
+                  <ShotRow key={shot.id} shot={shot} deliverables={deliverables}
+                    campaignId={campaignId} canEdit={canEdit} canComplete={canComplete} onMutate={onMutate} />
+                ))}
+              </>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {canEdit && (
+        <BottomBar setups={setups} campaignId={campaignId} wf={wfNumber} date={firstShootDate} onMutate={onMutate} />
+      )}
+    </div>
+  );
+}

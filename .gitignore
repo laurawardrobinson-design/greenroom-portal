@@ -1,0 +1,8 @@
+.DS_Store
+.claude/
+.gstack/
+portal-v2/node_modules/
+portal-v2/.next/
+portal-v2/.env*
+portal-v2/*.tsbuildinfo
+portal-v2/next-env.d.ts

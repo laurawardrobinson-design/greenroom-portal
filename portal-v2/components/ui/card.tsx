@@ -1,0 +1,64 @@
+import type { HTMLAttributes, ReactNode } from "react";
+
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+  hover?: boolean;
+  padding?: "none" | "sm" | "md" | "lg";
+}
+
+const paddingStyles = {
+  none: "",
+  sm: "p-4",
+  md: "p-5",
+  lg: "p-6",
+};
+
+export function Card({
+  children,
+  hover = false,
+  padding = "md",
+  className = "",
+  ...props
+}: CardProps) {
+  return (
+    <div
+      className={`
+        rounded-xl border border-border bg-surface
+        ${hover ? "transition-shadow hover:shadow-md cursor-pointer" : ""}
+        ${paddingStyles[padding]}
+        ${className}
+      `}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function CardHeader({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`mb-4 flex items-center justify-between ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+export function CardTitle({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <h3 className={`text-base font-semibold text-text-primary ${className}`}>
+      {children}
+    </h3>
+  );
+}
