@@ -131,7 +131,7 @@ export function CreatureAppearance({ creature, position, onDone }: CreatureAppea
 // --- Discovery toast ---
 function DiscoveryToast({ name }: { name: string }) {
   return (
-    <div className="discovery-toast fixed bottom-6 left-1/2 -translate-x-1/2 bg-sidebar text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm">
+    <div className="discovery-toast fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] bg-sidebar text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm">
       <span className="discovery-sparkle text-primary text-lg">✦</span>
       <span>
         You discovered{" "}

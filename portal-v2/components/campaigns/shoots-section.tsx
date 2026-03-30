@@ -832,7 +832,7 @@ function CrewChip({ crew, canEdit, onRemove, shootId, onMutate }: {
           </select>
         ) : (
           <span
-            className={`inline-block text-[9px] font-medium px-1.5 py-0.5 rounded mt-0.5 ${roleColor} ${canEdit ? "cursor-pointer hover:ring-1 hover:ring-primary/30" : ""}`}
+            className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded mt-0.5 ${roleColor} ${canEdit ? "cursor-pointer hover:ring-1 hover:ring-primary/30" : ""}`}
             onClick={() => canEdit && setEditingRole(true)}
           >
             {crew.roleOnShoot}

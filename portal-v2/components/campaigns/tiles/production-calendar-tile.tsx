@@ -156,7 +156,7 @@ export function ProductionCalendarTile({
       <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
         <div className="flex items-center gap-2">
           <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
             {format(currentMonth, "MMMM yyyy")}
           </h3>
         </div>
@@ -182,7 +182,7 @@ export function ProductionCalendarTile({
           {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
             <div
               key={day}
-              className="text-center text-[9px] font-medium text-text-tertiary py-0.5"
+              className="text-center text-[10px] font-medium text-text-tertiary py-0.5"
             >
               {day}
             </div>

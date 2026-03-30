@@ -59,7 +59,7 @@ function FilePreviewModal({ asset, onClose }: { asset: Asset; onClose: () => voi
               href={asset.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors px-2 py-1 rounded-lg hover:bg-surface-secondary"
+              className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors px-2 py-1 rounded-lg hover:bg-surface-secondary"
             >
               <ExternalLink className="h-3.5 w-3.5" />
               Open
@@ -104,7 +104,7 @@ function FilePreviewModal({ asset, onClose }: { asset: Asset; onClose: () => voi
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-xs text-text-secondary tabular-nums">
+            <span className="text-sm text-text-secondary tabular-nums">
               Page {currentPage}
             </span>
             <button
@@ -159,7 +159,7 @@ export function FileSection({
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-3">{title}</p>
+      <p className="text-sm font-semibold uppercase tracking-wider text-text-tertiary mb-3">{title}</p>
       {canUpload && (
         <label
           className="block"
@@ -176,7 +176,7 @@ export function FileSection({
             }`}
           >
             <Upload className={`h-5 w-5 ${isDragOver ? "text-primary" : "text-text-tertiary"}`} />
-            <span className="text-xs font-medium">
+            <span className="text-sm font-medium">
               {uploading ? "Uploading..." : isDragOver ? "Drop to upload" : "Drop files or click to browse"}
             </span>
           </div>

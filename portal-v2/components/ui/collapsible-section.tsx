@@ -59,11 +59,11 @@ export function CollapsibleSection({
           {Icon && (
             <Icon className="h-4 w-4 shrink-0 text-primary" />
           )}
-          <span className="text-xs font-semibold text-text-primary tracking-wider uppercase">
+          <span className="text-sm font-semibold text-text-primary tracking-wider uppercase">
             {title}
           </span>
           {badge && !expanded && (
-            <span className="ml-1.5 text-[11px] text-text-tertiary font-normal normal-case tracking-normal">
+            <span className="ml-1.5 text-[13px] text-text-tertiary font-normal normal-case tracking-normal">
               {badge}
             </span>
           )}

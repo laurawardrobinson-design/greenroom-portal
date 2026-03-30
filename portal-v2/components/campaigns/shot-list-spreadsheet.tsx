@@ -92,7 +92,7 @@ function OverlayPreview({ spec }: { spec: string }) {
   }
   if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) {
     return (
-      <div className="flex items-center justify-center h-20 rounded-lg bg-neutral-600/30 text-text-tertiary text-xs font-mono">
+      <div className="flex items-center justify-center h-20 rounded-lg bg-neutral-600/30 text-text-tertiary text-sm font-mono">
         {spec}
       </div>
     );
@@ -169,7 +169,7 @@ function ChannelPickerPanel({
             className="flex h-5 w-5 items-center justify-center rounded hover:bg-surface-secondary text-text-tertiary transition-colors">
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
-          <span className="text-xs font-semibold text-text-primary">{active.name}</span>
+          <span className="text-sm font-semibold text-text-primary">{active.name}</span>
         </div>
 
         {/* Spec tabs */}
@@ -177,7 +177,7 @@ function ChannelPickerPanel({
           <div className="flex flex-wrap gap-1 px-3 pt-2.5">
             {active.specs.map((spec) => (
               <button key={spec} type="button" onClick={() => setDetailSpec(spec)}
-                className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold transition-colors ${
+                className={`px-2 py-0.5 rounded text-xs font-mono font-semibold transition-colors ${
                   detailSpec === spec
                     ? "bg-primary text-white"
                     : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
@@ -196,10 +196,10 @@ function ChannelPickerPanel({
         {/* Download */}
         <div className="px-3 pb-2">
           <button type="button" onClick={triggerDownload}
-            className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-secondary px-2.5 py-2 text-xs font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors">
+            className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-secondary px-2.5 py-2 text-sm font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors">
             <Download className="h-3 w-3 shrink-0" />
             Capture One Overlay
-            <span className="ml-auto font-mono text-[9px] text-text-tertiary">{detailSpec}</span>
+            <span className="ml-auto font-mono text-xs text-text-tertiary">{detailSpec}</span>
           </button>
         </div>
 
@@ -207,7 +207,7 @@ function ChannelPickerPanel({
         <div className="px-3 pb-3 pt-1 border-t border-border">
           <button type="button"
             onClick={() => { onToggle({ channel: active.name, spec: detailSpec }); setView("list"); }}
-            className={`w-full rounded-lg py-1.5 text-xs font-semibold transition-colors ${
+            className={`w-full rounded-lg py-1.5 text-sm font-semibold transition-colors ${
               alreadySel
                 ? "bg-red-50 text-red-500 hover:bg-red-100 border border-red-200"
                 : "bg-primary text-white hover:bg-primary/90"
@@ -227,7 +227,7 @@ function ChannelPickerPanel({
   return (
     <div className="w-64">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-        <span className="text-xs font-semibold text-text-primary">Add channels</span>
+        <span className="text-sm font-semibold text-text-primary">Add channels</span>
         <button type="button" onClick={onClose}
           className="flex h-5 w-5 items-center justify-center rounded hover:bg-surface-secondary text-text-tertiary transition-colors">
           <X className="h-3 w-3" />
@@ -244,7 +244,7 @@ function ChannelPickerPanel({
                   ? "border-primary/50 bg-primary/10 text-primary"
                   : "border-border text-text-secondary hover:border-primary/30 hover:bg-surface-secondary"
               }`}>
-              <span className="text-[10px] font-semibold leading-snug text-center">{tmpl.abbr ?? tmpl.name} {spec}</span>
+              <span className="text-xs font-semibold leading-snug text-center">{tmpl.abbr ?? tmpl.name} {spec}</span>
             </button>
           );
         })}
@@ -277,12 +277,8 @@ function DraftChannelChip({ sel, tmpl, onRemove }: {
   return (
     <span className="relative inline-block">
       <button ref={anchorRef} type="button" onClick={toggle}
-        className="group inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary hover:bg-primary/20 transition-colors">
+        className="group inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors">
         {tmpl?.abbr ?? sel.channel} <span className="font-mono font-normal opacity-70">{sel.spec}</span>
-        <span onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          className="inline-flex opacity-0 group-hover:opacity-100 h-3 w-3 items-center justify-center rounded-full hover:bg-primary/30 transition-opacity">
-          <X className="h-2 w-2" />
-        </span>
       </button>
       {open && typeof document !== "undefined" && createPortal(
         <>
@@ -290,8 +286,8 @@ function DraftChannelChip({ sel, tmpl, onRemove }: {
           <div ref={panelRef} style={{ ...panelStyle, width: 240 }}
             className="rounded-xl border border-border bg-surface shadow-lg overflow-hidden">
             <div className="px-3 pt-2.5 pb-1">
-              <p className="text-[11px] font-semibold text-text-primary">{tmpl?.name ?? sel.channel}</p>
-              <p className="font-mono text-[10px] text-text-tertiary mt-0.5">{sel.spec}</p>
+              <p className="text-[13px] font-semibold text-text-primary">{tmpl?.name ?? sel.channel}</p>
+              <p className="font-mono text-xs text-text-tertiary mt-0.5">{sel.spec}</p>
             </div>
             <div className="px-3 pt-1 pb-1">
               <OverlayPreview spec={sel.spec} />
@@ -303,10 +299,10 @@ function DraftChannelChip({ sel, tmpl, onRemove }: {
                   generateOverlayPng({ width: dims.width, height: dims.height, channel: sel.channel, format: sel.spec, aspectRatio: sel.spec });
                   close();
                 }}
-                className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-secondary px-2.5 py-2 text-xs font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors">
+                className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-secondary px-2.5 py-2 text-sm font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors">
                 <Download className="h-3 w-3 shrink-0" />
                 Capture One Overlay
-                <span className="ml-auto font-mono text-[9px] text-text-tertiary">{sel.spec}</span>
+                <span className="ml-auto font-mono text-xs text-text-tertiary">{sel.spec}</span>
               </button>
             </div>
           </div>
@@ -351,7 +347,7 @@ function DraftChannelCell({
       })}
 
       <button ref={anchorRef} type="button" onClick={toggle}
-        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-text-tertiary border border-dashed border-border/70 hover:border-primary hover:text-primary hover:bg-primary/3 transition-colors">
+        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-text-tertiary border border-dashed border-border/70 hover:border-primary hover:text-primary hover:bg-primary/3 transition-colors">
         <Plus className="h-2.5 w-2.5" />
         {selected.length === 0 && <span>Add channel</span>}
       </button>
@@ -393,14 +389,8 @@ function DeliverableChip({ del, canEdit, onRemove }: {
   return (
     <span className="relative inline-block">
       <button ref={anchorRef} type="button" onClick={toggle}
-        className="group inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary hover:bg-primary/20 transition-colors">
+        className="group inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors">
         {channelLabel} <span className="font-mono font-normal opacity-70">{del.aspectRatio}</span>
-        {canEdit && (
-          <span onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            className="inline-flex opacity-0 group-hover:opacity-100 h-3 w-3 items-center justify-center rounded-full hover:bg-primary/30 transition-opacity">
-            <X className="h-2 w-2" />
-          </span>
-        )}
       </button>
 
       {open && typeof document !== "undefined" && createPortal(
@@ -409,8 +399,8 @@ function DeliverableChip({ del, canEdit, onRemove }: {
           <div ref={panelRef} style={{ ...panelStyle, width: 240 }}
             className="rounded-xl border border-border bg-surface shadow-lg overflow-hidden">
             <div className="px-3 pt-2.5 pb-1">
-              <p className="text-[11px] font-semibold text-text-primary">{del.channel}</p>
-              <p className="font-mono text-[10px] text-text-tertiary mt-0.5">{del.format} · {del.width}×{del.height}</p>
+              <p className="text-[13px] font-semibold text-text-primary">{del.channel}</p>
+              <p className="font-mono text-xs text-text-tertiary mt-0.5">{del.format} · {del.width}×{del.height}</p>
             </div>
             <div className="px-3 pt-1 pb-1">
               <OverlayPreview spec={del.aspectRatio} />
@@ -422,10 +412,10 @@ function DeliverableChip({ del, canEdit, onRemove }: {
                   generateOverlayPng({ width: dims.width, height: dims.height, channel: del.channel, format: del.format, aspectRatio: del.aspectRatio });
                   close();
                 }}
-                className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-secondary px-2.5 py-2 text-xs font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors">
+                className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-secondary px-2.5 py-2 text-sm font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors">
                 <Download className="h-3 w-3 shrink-0" />
                 Capture One Overlay
-                <span className="ml-auto font-mono text-[9px] text-text-tertiary">{del.aspectRatio}</span>
+                <span className="ml-auto font-mono text-xs text-text-tertiary">{del.aspectRatio}</span>
               </button>
             </div>
           </div>
@@ -550,7 +540,7 @@ function Cell({ value, placeholder, onSave, readOnly = false, mono = false, clas
 
   if (readOnly) {
     return (
-      <div className={`px-2 py-1.5 h-full min-h-[32px] text-xs text-text-primary ${mono ? "font-mono" : ""} ${className}`}>
+      <div className={`px-2 py-1.5 h-full min-h-[32px] text-sm text-text-primary ${mono ? "font-mono" : ""} ${className}`}>
         {value || "—"}
       </div>
     );
@@ -568,11 +558,11 @@ function Cell({ value, placeholder, onSave, readOnly = false, mono = false, clas
             if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); commit(); }
             if (e.key === "Escape") { setDraft(value); setEditing(false); }
           }}
-          className={`absolute inset-0 px-2 py-1.5 text-xs bg-white dark:bg-surface outline-none z-10 ring-2 ring-inset ring-primary text-text-primary ${mono ? "font-mono" : ""}`}
+          className={`absolute inset-0 px-2 py-1.5 text-sm bg-white dark:bg-surface outline-none z-10 ring-2 ring-inset ring-primary text-text-primary ${mono ? "font-mono" : ""}`}
           placeholder={placeholder}
         />
       ) : (
-        <div className={`px-2 py-1.5 text-xs h-full ${
+        <div className={`px-2 py-1.5 text-sm h-full ${
           value ? (mono ? "font-mono text-text-primary" : "text-text-primary") : "text-text-tertiary/40"
         } group-hover:bg-primary/3 transition-colors`}>
           {value || placeholder}
@@ -668,10 +658,10 @@ function RefCell({ shotId, campaignId, value, canEdit, onMutate }: {
               {uploading
                 ? <span className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                 : <Upload className={`h-6 w-6 ${dragging ? "text-primary" : "text-text-tertiary"}`} />}
-              <p className="text-xs font-medium text-text-secondary text-center">
+              <p className="text-sm font-medium text-text-secondary text-center">
                 {uploading ? "Uploading…" : "Drop image here or click to browse"}
               </p>
-              <p className="text-[10px] text-text-tertiary">JPG, PNG, WEBP, HEIC</p>
+              <p className="text-xs text-text-tertiary">JPG, PNG, WEBP, HEIC</p>
             </div>
             <input ref={inputRef} type="file" accept="image/*" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
@@ -730,20 +720,19 @@ function SetupHeaderRow({ setup, canEdit, onMutate }: {
                   if (e.key === "Enter") { e.preventDefault(); saveName(); }
                   if (e.key === "Escape") { setName(setup.name); setEditing(false); }
                 }}
-                className="text-xs font-semibold text-primary bg-transparent border-b border-primary outline-none min-w-[80px]"
+                className="text-sm font-semibold text-primary bg-transparent border-b border-primary outline-none min-w-[80px]"
               />
             ) : (
               <span
                 onClick={() => canEdit && setEditing(true)}
-                className={`text-xs font-semibold text-primary ${canEdit ? "cursor-pointer hover:opacity-70 transition-opacity" : ""}`}
+                className={`text-sm font-semibold text-primary ${canEdit ? "cursor-pointer hover:opacity-70 transition-opacity" : ""}`}
               >
                 {setup.name}
               </span>
             )}
             {setup.location && (
-              <span className="text-[10px] text-primary/60 font-medium">{setup.location}</span>
+              <span className="text-xs text-primary/60 font-medium">{setup.location}</span>
             )}
-            <span className="text-[10px] text-primary/50">{done}/{setup.shots.length}</span>
           </div>
           {canEdit && (
             <button type="button" onClick={handleDelete} title="Delete setup"
@@ -816,7 +805,7 @@ function ShotRow({ shot, deliverables, campaignId, canEdit, canComplete, onMutat
         <button
           type="button"
           onClick={() => setShowDetail(true)}
-          className="w-full text-left px-2 py-1.5 min-h-[32px] text-xs font-mono text-text-primary hover:bg-primary/5 transition-colors"
+          className="w-full text-left px-2 py-1.5 min-h-[32px] text-sm font-mono text-text-primary hover:bg-primary/5 transition-colors"
         >
           {shot.name || <span className="text-text-tertiary/40">Shot name…</span>}
         </button>
@@ -847,9 +836,9 @@ function ShotRow({ shot, deliverables, campaignId, canEdit, canComplete, onMutat
 
 
 // ─── Bottom bar ───────────────────────────────────────────────────────────────
-function BottomBar({ setups, campaignId, wf, date, onMutate }: {
+function BottomBar({ setups, campaignId, wf, date, onMutate, onAddSetup }: {
   setups: ShotListSetup[]; campaignId: string;
-  wf?: string; date?: string; onMutate: () => void;
+  wf?: string; date?: string; onMutate: () => void; onAddSetup: () => void;
 }) {
   const { toast } = useToast();
   const [addingShot, setAddingShot] = useState(false);
@@ -878,13 +867,18 @@ function BottomBar({ setups, campaignId, wf, date, onMutate }: {
   }
 
   return (
-    <div className="border-t border-border/40 px-3 py-2">
+    <div className="flex items-center justify-between border-t border-border/40 px-3 py-2">
       <button type="button" onClick={addShot} disabled={addingShot || !lastSetup}
-        className="flex items-center gap-1.5 text-xs font-medium text-text-tertiary hover:text-primary transition-colors disabled:opacity-40">
+        className="flex items-center gap-1.5 text-sm font-medium text-text-tertiary hover:text-primary transition-colors disabled:opacity-40">
         {addingShot
           ? <span className="h-3 w-3 rounded-full border border-current border-t-transparent animate-spin" />
           : <Plus className="h-3 w-3" />}
         Add Shot
+      </button>
+      <button type="button" onClick={onAddSetup}
+        className="flex items-center gap-1.5 text-sm font-medium text-text-tertiary hover:text-primary transition-colors">
+        <Plus className="h-3 w-3" />
+        Add Scene
       </button>
     </div>
   );
@@ -914,7 +908,7 @@ export function ShotListSpreadsheet({
       <div className="flex flex-col items-center gap-3 py-10 px-5">
         {canEdit && (
           <button type="button" onClick={onAddSetup}
-            className="inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-xs font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors">
+            className="inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-sm font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors">
             <Plus className="h-3 w-3" />
             Add Scene
           </button>
@@ -929,10 +923,10 @@ export function ShotListSpreadsheet({
         <thead>
           <tr className="bg-surface-secondary/80">
             <th className="border border-border/60 w-9 px-2 py-2" />
-            <th className="border border-border/60 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-text-tertiary w-28">Shot</th>
-            <th className="border border-border/60 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-text-tertiary w-52">Channel</th>
-            <th className="border border-border/60 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Description</th>
-            <th className="border border-border/60 px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wider text-text-tertiary w-12">Ref</th>
+            <th className="border border-border/60 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary w-28">Shot</th>
+            <th className="border border-border/60 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary w-52">Channel</th>
+            <th className="border border-border/60 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Description</th>
+            <th className="border border-border/60 px-2 py-2 text-center text-xs font-semibold uppercase tracking-wider text-text-tertiary w-12">Ref</th>
             <th className="border border-border/60 w-8" />
           </tr>
         </thead>
@@ -956,7 +950,7 @@ export function ShotListSpreadsheet({
       </table>
 
       {canEdit && (
-        <BottomBar setups={setups} campaignId={campaignId} wf={wfNumber} date={firstShootDate} onMutate={onMutate} />
+        <BottomBar setups={setups} campaignId={campaignId} wf={wfNumber} date={firstShootDate} onMutate={onMutate} onAddSetup={onAddSetup} />
       )}
     </div>
   );

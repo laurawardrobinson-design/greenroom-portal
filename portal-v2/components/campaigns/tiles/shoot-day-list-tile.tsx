@@ -102,7 +102,7 @@ export function ShootDayListTile({
       <div className="flex items-center px-3.5 py-2.5 border-b border-border">
         <div className="flex items-center gap-2">
           <Clapperboard className="h-4 w-4 shrink-0 text-primary" />
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary">Shoot Days</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">Shoot Days</h3>
         </div>
       </div>
 

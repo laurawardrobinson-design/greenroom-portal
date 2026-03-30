@@ -75,7 +75,7 @@ export function StatusProgression({ status, onStatusChange, disabled }: Props) {
             >
               {isPast && <Check className="h-3 w-3" strokeWidth={3} />}
               {isCurrent && (
-                <span className="text-[9px] font-bold leading-none">
+                <span className="text-[10px] font-bold leading-none">
                   {i + 1}
                 </span>
               )}

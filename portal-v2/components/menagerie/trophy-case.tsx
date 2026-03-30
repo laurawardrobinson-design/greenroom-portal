@@ -45,7 +45,7 @@ export function TrophyCase() {
       {/* Floating golden bird cage button */}
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-5 right-5 z-50 rounded-full bg-sidebar p-2.5 shadow-lg hover:shadow-xl transition-shadow trophy-glow"
+        className="fixed bottom-5 right-5 z-50 rounded-full bg-sidebar p-2.5 shadow-lg hover:shadow-xl transition-shadow"
         title="Menagerie"
       >
         <BirdCageIcon />
@@ -60,7 +60,7 @@ export function TrophyCase() {
               <h3 className="text-sm font-semibold text-white tracking-wide">
                 Menagerie
               </h3>
-              <p className="text-[10px] text-white/50 mt-0.5">
+              <p className="text-xs text-white/50 mt-0.5">
                 {discoveredCount} of {CREATURES.length} found
               </p>
             </div>
@@ -91,7 +91,7 @@ export function TrophyCase() {
                     style={{ height: "120px" }}
                   >
                     <p className="text-lg text-text-tertiary/40 mb-2">?</p>
-                    <p className="text-[9px] text-text-tertiary/60 italic leading-snug">
+                    <p className="text-[11px] text-text-tertiary/90 italic leading-snug">
                       {creature.triggerHint}
                     </p>
                   </div>
@@ -121,11 +121,11 @@ export function TrophyCase() {
                           <SvgComponent className="h-9 w-11" />
                         )}
                       </div>
-                      <p className="text-[11px] font-medium text-text-primary leading-tight">
+                      <p className="text-xs font-medium text-text-primary leading-tight">
                         {creature.name}
                       </p>
                       {discovery && (
-                        <p className="text-[9px] text-text-tertiary mt-0.5">
+                        <p className="text-[11px] text-text-tertiary mt-0.5">
                           {format(parseISO(discovery.discovered_at), "MMM d")}
                         </p>
                       )}
@@ -133,14 +133,14 @@ export function TrophyCase() {
                   ) : (
                     /* Back — creature info */
                     <div className="flex flex-col items-center justify-center h-full bg-sidebar p-2.5 overflow-hidden">
-                      <p className="text-[10px] font-semibold text-primary mb-1 leading-tight">
+                      <p className="text-xs font-semibold text-primary mb-1 leading-tight">
                         {creature.name}
                       </p>
-                      <p className="text-[8px] text-white/70 leading-snug line-clamp-3">
+                      <p className="text-[11px] text-white/70 leading-snug line-clamp-3">
                         {creature.description}
                       </p>
                       {discovery && (
-                        <p className="text-[7px] text-white/40 mt-1.5">
+                        <p className="text-[10px] text-white/40 mt-1.5">
                           {format(parseISO(discovery.discovered_at), "MMM d, yyyy")}
                         </p>
                       )}
@@ -155,13 +155,13 @@ export function TrophyCase() {
           <div className="border-t border-border px-4 py-2.5 flex items-center justify-between">
             <button
               onClick={() => { releaseCreatures(); setOpen(false); }}
-              className="text-[9px] text-text-tertiary/60 hover:text-primary transition-colors italic"
+              className="text-[11px] text-black hover:text-black/80 transition-colors italic"
             >
               Release the critters
             </button>
             <button
               onClick={() => { requestZookeeper(); setOpen(false); }}
-              className="text-[9px] text-text-tertiary/60 hover:text-red-400 transition-colors italic"
+              className="text-[11px] text-black hover:text-black/80 transition-colors italic"
             >
               Call the Zookeeper
             </button>

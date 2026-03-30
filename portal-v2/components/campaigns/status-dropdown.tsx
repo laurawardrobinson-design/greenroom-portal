@@ -56,7 +56,7 @@ export function StatusDropdown({ status, onStatusChange, disabled }: Props) {
         onClick={() => canChange && setOpen(!open)}
         disabled={!canChange}
         className={`
-          inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium
+          inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium
           transition-all duration-150
           ${colors.bg} ${colors.text}
           ${canChange ? "cursor-pointer hover:shadow-sm active:scale-[0.97]" : "cursor-default"}
@@ -84,7 +84,7 @@ export function StatusDropdown({ status, onStatusChange, disabled }: Props) {
                   onClick={() => !isDisabled && handleSelect(s)}
                   disabled={isDisabled}
                   className={`
-                    flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors
+                    flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-base transition-colors
                     ${isActive ? "bg-surface-secondary font-medium" : ""}
                     ${isDisabled ? "opacity-35 cursor-not-allowed" : "hover:bg-surface-secondary cursor-pointer"}
                   `}
@@ -106,7 +106,7 @@ export function StatusDropdown({ status, onStatusChange, disabled }: Props) {
                 <button
                   type="button"
                   onClick={() => handleSelect("Cancelled")}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 cursor-pointer transition-colors"
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-base text-red-600 hover:bg-red-50 cursor-pointer transition-colors"
                 >
                   <Ban className="h-3 w-3" />
                   Cancel Campaign

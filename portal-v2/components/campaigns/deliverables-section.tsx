@@ -278,7 +278,7 @@ export function DeliverablesSection({ campaignId, deliverables, vendors, canEdit
                           }`}
                         >
                           {p.format}
-                          <span className="ml-1.5 font-mono text-[9px] opacity-60">{p.aspectRatio}</span>
+                          <span className="ml-1.5 font-mono text-[10px] opacity-60">{p.aspectRatio}</span>
                         </button>
                       );
                     })}

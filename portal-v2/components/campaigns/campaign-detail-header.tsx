@@ -88,7 +88,7 @@ export function CampaignDetailHeader({
       {isCancelled && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-center gap-2">
           <X className="h-5 w-5 text-red-600 shrink-0" />
-          <p className="text-sm font-medium text-red-700">
+          <p className="text-base font-medium text-red-700">
             This campaign has been cancelled and cannot be edited.
           </p>
         </div>
@@ -116,7 +116,7 @@ export function CampaignDetailHeader({
                     if (e.key === "Enter") saveWfEdit();
                     if (e.key === "Escape") cancelWfEdit();
                   }}
-                  className="text-xs font-mono text-text-primary bg-transparent border-b border-primary focus:outline-none w-24"
+                  className="text-sm font-mono text-text-primary bg-transparent border-b border-primary focus:outline-none w-24"
                 />
                 <button onClick={saveWfEdit} className="text-primary hover:text-primary/80">
                   <Check className="h-3 w-3" />
@@ -127,7 +127,7 @@ export function CampaignDetailHeader({
               </div>
             ) : (
               <span
-                className={`text-xs font-mono text-text-tertiary ${canEdit && !isCancelled ? "cursor-pointer hover:text-primary" : ""}`}
+                className={`text-base font-semibold uppercase tracking-wider text-text-primary ${canEdit && !isCancelled ? "cursor-pointer hover:text-primary" : ""}`}
                 onClick={() => canEdit && !isCancelled && setEditingWf(true)}
               >
                 {campaign.wfNumber || "—"}
@@ -147,7 +147,7 @@ export function CampaignDetailHeader({
                     if (e.key === "Enter") saveEdit("name");
                     if (e.key === "Escape") cancelEdit();
                   }}
-                  className={`text-2xl font-bold tracking-tight bg-transparent border-b-2 focus:outline-none w-full ${
+                  className={`text-xl font-bold tracking-tight bg-transparent border-b-2 focus:outline-none w-full max-w-md ${
                     editError
                       ? "text-error border-error text-text-primary"
                       : "text-text-primary border-primary"
@@ -162,10 +162,10 @@ export function CampaignDetailHeader({
               </div>
               {editError && (
                 <div className="flex items-center justify-between gap-2 rounded px-2 py-1 bg-error/10">
-                  <p className="text-xs text-error">{editError}</p>
+                  <p className="text-sm text-error">{editError}</p>
                   <button
                     onClick={revertEdit}
-                    className="text-xs text-error hover:text-error/80 underline"
+                    className="text-sm text-error hover:text-error/80 underline"
                   >
                     Revert
                   </button>
@@ -175,14 +175,14 @@ export function CampaignDetailHeader({
           ) : (
             <div className="flex items-center gap-2">
               <h2
-                className={`text-2xl font-bold tracking-tight text-text-primary truncate ${
+                className={`text-xl font-bold tracking-tight text-text-primary truncate ${
                   canEdit && !isCancelled ? "cursor-pointer hover:text-primary transition-colors" : ""
                 }`}
                 onClick={() => canEdit && !isCancelled && startEdit("name", campaign.name)}
               >
                 {campaign.name}
               </h2>
-              <CopyButton value={campaign.name} />
+              <CopyButton value={`${campaign.wfNumber ? campaign.wfNumber + " " : ""}${campaign.name}`} />
             </div>
           )}
         </div>
@@ -210,7 +210,7 @@ export function CampaignDetailHeader({
         title="Delete Campaign"
         size="sm"
       >
-        <p className="text-sm text-text-secondary">
+        <p className="text-base text-text-secondary">
           Are you sure you want to delete <strong>{campaign.name}</strong>?
           This will remove all shoots, vendor assignments, deliverables, and
           files associated with this campaign. This cannot be undone.

@@ -17,7 +17,7 @@ export function DocumentsTile({ campaignId, isVendor, canEdit, uploading, onUplo
     <Card padding="none" className="h-full flex flex-col">
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
         <FileText className="h-4 w-4 shrink-0 text-primary" />
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary">Documents</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">Documents</h3>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3.5 py-3">

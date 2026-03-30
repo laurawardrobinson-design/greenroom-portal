@@ -20,7 +20,24 @@ export const createCampaignSchema = z.object({
   notes: z.string().default(""),
 });
 
-export const updateCampaignSchema = createCampaignSchema.partial();
+export const updateCampaignSchema = z.object({
+  wfNumber: z.string().optional(),
+  name: z.string().min(1, "Campaign name is required").optional(),
+  status: z
+    .enum([
+      "Planning",
+      "In Production",
+      "Post",
+      "Complete",
+      "Cancelled",
+    ])
+    .optional(),
+  productionBudget: z.number().min(0).optional(),
+  budgetPoolId: z.string().uuid().nullable().optional(),
+  assetsDeliveryDate: z.string().nullable().optional(),
+  notes: z.string().optional(),
+  producerId: z.string().uuid().nullable().optional(),
+});
 
 export const campaignStatusSchema = z.enum([
   "Planning",

@@ -80,7 +80,7 @@ export function GatorEasterEgg() {
   return (
     <div className="relative mx-4 my-2">
       {/* The secret trigger box + animation container */}
-      <div className="relative h-8 overflow-hidden">
+      <div className="relative h-8 overflow-visible">
         {/* Zookeeper scene — walks left to right */}
         {zookeeperWalking && (
           <>
@@ -90,7 +90,7 @@ export function GatorEasterEgg() {
               </div>
             </div>
             <div className="zookeeper-text absolute inset-0 flex items-center justify-center">
-              <span className="text-[7px] font-medium text-white/50 tracking-wider text-center leading-tight">
+              <span className="text-[11px] font-medium text-primary/70 tracking-wider text-center leading-tight">
                 Zookeeper caught all
                 <br />
                 the critters!
@@ -101,14 +101,16 @@ export function GatorEasterEgg() {
 
         {/* Gator credit text */}
         {chomping && !zookeeperWalking && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
-            <span className="gator-credit text-[8px] font-medium text-primary/70 tracking-wider text-center leading-tight">
-              from the giant mutant brain
-              <br />
-              of Laura Robinson
-            </span>
+          <div className="absolute inset-0 flex items-center justify-center">
+            {!showCritterLine && (
+              <span className="gator-credit text-[11px] font-medium text-primary/70 tracking-wider text-center leading-tight">
+                from the giant mutant brain
+                <br />
+                of Laura Robinson
+              </span>
+            )}
             {showCritterLine && (
-              <span className="critter-line text-[8px] font-medium text-primary/50 tracking-wider text-center leading-tight">
+              <span className="critter-line text-[11px] font-medium text-primary/70 tracking-wider text-center leading-tight">
                 Critters got loose!
               </span>
             )}

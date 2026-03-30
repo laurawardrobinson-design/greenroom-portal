@@ -67,7 +67,7 @@ export function DateChipPicker({
           {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
             <div
               key={i}
-              className="h-5 flex items-center justify-center text-[9px] font-medium text-text-tertiary"
+              className="h-5 flex items-center justify-center text-[10px] font-medium text-text-tertiary"
             >
               {d}
             </div>

@@ -23,7 +23,7 @@ import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { useToast } from "@/components/ui/toast";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Info, Users, AlertCircle, UserCircle, Calendar, ChevronDown } from "lucide-react";
+import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Bell, Users, AlertCircle, Calendar, ChevronDown, X, UserCircle, Info } from "lucide-react";
 import { BudgetSidebarTile } from "@/components/campaigns/tiles/budget-sidebar-tile";
 import useSWR from "swr";
 import type { AppUser } from "@/types/domain";
@@ -87,6 +87,13 @@ export default function CampaignDetailPage({
 
   // Draft email modal
   const [showDraftEmail, setShowDraftEmail] = useState(false);
+  const [dismissedNotifs, setDismissedNotifs] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const stored = localStorage.getItem(`dismissed-notifs-${id}`);
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
 
 
   // Permissions
@@ -232,6 +239,17 @@ export default function CampaignDetailPage({
     }
   }
 
+  function dismissNotif(key: string) {
+    const next = new Set(dismissedNotifs);
+    next.add(key);
+    setDismissedNotifs(next);
+    localStorage.setItem(`dismissed-notifs-${id}`, JSON.stringify([...next]));
+  }
+
+  const visibleAttentionItems = attentionItems.filter(
+    (item) => !dismissedNotifs.has(item.label + (item.context ?? ""))
+  );
+
   const allShots = setups.flatMap((s) => s.shots);
 
   const allDates = shoots.flatMap((s) =>
@@ -239,7 +257,7 @@ export default function CampaignDetailPage({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 -mt-3">
       {/* Header + logline + top-right actions */}
       <div className="flex items-start gap-4">
         <div className="flex-1 space-y-1">
@@ -269,43 +287,72 @@ export default function CampaignDetailPage({
                   }
                 }}
                 rows={1}
-                placeholder="Add a logline — one sentence on what this campaign is and why it exists."
-                className="w-full text-xs text-text-secondary bg-transparent focus:outline-none resize-none"
+                placeholder="Add a logline — one sentence about what this campaign is and why it exists."
+                className="w-full text-sm text-text-secondary bg-transparent focus:outline-none resize-none"
               />
             ) : campaign.notes ? (
               <p
-                className={`text-xs text-text-secondary leading-relaxed whitespace-pre-wrap ${canEdit && campaign.status !== "Cancelled" ? "cursor-pointer hover:text-text-primary transition-colors" : ""}`}
+                className={`text-sm text-text-secondary leading-relaxed whitespace-pre-wrap ${canEdit && campaign.status !== "Cancelled" ? "cursor-pointer hover:text-text-primary transition-colors" : ""}`}
                 onClick={() => { if (canEdit && campaign.status !== "Cancelled") startNotesEdit(); }}
               >
                 {campaign.notes}
               </p>
             ) : (
               <p
-                className="text-xs text-text-tertiary italic cursor-pointer hover:text-text-secondary transition-colors"
+                className="text-sm text-text-tertiary italic cursor-pointer hover:text-text-secondary transition-colors"
                 onClick={startNotesEdit}
               >
-                Add a logline — one sentence on what this campaign is and why it exists.
+                Add a logline — one sentence about what this campaign is and why it exists.
               </p>
             )}
           </div>
         )}
         </div>
 
-        {/* Status + Draft Email — top right, aligned with title */}
-        <div className="flex items-center gap-2 shrink-0 pt-5">
-          <StatusDropdown
-            status={campaign.status}
-            onStatusChange={canEdit && campaign.status !== "Cancelled" ? handleStatusChange : undefined}
-            disabled={!canEdit || campaign.status === "Cancelled"}
-          />
-          <button
-            type="button"
-            onClick={() => setShowDraftEmail(true)}
-            title="Draft Email"
-            className="flex items-center justify-center rounded-lg border border-border p-1.5 text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors shrink-0"
-          >
-            <Mail className="h-3.5 w-3.5" />
-          </button>
+        {/* Status + Assets Due — top right */}
+        <div className="shrink-0 space-y-2 pt-1">
+          {/* Row 1: Planning + Mail — aligned with WF number */}
+          <div className="flex items-center justify-end gap-2">
+            <StatusDropdown
+              status={campaign.status}
+              onStatusChange={canEdit && campaign.status !== "Cancelled" ? handleStatusChange : undefined}
+              disabled={!canEdit || campaign.status === "Cancelled"}
+            />
+            <button
+              type="button"
+              onClick={() => setShowDraftEmail(true)}
+              title="Draft Email"
+              className="flex items-center justify-center rounded-lg border border-border p-1.5 text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors shrink-0"
+            >
+              <Mail className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          {/* Row 2: Assets Due — stacked label + big date */}
+          {(showFinancials || campaign.assetsDeliveryDate) && (
+            <div
+              className={`relative text-right ${canEdit ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+              onClick={() => canEdit && assetsDueDateRef.current?.showPicker()}
+            >
+              <div className="flex items-center justify-end gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-primary" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-primary">Assets Due</span>
+              </div>
+              {campaign.assetsDeliveryDate && (
+                <p className="text-lg font-bold text-primary tracking-wide mt-0.5">
+                  {format(parseISO(campaign.assetsDeliveryDate), "MMM d, yyyy").toUpperCase()}
+                </p>
+              )}
+              {canEdit && (
+                <input
+                  ref={assetsDueDateRef}
+                  type="date"
+                  value={campaign.assetsDeliveryDate ?? ""}
+                  onChange={(e) => handleUpdate("assetsDeliveryDate", e.target.value || null)}
+                  className="absolute inset-0 opacity-0 pointer-events-none w-0"
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -364,103 +411,44 @@ export default function CampaignDetailPage({
         {/* Right column — info sidebar */}
         <div className="space-y-3">
 
-          {/* Campaign Info */}
-          <CollapsibleSection
-            id={`campaign-${id}-info`}
-            title="Campaign Info"
-            icon={Info}
-            defaultExpanded={true}
-          >
-            <div className="pt-1.5">
-              {/* Attention items */}
-              {attentionItems.length > 0 && (
-                <div className="space-y-1.5 mb-3 pb-3 border-b border-border">
-                  {attentionItems.map((item, i) => (
-                    <div key={i} className="flex items-start gap-2 pl-2.5 py-1.5 rounded-r-md border-l-2 border-amber-400 bg-amber-50/60">
-                      <AlertCircle className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-medium text-amber-800 leading-tight">{item.label}</p>
-                        {item.context && (
-                          <p className="text-[11px] text-amber-600 mt-0.5">{item.context}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Info rows */}
-              <div className="divide-y divide-border/60">
-                {/* Producer */}
-                {showFinancials && (
-                  <div className="flex items-center justify-between gap-3 py-2">
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <UserCircle className="h-3.5 w-3.5 text-text-tertiary" />
-                      <span className="text-[10px] uppercase tracking-wider font-medium text-text-tertiary">Producer</span>
-                    </div>
-                    {canEdit ? (
-                      <div className="relative flex items-center">
-                        <select
-                          value={campaign.producerId ?? ""}
-                          onChange={(e) => handleUpdate("producerId", e.target.value || null)}
-                          className="appearance-none text-xs font-medium text-text-primary bg-transparent focus:outline-none cursor-pointer hover:text-primary transition-colors pr-5"
-                        >
-                          <option value="">Unassigned</option>
-                          {allUsers
-                            .filter((u) => u.role === "Producer" || u.role === "Admin")
-                            .map((u) => (
-                              <option key={u.id} value={u.id}>{u.name}</option>
-                            ))}
-                        </select>
-                        <ChevronDown className="h-3 w-3 text-text-tertiary absolute right-0 pointer-events-none" />
-                      </div>
-                    ) : (
-                      <span className="text-xs font-medium text-text-primary">
-                        {producer?.name ?? <span className="text-text-tertiary italic">Unassigned</span>}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* Assets Due */}
-                {(showFinancials || campaign.assetsDeliveryDate) && (
-                  <div className="flex items-center justify-between gap-3 py-2">
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <Calendar className="h-3.5 w-3.5 text-text-tertiary" />
-                      <span className="text-[10px] uppercase tracking-wider font-medium text-text-tertiary">Assets Due</span>
-                    </div>
-                    {canEdit ? (
-                      <div className="relative inline-flex items-center">
-                        <button
-                          type="button"
-                          onClick={() => assetsDueDateRef.current?.showPicker()}
-                          className="text-xs font-medium text-text-primary hover:text-primary transition-colors"
-                        >
-                          {campaign.assetsDeliveryDate
-                            ? format(parseISO(campaign.assetsDeliveryDate), "MMM d, yyyy")
-                            : <span className="text-text-tertiary">Set date</span>
-                          }
-                        </button>
-                        <input
-                          ref={assetsDueDateRef}
-                          type="date"
-                          value={campaign.assetsDeliveryDate ?? ""}
-                          onChange={(e) => handleUpdate("assetsDeliveryDate", e.target.value || null)}
-                          className="absolute inset-0 opacity-0 pointer-events-none w-0"
-                        />
-                      </div>
-                    ) : campaign.assetsDeliveryDate ? (
-                      <span className="text-xs font-medium text-text-primary">
-                        {format(parseISO(campaign.assetsDeliveryDate), "MMM d, yyyy")}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-text-tertiary">—</span>
-                    )}
-                  </div>
-                )}
+          {/* Activity — always visible */}
+          <div className="border border-border rounded-lg bg-surface">
+            <div className="flex items-center px-3.5 py-2.5 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4 shrink-0 text-primary" />
+                <span className="text-sm font-semibold text-text-primary tracking-wider uppercase">Activity</span>
               </div>
             </div>
-          </CollapsibleSection>
+            <div className="px-3.5 py-3">
+              {visibleAttentionItems.length > 0 ? (
+                <div className="space-y-1.5">
+                  {visibleAttentionItems.map((item, i) => {
+                    const key = item.label + (item.context ?? "");
+                    return (
+                      <div key={i} className="group flex items-start gap-2 pl-2.5 py-1.5 rounded-r-md border-l-2 border-primary bg-primary/5">
+                        <AlertCircle className="h-3 w-3 text-primary shrink-0 mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-medium text-text-primary leading-tight">{item.label}</p>
+                          {item.context && (
+                            <p className="text-[13px] text-text-secondary mt-0.5">{item.context}</p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => dismissNotif(key)}
+                          className="opacity-0 group-hover:opacity-100 shrink-0 p-0.5 rounded hover:bg-surface-secondary transition-opacity"
+                        >
+                          <X className="h-3 w-3 text-text-tertiary" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-text-tertiary">No activity</p>
+              )}
+            </div>
+          </div>
 
           {/* Budget */}
           {showFinancials && (
@@ -506,7 +494,7 @@ export default function CampaignDetailPage({
                 <div className="flex flex-col items-center gap-3 py-4 px-5">
                   {canEdit && (
                     <button type="button" onClick={() => setShowAddProduct(true)}
-                      className="inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-xs font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors">
+                      className="inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-sm font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors">
                       <Plus className="h-3 w-3" />
                       Add Product
                     </button>
@@ -518,10 +506,10 @@ export default function CampaignDetailPage({
                     <div key={cp.id} className="flex items-start gap-3 rounded-lg bg-surface-secondary p-3">
                       <ShoppingBasket className="h-4 w-4 text-text-tertiary shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-text-primary truncate">{cp.product?.name || "Unknown product"}</p>
-                        <p className="text-xs text-text-tertiary">{cp.product?.department}</p>
+                        <p className="text-base font-medium text-text-primary truncate">{cp.product?.name || "Unknown product"}</p>
+                        <p className="text-sm text-text-tertiary">{cp.product?.department}</p>
                         {cp.notes && (
-                          <p className="text-xs text-text-secondary mt-1 leading-relaxed">{cp.notes}</p>
+                          <p className="text-sm text-text-secondary mt-1 leading-relaxed">{cp.notes}</p>
                         )}
                       </div>
                     </div>
@@ -544,7 +532,7 @@ export default function CampaignDetailPage({
                 <div className="flex flex-col items-center gap-3 py-4 px-5">
                   {canEdit && (
                     <button type="button" onClick={() => setShowAddGear(true)}
-                      className="inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-xs font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors">
+                      className="inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-sm font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors">
                       <Plus className="h-3 w-3" />
                       Add Gear
                     </button>
@@ -556,8 +544,8 @@ export default function CampaignDetailPage({
                     <div key={cg.id} className="flex items-center gap-3 rounded-lg bg-surface-secondary p-3">
                       <Wrench className="h-4 w-4 text-text-tertiary shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-text-primary truncate">{cg.gearItem?.name || "Unknown gear"}</p>
-                        <p className="text-xs text-text-tertiary">{cg.gearItem?.category} · {cg.gearItem?.brand} {cg.gearItem?.model}</p>
+                        <p className="text-base font-medium text-text-primary truncate">{cg.gearItem?.name || "Unknown gear"}</p>
+                        <p className="text-sm text-text-tertiary">{cg.gearItem?.category} · {cg.gearItem?.brand} {cg.gearItem?.model}</p>
                       </div>
                     </div>
                   ))}
@@ -644,7 +632,7 @@ export default function CampaignDetailPage({
           }}
           className="space-y-4"
         >
-          <p className="text-xs text-text-secondary">
+          <p className="text-sm text-text-secondary">
             Current budget: {formatCurrency(financials.budget)} · Remaining: {formatCurrency(financials.remaining)}
           </p>
           <div>
@@ -668,7 +656,7 @@ export default function CampaignDetailPage({
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1.5">
+            <label className="block text-base font-medium text-text-primary mb-1.5">
               Rationale
             </label>
             <textarea
@@ -676,7 +664,7 @@ export default function CampaignDetailPage({
               onChange={(e) => setOverageRationale(e.target.value)}
               placeholder="Why is the additional budget needed?"
               rows={3}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
             />
           </div>
           <ModalFooter>

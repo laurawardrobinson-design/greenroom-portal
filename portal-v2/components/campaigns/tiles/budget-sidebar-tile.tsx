@@ -57,7 +57,7 @@ export function BudgetSidebarTile({ campaignId, financials, vendors, canEdit, on
       <div className="flex border-b border-border pt-3 mb-3 -mx-3.5 px-3.5">
         <button
           onClick={() => setTab("overview")}
-          className={`pb-2 mr-4 text-xs font-medium border-b-2 -mb-px transition-colors ${
+          className={`pb-2 mr-4 text-sm font-medium border-b-2 -mb-px transition-colors ${
             tab === "overview"
               ? "border-primary text-primary"
               : "border-transparent text-text-tertiary hover:text-text-secondary"
@@ -67,7 +67,7 @@ export function BudgetSidebarTile({ campaignId, financials, vendors, canEdit, on
         </button>
         <button
           onClick={() => setTab("vendors")}
-          className={`pb-2 text-xs font-medium border-b-2 -mb-px transition-colors ${
+          className={`pb-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
             tab === "vendors"
               ? "border-primary text-primary"
               : "border-transparent text-text-tertiary hover:text-text-secondary"
@@ -93,11 +93,11 @@ export function BudgetSidebarTile({ campaignId, financials, vendors, canEdit, on
                 />
               </div>
               <div className="flex items-center gap-3 mt-1.5">
-                <span className="flex items-center gap-1 text-[10px] text-text-tertiary">
+                <span className="flex items-center gap-1 text-xs text-text-tertiary">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
                   Spent
                 </span>
-                <span className="flex items-center gap-1 text-[10px] text-text-tertiary">
+                <span className="flex items-center gap-1 text-xs text-text-tertiary">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
                   Committed
                 </span>
@@ -107,19 +107,19 @@ export function BudgetSidebarTile({ campaignId, financials, vendors, canEdit, on
 
           {/* Numbers */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between text-sm">
               <span className="text-text-tertiary">Total budget</span>
               <span className="font-semibold text-text-primary">{formatCurrency(financials.budget)}</span>
             </div>
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between text-sm">
               <span className="text-text-tertiary">Spent</span>
               <span className="font-medium text-emerald-600">{formatCurrency(financials.spent)}</span>
             </div>
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between text-sm">
               <span className="text-text-tertiary">Committed</span>
               <span className="font-medium text-blue-600">{formatCurrency(financials.committed)}</span>
             </div>
-            <div className="flex items-center justify-between text-xs border-t border-border pt-1.5">
+            <div className="flex items-center justify-between text-sm border-t border-border pt-1.5">
               <span className="font-medium text-text-secondary">Remaining</span>
               <span className={`font-semibold ${
                 isOver ? "text-red-600" : isWarning ? "text-amber-600" : "text-emerald-600"
@@ -133,7 +133,7 @@ export function BudgetSidebarTile({ campaignId, financials, vendors, canEdit, on
             <button
               type="button"
               onClick={onRequestOverage}
-              className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+              className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
             >
               Request adjustment →
             </button>
@@ -144,7 +144,7 @@ export function BudgetSidebarTile({ campaignId, financials, vendors, canEdit, on
       {tab === "vendors" && (
         <div className="space-y-3">
           {vendors.length === 0 ? (
-            <p className="text-xs text-text-tertiary py-1">No vendors assigned yet.</p>
+            <p className="text-sm text-text-tertiary py-1">No vendors assigned yet.</p>
           ) : (
             <div className="space-y-1">
               {vendors.map((cv) => {
@@ -153,13 +153,13 @@ export function BudgetSidebarTile({ campaignId, financials, vendors, canEdit, on
                 return (
                   <div
                     key={cv.id}
-                    className="flex items-center justify-between rounded-md bg-surface-secondary px-2.5 py-2 text-xs"
+                    className="flex items-center justify-between rounded-md bg-surface-secondary px-2.5 py-2 text-sm"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-text-primary truncate">
                         {cv.vendor?.companyName || "Unknown"}
                       </p>
-                      <p className="text-[10px] text-text-tertiary">{cv.vendor?.category}</p>
+                      <p className="text-xs text-text-tertiary">{cv.vendor?.category}</p>
                     </div>
                     <span className={`font-medium ml-2 shrink-0 ${
                       isPaid ? "text-emerald-600" : "text-text-secondary"
@@ -174,7 +174,7 @@ export function BudgetSidebarTile({ campaignId, financials, vendors, canEdit, on
 
           {overageRequests.length > 0 && (
             <div>
-              <p className="text-[10px] uppercase tracking-wider font-medium text-text-tertiary mb-1.5">
+              <p className="text-xs uppercase tracking-wider font-medium text-text-tertiary mb-1.5">
                 Adjustment Requests
               </p>
               <div className="space-y-1.5">
@@ -192,10 +192,10 @@ export function BudgetSidebarTile({ campaignId, financials, vendors, canEdit, on
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
-                        <span className="text-xs font-medium text-text-primary">
+                        <span className="text-sm font-medium text-text-primary">
                           {formatCurrency(req.amount)}
                         </span>
-                        <span className={`text-[10px] font-medium ${
+                        <span className={`text-xs font-medium ${
                           req.status === "Approved"
                             ? "text-emerald-600"
                             : req.status === "Declined"
@@ -205,10 +205,10 @@ export function BudgetSidebarTile({ campaignId, financials, vendors, canEdit, on
                           {req.status}
                         </span>
                       </div>
-                      <p className="text-[10px] text-text-secondary mt-0.5 leading-tight">
+                      <p className="text-xs text-text-secondary mt-0.5 leading-tight">
                         {req.rationale}
                       </p>
-                      <p className="text-[10px] text-text-tertiary mt-0.5">
+                      <p className="text-xs text-text-tertiary mt-0.5">
                         {req.requester?.name && `${req.requester.name} · `}
                         {format(parseISO(req.createdAt), "MMM d")}
                       </p>
@@ -223,7 +223,7 @@ export function BudgetSidebarTile({ campaignId, financials, vendors, canEdit, on
             <button
               type="button"
               onClick={onRequestOverage}
-              className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+              className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
             >
               Request adjustment →
             </button>

@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShotListSpreadsheet } from "@/components/campaigns/shot-list-spreadsheet";
-import { Crosshair, Plus } from "lucide-react";
+import { Crosshair } from "lucide-react";
 import type { ShotListSetup, CampaignDeliverable } from "@/types/domain";
 
 interface Props {
@@ -41,21 +41,11 @@ export function ShotListTile({
       <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
         <div className="flex items-center gap-2">
           <Crosshair className="h-4 w-4 shrink-0 text-primary" />
-          <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary">Shot List</h3>
-            {totalShots > 0 && (
-              <p className="text-[10px] text-text-tertiary">
-                {completedShots}/{totalShots} complete
-              </p>
-            )}
-          </div>
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">Shot List Preview</h3>
         </div>
-        {canEditShots && setups.length > 0 && (
-          <Button size="sm" variant="ghost" onClick={onAddSetup}>
-            <Plus className="h-3.5 w-3.5" />
-            Add Scene
-          </Button>
-        )}
+        <Button size="sm" variant="ghost" className="text-xs text-text-secondary hover:text-text-primary">
+          View Full Shot List
+        </Button>
       </div>
 
       {/* On-set progress bar */}
