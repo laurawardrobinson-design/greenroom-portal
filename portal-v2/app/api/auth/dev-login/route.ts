@@ -23,10 +23,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Dev auth disabled" }, { status: 403 });
   }
 
-  const { role } = await request.json();
+  const { role, vendor_id } = await request.json();
   const testUser = TEST_USERS[role as string];
   if (!testUser) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+  }
+
+  // Vendor role requires vendor_id selection
+  if (testUser.role === "Vendor" && !vendor_id) {
+    return NextResponse.json({ error: "Vendor login requires vendor_id" }, { status: 400 });
   }
 
   const admin = createAdminClient();
@@ -49,11 +54,12 @@ export async function POST(request: Request) {
           name: testUser.name,
           role: testUser.role,
           active: true,
+          vendor_id: vendor_id || null,
         },
         { onConflict: "id" }
       );
     }
-    return NextResponse.json({ success: true, role: testUser.role });
+    return NextResponse.json({ success: true, role: testUser.role, vendor_id });
   }
 
   // Sign-in failed — user probably doesn't exist, create them
@@ -78,6 +84,7 @@ export async function POST(request: Request) {
         name: testUser.name,
         role: testUser.role,
         active: true,
+        vendor_id: vendor_id || null,
       },
       { onConflict: "id" }
     );
@@ -93,5 +100,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: signInErr2.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, role: testUser.role });
+  return NextResponse.json({ success: true, role: testUser.role, vendor_id });
 }

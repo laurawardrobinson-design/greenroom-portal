@@ -4,9 +4,9 @@ import { useState } from "react";
 import type { Campaign, CampaignStatus } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { Modal, ModalFooter } from "@/components/ui/modal";
-import { ArrowLeft, Trash2, X, Check } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Trash2, X, Check } from "lucide-react";
 import { CopyButton } from "./copy-button";
-import Link from "next/link";
 
 interface Props {
   campaign: Campaign;
@@ -82,6 +82,14 @@ export function CampaignDetailHeader({
 
   const isCancelled = campaign.status === "Cancelled";
 
+  // Build the title with WF number + campaign name
+  const titleParts: string[] = [];
+  if (campaign.wfNumber) {
+    titleParts.push(campaign.wfNumber);
+  }
+  titleParts.push(campaign.name);
+  const title = titleParts.join(" ");
+
   return (
     <div className="space-y-2">
       {/* Cancelled state banner */}
@@ -94,114 +102,85 @@ export function CampaignDetailHeader({
         </div>
       )}
 
-      {/* Top row: back + actions */}
-      <div className="flex items-start gap-3">
-        <Link
-          href="/campaigns"
-          className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-
-        <div className="flex-1 min-w-0">
-          {/* WF Number — top line */}
-          <div className="flex items-center gap-1.5 mb-0.5">
-            {editingWf ? (
-              <div className="flex items-center gap-1">
-                <input
-                  autoFocus
-                  value={wfValue}
-                  onChange={(e) => setWfValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") saveWfEdit();
-                    if (e.key === "Escape") cancelWfEdit();
-                  }}
-                  className="text-sm font-mono text-text-primary bg-transparent border-b border-primary focus:outline-none w-24"
-                />
-                <button onClick={saveWfEdit} className="text-primary hover:text-primary/80">
-                  <Check className="h-3 w-3" />
-                </button>
-                <button onClick={cancelWfEdit} className="text-text-tertiary hover:text-text-primary">
-                  <X className="h-3 w-3" />
+      {/* Page header with breadcrumb and title */}
+      {editingField === "name" ? (
+        <div className="space-y-3 pb-4 border-b border-border">
+          <button
+            onClick={cancelEdit}
+            className="flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors"
+          >
+            ← Campaigns
+          </button>
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <input
+                autoFocus
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveEdit("name");
+                  if (e.key === "Escape") cancelEdit();
+                }}
+                className={`text-2xl font-bold bg-transparent border-b-2 focus:outline-none flex-1 ${
+                  editError
+                    ? "text-error border-error text-text-primary"
+                    : "text-text-primary border-primary"
+                }`}
+              />
+              <button onClick={() => saveEdit("name")} className="text-primary hover:text-primary/80 shrink-0 pt-1">
+                <Check className="h-4 w-4" />
+              </button>
+              <button onClick={cancelEdit} className="text-text-tertiary hover:text-text-primary shrink-0 pt-1">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {editError && (
+              <div className="flex items-center justify-between gap-2 rounded px-2 py-1 bg-error/10">
+                <p className="text-sm text-error">{editError}</p>
+                <button
+                  onClick={revertEdit}
+                  className="text-sm text-error hover:text-error/80 underline"
+                >
+                  Revert
                 </button>
               </div>
-            ) : (
-              <span
-                className={`text-base font-semibold uppercase tracking-wider text-text-primary ${canEdit && !isCancelled ? "cursor-pointer hover:text-primary" : ""}`}
-                onClick={() => canEdit && !isCancelled && setEditingWf(true)}
-              >
-                {campaign.wfNumber || "—"}
-              </span>
             )}
           </div>
-
-          {/* Campaign name + copy — second line */}
-          {editingField === "name" ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  autoFocus
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") saveEdit("name");
-                    if (e.key === "Escape") cancelEdit();
-                  }}
-                  className={`text-xl font-bold tracking-tight bg-transparent border-b-2 focus:outline-none w-full max-w-md ${
-                    editError
-                      ? "text-error border-error text-text-primary"
-                      : "text-text-primary border-primary"
-                  }`}
-                />
-                <button onClick={() => saveEdit("name")} className="text-primary hover:text-primary/80">
-                  <Check className="h-4 w-4" />
-                </button>
-                <button onClick={cancelEdit} className="text-text-tertiary hover:text-text-primary">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              {editError && (
-                <div className="flex items-center justify-between gap-2 rounded px-2 py-1 bg-error/10">
-                  <p className="text-sm text-error">{editError}</p>
-                  <button
-                    onClick={revertEdit}
-                    className="text-sm text-error hover:text-error/80 underline"
-                  >
-                    Revert
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <h2
-                className={`text-xl font-bold tracking-tight text-text-primary truncate ${
-                  canEdit && !isCancelled ? "cursor-pointer hover:text-primary transition-colors" : ""
-                }`}
-                onClick={() => canEdit && !isCancelled && startEdit("name", campaign.name)}
-              >
-                {campaign.name}
-              </h2>
-              <CopyButton value={`${campaign.wfNumber ? campaign.wfNumber + " " : ""}${campaign.name}`} />
-            </div>
-          )}
         </div>
-
-        {/* Delete — far right (admin only) */}
-        {isAdmin && (
-          <div className="shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDeleteConfirm(true)}
-              title="Delete campaign"
-              className="text-text-tertiary hover:text-error"
+      ) : (
+        <PageHeader
+          breadcrumb="Campaigns"
+          breadcrumbHref="/campaigns"
+          title={
+            <span
+              className={canEdit && !isCancelled ? "cursor-pointer hover:text-primary/80 transition-colors" : ""}
+              onClick={() => canEdit && !isCancelled && startEdit("name", campaign.name)}
             >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        )}
-      </div>
+              {title}
+            </span>
+          }
+          actions={
+            isAdmin ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDeleteConfirm(true)}
+                title="Delete campaign"
+                className="text-text-tertiary hover:text-error"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
+
+      {/* Copy button below header */}
+      {!editingField && (
+        <div className="flex items-center gap-2 -mt-2">
+          <CopyButton value={title} />
+        </div>
+      )}
 
       {/* Delete confirmation */}
       <Modal

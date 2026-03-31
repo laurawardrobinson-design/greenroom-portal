@@ -6,10 +6,10 @@ import { useCampaign, useCampaigns } from "@/hooks/use-campaigns";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import useSWR from "swr";
 import type { AppUser, Shoot, CampaignVendor } from "@/types/domain";
 import {
-  ArrowLeft,
   CalendarDays,
   Truck,
   DollarSign,
@@ -393,22 +393,15 @@ export default function PreProductionWorkspacePage({
   return (
     <div className="space-y-0 -mt-3">
       {/* Header */}
-      <div className="pb-4 border-b border-border">
-        {/* Back link */}
-        <div className="mb-3">
-          <button
-            type="button"
-            onClick={() => router.push("/pre-production")}
-            className="flex items-center gap-1.5 text-xs font-medium text-text-tertiary hover:text-text-secondary transition-colors"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Pre Production
-          </button>
-        </div>
-
-        {/* Campaign title — doubles as the switcher trigger */}
-        <CampaignSwitcher currentId={id} currentName={campaign.name} currentWf={campaign.wfNumber} />
-      </div>
+      <PageHeader
+        breadcrumb="Pre Production"
+        breadcrumbHref="/pre-production"
+        title={
+          <div className="text-2xl font-bold">
+            <CampaignSwitcher currentId={id} currentName={campaign.name} currentWf={campaign.wfNumber} />
+          </div>
+        }
+      />
 
       {/* Tab bar */}
       <div className="border-b border-border">

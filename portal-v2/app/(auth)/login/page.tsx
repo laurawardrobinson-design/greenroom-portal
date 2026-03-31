@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
 
@@ -14,9 +14,39 @@ const DEV_ROLES = [
   { key: "vendor", label: "Vendor", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
 ];
 
+interface Vendor {
+  id: string;
+  company_name: string;
+  contact_name: string;
+}
+
 export default function LoginPage() {
   const [loading, setLoading] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [vendorLoading, setVendorLoading] = useState(false);
   const router = useRouter();
+
+  // Fetch demo vendors when vendor role is selected
+  useEffect(() => {
+    if (selectedRole === "vendor" && vendors.length === 0) {
+      fetchDemoVendors();
+    }
+  }, [selectedRole, vendors.length]);
+
+  async function fetchDemoVendors() {
+    setVendorLoading(true);
+    try {
+      const res = await fetch("/api/demo/vendors");
+      if (res.ok) {
+        const data = await res.json();
+        setVendors(data.vendors || []);
+      }
+    } catch {
+      console.error("Failed to fetch vendors");
+    }
+    setVendorLoading(false);
+  }
 
   async function handleGoogleLogin() {
     setLoading("google");
@@ -29,13 +59,16 @@ export default function LoginPage() {
     });
   }
 
-  async function handleDevLogin(role: string) {
+  async function handleDevLogin(role: string, vendorId?: string) {
     setLoading(role);
     try {
+      const body: any = { role };
+      if (vendorId) body.vendor_id = vendorId;
+
       const res = await fetch("/api/auth/dev-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -103,22 +136,71 @@ export default function LoginPage() {
                 <div className="h-px flex-1 bg-white/15" />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                {DEV_ROLES.map((r) => (
-                  <button
-                    key={r.key}
-                    onClick={() => handleDevLogin(r.key)}
-                    disabled={loading !== null}
-                    className={`rounded-lg border px-3 py-2.5 text-xs font-medium transition-all disabled:opacity-50 ${r.color}`}
-                  >
-                    {loading === r.key ? (
-                      <div className="mx-auto h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              {/* Vendor selector (shown when vendor is selected) */}
+              {selectedRole === "vendor" ? (
+                <>
+                  <div className="mb-4">
+                    <label className="block text-xs font-medium text-white/70 mb-2">
+                      Select Demo Vendor
+                    </label>
+                    {vendorLoading ? (
+                      <div className="text-center py-4 text-sm text-white/50">Loading vendors...</div>
+                    ) : vendors.length === 0 ? (
+                      <div className="text-center py-4 text-sm text-white/50">No demo vendors found</div>
                     ) : (
-                      r.label
+                      <div className="space-y-2">
+                        {vendors.map((vendor) => (
+                          <button
+                            key={vendor.id}
+                            onClick={() => handleDevLogin("vendor", vendor.id)}
+                            disabled={loading !== null}
+                            className="w-full text-left rounded-lg border border-white/20 bg-white/5 px-3 py-2.5 text-xs hover:bg-white/10 transition-all disabled:opacity-50"
+                          >
+                            {loading === "vendor" ? (
+                              <div className="mx-auto h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                            ) : (
+                              <>
+                                <div className="font-medium text-white">{vendor.company_name}</div>
+                                <div className="text-white/50 text-[10px]">{vendor.contact_name}</div>
+                              </>
+                            )}
+                          </button>
+                        ))}
+                      </div>
                     )}
+                  </div>
+                  <button
+                    onClick={() => setSelectedRole(null)}
+                    disabled={loading !== null}
+                    className="w-full mt-2 text-xs text-white/50 hover:text-white/70 transition-colors"
+                  >
+                    ← Back to roles
                   </button>
-                ))}
-              </div>
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {DEV_ROLES.map((r) => (
+                    <button
+                      key={r.key}
+                      onClick={() => {
+                        if (r.key === "vendor") {
+                          setSelectedRole("vendor");
+                        } else {
+                          handleDevLogin(r.key);
+                        }
+                      }}
+                      disabled={loading !== null}
+                      className={`rounded-lg border px-3 py-2.5 text-xs font-medium transition-all disabled:opacity-50 ${r.color}`}
+                    >
+                      {loading === r.key ? (
+                        <div className="mx-auto h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                      ) : (
+                        r.label
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </div>

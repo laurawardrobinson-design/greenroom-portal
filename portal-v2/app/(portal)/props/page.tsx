@@ -26,6 +26,7 @@ import {
   LayoutGrid,
   List,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -73,20 +74,17 @@ export default function PropsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-text-primary">Props</h2>
-          <p className="text-sm text-text-secondary">
-            {items.length} item{items.length !== 1 ? "s" : ""} · {availableCount} available
-          </p>
-        </div>
-        {canEdit && tab === "items" && (
-          <Button onClick={() => setShowAdd(true)}>
-            <Plus className="h-4 w-4" />
-            Add Prop
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Props"
+        actions={
+          canEdit && tab === "items" && (
+            <Button onClick={() => setShowAdd(true)}>
+              <Plus className="h-4 w-4" />
+              Add Prop
+            </Button>
+          )
+        }
+      />
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">

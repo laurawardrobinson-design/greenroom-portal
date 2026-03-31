@@ -14,6 +14,7 @@ import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { useToast } from "@/components/ui/toast";
 import { VENDOR_CATEGORIES } from "@/lib/constants/categories";
 import { Plus, Users, Search, Mail, Phone } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function VendorsPage() {
   const [search, setSearch] = useState("");
@@ -26,20 +27,15 @@ export default function VendorsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-text-primary">
-            Vendor Roster
-          </h2>
-          <p className="text-sm text-text-secondary">
-            {vendors.length} active vendor{vendors.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <Button onClick={() => setShowAdd(true)}>
-          <Plus className="h-4 w-4" />
-          Add Vendor
-        </Button>
-      </div>
+      <PageHeader
+        title="Vendor Roster"
+        actions={
+          <Button onClick={() => setShowAdd(true)}>
+            <Plus className="h-4 w-4" />
+            Add Vendor
+          </Button>
+        }
+      />
 
       {/* Search */}
       <form

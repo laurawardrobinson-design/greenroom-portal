@@ -6,11 +6,12 @@ import { useCampaign } from "@/hooks/use-campaigns";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { ShotDetailModal } from "@/components/campaigns/shot-detail-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import {
-  ArrowLeft, Crosshair, GripVertical, Check, AlertTriangle, Film, Camera, Layers,
+  Crosshair, GripVertical, Check, AlertTriangle, Film, Camera, Layers,
   MapPin, User, Package, Shirt, FileText, RotateCcw, Plus, Trash2,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -543,28 +544,19 @@ export default function FullShotListPage({ params }: { params: Promise<{ id: str
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Page header */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <button
-              type="button"
-              onClick={() => router.push(`/campaigns/${id}`)}
-              className="flex items-center gap-1.5 text-xs font-medium text-text-tertiary hover:text-text-secondary transition-colors mb-2"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to campaign
-            </button>
+        <PageHeader
+          breadcrumb={`${campaign.wfNumber ? campaign.wfNumber + " " : ""}${campaign.name}`}
+          breadcrumbHref={`/campaigns/${id}`}
+          title={
             <div className="flex items-center gap-2">
               <Crosshair className="h-4 w-4 text-primary" />
-              <h1 className="text-sm font-semibold uppercase tracking-wider text-text-primary">One-Liner</h1>
+              <span className="text-2xl font-bold text-text-primary">Shots</span>
             </div>
-            <p className="text-xl font-bold text-text-primary">{campaign.name}</p>
-            {campaign.wfNumber && (
-              <p className="text-xs font-mono text-text-tertiary">{campaign.wfNumber}</p>
-            )}
-          </div>
+          }
+        />
 
-          {/* Progress + actions */}
-          <div className="flex flex-col items-end gap-3 shrink-0">
+        {/* Progress + actions */}
+        <div className="flex flex-col items-end gap-3 shrink-0">
             {totalShots > 0 && (
               <div className="text-right space-y-1">
                 <p className="text-xs font-medium text-text-tertiary">
@@ -588,7 +580,6 @@ export default function FullShotListPage({ params }: { params: Promise<{ id: str
                 Reset Naming
               </button>
             )}
-          </div>
         </div>
 
         {/* Scenes */}

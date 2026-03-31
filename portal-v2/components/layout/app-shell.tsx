@@ -11,6 +11,7 @@ import { MothDetector } from "@/components/menagerie/moth-detector";
 import { RaccoonDetector } from "@/components/menagerie/raccoon-detector";
 import { TrophyCase } from "@/components/menagerie/trophy-case";
 import { OnboardingModal, getProductIcon } from "@/components/onboarding/onboarding-modal";
+import { DemoIcon } from "@/components/demo-mode/demo-icon";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -67,6 +68,9 @@ function AppShellInner({ children }: AppShellProps) {
       <MothDetector />
       <RaccoonDetector />
       <TrophyCase />
+
+      {/* Demo Mode Icon */}
+      {process.env.NEXT_PUBLIC_DEV_AUTH === "true" && <DemoIcon />}
     </>
   );
 }

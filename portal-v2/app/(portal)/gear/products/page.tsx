@@ -19,12 +19,12 @@ import {
   Plus,
   Search,
   ShoppingBasket,
-  ArrowLeft,
   Edit2,
   Trash2,
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/page-header";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -66,30 +66,19 @@ export default function ProductDirectoryPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/inventory"
-            className="rounded-lg p-1.5 text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h2 className="text-lg font-semibold text-text-primary">
-              Product Directory
-            </h2>
-            <p className="text-sm text-text-secondary">
-              {products.length} product{products.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-        </div>
-        {canEdit && (
-          <Button onClick={() => setShowAdd(true)}>
-            <Plus className="h-4 w-4" />
-            Add Product
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        breadcrumb="Inventory"
+        breadcrumbHref="/inventory"
+        title="Product Directory"
+        actions={
+          canEdit && (
+            <Button onClick={() => setShowAdd(true)}>
+              <Plus className="h-4 w-4" />
+              Add Product
+            </Button>
+          )
+        }
+      />
 
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

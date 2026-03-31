@@ -474,3 +474,414 @@ export function generateOneLinerPdf(options: OneLinerPdfOptions): jsPDF {
 
   return doc;
 }
+
+// ─── Estimate PDF ────────────────────────────────────────────────────────────
+
+export interface EstimateItem {
+  category: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface EstimatePdfOptions {
+  vendorName: string;
+  vendorContact: string;
+  vendorEmail: string;
+  vendorPhone: string;
+  campaignName: string;
+  wfNumber: string;
+  estimateDate: string;
+  items: EstimateItem[];
+  totalAmount: number;
+  notes?: string;
+}
+
+export function generateEstimatePdf(options: EstimatePdfOptions): jsPDF {
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 36;
+  const contentW = pageW - margin * 2;
+  let y = margin;
+
+  // Header
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("ESTIMATE", margin, y);
+  y += 20;
+
+  // Vendor info (left) | Campaign info (right)
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("From:", margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(options.vendorName, margin, y + 12);
+  doc.text(`${options.vendorContact}`, margin, y + 24);
+  doc.text(`${options.vendorEmail}`, margin, y + 36);
+  doc.text(`${options.vendorPhone}`, margin, y + 48);
+
+  // Campaign info (right)
+  const rightCol = margin + contentW / 2;
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("Campaign:", rightCol, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(`${options.wfNumber} ${options.campaignName}`, rightCol, y + 12, { maxWidth: contentW / 2 - 8 });
+  doc.text(`Estimate Date: ${format(parseISO(options.estimateDate), "MMM d, yyyy")}`, rightCol, y + 36);
+
+  y += 70;
+  doc.setDrawColor(200);
+  doc.setLineWidth(1);
+  doc.line(margin, y, pageW - margin, y);
+  y += 12;
+
+  // Line items table
+  const tableBody = options.items.map((item) => [
+    item.description,
+    item.category,
+    String(item.quantity),
+    `$${item.unitPrice.toFixed(2)}`,
+    `$${item.amount.toFixed(2)}`,
+  ]);
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    head: [["Description", "Category", "Qty", "Unit Price", "Amount"]],
+    body: tableBody,
+    theme: "grid",
+    headStyles: {
+      fillColor: [245, 245, 245],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      fontSize: 8,
+      cellPadding: 4,
+    },
+    bodyStyles: { fontSize: 8, cellPadding: 4 },
+    columnStyles: {
+      0: { cellWidth: 160 },
+      1: { cellWidth: 90 },
+      2: { cellWidth: 40 },
+      3: { cellWidth: 70 },
+      4: { cellWidth: 70 },
+    },
+  });
+
+  y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
+
+  // Total
+  doc.setDrawColor(200);
+  doc.setLineWidth(1);
+  doc.line(margin, y, pageW - margin, y);
+  y += 8;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text(`Total Estimate: $${options.totalAmount.toFixed(2)}`, pageW - margin - 100, y, { align: "right" });
+
+  y += 20;
+
+  // Notes
+  if (options.notes) {
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("Notes:", margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(options.notes, margin, y + 12, { maxWidth: contentW });
+  }
+
+  return doc;
+}
+
+// ─── PO PDF ──────────────────────────────────────────────────────────────────
+
+export interface POItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface POPdfOptions {
+  vendorName: string;
+  vendorContact: string;
+  vendorEmail: string;
+  vendorPhone: string;
+  campaignName: string;
+  wfNumber: string;
+  poDate: string;
+  poNumber: string;
+  items: POItem[];
+  totalAmount: number;
+  terms?: string;
+  notes?: string;
+}
+
+export function generatePOPdf(options: POPdfOptions): jsPDF {
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 36;
+  const contentW = pageW - margin * 2;
+  let y = margin;
+
+  // Company letterhead
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("PURCHASE ORDER", margin, y);
+  y += 20;
+
+  // PO details (right)
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  const rightCol = margin + contentW - 150;
+  doc.text("PO Number:", rightCol, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(options.poNumber, rightCol, y + 12);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("PO Date:", rightCol, y + 24);
+  doc.setFont("helvetica", "normal");
+  doc.text(format(parseISO(options.poDate), "MMM d, yyyy"), rightCol, y + 36);
+
+  // Vendor info
+  y += 20;
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("Bill To:", margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(options.vendorName, margin, y + 12);
+  doc.text(`${options.vendorContact}`, margin, y + 24);
+  doc.text(`${options.vendorEmail}`, margin, y + 36);
+  doc.text(`${options.vendorPhone}`, margin, y + 48);
+
+  // Campaign info
+  y = margin + 20;
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("Project:", margin, y + 80);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(`${options.wfNumber} ${options.campaignName}`, margin, y + 92, { maxWidth: contentW });
+
+  y += 110;
+  doc.setDrawColor(200);
+  doc.setLineWidth(1);
+  doc.line(margin, y, pageW - margin, y);
+  y += 12;
+
+  // Line items table
+  const tableBody = options.items.map((item) => [
+    item.description,
+    String(item.quantity),
+    `$${item.unitPrice.toFixed(2)}`,
+    `$${item.amount.toFixed(2)}`,
+  ]);
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    head: [["Description", "Qty", "Unit Price", "Amount"]],
+    body: tableBody,
+    theme: "grid",
+    headStyles: {
+      fillColor: [245, 245, 245],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      fontSize: 8,
+      cellPadding: 4,
+    },
+    bodyStyles: { fontSize: 8, cellPadding: 4 },
+    columnStyles: {
+      0: { cellWidth: 240 },
+      1: { cellWidth: 50 },
+      2: { cellWidth: 80 },
+      3: { cellWidth: 80 },
+    },
+  });
+
+  y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
+
+  // Total
+  doc.setDrawColor(200);
+  doc.setLineWidth(1);
+  doc.line(margin, y, pageW - margin, y);
+  y += 8;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text(`Total PO Amount: $${options.totalAmount.toFixed(2)}`, pageW - margin - 120, y, { align: "right" });
+
+  y += 20;
+
+  // Terms
+  if (options.terms) {
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("Terms:", margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(options.terms, margin, y + 12, { maxWidth: contentW });
+    y += 24;
+  }
+
+  // Notes
+  if (options.notes) {
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("Notes:", margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(options.notes, margin, y + 12, { maxWidth: contentW });
+  }
+
+  return doc;
+}
+
+// ─── Invoice PDF ─────────────────────────────────────────────────────────────
+
+export interface InvoiceItem {
+  description: string;
+  amount: number;
+}
+
+export interface InvoicePdfOptions {
+  vendorName: string;
+  vendorContact: string;
+  vendorEmail: string;
+  vendorPhone: string;
+  campaignName: string;
+  wfNumber: string;
+  invoiceDate: string;
+  invoiceNumber: string;
+  items: InvoiceItem[];
+  totalAmount: number;
+  status?: "Pending" | "Approved" | "Paid" | "Rejected";
+  notes?: string;
+}
+
+export function generateInvoicePdf(options: InvoicePdfOptions): jsPDF {
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 36;
+  const contentW = pageW - margin * 2;
+  let y = margin;
+
+  // Header
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("INVOICE", margin, y);
+  y += 20;
+
+  // Invoice details (right)
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  const rightCol = margin + contentW - 150;
+  doc.text("Invoice Number:", rightCol, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(options.invoiceNumber, rightCol, y + 12);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Invoice Date:", rightCol, y + 24);
+  doc.setFont("helvetica", "normal");
+  doc.text(format(parseISO(options.invoiceDate), "MMM d, yyyy"), rightCol, y + 36);
+
+  // Vendor info
+  y += 20;
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("From:", margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(options.vendorName, margin, y + 12);
+  doc.text(`${options.vendorContact}`, margin, y + 24);
+  doc.text(`${options.vendorEmail}`, margin, y + 36);
+  doc.text(`${options.vendorPhone}`, margin, y + 48);
+
+  // Campaign info
+  y = margin + 20;
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("Project:", margin, y + 80);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(`${options.wfNumber} ${options.campaignName}`, margin, y + 92, { maxWidth: contentW });
+
+  y += 110;
+  doc.setDrawColor(200);
+  doc.setLineWidth(1);
+  doc.line(margin, y, pageW - margin, y);
+  y += 12;
+
+  // Line items table
+  const tableBody = options.items.map((item) => [
+    item.description,
+    `$${item.amount.toFixed(2)}`,
+  ]);
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    head: [["Description", "Amount"]],
+    body: tableBody,
+    theme: "grid",
+    headStyles: {
+      fillColor: [245, 245, 245],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      fontSize: 8,
+      cellPadding: 4,
+    },
+    bodyStyles: { fontSize: 8, cellPadding: 4 },
+    columnStyles: {
+      0: { cellWidth: 380 },
+      1: { cellWidth: 80 },
+    },
+  });
+
+  y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
+
+  // Total
+  doc.setDrawColor(200);
+  doc.setLineWidth(1);
+  doc.line(margin, y, pageW - margin, y);
+  y += 8;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text(`Total Amount Due: $${options.totalAmount.toFixed(2)}`, pageW - margin - 120, y, { align: "right" });
+
+  y += 20;
+
+  // Status badge
+  if (options.status) {
+    const statusColors: { [key: string]: [number, number, number] } = {
+      Pending: [255, 193, 7],
+      Approved: [76, 175, 80],
+      Paid: [33, 150, 243],
+      Rejected: [244, 67, 54],
+    };
+    const bgColor = statusColors[options.status] || [200, 200, 200];
+    doc.setFillColor(...bgColor);
+    doc.rect(pageW - margin - 100, y - 4, 80, 14, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text(options.status.toUpperCase(), pageW - margin - 60, y + 4, { align: "center" });
+  }
+
+  y += 20;
+
+  // Notes
+  if (options.notes) {
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("Notes:", margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(options.notes, margin, y + 12, { maxWidth: contentW });
+  }
+
+  return doc;
+}

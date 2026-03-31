@@ -55,7 +55,7 @@ export default function CampaignsPage() {
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-text-primary tracking-tight">Campaigns</h1>
+            <h1 className="text-2xl font-bold text-text-primary">Campaigns</h1>
             <p className="text-sm text-text-secondary mt-1">Manage and track all production projects.</p>
           </div>
           {canCreate && (
