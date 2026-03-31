@@ -12,6 +12,15 @@ function toUser(row: Record<string, unknown>): AppUser {
     phone: (row.phone as string) || "",
     title: (row.title as string) || "",
     vendorId: (row.vendor_id as string) || null,
+    favoriteDrinks: (row.favorite_drinks as string) || "",
+    favoriteSnacks: (row.favorite_snacks as string) || "",
+    dietaryRestrictions: (row.dietary_restrictions as string) || "",
+    allergies: (row.allergies as string) || "",
+    energyBoost: (row.energy_boost as string) || "",
+    favoritePublixProduct: (row.favorite_publix_product as string) || "",
+    lunchPlace: (row.lunch_place as string) || "",
+    preferredContact: (row.preferred_contact as string) || "Email",
+    onboardingCompleted: (row.onboarding_completed as boolean) ?? false,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -91,6 +100,9 @@ export async function createUser(input: {
   phone?: string;
   title?: string;
   role?: string;
+  favoriteDrinks?: string;
+  favoriteSnacks?: string;
+  dietaryRestrictions?: string;
 }): Promise<AppUser> {
   const db = createAdminClient();
   const { data, error } = await db
@@ -103,6 +115,9 @@ export async function createUser(input: {
       title: input.title || "",
       role: input.role || "Studio",
       active: true,
+      favorite_drinks: input.favoriteDrinks || "",
+      favorite_snacks: input.favoriteSnacks || "",
+      dietary_restrictions: input.dietaryRestrictions || "",
     })
     .select("*")
     .single();
@@ -116,12 +131,41 @@ export async function createUser(input: {
 
 export async function updateUser(
   id: string,
-  updates: { role?: string; active?: boolean }
+  updates: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    title?: string;
+    role?: string;
+    active?: boolean;
+    favoriteDrinks?: string;
+    favoriteSnacks?: string;
+    dietaryRestrictions?: string;
+    allergies?: string;
+    energyBoost?: string;
+    favoritePublixProduct?: string;
+    lunchPlace?: string;
+    preferredContact?: string;
+    onboardingCompleted?: boolean;
+  }
 ): Promise<AppUser> {
   const db = createAdminClient();
   const updateData: Record<string, unknown> = {};
+  if (updates.name !== undefined) updateData.name = updates.name;
+  if (updates.email !== undefined) updateData.email = updates.email;
+  if (updates.phone !== undefined) updateData.phone = updates.phone;
+  if (updates.title !== undefined) updateData.title = updates.title;
   if (updates.role !== undefined) updateData.role = updates.role;
   if (updates.active !== undefined) updateData.active = updates.active;
+  if (updates.favoriteDrinks !== undefined) updateData.favorite_drinks = updates.favoriteDrinks;
+  if (updates.favoriteSnacks !== undefined) updateData.favorite_snacks = updates.favoriteSnacks;
+  if (updates.dietaryRestrictions !== undefined) updateData.dietary_restrictions = updates.dietaryRestrictions;
+  if (updates.allergies !== undefined) updateData.allergies = updates.allergies;
+  if (updates.energyBoost !== undefined) updateData.energy_boost = updates.energyBoost;
+  if (updates.favoritePublixProduct !== undefined) updateData.favorite_publix_product = updates.favoritePublixProduct;
+  if (updates.lunchPlace !== undefined) updateData.lunch_place = updates.lunchPlace;
+  if (updates.preferredContact !== undefined) updateData.preferred_contact = updates.preferredContact;
+  if (updates.onboardingCompleted !== undefined) updateData.onboarding_completed = updates.onboardingCompleted;
 
   const { data, error } = await db
     .from("users")

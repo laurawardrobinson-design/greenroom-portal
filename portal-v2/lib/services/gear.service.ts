@@ -108,7 +108,7 @@ export async function createGearItem(input: {
       purchase_price: input.purchasePrice || 0,
       warranty_expiry: input.warrantyExpiry || null,
       notes: input.notes || "",
-      image_url: input.imageUrl || null,
+      image_url: input.imageUrl || "",
       section: input.section ?? "Gear",
     })
     .select()
@@ -210,7 +210,7 @@ export async function getActiveCheckouts(userId?: string): Promise<GearCheckout[
     notes: row.notes,
     gearItem: row.gear_items ? toGearItem(row.gear_items) : undefined,
     user: row.users
-      ? { id: row.users.id, email: row.users.email, name: row.users.name, role: row.users.role, active: row.users.active, avatarUrl: row.users.avatar_url || "", phone: row.users.phone || "", title: row.users.title || "", vendorId: row.users.vendor_id, createdAt: row.users.created_at, updatedAt: row.users.updated_at }
+      ? { id: row.users.id, email: row.users.email, name: row.users.name, role: row.users.role, active: row.users.active, avatarUrl: row.users.avatar_url || "", phone: row.users.phone || "", title: row.users.title || "", vendorId: row.users.vendor_id, favoriteDrinks: row.users.favorite_drinks || "", favoriteSnacks: row.users.favorite_snacks || "", dietaryRestrictions: row.users.dietary_restrictions || "", allergies: row.users.allergies || "", energyBoost: row.users.energy_boost || "", favoritePublixProduct: row.users.favorite_publix_product || "", lunchPlace: row.users.lunch_place || "", preferredContact: row.users.preferred_contact || "Email", onboardingCompleted: row.users.onboarding_completed ?? false, createdAt: row.users.created_at, updatedAt: row.users.updated_at }
       : undefined,
   }));
 }
@@ -564,7 +564,7 @@ export async function getRecentActivity(limit = 10): Promise<GearCheckout[]> {
     notes: row.notes,
     gearItem: row.gear_items ? toGearItem(row.gear_items) : undefined,
     user: row.users
-      ? { id: row.users.id, email: row.users.email, name: row.users.name, role: row.users.role, active: row.users.active, avatarUrl: row.users.avatar_url || "", phone: row.users.phone || "", title: row.users.title || "", vendorId: row.users.vendor_id, createdAt: row.users.created_at, updatedAt: row.users.updated_at }
+      ? { id: row.users.id, email: row.users.email, name: row.users.name, role: row.users.role, active: row.users.active, avatarUrl: row.users.avatar_url || "", phone: row.users.phone || "", title: row.users.title || "", vendorId: row.users.vendor_id, favoriteDrinks: row.users.favorite_drinks || "", favoriteSnacks: row.users.favorite_snacks || "", dietaryRestrictions: row.users.dietary_restrictions || "", allergies: row.users.allergies || "", energyBoost: row.users.energy_boost || "", favoritePublixProduct: row.users.favorite_publix_product || "", lunchPlace: row.users.lunch_place || "", preferredContact: row.users.preferred_contact || "Email", onboardingCompleted: row.users.onboarding_completed ?? false, createdAt: row.users.created_at, updatedAt: row.users.updated_at }
       : undefined,
   }));
 }

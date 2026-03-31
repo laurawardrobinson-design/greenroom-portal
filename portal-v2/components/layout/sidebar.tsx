@@ -89,6 +89,7 @@ interface SidebarProps {
   userRole: UserRole;
   userName: string;
   userAvatar?: string;
+  userProductEmoji?: string;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 }
@@ -96,6 +97,7 @@ interface SidebarProps {
 export function Sidebar({
   userRole,
   userName,
+  userProductEmoji,
   mobileOpen = false,
   onMobileClose,
 }: SidebarProps) {
@@ -174,12 +176,16 @@ export function Sidebar({
       <div className="border-t border-white/10 p-3">
         <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-medium">
-            {userName
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase()}
+            {userProductEmoji ? (
+              <span className="text-base leading-none">{userProductEmoji}</span>
+            ) : (
+              userName
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase()
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-medium">{userName}</p>

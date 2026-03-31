@@ -10,13 +10,14 @@ import { PeacockDetector } from "@/components/menagerie/peacock-detector";
 import { MothDetector } from "@/components/menagerie/moth-detector";
 import { RaccoonDetector } from "@/components/menagerie/raccoon-detector";
 import { TrophyCase } from "@/components/menagerie/trophy-case";
+import { OnboardingModal, getProductEmoji } from "@/components/onboarding/onboarding-modal";
 
 interface AppShellProps {
   children: React.ReactNode;
 }
 
 function AppShellInner({ children }: AppShellProps) {
-  const { user, isLoading } = useCurrentUser();
+  const { user, isLoading, mutate } = useCurrentUser();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   if (isLoading || !user) {
@@ -36,6 +37,7 @@ function AppShellInner({ children }: AppShellProps) {
           userRole={user.role}
           userName={user.name}
           userAvatar={user.avatarUrl}
+          userProductEmoji={getProductEmoji(user.favoritePublixProduct)}
           mobileOpen={mobileOpen}
           onMobileClose={() => setMobileOpen(false)}
         />
@@ -51,6 +53,14 @@ function AppShellInner({ children }: AppShellProps) {
           </main>
         </div>
       </div>
+
+      {/* Onboarding — shown on first login */}
+      {!user.onboardingCompleted && (
+        <OnboardingModal
+          user={user}
+          onComplete={() => mutate()}
+        />
+      )}
 
       {/* Mutant Menagerie — creature detectors + trophy case */}
       <PeacockDetector />

@@ -9,7 +9,30 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
-import { Settings, Shield, User, Users } from "lucide-react";
+import {
+  Settings,
+  Shield,
+  User,
+  Users,
+  Mail,
+  Phone,
+  Contact,
+  AlertTriangle,
+  Utensils,
+  Zap,
+  Pencil,
+  Check,
+  X,
+} from "lucide-react";
+import {
+  PUBLIX_PRODUCTS,
+  CONTACT_OPTIONS,
+  SNACK_PRESETS,
+  DRINK_PRESETS,
+  ENERGY_PRESETS,
+  TagInput,
+  getProductEmoji,
+} from "@/components/onboarding/onboarding-modal";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -22,12 +45,410 @@ const ROLE_COLORS: Record<string, string> = {
 
 const ALL_ROLES = ["Admin", "Producer", "Studio", "Vendor"];
 
-export default function SettingsPage() {
-  const { user, isLoading: loadingUser } = useCurrentUser();
-  const isAdmin = user?.role === "Admin";
+// -------------------------------------------------------
+// Preset chips (local) — toggling for snacks/drinks
+// -------------------------------------------------------
+function PresetChips({
+  presets,
+  activeTags,
+  onToggle,
+}: {
+  presets: string[];
+  activeTags: string[];
+  onToggle: (preset: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {presets.map((preset) => {
+        const active = activeTags.includes(preset);
+        return (
+          <button
+            key={preset}
+            type="button"
+            onClick={() => onToggle(preset)}
+            className={`rounded-full px-3 py-1 text-xs font-medium border transition-all ${
+              active
+                ? "bg-primary text-white border-primary"
+                : "bg-surface border-border text-text-secondary hover:border-primary/40 hover:text-text-primary"
+            }`}
+          >
+            {preset}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
-  // Fetch all users (including inactive) for admin — use no filter
-  const { data: users, isLoading: loadingUsers, mutate } = useSWR<AppUser[]>(
+// -------------------------------------------------------
+// My Card — contact card preview
+// -------------------------------------------------------
+function MyCard({ user }: { user: AppUser }) {
+  const emoji = getProductEmoji(user.favoritePublixProduct);
+  const snacks = user.favoriteSnacks ? user.favoriteSnacks.split(", ").filter(Boolean) : [];
+  const drinks = user.favoriteDrinks ? user.favoriteDrinks.split(", ").filter(Boolean) : [];
+  const allergies = user.allergies ? user.allergies.split(", ").filter(Boolean) : [];
+
+  const contactIcon = CONTACT_OPTIONS.find((c) => c.value === user.preferredContact);
+  const ContactIcon = contactIcon?.icon ?? Mail;
+
+  return (
+    <div className="rounded-xl border border-border bg-surface-secondary p-4 space-y-3">
+      {/* Avatar + name */}
+      <div className="flex items-center gap-3">
+        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl shrink-0">
+          {emoji || user.name.charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <p className="font-semibold text-text-primary">{user.name}</p>
+          <p className="text-xs text-text-tertiary">
+            {user.role}{user.title ? ` · ${user.title}` : ""}
+          </p>
+        </div>
+      </div>
+
+      {/* Contact info */}
+      <div className="space-y-1 text-sm">
+        <div className="flex items-center gap-2 text-text-secondary">
+          <Mail className="h-3.5 w-3.5 text-text-tertiary shrink-0" />
+          <span>{user.email}</span>
+        </div>
+        {user.phone && (
+          <div className="flex items-center gap-2 text-text-secondary">
+            <Phone className="h-3.5 w-3.5 text-text-tertiary shrink-0" />
+            <span>{user.phone}</span>
+          </div>
+        )}
+        {user.preferredContact && (
+          <div className="flex items-center gap-2 text-text-secondary">
+            <ContactIcon className="h-3.5 w-3.5 text-text-tertiary shrink-0" />
+            <span>Prefers {user.preferredContact}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Preferences */}
+      <div className="border-t border-border pt-3 space-y-1.5 text-sm">
+        {user.favoritePublixProduct && (
+          <div className="flex items-center gap-2 text-text-secondary">
+            <span className="text-base shrink-0">{emoji}</span>
+            <span>{user.favoritePublixProduct}</span>
+          </div>
+        )}
+        {snacks.length > 0 && (
+          <div className="flex items-start gap-2 text-text-secondary">
+            <span className="shrink-0 mt-0.5">🍿</span>
+            <span>{snacks.join(", ")}</span>
+          </div>
+        )}
+        {drinks.length > 0 && (
+          <div className="flex items-start gap-2 text-text-secondary">
+            <span className="shrink-0 mt-0.5">🥤</span>
+            <span>{drinks.join(", ")}</span>
+          </div>
+        )}
+        {user.energyBoost && (
+          <div className="flex items-start gap-2 text-text-secondary">
+            <Zap className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+            <span>{user.energyBoost}</span>
+          </div>
+        )}
+        {allergies.length > 0 && (
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+            <div className="flex flex-wrap gap-1">
+              {allergies.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {user.dietaryRestrictions && (
+          <div className="flex items-start gap-2 text-text-secondary">
+            <Utensils className="h-3.5 w-3.5 text-text-tertiary shrink-0 mt-0.5" />
+            <span>{user.dietaryRestrictions}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------
+// Preferences form
+// -------------------------------------------------------
+function PreferencesForm({
+  user,
+  onSaved,
+}: {
+  user: AppUser;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
+
+  const [selectedProduct, setSelectedProduct] = useState(user.favoritePublixProduct || "");
+  const [snackTags, setSnackTags] = useState<string[]>(
+    user.favoriteSnacks ? user.favoriteSnacks.split(", ").filter(Boolean) : []
+  );
+  const [drinkTags, setDrinkTags] = useState<string[]>(
+    user.favoriteDrinks ? user.favoriteDrinks.split(", ").filter(Boolean) : []
+  );
+  const [energyBoost, setEnergyBoost] = useState(user.energyBoost || "");
+  const [allergyTags, setAllergyTags] = useState<string[]>(
+    user.allergies ? user.allergies.split(", ").filter(Boolean) : []
+  );
+  const [dietaryRestrictions, setDietaryRestrictions] = useState(
+    user.dietaryRestrictions || ""
+  );
+  const [preferredContact, setPreferredContact] = useState(user.preferredContact || "Email");
+  const [phone, setPhone] = useState(user.phone || "");
+
+  function toggleTag(tags: string[], setTags: (t: string[]) => void, value: string) {
+    if (tags.includes(value)) {
+      setTags(tags.filter((t) => t !== value));
+    } else {
+      setTags([...tags, value]);
+    }
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          favoritePublixProduct: selectedProduct,
+          favoriteSnacks: snackTags.join(", "),
+          favoriteDrinks: drinkTags.join(", "),
+          energyBoost,
+          allergies: allergyTags.join(", "),
+          dietaryRestrictions,
+          preferredContact,
+          phone,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast("success", "Preferences saved");
+      onSaved();
+    } catch {
+      toast("error", "Couldn't save — try again");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Publix icon */}
+      <div>
+        <p className="text-sm font-medium text-text-primary mb-2">Your Publix icon</p>
+        <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto overscroll-contain pr-1">
+          {PUBLIX_PRODUCTS.map((product) => (
+            <button
+              key={product.name}
+              onClick={() => setSelectedProduct(product.name)}
+              className={`flex flex-col items-center gap-1 rounded-xl p-2 border text-center transition-all ${
+                selectedProduct === product.name
+                  ? "border-primary bg-primary/5 ring-1 ring-primary"
+                  : "border-border hover:border-primary/40 hover:bg-surface-secondary"
+              }`}
+            >
+              <span className="text-xl">{product.emoji}</span>
+              <span className="text-[10px] font-medium text-text-secondary leading-tight">
+                {product.name}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Snacks */}
+      <div>
+        <p className="text-sm font-medium text-text-primary mb-2">🍿 Snacks</p>
+        <PresetChips
+          presets={SNACK_PRESETS}
+          activeTags={snackTags}
+          onToggle={(p) => toggleTag(snackTags, setSnackTags, p)}
+        />
+        <div className="mt-2">
+          <TagInput
+            tags={snackTags}
+            onChange={setSnackTags}
+            placeholder="Add your favorite..."
+          />
+        </div>
+      </div>
+
+      {/* Drinks */}
+      <div>
+        <p className="text-sm font-medium text-text-primary mb-2">🥤 Drinks</p>
+        <PresetChips
+          presets={DRINK_PRESETS}
+          activeTags={drinkTags}
+          onToggle={(p) => toggleTag(drinkTags, setDrinkTags, p)}
+        />
+        <div className="mt-2">
+          <TagInput
+            tags={drinkTags}
+            onChange={setDrinkTags}
+            placeholder="Add your favorite..."
+          />
+        </div>
+      </div>
+
+      {/* Energy boost */}
+      <div>
+        <p className="flex items-center gap-1.5 text-sm font-medium text-text-primary mb-1">
+          <Zap className="h-4 w-4 text-primary" />
+          Energy Boost
+        </p>
+        <p className="text-xs text-text-tertiary mb-2">
+          Give us your full order — the more specific, the better.
+        </p>
+        <div className="mb-2">
+          <p className="text-[10px] font-medium text-text-tertiary uppercase tracking-wider mb-1.5">
+            Quick start →
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {ENERGY_PRESETS.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => {
+                  setEnergyBoost(preset + " - ");
+                  setTimeout(() => {
+                    const el = document.querySelector<HTMLInputElement>("[data-energy-input-settings]");
+                    el?.focus();
+                    if (el) {
+                      const len = el.value.length;
+                      el.setSelectionRange(len, len);
+                    }
+                  }, 0);
+                }}
+                className="rounded-full px-3 py-1 text-xs font-medium border border-border bg-surface text-text-secondary hover:border-primary/40 hover:text-text-primary transition-all"
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+        </div>
+        <input
+          data-energy-input-settings
+          type="text"
+          value={energyBoost}
+          onChange={(e) => setEnergyBoost(e.target.value)}
+          placeholder="e.g. Iced coffee - 2 pumps sugar free vanilla, oat milk"
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40"
+        />
+      </div>
+
+      {/* Allergies */}
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-1.5">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          Allergies
+        </label>
+        <TagInput
+          tags={allergyTags}
+          onChange={setAllergyTags}
+          placeholder="Type an allergy and press Enter..."
+        />
+      </div>
+
+      {/* Dietary */}
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-1.5">
+          <Utensils className="h-4 w-4 text-primary" />
+          Dietary preferences
+        </label>
+        <input
+          type="text"
+          value={dietaryRestrictions}
+          onChange={(e) => setDietaryRestrictions(e.target.value)}
+          placeholder="e.g. Vegetarian, Gluten-Free"
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40"
+        />
+      </div>
+
+      {/* Contact */}
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-2">
+          <Contact className="h-4 w-4 text-primary" />
+          Best way to reach you
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          {CONTACT_OPTIONS.map(({ value, label, icon: Icon, description }) => (
+            <button
+              key={value}
+              onClick={() => setPreferredContact(value)}
+              className={`flex flex-col items-center gap-2 rounded-xl p-3 border text-center transition-all ${
+                preferredContact === value
+                  ? "border-primary bg-primary/5 ring-1 ring-primary"
+                  : "border-border hover:border-primary/40 hover:bg-surface-secondary"
+              }`}
+            >
+              <div
+                className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                  preferredContact === value ? "bg-primary text-white" : "bg-surface-secondary text-text-tertiary"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-text-primary">{label}</p>
+                <p className="text-[10px] text-text-tertiary leading-tight">{description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Phone */}
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-1.5">
+          <Phone className="h-4 w-4 text-primary" />
+          Cell phone
+        </label>
+        <input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="(555) 000-0000"
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40"
+        />
+      </div>
+
+      <div className="flex gap-3 pt-1">
+        <Button
+          size="sm"
+          loading={saving}
+          onClick={handleSave}
+          className="flex-1"
+        >
+          <Check className="mr-1.5 h-3.5 w-3.5" />
+          Save preferences
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------
+// Main page
+// -------------------------------------------------------
+export default function SettingsPage() {
+  const { user, isLoading: loadingUser, mutate } = useCurrentUser();
+  const isAdmin = user?.role === "Admin";
+  const [editingPrefs, setEditingPrefs] = useState(false);
+
+  const { data: users, isLoading: loadingUsers, mutate: mutateUsers } = useSWR<AppUser[]>(
     isAdmin ? "/api/users?roles=Admin,Producer,Studio,Vendor" : null,
     fetcher
   );
@@ -38,15 +459,78 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <h2 className="text-lg font-semibold text-text-primary">Settings</h2>
 
-      {/* Profile section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <User className="h-4 w-4" />
-            My Profile
-          </CardTitle>
-        </CardHeader>
-        {user && (
+      {/* My Card */}
+      {user && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <Contact className="h-4 w-4" />
+              My Card
+            </CardTitle>
+          </CardHeader>
+          <MyCard user={user} />
+        </Card>
+      )}
+
+      {/* My Preferences */}
+      {user && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <Settings className="h-4 w-4" />
+              My Preferences
+            </CardTitle>
+            {!editingPrefs && (
+              <button
+                onClick={() => setEditingPrefs(true)}
+                className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </button>
+            )}
+            {editingPrefs && (
+              <button
+                onClick={() => setEditingPrefs(false)}
+                className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+                Cancel
+              </button>
+            )}
+          </CardHeader>
+          {editingPrefs ? (
+            <PreferencesForm
+              user={user}
+              onSaved={() => {
+                mutate();
+                setEditingPrefs(false);
+              }}
+            />
+          ) : (
+            <div className="space-y-2 text-sm text-text-secondary">
+              {user.favoritePublixProduct ? (
+                <p>
+                  <span className="text-base mr-1.5">{getProductEmoji(user.favoritePublixProduct)}</span>
+                  {user.favoritePublixProduct}
+                </p>
+              ) : (
+                <p className="text-text-tertiary italic">No preferences set yet — click Edit to get started.</p>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Account */}
+      {user && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <User className="h-4 w-4" />
+              Account
+            </CardTitle>
+          </CardHeader>
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between">
               <dt className="text-text-tertiary">Name</dt>
@@ -71,8 +555,8 @@ export default function SettingsPage() {
               </div>
             )}
           </dl>
-        )}
-      </Card>
+        </Card>
+      )}
 
       {/* Dev mode indicator */}
       {process.env.NEXT_PUBLIC_DEV_AUTH === "true" && (
@@ -117,7 +601,7 @@ export default function SettingsPage() {
                   key={u.id}
                   appUser={u}
                   isCurrentUser={u.id === user?.id}
-                  onUpdated={mutate}
+                  onUpdated={mutateUsers}
                 />
               ))}
             </div>
@@ -133,6 +617,9 @@ export default function SettingsPage() {
   );
 }
 
+// -------------------------------------------------------
+// User row (admin user management)
+// -------------------------------------------------------
 function UserRow({
   appUser,
   isCurrentUser,

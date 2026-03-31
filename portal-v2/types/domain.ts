@@ -15,6 +15,15 @@ export interface AppUser {
   phone: string;
   title: string;
   vendorId: string | null;
+  favoriteDrinks: string;
+  favoriteSnacks: string;
+  dietaryRestrictions: string;
+  allergies: string;
+  energyBoost: string;
+  favoritePublixProduct: string;
+  lunchPlace: string;
+  preferredContact: string;
+  onboardingCompleted: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -279,7 +288,13 @@ export type GearCategory =
   | "Tripod / Support"
   | "Grip"
   | "Accessories"
-  | "Other";
+  | "Other"
+  | "Surfaces & Backgrounds"
+  | "Tableware"
+  | "Linens & Textiles"
+  | "Cookware & Small Wares"
+  | "Decorative Items"
+  | "Furniture";
 
 export interface GearItem {
   id: string;
@@ -474,6 +489,7 @@ export interface Product {
   id: string;
   name: string;
   department: ProductDepartment;
+  itemCode: string | null;
   description: string;
   shootingNotes: string;
   restrictions: string;
