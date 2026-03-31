@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   const { role, vendor_id } = await request.json();
-  const testUser = TEST_USERS[role as string];
+  let testUser = TEST_USERS[role as string];
   if (!testUser) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
@@ -35,6 +35,21 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
+
+  // For vendors, fetch their actual contact name from database
+  let vendorContactName = testUser.name;
+  if (testUser.role === "Vendor" && vendor_id) {
+    const { data: vendor } = await admin
+      .from("vendors")
+      .select("contact_name")
+      .eq("id", vendor_id)
+      .single();
+
+    if (vendor?.contact_name) {
+      vendorContactName = vendor.contact_name;
+    }
+  }
+
   const supabase = await createClient();
 
   // Try signing in first — the user likely already exists
@@ -51,7 +66,7 @@ export async function POST(request: Request) {
         {
           id: session.session.user.id,
           email: testUser.email,
-          name: testUser.name,
+          name: vendorContactName,
           role: testUser.role,
           active: true,
           vendor_id: vendor_id || null,
@@ -68,7 +83,7 @@ export async function POST(request: Request) {
       email: testUser.email,
       password: TEST_PASSWORD,
       email_confirm: true,
-      user_metadata: { full_name: testUser.name },
+      user_metadata: { full_name: vendorContactName },
     });
 
   if (createErr) {
@@ -81,7 +96,7 @@ export async function POST(request: Request) {
       {
         id: created.user.id,
         email: testUser.email,
-        name: testUser.name,
+        name: vendorContactName,
         role: testUser.role,
         active: true,
         vendor_id: vendor_id || null,
