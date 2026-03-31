@@ -58,7 +58,7 @@ export default function VendorsPage() {
               setSearchInput(e.target.value);
               if (e.target.value === "") setSearch("");
             }}
-            className="h-9 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary shadow-xs focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none sm:w-80"
+            className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary shadow-xs focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none sm:w-80"
           />
         </div>
       </form>

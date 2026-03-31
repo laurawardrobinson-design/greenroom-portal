@@ -4,14 +4,15 @@ import { useState, useRef, useEffect, useCallback, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { format, parseISO } from "date-fns";
 import {
-  Check, AlertTriangle, Plus, X, Download, Upload, ChevronLeft, Trash2,
+  Check, AlertTriangle, Plus, X, Download, Upload, ChevronLeft, Trash2, GripVertical, RotateCcw,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { generateOverlayPng } from "@/lib/utils/overlay-generator";
 import { CHANNEL_TEMPLATES, SPEC_DIMENSIONS } from "@/lib/constants/channels";
 import type { ChannelTemplate } from "@/lib/constants/channels";
-import type { ShotListSetup, ShotListShot, CampaignDeliverable } from "@/types/domain";
+import type { ShotListSetup, ShotListShot, CampaignDeliverable, CampaignStatus } from "@/types/domain";
 import { ShotDetailModal } from "@/components/campaigns/shot-detail-modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DraftDeliverableSel { channel: string; spec: string }
@@ -708,7 +709,7 @@ function SetupHeaderRow({ setup, canEdit, onMutate }: {
 
   return (
     <tr className="group">
-      <td colSpan={6} className="border border-border/60 bg-primary/[0.06] border-l-2 border-l-primary px-3 py-1.5">
+      <td colSpan={7} className="border border-border/60 bg-primary/[0.06] border-l-2 border-l-primary px-3 py-1.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {canEdit && editing ? (
@@ -747,9 +748,16 @@ function SetupHeaderRow({ setup, canEdit, onMutate }: {
 }
 
 // ─── Saved shot row ───────────────────────────────────────────────────────────
-function ShotRow({ shot, deliverables, campaignId, canEdit, canComplete, onMutate }: {
+function ShotRow({ shot, deliverables, campaignId, canEdit, canComplete, onMutate,
+  isDragOver, onDragStart, onDragOver, onDrop, onDragEnd,
+}: {
   shot: ShotListShot; deliverables: CampaignDeliverable[];
   campaignId: string; canEdit: boolean; canComplete: boolean; onMutate: () => void;
+  isDragOver: boolean;
+  onDragStart: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
 }) {
   const { toast } = useToast();
   const [showDetail, setShowDetail] = useState(false);
@@ -783,9 +791,26 @@ function ShotRow({ shot, deliverables, campaignId, canEdit, canComplete, onMutat
           onSaved={() => { onMutate(); setShowDetail(false); }}
         />
       )}
-    <tr className={`group transition-colors ${
-      done ? "bg-emerald-50/40" : retouch ? "bg-amber-50/40" : "bg-white hover:bg-primary/[0.015]"
-    }`}>
+    <tr
+      draggable={canEdit}
+      onDragStart={canEdit ? onDragStart : undefined}
+      onDragOver={canEdit ? onDragOver : undefined}
+      onDrop={canEdit ? onDrop : undefined}
+      onDragEnd={canEdit ? onDragEnd : undefined}
+      className={`group transition-colors ${isDragOver ? "outline outline-2 outline-primary/50 outline-offset-[-1px]" : ""} ${
+        done ? "bg-emerald-50/40" : retouch ? "bg-amber-50/40" : "bg-white hover:bg-primary/[0.015]"
+      }`}
+    >
+      {/* Drag handle */}
+      <td className="border border-border/60 w-5 p-0">
+        <div className="flex items-center justify-center min-h-[32px]">
+          {canEdit && (
+            <span className="text-text-tertiary/25 group-hover:text-text-tertiary/50 transition-colors cursor-grab active:cursor-grabbing">
+              <GripVertical className="h-3.5 w-3.5" />
+            </span>
+          )}
+        </div>
+      </td>
       <td className="border border-border/60 w-9 text-center p-0">
         <div className="flex items-center justify-center min-h-[32px]">
           {canComplete && (
@@ -836,9 +861,10 @@ function ShotRow({ shot, deliverables, campaignId, canEdit, canComplete, onMutat
 
 
 // ─── Bottom bar ───────────────────────────────────────────────────────────────
-function BottomBar({ setups, campaignId, wf, date, onMutate, onAddSetup }: {
+function BottomBar({ setups, campaignId, wf, date, onMutate, onAddSetup, onResetNaming, resetNamingDisabled }: {
   setups: ShotListSetup[]; campaignId: string;
   wf?: string; date?: string; onMutate: () => void; onAddSetup: () => void;
+  onResetNaming: () => void; resetNamingDisabled: boolean;
 }) {
   const { toast } = useToast();
   const [addingShot, setAddingShot] = useState(false);
@@ -868,17 +894,29 @@ function BottomBar({ setups, campaignId, wf, date, onMutate, onAddSetup }: {
 
   return (
     <div className="flex items-center justify-between border-t border-border/40 px-3 py-2">
-      <button type="button" onClick={addShot} disabled={addingShot || !lastSetup}
-        className="flex items-center gap-1.5 text-sm font-medium text-text-tertiary hover:text-primary transition-colors disabled:opacity-40">
-        {addingShot
-          ? <span className="h-3 w-3 rounded-full border border-current border-t-transparent animate-spin" />
-          : <Plus className="h-3 w-3" />}
-        Add Shot
-      </button>
-      <button type="button" onClick={onAddSetup}
-        className="flex items-center gap-1.5 text-sm font-medium text-text-tertiary hover:text-primary transition-colors">
-        <Plus className="h-3 w-3" />
-        Add Scene
+      <div className="flex items-center gap-4">
+        <button type="button" onClick={addShot} disabled={addingShot || !lastSetup}
+          className="flex items-center gap-1.5 text-sm font-medium text-text-tertiary hover:text-primary transition-colors disabled:opacity-40">
+          {addingShot
+            ? <span className="h-3 w-3 rounded-full border border-current border-t-transparent animate-spin" />
+            : <Plus className="h-3 w-3" />}
+          Add Shot
+        </button>
+        <button type="button" onClick={onAddSetup}
+          className="flex items-center gap-1.5 text-sm font-medium text-text-tertiary hover:text-primary transition-colors">
+          <Plus className="h-3 w-3" />
+          Add Scene
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={onResetNaming}
+        disabled={resetNamingDisabled}
+        title={resetNamingDisabled ? "Cannot reset naming after shoot is complete" : "Renumber shots based on current order"}
+        className="flex items-center gap-1.5 text-xs font-medium text-text-tertiary/60 hover:text-text-secondary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        <RotateCcw className="h-3 w-3" />
+        Reset Naming
       </button>
     </div>
   );
@@ -893,17 +931,112 @@ interface Props {
   firstShootDate?: string;
   canEdit: boolean;
   canComplete: boolean;
+  campaignStatus: CampaignStatus;
   onAddSetup: () => void;
   onMutate: () => void;
 }
 
 export function ShotListSpreadsheet({
   setups, deliverables, campaignId, wfNumber, firstShootDate,
-  canEdit, canComplete, onAddSetup, onMutate,
+  canEdit, canComplete, campaignStatus, onAddSetup, onMutate,
 }: Props) {
-  let idx = 1;
+  const { toast } = useToast();
 
-  if (setups.length === 0) {
+  // Local copy of setups for optimistic drag reordering
+  const [localSetups, setLocalSetups] = useState(setups);
+  useEffect(() => setLocalSetups(setups), [setups]);
+
+  // Drag state (using ref for the dragged item to avoid re-render during drag)
+  const dragRef = useRef<{ shotId: string; setupId: string } | null>(null);
+  const [dragOverShotId, setDragOverShotId] = useState<string | null>(null);
+
+  function handleShotDragStart(shotId: string, setupId: string) {
+    dragRef.current = { shotId, setupId };
+  }
+
+  function handleShotDragOver(e: React.DragEvent, shotId: string, setupId: string) {
+    e.preventDefault();
+    if (!dragRef.current || dragRef.current.setupId !== setupId) return;
+    if (dragRef.current.shotId !== shotId) setDragOverShotId(shotId);
+  }
+
+  async function handleShotDrop(targetShotId: string, targetSetupId: string) {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    setDragOverShotId(null);
+    if (!drag || drag.shotId === targetShotId || drag.setupId !== targetSetupId) return;
+
+    const setup = localSetups.find((s) => s.id === targetSetupId);
+    if (!setup) return;
+
+    const shots = [...setup.shots];
+    const fromIdx = shots.findIndex((s) => s.id === drag.shotId);
+    const toIdx = shots.findIndex((s) => s.id === targetShotId);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    const [moved] = shots.splice(fromIdx, 1);
+    shots.splice(toIdx, 0, moved);
+
+    // Optimistic update
+    setLocalSetups((prev) => prev.map((s) => s.id === targetSetupId ? { ...s, shots } : s));
+
+    // Commit new sortOrder for all shots in the setup
+    try {
+      await Promise.all(
+        shots.map((sh, i) =>
+          fetch(`/api/shot-list/shots/${sh.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sortOrder: i }),
+          })
+        )
+      );
+      onMutate();
+    } catch {
+      toast("error", "Failed to reorder shots");
+      setLocalSetups(setups);
+    }
+  }
+
+  function handleShotDragEnd() {
+    dragRef.current = null;
+    setDragOverShotId(null);
+  }
+
+  // Reset naming
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const shootComplete = campaignStatus === "Post" || campaignStatus === "Complete";
+
+  async function handleResetNaming() {
+    setResetting(true);
+    try {
+      let idx = 1;
+      const patches: Promise<Response>[] = [];
+      for (const setup of localSetups) {
+        for (const shot of setup.shots) {
+          const newName = buildShotName(wfNumber, firstShootDate, idx);
+          patches.push(
+            fetch(`/api/shot-list/shots/${shot.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: newName }),
+            })
+          );
+          idx++;
+        }
+      }
+      await Promise.all(patches);
+      onMutate();
+      setShowResetConfirm(false);
+    } catch {
+      toast("error", "Failed to reset naming");
+    } finally {
+      setResetting(false);
+    }
+  }
+
+  if (localSetups.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 py-10 px-5">
         {canEdit && (
@@ -918,40 +1051,70 @@ export function ShotListSpreadsheet({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[600px] border-collapse">
-        <thead>
-          <tr className="bg-surface-secondary/80">
-            <th className="border border-border/60 w-9 px-2 py-2" />
-            <th className="border border-border/60 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary w-28">Shot</th>
-            <th className="border border-border/60 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary w-52">Channel</th>
-            <th className="border border-border/60 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Description</th>
-            <th className="border border-border/60 px-2 py-2 text-center text-xs font-semibold uppercase tracking-wider text-text-tertiary w-12">Ref</th>
-            <th className="border border-border/60 w-8" />
-          </tr>
-        </thead>
-        <tbody>
-          {setups.map((setup) => {
-            const startIdx = idx;
-            idx += setup.shots.length + 1;
+    <>
+      <ConfirmDialog
+        open={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirm={handleResetNaming}
+        title="Reset Shot Naming?"
+        description="This will renumber all shots based on their current order, replacing existing shot names. This cannot be undone."
+        confirmLabel="Reset Naming"
+        cancelLabel="Cancel"
+        variant="danger"
+        loading={resetting}
+      />
 
-            return (
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[600px] border-collapse">
+          <thead>
+            <tr className="bg-surface-secondary/80">
+              <th className="border border-border/60 w-5" />
+              <th className="border border-border/60 w-9 px-2 py-2" />
+              <th className="border border-border/60 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary w-28">Shot</th>
+              <th className="border border-border/60 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary w-52">Channel</th>
+              <th className="border border-border/60 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Description</th>
+              <th className="border border-border/60 px-2 py-2 text-center text-xs font-semibold uppercase tracking-wider text-text-tertiary w-12">Ref</th>
+              <th className="border border-border/60 w-8" />
+            </tr>
+          </thead>
+          <tbody>
+            {localSetups.map((setup) => (
               <Fragment key={setup.id}>
                 <SetupHeaderRow setup={setup} canEdit={canEdit} onMutate={onMutate} />
-
                 {setup.shots.map((shot) => (
-                  <ShotRow key={shot.id} shot={shot} deliverables={deliverables}
-                    campaignId={campaignId} canEdit={canEdit} canComplete={canComplete} onMutate={onMutate} />
+                  <ShotRow
+                    key={shot.id}
+                    shot={shot}
+                    deliverables={deliverables}
+                    campaignId={campaignId}
+                    canEdit={canEdit}
+                    canComplete={canComplete}
+                    onMutate={onMutate}
+                    isDragOver={dragOverShotId === shot.id}
+                    onDragStart={() => handleShotDragStart(shot.id, setup.id)}
+                    onDragOver={(e) => handleShotDragOver(e, shot.id, setup.id)}
+                    onDrop={() => handleShotDrop(shot.id, setup.id)}
+                    onDragEnd={handleShotDragEnd}
+                  />
                 ))}
               </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
+            ))}
+          </tbody>
+        </table>
 
-      {canEdit && (
-        <BottomBar setups={setups} campaignId={campaignId} wf={wfNumber} date={firstShootDate} onMutate={onMutate} onAddSetup={onAddSetup} />
-      )}
-    </div>
+        {canEdit && (
+          <BottomBar
+            setups={localSetups}
+            campaignId={campaignId}
+            wf={wfNumber}
+            date={firstShootDate}
+            onMutate={onMutate}
+            onAddSetup={onAddSetup}
+            onResetNaming={() => setShowResetConfirm(true)}
+            resetNamingDisabled={shootComplete}
+          />
+        )}
+      </div>
+    </>
   );
 }

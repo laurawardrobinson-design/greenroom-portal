@@ -28,15 +28,16 @@ export async function POST(request: Request) {
   }
 }
 
-// PATCH /api/users — update role or active status (Admin only)
+// PATCH /api/users — update user fields (Admin or Producer)
 export async function PATCH(request: Request) {
   try {
-    await requireRole(["Admin"]);
-    const { id, role, active } = await request.json();
+    await requireRole(["Admin", "Producer"]);
+    const body = await request.json();
+    const { id, ...updates } = body;
     if (!id) {
       return NextResponse.json({ error: "id required" }, { status: 400 });
     }
-    const updated = await updateUser(id, { role, active });
+    const updated = await updateUser(id, updates);
     return NextResponse.json(updated);
   } catch (error) {
     return authErrorResponse(error);

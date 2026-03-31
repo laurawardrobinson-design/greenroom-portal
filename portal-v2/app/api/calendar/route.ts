@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
     let query = db
       .from("shoot_dates")
-      .select("*, shoots!inner(id, name, shoot_type, campaign_id, campaigns(id, name, wf_number, status))")
+      .select("*, shoots!inner(id, name, shoot_type, campaign_id, campaigns(id, name, wf_number, status, producer_id, users!campaigns_producer_id_fkey(id, name)))")
       .order("shoot_date");
 
     if (month) {
@@ -30,6 +30,7 @@ export async function GET(request: Request) {
     const events = (data || []).map((row) => {
       const shoot = row.shoots as Record<string, unknown>;
       const campaign = shoot?.campaigns as Record<string, unknown> | null;
+      const producer = campaign?.users as Record<string, unknown> | null;
       return {
         id: row.id,
         date: row.shoot_date,
@@ -44,6 +45,8 @@ export async function GET(request: Request) {
               name: campaign.name,
               wfNumber: campaign.wf_number,
               status: campaign.status,
+              producerId: campaign.producer_id as string | null,
+              producerName: producer ? (producer.name as string) : null,
             }
           : null,
       };

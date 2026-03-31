@@ -89,15 +89,8 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
             <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary mb-0.5">
               Assets Due
             </p>
-            <p className={`text-[16px] font-bold ${
-              assetsOverdue
-                ? "text-red-600"
-                : assetsDaysLeft !== null && assetsDaysLeft <= 7
-                ? "text-primary"
-                : "text-text-primary"
-            }`}>
+            <p className="text-[16px] font-bold text-primary">
               {format(parseISO(campaign.assetsDeliveryDate), "MMM d, yyyy")}
-              {assetsOverdue && " — Overdue"}
             </p>
           </div>
         )}

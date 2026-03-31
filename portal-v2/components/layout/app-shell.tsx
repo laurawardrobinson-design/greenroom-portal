@@ -10,7 +10,7 @@ import { PeacockDetector } from "@/components/menagerie/peacock-detector";
 import { MothDetector } from "@/components/menagerie/moth-detector";
 import { RaccoonDetector } from "@/components/menagerie/raccoon-detector";
 import { TrophyCase } from "@/components/menagerie/trophy-case";
-import { OnboardingModal, getProductEmoji } from "@/components/onboarding/onboarding-modal";
+import { OnboardingModal, getProductIcon } from "@/components/onboarding/onboarding-modal";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -37,7 +37,7 @@ function AppShellInner({ children }: AppShellProps) {
           userRole={user.role}
           userName={user.name}
           userAvatar={user.avatarUrl}
-          userProductEmoji={getProductEmoji(user.favoritePublixProduct)}
+          userProductIcon={getProductIcon(user.favoritePublixProduct) ?? undefined}
           mobileOpen={mobileOpen}
           onMobileClose={() => setMobileOpen(false)}
         />

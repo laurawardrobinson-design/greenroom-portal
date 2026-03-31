@@ -21,6 +21,7 @@ import {
   Star,
   UserCircle,
 } from "lucide-react";
+import { ScheduleTab } from "@/components/pre-production/schedule-tab";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -71,16 +72,6 @@ function PlaceholderTab({
 }
 
 // ─── Tab panels ───────────────────────────────────────────────────────────────
-function ScheduleTab() {
-  return (
-    <PlaceholderTab
-      icon={CalendarDays}
-      title="Schedule"
-      description="The 1st AD workspace — day-by-day shooting schedule, one-liner strip board, call sheets, and full shot list."
-      items={["One-Liner", "Shooting Schedule", "Call Sheets", "Shot List"]}
-    />
-  );
-}
 
 function LogisticsTab() {
   return (
@@ -450,7 +441,17 @@ export default function PreProductionWorkspacePage({
 
       {/* Tab content */}
       <div className="pt-6">
-        {activeTab === "schedule"  && <ScheduleTab />}
+        {activeTab === "schedule"  && (
+          <ScheduleTab
+            campaignId={id}
+            campaignName={campaign.name}
+            wfNumber={campaign.wfNumber}
+            assetsDeliveryDate={campaign.assetsDeliveryDate}
+            producerId={campaign.producerId}
+            shoots={shoots}
+            vendors={vendors}
+          />
+        )}
         {activeTab === "logistics" && <LogisticsTab />}
         {activeTab === "people"    && <PeopleTab shoots={shoots} vendors={vendors} producerId={campaign.producerId} />}
         {activeTab === "payments"  && <PaymentsTab />}

@@ -1,21 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import useSWR from "swr";
-import { Clock, CheckCircle2, XCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
-import { format, parseISO } from "date-fns";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
-interface OverageRequest {
-  id: string;
-  amount: number;
-  rationale: string;
-  status: string;
-  createdAt: string;
-  requester?: { name: string };
-}
 
 interface CampaignVendor {
   id: string;
@@ -34,200 +19,98 @@ interface Props {
   onRequestOverage: () => void;
 }
 
-export function BudgetSidebarTile({ campaignId, financials, vendors, canEdit, onRequestOverage }: Props) {
-  const [tab, setTab] = useState<"overview" | "vendors">("overview");
-
-  const { data: overageRequests = [] } = useSWR<OverageRequest[]>(
-    tab === "vendors" ? `/api/budget/requests?campaignId=${campaignId}` : null,
-    fetcher
-  );
-
-  const spentPct = financials.budget > 0
-    ? Math.min((financials.spent / financials.budget) * 100, 100)
-    : 0;
-  const committedOnlyPct = financials.budget > 0
-    ? Math.min(((financials.committed - financials.spent) / financials.budget) * 100, 100 - spentPct)
-    : 0;
+export function BudgetSidebarTile({ financials, canEdit, onRequestOverage }: Props) {
   const isOver = financials.remaining < 0;
   const isWarning = !isOver && financials.budget > 0 && financials.remaining < financials.budget * 0.1;
 
+  const remainingColor = isOver
+    ? "text-red-500"
+    : isWarning
+    ? "text-amber-500"
+    : "text-primary";
+
+  const budget = financials.budget;
+  const spent = financials.spent;
+  const committed = financials.committed;
+
+  const spentPct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
+  const committedOnlyPct =
+    budget > 0 ? Math.max(0, Math.min(((committed - spent) / budget) * 100, 100 - spentPct)) : 0;
+  const overPct = budget > 0 && committed > budget ? ((committed - budget) / budget) * 100 : 0;
+
+  const stats: { label: string; value: number; valueClass: string }[] = [
+    { label: "Total Budget", value: financials.budget, valueClass: "text-text-primary" },
+    { label: "Remaining", value: financials.remaining, valueClass: remainingColor },
+    { label: "Committed", value: financials.committed, valueClass: "text-blue-500" },
+    { label: "Spent", value: financials.spent, valueClass: "text-text-secondary" },
+  ];
+
   return (
-    <div>
-      {/* Tab strip — flush against CollapsibleSection header border */}
-      <div className="flex border-b border-border pt-3 mb-3 -mx-3.5 px-3.5">
-        <button
-          onClick={() => setTab("overview")}
-          className={`pb-2 mr-4 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            tab === "overview"
-              ? "border-primary text-primary"
-              : "border-transparent text-text-tertiary hover:text-text-secondary"
-          }`}
-        >
-          Overview
-        </button>
-        <button
-          onClick={() => setTab("vendors")}
-          className={`pb-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            tab === "vendors"
-              ? "border-primary text-primary"
-              : "border-transparent text-text-tertiary hover:text-text-secondary"
-          }`}
-        >
-          Vendors{vendors.length > 0 ? ` · ${vendors.length}` : ""}
-        </button>
+    <div className="space-y-3">
+
+      {/* 2×2 stat grid */}
+      <div className="grid grid-cols-2 gap-2">
+        {stats.map(({ label, value, valueClass }) => (
+          <div key={label} className="bg-surface-secondary rounded-lg px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-0.5">
+              {label}
+            </p>
+            <p className={`text-lg font-bold tabular-nums leading-tight ${valueClass}`}>
+              {formatCurrency(value)}
+            </p>
+          </div>
+        ))}
       </div>
 
-      {tab === "overview" && (
-        <div className="space-y-3">
-          {/* Stacked progress bar */}
-          {financials.budget > 0 && (
-            <div>
-              <div className="h-1.5 rounded-full bg-surface-tertiary overflow-hidden flex">
-                <div
-                  className="h-full bg-emerald-500 transition-all duration-500"
-                  style={{ width: `${spentPct}%` }}
-                />
-                <div
-                  className={`h-full transition-all duration-500 ${isOver ? "bg-red-500" : "bg-blue-400"}`}
-                  style={{ width: `${committedOnlyPct}%` }}
-                />
-              </div>
-              <div className="flex items-center gap-3 mt-1.5">
-                <span className="flex items-center gap-1 text-xs text-text-tertiary">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                  Spent
-                </span>
-                <span className="flex items-center gap-1 text-xs text-text-tertiary">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
-                  Committed
-                </span>
-              </div>
+      {/* Progress bar */}
+      {budget > 0 && (
+        <div>
+          <div className="relative h-2 rounded-full bg-surface-tertiary overflow-visible">
+            <div className="absolute inset-0 rounded-full overflow-hidden flex">
+              <div
+                className="h-full bg-primary transition-all duration-500 shrink-0"
+                style={{ width: `${spentPct}%` }}
+              />
+              <div
+                className="h-full bg-blue-400 transition-all duration-500 shrink-0"
+                style={{ width: `${committedOnlyPct}%` }}
+              />
             </div>
-          )}
-
-          {/* Numbers */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-text-tertiary">Total budget</span>
-              <span className="font-semibold text-text-primary">{formatCurrency(financials.budget)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-text-tertiary">Spent</span>
-              <span className="font-medium text-emerald-600">{formatCurrency(financials.spent)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-text-tertiary">Committed</span>
-              <span className="font-medium text-blue-600">{formatCurrency(financials.committed)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm border-t border-border pt-1.5">
-              <span className="font-medium text-text-secondary">Remaining</span>
-              <span className={`font-semibold ${
-                isOver ? "text-red-600" : isWarning ? "text-amber-600" : "text-emerald-600"
-              }`}>
-                {formatCurrency(financials.remaining)}
-              </span>
-            </div>
+            {overPct > 0 && (
+              <div
+                className="absolute top-0 right-0 h-full bg-red-500 rounded-r-full transition-all duration-500"
+                style={{ width: `${Math.min(overPct, 30)}%`, transform: "translateX(100%)" }}
+              />
+            )}
           </div>
-
-          {canEdit && (
-            <button
-              type="button"
-              onClick={onRequestOverage}
-              className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
-            >
-              Request adjustment →
-            </button>
-          )}
+          <div className="flex items-center gap-3 mt-1.5">
+            <span className="flex items-center gap-1 text-[10px] text-text-tertiary">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+              Spent
+            </span>
+            <span className="flex items-center gap-1 text-[10px] text-text-tertiary">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
+              Committed
+            </span>
+            {overPct > 0 && (
+              <span className="flex items-center gap-1 text-[10px] text-red-500">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+                Over budget
+              </span>
+            )}
+          </div>
         </div>
       )}
 
-      {tab === "vendors" && (
-        <div className="space-y-3">
-          {vendors.length === 0 ? (
-            <p className="text-sm text-text-tertiary py-1">No vendors assigned yet.</p>
-          ) : (
-            <div className="space-y-1">
-              {vendors.map((cv) => {
-                const amount = cv.estimateTotal || cv.invoiceTotal || 0;
-                const isPaid = ["Paid", "Invoice Approved"].includes(cv.status);
-                return (
-                  <div
-                    key={cv.id}
-                    className="flex items-center justify-between rounded-md bg-surface-secondary px-2.5 py-2 text-sm"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-text-primary truncate">
-                        {cv.vendor?.companyName || "Unknown"}
-                      </p>
-                      <p className="text-xs text-text-tertiary">{cv.vendor?.category}</p>
-                    </div>
-                    <span className={`font-medium ml-2 shrink-0 ${
-                      isPaid ? "text-emerald-600" : "text-text-secondary"
-                    }`}>
-                      {formatCurrency(amount)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {overageRequests.length > 0 && (
-            <div>
-              <p className="text-xs uppercase tracking-wider font-medium text-text-tertiary mb-1.5">
-                Adjustment Requests
-              </p>
-              <div className="space-y-1.5">
-                {overageRequests.map((req) => (
-                  <div
-                    key={req.id}
-                    className="flex items-start gap-2 rounded-md bg-surface-secondary px-2.5 py-2"
-                  >
-                    {req.status === "Pending" ? (
-                      <Clock className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
-                    ) : req.status === "Approved" ? (
-                      <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0 mt-0.5" />
-                    ) : (
-                      <XCircle className="h-3 w-3 text-red-500 shrink-0 mt-0.5" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-sm font-medium text-text-primary">
-                          {formatCurrency(req.amount)}
-                        </span>
-                        <span className={`text-xs font-medium ${
-                          req.status === "Approved"
-                            ? "text-emerald-600"
-                            : req.status === "Declined"
-                            ? "text-red-600"
-                            : "text-amber-600"
-                        }`}>
-                          {req.status}
-                        </span>
-                      </div>
-                      <p className="text-xs text-text-secondary mt-0.5 leading-tight">
-                        {req.rationale}
-                      </p>
-                      <p className="text-xs text-text-tertiary mt-0.5">
-                        {req.requester?.name && `${req.requester.name} · `}
-                        {format(parseISO(req.createdAt), "MMM d")}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {canEdit && (
-            <button
-              type="button"
-              onClick={onRequestOverage}
-              className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
-            >
-              Request adjustment →
-            </button>
-          )}
+      {canEdit && (
+        <div className="flex justify-center pt-0.5">
+          <button
+            type="button"
+            onClick={onRequestOverage}
+            className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+          >
+            Request adjustment →
+          </button>
         </div>
       )}
     </div>

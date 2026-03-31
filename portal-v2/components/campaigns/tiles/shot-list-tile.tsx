@@ -1,10 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShotListSpreadsheet } from "@/components/campaigns/shot-list-spreadsheet";
 import { Crosshair } from "lucide-react";
-import type { ShotListSetup, CampaignDeliverable } from "@/types/domain";
+import type { ShotListSetup, CampaignDeliverable, CampaignStatus } from "@/types/domain";
 
 interface Props {
   campaignId: string;
@@ -15,6 +16,7 @@ interface Props {
   canEditShots: boolean;
   canCompleteShots: boolean;
   onSetMode: boolean;
+  campaignStatus: CampaignStatus;
   onAddSetup: () => void;
   onMutate: () => void;
 }
@@ -28,9 +30,11 @@ export function ShotListTile({
   canEditShots,
   canCompleteShots,
   onSetMode,
+  campaignStatus,
   onAddSetup,
   onMutate,
 }: Props) {
+  const router = useRouter();
   const allShots = setups.flatMap((s) => s.shots);
   const completedShots = allShots.filter((s) => s.status === "Complete").length;
   const totalShots = allShots.length;
@@ -41,9 +45,14 @@ export function ShotListTile({
       <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
         <div className="flex items-center gap-2">
           <Crosshair className="h-4 w-4 shrink-0 text-primary" />
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">Shot List Preview</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">One-Liner</h3>
         </div>
-        <Button size="sm" variant="ghost" className="text-xs text-text-secondary hover:text-text-primary">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-xs text-text-secondary hover:text-text-primary"
+          onClick={() => router.push(`/campaigns/${campaignId}/shots`)}
+        >
           View Full Shot List
         </Button>
       </div>
@@ -73,6 +82,7 @@ export function ShotListTile({
         firstShootDate={firstShootDate}
         canEdit={canEditShots}
         canComplete={canCompleteShots}
+        campaignStatus={campaignStatus}
         onAddSetup={onAddSetup}
         onMutate={onMutate}
       />

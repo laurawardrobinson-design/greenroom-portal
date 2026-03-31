@@ -394,6 +394,7 @@ export default function CampaignDetailPage({
             canEditShots={canEditShots}
             canCompleteShots={canCompleteShots}
             onSetMode={false}
+            campaignStatus={campaign.status}
             onAddSetup={() => setShowAddSetup(true)}
             onMutate={mutate}
           />

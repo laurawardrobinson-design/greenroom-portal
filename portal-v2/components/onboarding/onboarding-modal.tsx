@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { AppUser } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -16,35 +16,73 @@ import {
   AlertTriangle,
   MessageSquare,
   Zap,
+  Sandwich,
+  Drumstick,
+  CakeSlice,
+  GlassWater,
+  Hamburger,
+  Citrus,
+  Banana,
+  IceCreamCone,
+  Fish,
+  Croissant,
+  Cookie,
+  Donut,
+  Salad,
+  Flower2,
 } from "lucide-react";
+import type { ComponentType } from "react";
 
 // -------------------------------------------------------
-// Publix product catalog — emoji + display name
+// Custom SVG icons for products without a Lucide match
 // -------------------------------------------------------
-export const PUBLIX_PRODUCTS = [
-  { name: "Pub Sub", emoji: "🥖" },
-  { name: "Fried Chicken", emoji: "🍗" },
-  { name: "Chantilly Cake", emoji: "🎂" },
-  { name: "Sweet Tea", emoji: "🫖" },
-  { name: "Cuban Sandwich", emoji: "🥪" },
-  { name: "Key Lime Pie", emoji: "🥧" },
-  { name: "Banana Pudding", emoji: "🍌" },
-  { name: "Deli Potato Wedges", emoji: "🥔" },
-  { name: "Fresh Sushi", emoji: "🍣" },
-  { name: "Bakery Croissant", emoji: "🥐" },
-  { name: "Boar's Head", emoji: "🥩" },
-  { name: "Pub Cookie", emoji: "🍪" },
-  { name: "Pimento Cheese", emoji: "🫙" },
-  { name: "Greenwise Salad", emoji: "🥗" },
-  { name: "Publix Cheese", emoji: "🧀" },
-  { name: "Seafood Counter", emoji: "🦐" },
-  { name: "Chicken Tender Sub", emoji: "🍞" },
-  { name: "Fresh Flowers", emoji: "🌸" },
+function DeliPotatoWedgesIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M5 27 L12 7 L19 27 Z"/>
+      <path d="M14 27 L21 7 L28 27 Z"/>
+    </svg>
+  );
+}
+
+function SpecialtyCheeseIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M2 27 L16 5 L30 27 Z"/>
+      <circle cx="11" cy="21" r="2.5"/>
+      <circle cx="20" cy="18" r="2"/>
+      <circle cx="16" cy="24" r="1.5"/>
+    </svg>
+  );
+}
+
+// -------------------------------------------------------
+// Publix product catalog — icon + display name
+// -------------------------------------------------------
+type ProductIconComponent = ComponentType<{ className?: string }>;
+
+export const PUBLIX_PRODUCTS: { name: string; icon: ProductIconComponent }[] = [
+  { name: "Pub Sub", icon: Sandwich },
+  { name: "Fried Chicken", icon: Drumstick },
+  { name: "Chantilly Cake", icon: CakeSlice },
+  { name: "Sweet Tea", icon: GlassWater },
+  { name: "Cuban Sandwich", icon: Hamburger },
+  { name: "Key Lime Pie", icon: Citrus },
+  { name: "Banana Pudding", icon: Banana },
+  { name: "Deli Potato Wedges", icon: DeliPotatoWedgesIcon },
+  { name: "Publix Ice Cream", icon: IceCreamCone },
+  { name: "Sushi", icon: Fish },
+  { name: "Bakery Croissant", icon: Croissant },
+  { name: "Chocolate Chip Cookie", icon: Cookie },
+  { name: "Sprinkle Cookie", icon: Donut },
+  { name: "Grab & Go Salad", icon: Salad },
+  { name: "Specialty Cheese", icon: SpecialtyCheeseIcon },
+  { name: "Fresh Flowers", icon: Flower2 },
 ];
 
-export function getProductEmoji(productName: string): string {
+export function getProductIcon(productName: string): ProductIconComponent | null {
   const found = PUBLIX_PRODUCTS.find((p) => p.name === productName);
-  return found?.emoji ?? "";
+  return found?.icon ?? null;
 }
 
 // -------------------------------------------------------
@@ -106,6 +144,17 @@ export const CONTACT_OPTIONS = [
 ];
 
 // -------------------------------------------------------
+// Phone formatter — strips non-digits, outputs (###) ###-####
+// -------------------------------------------------------
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 10);
+  if (digits.length === 0) return "";
+  if (digits.length <= 3) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+// -------------------------------------------------------
 // Tag input component (exported for settings page)
 // -------------------------------------------------------
 export function TagInput({
@@ -118,6 +167,7 @@ export function TagInput({
   placeholder?: string;
 }) {
   const [input, setInput] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   function addTag(value: string) {
     const trimmed = value.trim().replace(/,+$/, "");
@@ -143,10 +193,7 @@ export function TagInput({
   return (
     <div
       className="flex flex-wrap gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 min-h-[42px] focus-within:ring-2 focus-within:ring-primary/40 cursor-text"
-      onClick={() => {
-        const el = document.querySelector<HTMLInputElement>("[data-tag-input]");
-        el?.focus();
-      }}
+      onClick={() => inputRef.current?.focus()}
     >
       {tags.map((tag) => (
         <span
@@ -167,7 +214,7 @@ export function TagInput({
         </span>
       ))}
       <input
-        data-tag-input
+        ref={inputRef}
         type="text"
         value={input}
         onChange={(e) => setInput(e.target.value)}
@@ -256,8 +303,9 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
   const [energyBoost, setEnergyBoost] = useState("");
   const [allergyTags, setAllergyTags] = useState<string[]>([]);
   const [dietary, setDietary] = useState<string[]>([]);
-  const [preferredContact, setPreferredContact] = useState("Email");
-  const [phone, setPhone] = useState(user.phone || "");
+  const [preferredContact, setPreferredContact] = useState("Cell Phone");
+  const [phone, setPhone] = useState(() => formatPhone(user.phone || ""));
+  const phoneRef = useRef<HTMLInputElement>(null);
 
   function toggleTag(tags: string[], setTags: (t: string[]) => void, value: string) {
     if (tags.includes(value)) {
@@ -355,7 +403,7 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
                       : "border-border hover:border-primary/40 hover:bg-surface-secondary"
                   }`}
                 >
-                  <span className="text-2xl">{product.emoji}</span>
+                  <product.icon className="h-7 w-7" />
                   <span className="text-[10px] font-medium text-text-secondary leading-tight">
                     {product.name}
                   </span>
@@ -398,7 +446,7 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
               </p>
             </div>
 
-            <div className="space-y-4 mb-6 max-h-80 overflow-y-auto overscroll-contain pr-1 pb-4">
+            <div className="space-y-4 mb-6 max-h-80 overflow-y-auto overscroll-contain pr-3 pb-4">
               {/* Snacks */}
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-text-primary mb-2">
@@ -603,9 +651,10 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
                   Cell phone
                 </label>
                 <input
+                  ref={phoneRef}
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setPhone(formatPhone(e.target.value))}
                   placeholder="(555) 000-0000"
                   className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40"
                 />
@@ -662,8 +711,10 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
         {step === 5 && (
           <div className="p-6">
             <div className="text-center mb-6">
-              <div className="text-4xl mb-2">
-                {selectedProductData?.emoji ?? "🎬"}
+              <div className="flex justify-center mb-2">
+                {selectedProductData
+                  ? <selectedProductData.icon className="h-14 w-14 text-primary" />
+                  : <Utensils className="h-14 w-14 text-primary" />}
               </div>
               <h2 className="text-lg font-bold text-text-primary">Looking good!</h2>
               <p className="text-sm text-text-secondary mt-1">
@@ -675,8 +726,10 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
             <div className="rounded-xl border border-border bg-surface-secondary p-4 mb-6 space-y-3">
               {/* Avatar + name */}
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl shrink-0">
-                  {selectedProductData?.emoji ?? user.name.charAt(0).toUpperCase()}
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  {selectedProductData
+                    ? <selectedProductData.icon className="h-6 w-6 text-primary" />
+                    : <span className="text-lg font-bold text-primary">{user.name.charAt(0).toUpperCase()}</span>}
                 </div>
                 <div>
                   <p className="font-semibold text-text-primary">{user.name}</p>
@@ -704,9 +757,9 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
 
               {/* Preferences */}
               <div className="border-t border-border pt-3 space-y-1.5 text-sm">
-                {selectedProduct && (
+                {selectedProduct && selectedProductData && (
                   <div className="flex items-center gap-2 text-text-secondary">
-                    <span className="text-base">{selectedProductData?.emoji}</span>
+                    <selectedProductData.icon className="h-4 w-4 shrink-0" />
                     <span>{selectedProduct}</span>
                   </div>
                 )}

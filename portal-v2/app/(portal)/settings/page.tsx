@@ -31,7 +31,7 @@ import {
   DRINK_PRESETS,
   ENERGY_PRESETS,
   TagInput,
-  getProductEmoji,
+  getProductIcon,
 } from "@/components/onboarding/onboarding-modal";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -80,11 +80,21 @@ function PresetChips({
   );
 }
 
+function ProductRowItem({ productName }: { productName: string }) {
+  const Icon = getProductIcon(productName);
+  return (
+    <div className="flex items-center gap-1.5 text-sm text-text-secondary">
+      {Icon && <Icon className="h-4 w-4 shrink-0" />}
+      <span>{productName}</span>
+    </div>
+  );
+}
+
 // -------------------------------------------------------
 // My Card — contact card preview
 // -------------------------------------------------------
 function MyCard({ user }: { user: AppUser }) {
-  const emoji = getProductEmoji(user.favoritePublixProduct);
+  const ProductIcon = getProductIcon(user.favoritePublixProduct);
   const snacks = user.favoriteSnacks ? user.favoriteSnacks.split(", ").filter(Boolean) : [];
   const drinks = user.favoriteDrinks ? user.favoriteDrinks.split(", ").filter(Boolean) : [];
   const allergies = user.allergies ? user.allergies.split(", ").filter(Boolean) : [];
@@ -96,8 +106,10 @@ function MyCard({ user }: { user: AppUser }) {
     <div className="rounded-xl border border-border bg-surface-secondary p-4 space-y-3">
       {/* Avatar + name */}
       <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl shrink-0">
-          {emoji || user.name.charAt(0).toUpperCase()}
+        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          {ProductIcon
+            ? <ProductIcon className="h-6 w-6 text-primary" />
+            : <span className="text-lg font-bold text-primary">{user.name.charAt(0).toUpperCase()}</span>}
         </div>
         <div>
           <p className="font-semibold text-text-primary">{user.name}</p>
@@ -131,7 +143,7 @@ function MyCard({ user }: { user: AppUser }) {
       <div className="border-t border-border pt-3 space-y-1.5 text-sm">
         {user.favoritePublixProduct && (
           <div className="flex items-center gap-2 text-text-secondary">
-            <span className="text-base shrink-0">{emoji}</span>
+            {ProductIcon && <ProductIcon className="h-4 w-4 shrink-0" />}
             <span>{user.favoritePublixProduct}</span>
           </div>
         )}
@@ -260,7 +272,7 @@ function PreferencesForm({
                   : "border-border hover:border-primary/40 hover:bg-surface-secondary"
               }`}
             >
-              <span className="text-xl">{product.emoji}</span>
+              <product.icon className="h-6 w-6" />
               <span className="text-[10px] font-medium text-text-secondary leading-tight">
                 {product.name}
               </span>
@@ -510,10 +522,7 @@ export default function SettingsPage() {
           ) : (
             <div className="space-y-2 text-sm text-text-secondary">
               {user.favoritePublixProduct ? (
-                <p>
-                  <span className="text-base mr-1.5">{getProductEmoji(user.favoritePublixProduct)}</span>
-                  {user.favoritePublixProduct}
-                </p>
+                <ProductRowItem productName={user.favoritePublixProduct} />
               ) : (
                 <p className="text-text-tertiary italic">No preferences set yet — click Edit to get started.</p>
               )}

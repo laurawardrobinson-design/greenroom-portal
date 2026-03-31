@@ -108,16 +108,43 @@ export default function PropsPage() {
       {tab === "items" && (
         <>
           {/* Search + filter bar */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1 max-w-xs">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-              <input
-                type="text"
-                placeholder="Search props..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-9 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
-              />
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="relative min-w-[180px] max-w-xs flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+                <input
+                  type="text"
+                  placeholder="Search props..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                />
+              </div>
+              <div className="ml-auto flex items-center gap-1">
+                {canEdit && (
+                  <button
+                    onClick={() => setShowAdd(true)}
+                    className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+                    title="Add prop"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                )}
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
+                  title="Grid view"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
+                  title="List view"
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
             </div>
             <div className="flex gap-1.5 flex-wrap">
               <button
@@ -139,22 +166,6 @@ export default function PropsPage() {
                   {cat}
                 </button>
               ))}
-            </div>
-            <div className="sm:ml-auto flex gap-1">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
-                title="Grid view"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
-                title="List view"
-              >
-                <List className="h-4 w-4" />
-              </button>
             </div>
           </div>
 

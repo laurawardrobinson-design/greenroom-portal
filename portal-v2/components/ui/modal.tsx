@@ -104,7 +104,7 @@ export function Modal({
         aria-labelledby={title ? "modal-title" : undefined}
         className={`
           relative w-full ${sizeStyles[size]}
-          rounded-xl border border-border bg-surface p-6 shadow-lg
+          rounded-xl border border-border bg-surface p-5 shadow-lg
           animate-in fade-in zoom-in-95 duration-200
           max-h-[90vh] overflow-y-auto overscroll-contain
           max-sm:rounded-b-none max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:max-w-none max-sm:rounded-t-2xl max-sm:animate-none

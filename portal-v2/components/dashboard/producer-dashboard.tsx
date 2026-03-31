@@ -47,6 +47,15 @@ const SHOOT_TYPE_STYLES: Record<string, { pill: string; dot: string }> = {
   Other: { pill: "bg-slate-100 text-slate-700", dot: "bg-slate-400" },
 };
 
+const PRODUCER_COLORS = [
+  { swatch: "bg-emerald-400", pill: "bg-emerald-100 text-emerald-700" },
+  { swatch: "bg-sky-400",     pill: "bg-sky-100 text-sky-700" },
+  { swatch: "bg-violet-400",  pill: "bg-violet-100 text-violet-700" },
+  { swatch: "bg-rose-400",    pill: "bg-rose-100 text-rose-700" },
+  { swatch: "bg-amber-400",   pill: "bg-amber-100 text-amber-700" },
+  { swatch: "bg-teal-400",    pill: "bg-teal-100 text-teal-700" },
+];
+
 interface ShootEvent {
   id: string;
   date: string;
@@ -60,6 +69,8 @@ interface ShootEvent {
     name: string;
     wfNumber: string;
     status: string;
+    producerId: string | null;
+    producerName: string | null;
   } | null;
 }
 
@@ -162,6 +173,7 @@ export function ProducerDashboard({ user }: Props) {
   const [expandedPanel, setExpandedPanel] = useState<"campaigns" | "tasks" | "shoots" | null>(
     null
   );
+  const [hiddenProducers, setHiddenProducers] = useState<Set<string>>(new Set());
 
   const monthStr = format(currentMonth, "yyyy-MM");
 
@@ -172,6 +184,46 @@ export function ProducerDashboard({ user }: Props) {
   const events: ShootEvent[] = Array.isArray(rawEvents) ? rawEvents : [];
 
   const { data: stats } = useSWR<ProducerStats>("/api/dashboard", fetcher);
+
+  // Derive unique producers from all events (stable across months for color assignment)
+  const producers = useMemo(() => {
+    const map = new Map<string, string>(); // id → name
+    for (const e of events) {
+      if (e.campaign?.producerId && e.campaign.producerName) {
+        map.set(e.campaign.producerId, e.campaign.producerName);
+      }
+    }
+    return [...map.entries()].map(([id, name], i) => ({
+      id,
+      name,
+      color: PRODUCER_COLORS[i % PRODUCER_COLORS.length],
+    }));
+  }, [events]);
+
+  // Map producerId → color index for pill coloring
+  const producerColorMap = useMemo(() => {
+    const m = new Map<string, typeof PRODUCER_COLORS[0]>();
+    producers.forEach(({ id, color }) => m.set(id, color));
+    return m;
+  }, [producers]);
+
+  // Filter events by selected producers
+  const visibleEvents = useMemo(() => {
+    if (hiddenProducers.size === 0) return events;
+    return events.filter((e) => {
+      const pid = e.campaign?.producerId;
+      return !pid || !hiddenProducers.has(pid);
+    });
+  }, [events, hiddenProducers]);
+
+  function toggleProducer(id: string) {
+    setHiddenProducers((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   // Build full-week calendar grid (shows prev/next month days in gray, like Outlook)
   const monthStart = startOfMonth(currentMonth);
@@ -186,8 +238,20 @@ export function ProducerDashboard({ user }: Props) {
     d = addDays(d, 1);
   }
 
-  // Group events by date string for O(1) lookup
+  // Group visible events by date string for O(1) lookup
   const groupedEvents = useMemo(() => {
+    const map = new Map<string, ShootEvent[]>();
+    for (const e of visibleEvents) {
+      if (!map.has(e.date)) map.set(e.date, []);
+      map.get(e.date)!.push(e);
+    }
+    return map;
+  }, [visibleEvents]);
+
+  const selectedDateStr = selectedDay ? format(selectedDay, "yyyy-MM-dd") : null;
+  const selectedDayEvents = selectedDateStr ? groupedEvents.get(selectedDateStr) || [] : [];
+  // Re-derive selected day events from all events (not filtered) for the detail panel
+  const allGrouped = useMemo(() => {
     const map = new Map<string, ShootEvent[]>();
     for (const e of events) {
       if (!map.has(e.date)) map.set(e.date, []);
@@ -195,9 +259,7 @@ export function ProducerDashboard({ user }: Props) {
     }
     return map;
   }, [events]);
-
-  const selectedDateStr = selectedDay ? format(selectedDay, "yyyy-MM-dd") : null;
-  const selectedDayEvents = selectedDateStr ? groupedEvents.get(selectedDateStr) || [] : [];
+  const selectedDayAllEvents = selectedDateStr ? allGrouped.get(selectedDateStr) || [] : [];
 
   const togglePanel = (panel: "campaigns" | "tasks" | "shoots") => {
     setExpandedPanel((prev) => (prev === panel ? null : panel));
@@ -303,13 +365,15 @@ export function ProducerDashboard({ user }: Props) {
                   {dayEvents.length > 0 && (
                     <div className="mt-0.5 space-y-0.5">
                       {dayEvents.slice(0, 2).map((e) => {
-                        const typeStyle = SHOOT_TYPE_STYLES[e.shootType] || SHOOT_TYPE_STYLES.Other;
+                        const pid = e.campaign?.producerId;
+                        const pColor = pid ? producerColorMap.get(pid) : undefined;
+                        const pillClass = pColor?.pill ?? (SHOOT_TYPE_STYLES[e.shootType] || SHOOT_TYPE_STYLES.Other).pill;
                         return (
                           <Link
                             key={e.id}
                             href={e.campaign ? `/campaigns/${e.campaign.id}` : "#"}
                             onClick={(evt) => evt.stopPropagation()}
-                            className={`block truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight ${typeStyle.pill}`}
+                            className={`block truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight ${pillClass}`}
                           >
                             {e.campaign?.name || e.shootName}
                           </Link>
@@ -336,8 +400,8 @@ export function ProducerDashboard({ user }: Props) {
                     {format(selectedDay, "EEEE, MMMM d")}
                   </h4>
                   <p className="mt-0.5 text-xs text-text-tertiary">
-                    {selectedDayEvents.length}{" "}
-                    {selectedDayEvents.length === 1 ? "shoot" : "shoots"}
+                    {selectedDayAllEvents.length}{" "}
+                    {selectedDayAllEvents.length === 1 ? "shoot" : "shoots"}
                   </p>
                 </div>
                 <button
@@ -348,24 +412,26 @@ export function ProducerDashboard({ user }: Props) {
                 </button>
               </div>
 
-              {selectedDayEvents.length > 0 ? (
+              {selectedDayAllEvents.length > 0 ? (
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {selectedDayEvents.map((e) => {
-                    const typeStyle = SHOOT_TYPE_STYLES[e.shootType] || SHOOT_TYPE_STYLES.Other;
+                  {selectedDayAllEvents.map((e) => {
+                    const pid = e.campaign?.producerId;
+                    const pColor = pid ? producerColorMap.get(pid) : undefined;
+                    const dotClass = pColor?.swatch ?? (SHOOT_TYPE_STYLES[e.shootType] || SHOOT_TYPE_STYLES.Other).dot;
                     return (
                       <Link
                         key={e.id}
                         href={e.campaign ? `/campaigns/${e.campaign.id}` : "#"}
                         className="flex items-start gap-2.5 rounded-lg border border-border p-3 transition-colors hover:bg-surface-secondary"
                       >
-                        <span
-                          className={`mt-1 h-2 w-2 shrink-0 rounded-full ${typeStyle.dot}`}
-                        />
+                        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotClass}`} />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-text-primary">
                             {e.campaign?.name || "Unknown Campaign"}
                           </p>
-                          <p className="truncate text-xs text-text-secondary">{e.shootName}</p>
+                          {e.campaign?.producerName && (
+                            <p className="truncate text-xs text-text-secondary">{e.campaign.producerName}</p>
+                          )}
                           {(e.callTime || e.location) && (
                             <div className="mt-1 flex flex-wrap gap-3 text-xs text-text-tertiary">
                               {e.callTime && (
@@ -481,15 +547,38 @@ export function ProducerDashboard({ user }: Props) {
             ))}
           </StatCard>
 
-          {/* Shoot type legend */}
-          <div className="flex flex-wrap gap-x-3 gap-y-1.5 px-1">
-            {Object.entries(SHOOT_TYPE_STYLES).map(([type, s]) => (
-              <span key={type} className="flex items-center gap-1.5 text-xs text-text-tertiary">
-                <span className={`h-2 w-2 rounded-full ${s.dot}`} />
-                {type}
-              </span>
-            ))}
-          </div>
+          {/* Calendars filter */}
+          {producers.length > 0 && (
+            <Card padding="none" className="overflow-hidden">
+              <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
+                <Calendar className="h-4 w-4 shrink-0 text-primary" />
+                <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Calendars</span>
+              </div>
+              <div className="divide-y divide-border-light">
+                {producers.map(({ id, name, color }) => {
+                  const visible = !hiddenProducers.has(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => toggleProducer(id)}
+                      className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-surface-secondary"
+                    >
+                      <span
+                        className={`h-3 w-3 shrink-0 rounded-sm transition-opacity ${color.swatch} ${visible ? "opacity-100" : "opacity-25"}`}
+                      />
+                      <span className={`flex-1 truncate text-sm ${visible ? "text-text-primary" : "text-text-tertiary"}`}>
+                        {name}
+                      </span>
+                      {!visible && (
+                        <span className="text-[10px] text-text-tertiary">hidden</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     </div>
