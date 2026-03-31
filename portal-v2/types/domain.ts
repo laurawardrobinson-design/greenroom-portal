@@ -493,6 +493,7 @@ export interface Product {
   description: string;
   shootingNotes: string;
   restrictions: string;
+  pcomLink: string | null;
   rpGuideUrl: string | null;
   imageUrl: string | null;
   createdBy: string | null;

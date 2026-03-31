@@ -5,17 +5,19 @@ export const PRODUCT_DEPARTMENTS = [
   "Bakery",
   "Meat-Seafood",
   "Produce",
-  "Grocery",
   "Floral",
+  "Grocery",
   "Other",
 ] as const;
 
 export const createProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   department: z.enum(PRODUCT_DEPARTMENTS),
+  itemCode: z.string().nullable().default(null),
   description: z.string().default(""),
   shootingNotes: z.string().default(""),
   restrictions: z.string().default(""),
+  pcomLink: z.string().url().nullable().default(null),
   rpGuideUrl: z.string().url().nullable().default(null),
   imageUrl: z.string().url().nullable().default(null),
 });

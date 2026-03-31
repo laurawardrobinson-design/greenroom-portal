@@ -1,19 +1,27 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { Camera, X, Upload } from "lucide-react";
 
 interface ImageUploadProps {
   value: string | null;
   onFileSelected: (file: File) => void;
   onRemove: () => void;
+  onSourceUrl?: (url: string) => void; // called when clipboard HTML contains a source URL
+  onImageClick?: (url: string) => void;
   className?: string;
 }
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB — matches gear-images bucket
 
-export function ImageUpload({ value, onFileSelected, onRemove, className = "" }: ImageUploadProps) {
+// Pull the first img src URL out of clipboard HTML (e.g. when copying an image from a website)
+function extractImgSrcFromHtml(html: string): string | null {
+  const m = html.match(/src=["']([^"']+)["']/);
+  return m?.[1] ?? null;
+}
+
+export function ImageUpload({ value, onFileSelected, onRemove, onSourceUrl, onImageClick, className = "" }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -39,6 +47,34 @@ export function ImageUpload({ value, onFileSelected, onRemove, className = "" }:
     [onFileSelected]
   );
 
+  const handleClipboard = useCallback(
+    (clipboardData: DataTransfer) => {
+      const file = Array.from(clipboardData.items)
+        .find((item) => item.type.startsWith("image/"))
+        ?.getAsFile();
+      if (!file) return;
+      handleFile(file);
+      // Also try to extract the source URL from the clipboard HTML
+      if (onSourceUrl) {
+        const html = clipboardData.getData("text/html");
+        if (html) {
+          const src = extractImgSrcFromHtml(html);
+          if (src) onSourceUrl(src);
+        }
+      }
+    },
+    [handleFile, onSourceUrl]
+  );
+
+  // Global paste listener — catches ⌘V anywhere on the page when this component is mounted
+  useEffect(() => {
+    function onPaste(e: ClipboardEvent) {
+      if (e.clipboardData) handleClipboard(e.clipboardData as unknown as DataTransfer);
+    }
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, [handleClipboard]);
+
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
@@ -50,6 +86,10 @@ export function ImageUpload({ value, onFileSelected, onRemove, className = "" }:
     setDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (file) handleFile(file);
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    handleClipboard(e.clipboardData);
   }
 
   function handleRemove(e: React.MouseEvent) {
@@ -70,11 +110,12 @@ export function ImageUpload({ value, onFileSelected, onRemove, className = "" }:
       />
 
       {displayUrl ? (
-        <div className="relative group w-full">
+        <div className="relative group h-50 w-50">
           <img
             src={displayUrl}
             alt="Item photo"
-            className="h-32 w-full rounded-xl object-cover border border-border"
+            onClick={() => onImageClick?.(displayUrl)}
+            className={`absolute inset-0 h-full w-full rounded-xl object-cover border border-border ${onImageClick ? "cursor-zoom-in" : ""}`}
           />
           <div className="absolute inset-0 rounded-xl bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
             <button
@@ -100,13 +141,14 @@ export function ImageUpload({ value, onFileSelected, onRemove, className = "" }:
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
-          className={`flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-6 transition-colors ${
+          onPaste={handlePaste}
+          className={`flex h-50 w-50 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed transition-colors ${
             dragOver
               ? "border-primary bg-primary/5"
               : "border-border hover:border-primary/50 hover:bg-surface-secondary"
           }`}
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-tertiary">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-tertiary">
             {dragOver ? (
               <Upload className="h-5 w-5 text-primary" />
             ) : (
@@ -115,10 +157,10 @@ export function ImageUpload({ value, onFileSelected, onRemove, className = "" }:
           </div>
           <div className="text-center">
             <p className="text-xs font-medium text-text-secondary">
-              {dragOver ? "Drop image here" : "Add a photo"}
+              {dragOver ? "Drop image here" : "Right-click any product image → Copy Image, then ⌘V"}
             </p>
             <p className="text-[10px] text-text-tertiary mt-0.5">
-              JPG, PNG, or WebP up to 10 MB
+              Or click to browse · drag & drop
             </p>
           </div>
         </button>

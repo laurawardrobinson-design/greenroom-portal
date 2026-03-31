@@ -15,9 +15,11 @@ function toProduct(row: Record<string, unknown>): Product {
     id: row.id as string,
     name: row.name as string,
     department: row.department as ProductDepartment,
+    itemCode: (row.item_code as string) || null,
     description: row.description as string,
     shootingNotes: row.shooting_notes as string,
     restrictions: row.restrictions as string,
+    pcomLink: (row.pcom_link as string) || null,
     rpGuideUrl: (row.rp_guide_url as string) || null,
     imageUrl: (row.image_url as string) || null,
     createdBy: (row.created_by as string) || null,
@@ -107,9 +109,11 @@ export async function createProduct(input: CreateProductInput, userId: string): 
     .insert({
       name: input.name,
       department: input.department,
+      item_code: input.itemCode,
       description: input.description,
       shooting_notes: input.shootingNotes,
       restrictions: input.restrictions,
+      pcom_link: input.pcomLink,
       rp_guide_url: input.rpGuideUrl,
       image_url: input.imageUrl,
       created_by: userId,
@@ -126,9 +130,11 @@ export async function updateProduct(id: string, input: UpdateProductInput): Prom
   const update: Record<string, unknown> = {};
   if (input.name !== undefined) update.name = input.name;
   if (input.department !== undefined) update.department = input.department;
+  if (input.itemCode !== undefined) update.item_code = input.itemCode;
   if (input.description !== undefined) update.description = input.description;
   if (input.shootingNotes !== undefined) update.shooting_notes = input.shootingNotes;
   if (input.restrictions !== undefined) update.restrictions = input.restrictions;
+  if (input.pcomLink !== undefined) update.pcom_link = input.pcomLink;
   if (input.rpGuideUrl !== undefined) update.rp_guide_url = input.rpGuideUrl;
   if (input.imageUrl !== undefined) update.image_url = input.imageUrl;
 
