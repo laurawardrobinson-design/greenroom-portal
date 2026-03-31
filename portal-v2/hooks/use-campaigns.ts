@@ -20,6 +20,15 @@ async function fetcher<T>(url: string): Promise<T> {
   return res.json();
 }
 
+// Stable empty-array fallbacks — prevents useEffect([setups]) infinite loops
+// when SWR hasn't loaded yet (data?.x || [] creates a new ref each render)
+const EMPTY_SHOOTS: Shoot[] = [];
+const EMPTY_DELIVERABLES: CampaignDeliverable[] = [];
+const EMPTY_SETUPS: ShotListSetup[] = [];
+const EMPTY_PRODUCTS: CampaignProduct[] = [];
+const EMPTY_GEAR: CampaignGearLink[] = [];
+const EMPTY_VENDORS: CampaignVendor[] = [];
+
 export function useCampaigns(filters?: {
   status?: CampaignStatus;
   search?: string;
@@ -62,14 +71,14 @@ export function useCampaign(id: string | null) {
   );
 
   return {
-    campaign: data?.campaign || null,
-    shoots: data?.shoots || [],
-    deliverables: data?.deliverables || [],
-    financials: data?.financials || { committed: 0, spent: 0, budget: 0, remaining: 0 },
-    setups: data?.setups || [],
-    campaignProducts: data?.campaignProducts || [],
-    campaignGear: data?.campaignGear || [],
-    vendors: data?.vendors || [],
+    campaign: data?.campaign ?? null,
+    shoots: data?.shoots ?? EMPTY_SHOOTS,
+    deliverables: data?.deliverables ?? EMPTY_DELIVERABLES,
+    financials: data?.financials ?? { committed: 0, spent: 0, budget: 0, remaining: 0 },
+    setups: data?.setups ?? EMPTY_SETUPS,
+    campaignProducts: data?.campaignProducts ?? EMPTY_PRODUCTS,
+    campaignGear: data?.campaignGear ?? EMPTY_GEAR,
+    vendors: data?.vendors ?? EMPTY_VENDORS,
     isLoading,
     isError: !!error,
     mutate,

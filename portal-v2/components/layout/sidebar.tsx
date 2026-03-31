@@ -1,5 +1,6 @@
 "use client";
 
+import type { ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { UserRole } from "@/types/domain";
@@ -10,11 +11,11 @@ import {
   Package,
   Boxes,
   Utensils,
-  Calendar,
   DollarSign,
   Settings,
   LogOut,
   X,
+  ClipboardList,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -42,9 +43,9 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["Admin", "Producer", "Studio", "Vendor", "Art Director"],
   },
   {
-    label: "Calendar",
-    href: "/calendar",
-    icon: Calendar,
+    label: "Pre Production",
+    href: "/pre-production",
+    icon: ClipboardList,
     roles: ["Admin", "Producer", "Studio", "Art Director"],
   },
   {
@@ -89,7 +90,7 @@ interface SidebarProps {
   userRole: UserRole;
   userName: string;
   userAvatar?: string;
-  userProductEmoji?: string;
+  userProductIcon?: ComponentType<{ className?: string }>;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 }
@@ -97,13 +98,14 @@ interface SidebarProps {
 export function Sidebar({
   userRole,
   userName,
-  userProductEmoji,
+  userProductIcon,
   mobileOpen = false,
   onMobileClose,
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const filteredNav = NAV_ITEMS.filter((item) => item.roles.includes(userRole));
+  const UserProductIcon = userProductIcon ?? null;
 
   async function handleLogout() {
     const supabase = createClient();
@@ -137,7 +139,10 @@ export function Sidebar({
       <nav className="flex-1 space-y-1 px-4 py-6">
         {filteredNav.map((item) => {
           const isActive =
-            pathname === item.href || pathname.startsWith(item.href + "/");
+            pathname === item.href ||
+            (item.href === "/pre-production"
+              ? pathname.includes("/pre-production")
+              : !pathname.includes("/pre-production") && pathname.startsWith(item.href + "/"));
           const Icon = item.icon;
 
           return (
@@ -176,8 +181,8 @@ export function Sidebar({
       <div className="border-t border-white/10 p-3">
         <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-medium">
-            {userProductEmoji ? (
-              <span className="text-base leading-none">{userProductEmoji}</span>
+            {UserProductIcon ? (
+              <UserProductIcon className="h-5 w-5" />
             ) : (
               userName
                 .split(" ")
