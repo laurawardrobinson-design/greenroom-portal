@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import useSWR from "swr";
 import type { AppUser, Vendor } from "@/types/domain";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useVendors } from "@/hooks/use-vendors";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -269,9 +270,7 @@ function TeamSection({
               onClick={() => setDetailPerson(person)}
             >
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-tertiary text-sm font-semibold text-text-secondary">
-                  {person.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                </div>
+                <UserAvatar name={person.name} favoriteProduct={person.favoritePublixProduct} size="lg" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <h3 className="text-sm font-semibold text-text-primary truncate">{person.name}</h3>
@@ -348,9 +347,7 @@ function TeamSection({
               className="grid grid-cols-1 sm:grid-cols-[1fr_120px_1fr_140px] gap-0 px-4 py-3 border-b border-border-light last:border-b-0 hover:bg-surface-secondary transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-tertiary text-[10px] font-semibold text-text-secondary">
-                  {person.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                </div>
+                <UserAvatar name={person.name} favoriteProduct={person.favoritePublixProduct} size="xs" />
                 <div className="min-w-0">
                   <span className="text-sm font-medium text-text-primary truncate block">{person.name}</span>
                   {person.title && <span className="text-xs text-text-tertiary truncate block">{person.title}</span>}
@@ -414,9 +411,7 @@ function ContactDetailModal({
       <div className="space-y-4">
         {/* Avatar + role */}
         <div className="flex items-center gap-3">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface-tertiary text-lg font-semibold text-text-secondary">
-            {person.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-          </div>
+          <UserAvatar name={person.name} favoriteProduct={person.favoritePublixProduct} size="xl" />
           <div>
             <div className="flex items-center gap-2">
               <Badge variant="custom" className={ROLE_BADGE[person.role] || "bg-slate-50 text-slate-600"}>

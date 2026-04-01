@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -495,14 +496,7 @@ function CrewPicker({
                 }}
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-surface-secondary transition-colors"
               >
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[9px] font-semibold">
-                  {u.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase()}
-                </div>
+                <UserAvatar name={u.name} favoriteProduct={u.favoritePublixProduct} size="xs" />
                 <span className="text-[11px] font-medium text-text-primary">
                   {u.name}
                 </span>

@@ -35,7 +35,7 @@ VALUES
   (
     'a0000000-0000-0000-0000-000000000003'::uuid,
     'Culinary Artistry Co.',
-    'Chef Elizabeth Ross',
+    'Elizabeth Ross',
     'elizabeth@culinaryartistry.demo',
     '(212) 555-0103',
     'Food Stylist',

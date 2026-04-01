@@ -94,7 +94,7 @@ export async function getShoots(campaignId: string): Promise<Shoot[]> {
       .order("shoot_date", { ascending: true }),
     db
       .from("shoot_crew")
-      .select("*, users(id, email, name, role, active, avatar_url)")
+      .select("*, users(*)")
       .in("shoot_id", shootIds),
   ]);
 
@@ -202,7 +202,7 @@ export async function updateShoot(
       .order("shoot_date", { ascending: true }),
     db
       .from("shoot_crew")
-      .select("*, users(id, email, name, role, active, avatar_url)")
+      .select("*, users(*)")
       .eq("shoot_id", id),
   ]);
 
@@ -265,7 +265,7 @@ export async function addShootCrew(
   const { data, error } = await db
     .from("shoot_crew")
     .insert(insertData)
-    .select("*, users(id, email, name, role, active, avatar_url)")
+    .select("*, users(*)")
     .single();
   if (error) throw error;
   return toShootCrew(data);

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import type { AppUser } from "@/types/domain";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -81,10 +82,10 @@ function PresetChips({
 }
 
 function ProductRowItem({ productName }: { productName: string }) {
-  const Icon = getProductIcon(productName);
+  const iconSrc = getProductIcon(productName);
   return (
     <div className="flex items-center gap-1.5 text-sm text-text-secondary">
-      {Icon && <Icon className="h-4 w-4 shrink-0" />}
+      {iconSrc && <img src={iconSrc} alt={productName} className="h-4 w-4 shrink-0" />}
       <span>{productName}</span>
     </div>
   );
@@ -94,7 +95,7 @@ function ProductRowItem({ productName }: { productName: string }) {
 // My Card — contact card preview
 // -------------------------------------------------------
 function MyCard({ user }: { user: AppUser }) {
-  const ProductIcon = getProductIcon(user.favoritePublixProduct);
+  const productIconSrc = getProductIcon(user.favoritePublixProduct);
   const snacks = user.favoriteSnacks ? user.favoriteSnacks.split(", ").filter(Boolean) : [];
   const drinks = user.favoriteDrinks ? user.favoriteDrinks.split(", ").filter(Boolean) : [];
   const allergies = user.allergies ? user.allergies.split(", ").filter(Boolean) : [];
@@ -106,11 +107,7 @@ function MyCard({ user }: { user: AppUser }) {
     <div className="rounded-xl border border-border bg-surface-secondary p-4 space-y-3">
       {/* Avatar + name */}
       <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-          {ProductIcon
-            ? <ProductIcon className="h-6 w-6 text-primary" />
-            : <span className="text-lg font-bold text-primary">{user.name.charAt(0).toUpperCase()}</span>}
-        </div>
+        <UserAvatar name={user.name} favoriteProduct={user.favoritePublixProduct} size="lg" />
         <div>
           <p className="font-semibold text-text-primary">{user.name}</p>
           <p className="text-xs text-text-tertiary">
@@ -143,7 +140,7 @@ function MyCard({ user }: { user: AppUser }) {
       <div className="border-t border-border pt-3 space-y-1.5 text-sm">
         {user.favoritePublixProduct && (
           <div className="flex items-center gap-2 text-text-secondary">
-            {ProductIcon && <ProductIcon className="h-4 w-4 shrink-0" />}
+            {productIconSrc && <img src={productIconSrc} alt={user.favoritePublixProduct} className="h-4 w-4 shrink-0" />}
             <span>{user.favoritePublixProduct}</span>
           </div>
         )}
@@ -272,7 +269,7 @@ function PreferencesForm({
                   : "border-border hover:border-primary/40 hover:bg-surface-secondary"
               }`}
             >
-              <product.icon className="h-6 w-6" />
+              <img src={product.icon} alt={product.name} className="h-6 w-6" />
               <span className="text-[10px] font-medium text-text-secondary leading-tight">
                 {product.name}
               </span>

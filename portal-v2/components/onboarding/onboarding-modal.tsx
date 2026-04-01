@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { AppUser } from "@/types/domain";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useToast } from "@/components/ui/toast";
 import {
   Mail,
@@ -16,71 +17,27 @@ import {
   AlertTriangle,
   MessageSquare,
   Zap,
-  Sandwich,
-  Drumstick,
-  CakeSlice,
-  GlassWater,
-  Hamburger,
-  Citrus,
-  Banana,
-  IceCreamCone,
-  Fish,
-  Croissant,
-  Cookie,
-  Donut,
-  Salad,
-  Flower2,
 } from "lucide-react";
-import type { ComponentType } from "react";
 
 // -------------------------------------------------------
-// Custom SVG icons for products without a Lucide match
+// Publix product catalog — image icon + display name
 // -------------------------------------------------------
-function DeliPotatoWedgesIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M5 27 L12 7 L19 27 Z"/>
-      <path d="M14 27 L21 7 L28 27 Z"/>
-    </svg>
-  );
-}
-
-function SpecialtyCheeseIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M2 27 L16 5 L30 27 Z"/>
-      <circle cx="11" cy="21" r="2.5"/>
-      <circle cx="20" cy="18" r="2"/>
-      <circle cx="16" cy="24" r="1.5"/>
-    </svg>
-  );
-}
-
-// -------------------------------------------------------
-// Publix product catalog — icon + display name
-// -------------------------------------------------------
-type ProductIconComponent = ComponentType<{ className?: string }>;
-
-export const PUBLIX_PRODUCTS: { name: string; icon: ProductIconComponent }[] = [
-  { name: "Pub Sub", icon: Sandwich },
-  { name: "Fried Chicken", icon: Drumstick },
-  { name: "Chantilly Cake", icon: CakeSlice },
-  { name: "Sweet Tea", icon: GlassWater },
-  { name: "Cuban Sandwich", icon: Hamburger },
-  { name: "Key Lime Pie", icon: Citrus },
-  { name: "Banana Pudding", icon: Banana },
-  { name: "Deli Potato Wedges", icon: DeliPotatoWedgesIcon },
-  { name: "Publix Ice Cream", icon: IceCreamCone },
-  { name: "Sushi", icon: Fish },
-  { name: "Bakery Croissant", icon: Croissant },
-  { name: "Chocolate Chip Cookie", icon: Cookie },
-  { name: "Sprinkle Cookie", icon: Donut },
-  { name: "Grab & Go Salad", icon: Salad },
-  { name: "Specialty Cheese", icon: SpecialtyCheeseIcon },
-  { name: "Fresh Flowers", icon: Flower2 },
+export const PUBLIX_PRODUCTS: { name: string; icon: string }[] = [
+  { name: "Pub Sub", icon: "/icons/products/pub-sub.svg" },
+  { name: "Fried Chicken", icon: "/icons/products/fried-chicken.svg" },
+  { name: "Chantilly Cake", icon: "/icons/products/chantilly-cake.svg" },
+  { name: "Tea", icon: "/icons/products/sweet-tea.svg" },
+  { name: "Key Lime Pie", icon: "/icons/products/key-lime-pie.svg" },
+  { name: "Deli Potato Wedges", icon: "/icons/products/potato-wedges.svg" },
+  { name: "Publix Ice Cream", icon: "/icons/products/ice-cream.svg" },
+  { name: "Sushi", icon: "/icons/products/sushi.svg" },
+  { name: "Cookies", icon: "/icons/products/sprinkle-cookie.svg" },
+  { name: "Fresh Flowers", icon: "/icons/products/fresh-flowers.svg" },
+  { name: "Premium Meat", icon: "/icons/products/premium-meat.svg" },
+  { name: "Grab & Go Salad", icon: "/icons/products/salad.svg" },
 ];
 
-export function getProductIcon(productName: string): ProductIconComponent | null {
+export function getProductIcon(productName: string): string | null {
   const found = PUBLIX_PRODUCTS.find((p) => p.name === productName);
   return found?.icon ?? null;
 }
@@ -403,7 +360,7 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
                       : "border-border hover:border-primary/40 hover:bg-surface-secondary"
                   }`}
                 >
-                  <product.icon className="h-7 w-7" />
+                  <img src={product.icon} alt={product.name} className="h-7 w-7" />
                   <span className="text-[10px] font-medium text-text-secondary leading-tight">
                     {product.name}
                   </span>
@@ -713,7 +670,7 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
             <div className="text-center mb-6">
               <div className="flex justify-center mb-2">
                 {selectedProductData
-                  ? <selectedProductData.icon className="h-14 w-14 text-primary" />
+                  ? <img src={selectedProductData.icon} alt={selectedProductData.name} className="h-14 w-14" />
                   : <Utensils className="h-14 w-14 text-primary" />}
               </div>
               <h2 className="text-lg font-bold text-text-primary">Looking good!</h2>
@@ -726,11 +683,7 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
             <div className="rounded-xl border border-border bg-surface-secondary p-4 mb-6 space-y-3">
               {/* Avatar + name */}
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  {selectedProductData
-                    ? <selectedProductData.icon className="h-6 w-6 text-primary" />
-                    : <span className="text-lg font-bold text-primary">{user.name.charAt(0).toUpperCase()}</span>}
-                </div>
+                <UserAvatar name={user.name} favoriteProduct={selectedProduct} size="lg" />
                 <div>
                   <p className="font-semibold text-text-primary">{user.name}</p>
                   <p className="text-xs text-text-tertiary">{user.role}{user.title ? ` · ${user.title}` : ""}</p>
@@ -759,7 +712,7 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
               <div className="border-t border-border pt-3 space-y-1.5 text-sm">
                 {selectedProduct && selectedProductData && (
                   <div className="flex items-center gap-2 text-text-secondary">
-                    <selectedProductData.icon className="h-4 w-4 shrink-0" />
+                    <img src={selectedProductData.icon} alt={selectedProductData.name} className="h-4 w-4 shrink-0" />
                     <span>{selectedProduct}</span>
                   </div>
                 )}

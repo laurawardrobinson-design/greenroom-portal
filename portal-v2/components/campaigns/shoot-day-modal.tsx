@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import type { Shoot, ShootCrew, AppUser } from "@/types/domain";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { format, parseISO } from "date-fns";
@@ -477,14 +478,7 @@ function CrewChip({
 
   return (
     <div className="inline-flex items-center gap-2 rounded-lg bg-surface-secondary px-2.5 py-1.5 border border-border/40">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[11px] font-semibold">
-        {(crew.user?.name || "?")
-          .split(" ")
-          .map((n: string) => n[0])
-          .join("")
-          .slice(0, 2)
-          .toUpperCase()}
-      </div>
+      <UserAvatar name={crew.user?.name || "?"} favoriteProduct={crew.user?.favoritePublixProduct} size="sm" />
       <div className="min-w-0">
         <p className="text-[11px] font-medium text-text-primary leading-tight truncate">
           {crew.user?.name || "Unknown"}
@@ -606,14 +600,7 @@ function AddCrewInline({
                 onMouseDown={() => handleAdd(u.id)}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-surface-secondary transition-colors disabled:opacity-50"
               >
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
-                  {u.name
-                    .split(" ")
-                    .map((n: string) => n[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase()}
-                </div>
+                <UserAvatar name={u.name} favoriteProduct={u.favoritePublixProduct} size="xs" />
                 <span className="font-medium text-text-primary">{u.name}</span>
                 <span className="text-text-tertiary ml-auto">{u.role}</span>
               </button>

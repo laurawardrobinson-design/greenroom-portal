@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Wedges laying flat on plate, no stray lines/hair -->
+  <defs>
+    <linearGradient id="pw" x1="0" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#D89030"/>
+      <stop offset="100%" stop-color="#B06818"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="32" cy="50" rx="28" ry="4" fill="#00000010"/>
+  <!-- White plate -->
+  <ellipse cx="32" cy="38" rx="30" ry="16" fill="#F4F2EE"/>
+  <ellipse cx="32" cy="38" rx="30" ry="16" fill="none" stroke="#E4E0DA" stroke-width="0.5"/>
+  <ellipse cx="32" cy="38" rx="26" ry="13" fill="#FAFAF8"/>
+  <!-- Wedges laying flat - elongated shapes, various angles -->
+  <ellipse cx="18" cy="30" rx="10" ry="3.5" fill="#D49030" transform="rotate(-30 18 30)"/>
+  <ellipse cx="38" cy="28" rx="11" ry="3.5" fill="#C88020" transform="rotate(15 38 28)"/>
+  <ellipse cx="26" cy="36" rx="10" ry="3" fill="#D49030" transform="rotate(-10 26 36)"/>
+  <ellipse cx="44" cy="36" rx="9" ry="3.5" fill="#C88020" transform="rotate(25 44 36)"/>
+  <ellipse cx="14" cy="38" rx="8" ry="3" fill="#D49030" transform="rotate(-20 14 38)"/>
+  <ellipse cx="40" cy="42" rx="10" ry="3" fill="#C88020" transform="rotate(-5 40 42)"/>
+  <ellipse cx="22" cy="42" rx="9" ry="3" fill="#D49030" transform="rotate(10 22 42)"/>
+  <ellipse cx="50" cy="34" rx="8" ry="3" fill="#D49030" transform="rotate(-15 50 34)"/>
+</svg>

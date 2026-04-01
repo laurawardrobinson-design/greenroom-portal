@@ -10,9 +10,9 @@ const TEST_USERS: Record<
   string,
   { email: string; name: string; role: UserRole }
 > = {
-  admin: { email: "admin@test.local", name: "Gretchen", role: "Admin" },
-  producer: { email: "producer@test.local", name: "Laura", role: "Producer" },
-  studio: { email: "studio@test.local", name: "Studio", role: "Studio" },
+  admin: { email: "admin@test.local", name: "Gretchen Siss", role: "Admin" },
+  producer: { email: "producer@test.local", name: "Laura Robinson", role: "Producer" },
+  studio: { email: "studio@test.local", name: "Studio Manager", role: "Studio" },
   vendor: { email: "vendor@test.local", name: "Sam", role: "Vendor" },
 };
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import type { Shoot, ShootCrew, AppUser } from "@/types/domain";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DateChipPicker } from "@/components/ui/date-chip-picker";
@@ -806,14 +807,7 @@ function CrewChip({ crew, canEdit, onRemove, shootId, onMutate }: {
 
   return (
     <div className="inline-flex items-center gap-2 rounded-lg bg-surface-secondary px-2.5 py-1.5 border border-border/40">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[11px] font-semibold">
-        {(crew.user?.name || "?")
-          .split(" ")
-          .map((n: string) => n[0])
-          .join("")
-          .slice(0, 2)
-          .toUpperCase()}
-      </div>
+      <UserAvatar name={crew.user?.name || "?"} favoriteProduct={crew.user?.favoritePublixProduct} size="sm" />
       <div className="min-w-0">
         <p className="text-[11px] font-medium text-text-primary leading-tight truncate">
           {crew.user?.name || "Unknown"}
@@ -921,14 +915,7 @@ function AddCrewInline({
                   onClick={() => handleAdd(u.id)}
                   className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-secondary transition-colors disabled:opacity-50"
                 >
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
-                    {u.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </div>
+                  <UserAvatar name={u.name} favoriteProduct={u.favoritePublixProduct} size="xs" />
                   <span className="text-xs font-medium text-text-primary">
                     {u.name}
                   </span>

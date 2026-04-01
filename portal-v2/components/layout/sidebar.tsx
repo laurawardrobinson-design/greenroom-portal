@@ -1,6 +1,5 @@
 "use client";
 
-import type { ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { UserRole } from "@/types/domain";
@@ -21,6 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { GatorEasterEgg } from "./gator-easter-egg";
 import { NotificationBell } from "./notification-bell";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 interface NavItem {
   label: string;
@@ -90,7 +90,8 @@ interface SidebarProps {
   userRole: UserRole;
   userName: string;
   userAvatar?: string;
-  userProductIcon?: ComponentType<{ className?: string }>;
+  userProductIcon?: string;
+  userFavoriteProduct?: string;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 }
@@ -99,13 +100,13 @@ export function Sidebar({
   userRole,
   userName,
   userProductIcon,
+  userFavoriteProduct,
   mobileOpen = false,
   onMobileClose,
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const filteredNav = NAV_ITEMS.filter((item) => item.roles.includes(userRole));
-  const UserProductIcon = userProductIcon ?? null;
 
   async function handleLogout() {
     const supabase = createClient();
@@ -180,18 +181,7 @@ export function Sidebar({
       {/* User section */}
       <div className="border-t border-white/10 p-3">
         <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-medium">
-            {UserProductIcon ? (
-              <UserProductIcon className="h-5 w-5" />
-            ) : (
-              userName
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()
-            )}
-          </div>
+          <UserAvatar name={userName} favoriteProduct={userFavoriteProduct} size="md" variant="dark" />
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-medium">{userName}</p>
             <p className="text-xs text-white/50 capitalize">{userRole}</p>

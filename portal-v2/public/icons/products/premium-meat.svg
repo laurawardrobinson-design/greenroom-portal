@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="sear" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#B87848"/>
+      <stop offset="100%" stop-color="#905830"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="32" cy="58" rx="26" ry="3" fill="#00000010"/>
+  <!-- Top surface - larger, fills more of the viewbox -->
+  <path d="M4 34 Q2 22 10 14 Q20 8 30 10 Q40 6 52 10 Q62 18 60 30 Q64 40 54 46 Q42 54 28 52 Q14 50 6 42Z" fill="url(#sear)"/>
+  <!-- Lighter sear patches between grill marks -->
+  <path d="M14 22 Q20 16 28 24 Q24 28 16 26Z" fill="#C89068" opacity="0.55"/>
+  <path d="M34 18 Q40 14 48 22 Q44 28 36 24Z" fill="#D09870" opacity="0.5"/>
+  <path d="M20 36 Q28 30 36 38 Q30 44 22 40Z" fill="#C89068" opacity="0.45"/>
+  <path d="M42 30 Q50 24 58 34 Q52 40 44 34Z" fill="#D09870" opacity="0.45"/>
+  <path d="M10 30 Q16 26 22 32 Q18 36 12 34Z" fill="#C89068" opacity="0.4"/>
+  <path d="M48 16 Q54 14 58 22 Q54 26 50 22Z" fill="#D09870" opacity="0.4"/>
+  <!-- Grill marks - dark, high contrast -->
+  <path d="M8 24 Q16 32 22 46" stroke="#2A1005" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <path d="M18 16 Q26 28 32 46" stroke="#2A1005" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <path d="M30 12 Q36 26 42 44" stroke="#2A1005" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <path d="M42 12 Q48 24 56 38" stroke="#2A1005" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <!-- Rosemary sprig -->
+  <line x1="44" y1="22" x2="56" y2="12" stroke="#5D4037" stroke-width="1" stroke-linecap="round"/>
+  <path d="M46 20 Q48 18 46 16" fill="#43A047"/><path d="M48 19 Q50 17 48 15" fill="#388E3C"/>
+  <path d="M50 18 Q52 16 50 14" fill="#43A047"/><path d="M52 17 Q54 15 52 13" fill="#388E3C"/>
+  <path d="M47 22 Q49 20 47 18" fill="#43A047"/><path d="M49 21 Q51 19 49 17" fill="#388E3C"/>
+</svg>

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import useSWR from "swr";
 import type { Product, ProductDepartment } from "@/types/domain";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { PRODUCT_DEPARTMENTS } from "@/lib/validation/products.schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -722,10 +723,8 @@ function ProductDrawer({
               <div className="space-y-2.5 mb-2">
                 {notes.map((note) => (
                   <div key={note.id} className="flex gap-2 group/note">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 shrink-0 mt-0.5">
-                      <span className="text-[10px] font-semibold text-primary leading-none">
-                        {(note.authorName ?? "?").charAt(0).toUpperCase()}
-                      </span>
+                    <div className="shrink-0 mt-0.5">
+                      <UserAvatar name={note.authorName ?? "?"} size="xs" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-1.5 mb-0.5">

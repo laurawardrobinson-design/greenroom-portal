@@ -88,7 +88,7 @@ export function EstimatesGallery() {
           campaign: { wf_number: "WF210501", name: "Organic Produce Campaign" },
           vendor: {
             company_name: "Culinary Artistry Co.",
-            contact_name: "Chef Elizabeth Ross",
+            contact_name: "Elizabeth Ross",
             email: "elizabeth@culinaryartistry.demo",
             phone: "(212) 555-0103",
           },

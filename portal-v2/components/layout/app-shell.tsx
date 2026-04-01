@@ -39,6 +39,7 @@ function AppShellInner({ children }: AppShellProps) {
           userName={user.name}
           userAvatar={user.avatarUrl}
           userProductIcon={getProductIcon(user.favoritePublixProduct) ?? undefined}
+          userFavoriteProduct={user.favoritePublixProduct || undefined}
           mobileOpen={mobileOpen}
           onMobileClose={() => setMobileOpen(false)}
         />
