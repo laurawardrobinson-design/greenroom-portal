@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/invoices — upload invoice file + create record
+// POST /api/invoices — upload invoice file to PRIVATE storage + create record
 export async function POST(request: Request) {
   try {
     const user = await getAuthUser();
@@ -39,30 +39,37 @@ export async function POST(request: Request) {
       );
     }
 
-    // Upload to Supabase storage
+    // Upload to PRIVATE invoices bucket (not public)
     const db = createAdminClient();
-    const fileName = `${Date.now()}_${file.name}`;
-    const filePath = `invoices/${campaignVendorId}/${fileName}`;
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const storagePath = `${campaignVendorId}/${Date.now()}_${safeName}`;
 
     const { error: uploadError } = await db.storage
-      .from("files")
-      .upload(filePath, file, { contentType: file.type });
+      .from("invoices")
+      .upload(storagePath, file, { contentType: file.type });
 
     if (uploadError) throw uploadError;
 
-    const { data: publicUrl } = db.storage.from("files").getPublicUrl(filePath);
+    // Generate a short-lived signed URL for immediate viewing (10 min)
+    const { data: signedUrlData, error: signedUrlError } = await db.storage
+      .from("invoices")
+      .createSignedUrl(storagePath, 600); // 10 minutes
 
-    // Create invoice record
+    if (signedUrlError) throw signedUrlError;
+
+    // Create invoice record — store the STORAGE PATH, not a public URL
     const invoice = await createInvoice({
       campaignVendorId,
-      fileUrl: publicUrl.publicUrl,
+      fileUrl: signedUrlData.signedUrl, // Temporary URL for immediate display
       fileName: file.name,
+      storagePath, // Private path for generating future signed URLs
     });
 
     // Transition vendor status to "Invoice Submitted"
     await transitionVendorStatus(campaignVendorId, "Invoice Submitted");
 
-    // Trigger edge function for AI parsing (fire-and-forget)
+    // Trigger edge function for parsing (fire-and-forget)
+    // Passes storage path — edge function downloads directly from private storage
     const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (projectUrl && serviceKey) {
@@ -74,7 +81,7 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           invoiceId: invoice.id,
-          fileUrl: publicUrl.publicUrl,
+          storagePath, // Private storage path — NOT a public URL
           campaignVendorId,
         }),
       }).catch(() => {

@@ -25,7 +25,6 @@ export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [vendorLoading, setVendorLoading] = useState(false);
-  const [resetUserId, setResetUserId] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
   const [resetMessage, setResetMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const router = useRouter();
@@ -91,11 +90,6 @@ export default function LoginPage() {
   }
 
   async function handleResetPreferences() {
-    if (!resetUserId.trim()) {
-      setResetMessage({ type: "error", text: "Please enter a user ID or email" });
-      return;
-    }
-
     setResetLoading(true);
     setResetMessage(null);
 
@@ -103,7 +97,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/reset-preferences", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: resetUserId }),
+        body: JSON.stringify({}),
       });
 
       const data = await res.json();
@@ -118,9 +112,8 @@ export default function LoginPage() {
 
       setResetMessage({
         type: "success",
-        text: "Preferences reset! User will see onboarding on next login.",
+        text: "All preferences reset! Users will see onboarding on next login.",
       });
-      setResetUserId("");
     } catch {
       setResetMessage({
         type: "error",
@@ -239,35 +232,22 @@ export default function LoginPage() {
                     ))}
                   </div>
 
-                  {/* Reset Preferences Section */}
+                  {/* Reset All Preferences Section */}
                   <div className="mt-4 pt-4 border-t border-white/10">
-                    <label className="block text-xs font-medium text-white/70 mb-2">
-                      Reset User Preferences
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="User ID or email"
-                        value={resetUserId}
-                        onChange={(e) => setResetUserId(e.target.value)}
-                        disabled={resetLoading}
-                        className="flex-1 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-xs text-white placeholder-white/40 focus:outline-none focus:border-white/40 disabled:opacity-50"
-                      />
-                      <button
-                        onClick={handleResetPreferences}
-                        disabled={resetLoading}
-                        className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-xs font-medium text-white hover:bg-white/10 transition-all disabled:opacity-50"
-                      >
-                        {resetLoading ? (
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                        ) : (
-                          "Reset"
-                        )}
-                      </button>
-                    </div>
+                    <button
+                      onClick={handleResetPreferences}
+                      disabled={resetLoading}
+                      className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-xs font-medium text-white hover:bg-white/10 transition-all disabled:opacity-50"
+                    >
+                      {resetLoading ? (
+                        <div className="mx-auto h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                      ) : (
+                        "Reset All Users"
+                      )}
+                    </button>
                     {resetMessage && (
                       <p
-                        className={`mt-2 text-xs ${
+                        className={`mt-2 text-xs text-center ${
                           resetMessage.type === "success"
                             ? "text-green-400"
                             : "text-red-400"

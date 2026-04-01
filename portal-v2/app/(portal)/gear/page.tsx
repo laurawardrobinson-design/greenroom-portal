@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import useSWR from "swr";
+import { useSearchParams } from "next/navigation";
 import type {
   GearItem,
   GearCategory,
@@ -24,6 +25,10 @@ import { GearDetailModal } from "@/components/inventory/gear-detail-modal";
 import { AddGearModal } from "@/components/inventory/add-gear-modal";
 import { ReserveGearModal } from "@/components/inventory/reserve-gear-modal";
 import { EditGearModal } from "@/components/inventory/edit-gear-modal";
+import { QrScanner } from "@/components/ui/qr-scanner";
+import { BatchCart } from "@/components/inventory/batch-cart";
+import { ActiveCheckouts } from "@/components/inventory/active-checkouts";
+import { Drawer } from "@/components/ui/drawer";
 import {
   Plus,
   Package,
@@ -38,6 +43,8 @@ import {
   ChevronRight,
   Printer,
   QrCode,
+  ArrowDownToLine,
+  ScanLine,
   X,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -70,6 +77,7 @@ type Tab = "items" | "reservations";
 export default function InventoryPage() {
   const { toast } = useToast();
   const { user } = useCurrentUser();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>("items");
 
   // Items state
@@ -84,6 +92,17 @@ export default function InventoryPage() {
   const [selectedItem, setSelectedItem] = useState<GearItem | null>(null);
   const [detailItem, setDetailItem] = useState<GearItem | null>(null);
   const [editItem, setEditItem] = useState<GearItem | null>(null);
+
+  // Scanner drawer state
+  const [showScanner, setShowScanner] = useState(false);
+
+  // Checkout tab state
+  const [cartItems, setCartItems] = useState<GearItem[]>([]);
+  const [scannerActive, setScannerActive] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [manualCode, setManualCode] = useState("");
+  const cartRef = useRef<GearItem[]>([]);
+  cartRef.current = cartItems;
 
   // Inline row editing
   const [editingRow, setEditingRow] = useState<{
@@ -112,6 +131,102 @@ export default function InventoryPage() {
   const reservations: GearReservation[] = Array.isArray(rawReservations) ? rawReservations : [];
 
   const canEdit = user?.role === "Admin" || user?.role === "Studio" || user?.role === "Producer";
+
+  // Auto-open scanner drawer when ?scan=true
+  useEffect(() => {
+    if (searchParams.get("scan") === "true") {
+      setShowScanner(true);
+    }
+  }, [searchParams]);
+
+  // Activate scanner when drawer is visible
+  useEffect(() => {
+    setScannerActive(showScanner);
+  }, [showScanner]);
+
+  // Scan handler — stable ref to avoid restarting camera
+  const handleScan = useCallback(async (code: string) => {
+    if (cartRef.current.some((i) => i.qrCode === code)) {
+      toast("info", "Item already scanned");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/gear?qr=${encodeURIComponent(code)}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Item not found");
+      }
+      const item: GearItem = await res.json();
+      setCartItems((prev) => [...prev, item]);
+      toast("success", `Added: ${item.name}`);
+      if (navigator.vibrate) navigator.vibrate(100);
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Scan failed");
+    }
+  }, [toast]);
+
+  async function handleManualEntry() {
+    const code = manualCode.trim();
+    if (!code) return;
+    setManualCode("");
+    await handleScan(code);
+  }
+
+  async function handleBatchCheckout() {
+    const eligible = cartItems.filter(
+      (i) => i.status === "Available" || i.status === "Reserved"
+    );
+    if (eligible.length === 0) return;
+    setProcessing(true);
+    try {
+      const res = await fetch("/api/gear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "batch_checkout",
+          items: eligible.map((i) => ({
+            gearItemId: i.id,
+            condition: i.condition || "Good",
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Checkout failed");
+      toast("success", `Checked out ${eligible.length} item(s)`);
+      setCartItems([]);
+      mutate();
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Checkout failed");
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function handleBatchCheckin() {
+    const eligible = cartItems.filter((i) => i.status === "Checked Out");
+    if (eligible.length === 0) return;
+    setProcessing(true);
+    try {
+      const res = await fetch("/api/gear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "batch_checkin",
+          gearItemIds: eligible.map((i) => i.id),
+          condition: "Good",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Check-in failed");
+      toast("success", `Checked in ${eligible.length} item(s)`);
+      setCartItems([]);
+      mutate();
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Check-in failed");
+    } finally {
+      setProcessing(false);
+    }
+  }
 
   const availableCount = items.filter((i) => i.status === "Available").length;
 
@@ -155,27 +270,36 @@ export default function InventoryPage() {
             {items.length} item{items.length !== 1 ? "s" : ""} · {availableCount} available
           </p>
         </div>
-        {canEdit && tab === "items" && (
-          <Button onClick={() => setShowAdd(true)}>
-            <Plus className="h-4 w-4" />
-            Add Item
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={() => setShowScanner(true)}>
+            <ScanLine className="h-4 w-4" />
+            Scan
           </Button>
-        )}
+          {canEdit && tab === "items" && (
+            <Button onClick={() => setShowAdd(true)}>
+              <Plus className="h-4 w-4" />
+              Add Item
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
-        {(["items", "reservations"] as Tab[]).map((t) => (
+        {([
+          { key: "items" as Tab, label: "Items" },
+          { key: "reservations" as Tab, label: "Reservations" },
+        ]).map((t) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${
-              tab === t
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              tab === t.key
                 ? "border-primary text-primary"
                 : "border-transparent text-text-secondary hover:text-text-primary hover:border-border"
             }`}
           >
-            {t === "items" ? "Items" : "Reservations"}
+            {t.label}
           </button>
         ))}
       </div>
@@ -568,6 +692,70 @@ export default function InventoryPage() {
         onClose={() => setEditItem(null)}
         onUpdated={() => { mutate(); setEditItem(null); }}
       />
+
+      {/* Scanner drawer */}
+      <Drawer
+        open={showScanner}
+        onClose={() => setShowScanner(false)}
+        title="Check Out / Check In"
+        description="Scan gear QR codes to check items out or in"
+        size="lg"
+      >
+        <div className="space-y-4">
+          {/* Scanner tile */}
+          <div className="rounded-xl border border-border bg-surface overflow-hidden">
+            <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+              <QrCode className="h-4 w-4 shrink-0 text-primary" />
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+                SCAN ITEMS
+              </h3>
+            </div>
+            <div className="p-4">
+              <QrScanner
+                active={scannerActive && showScanner}
+                onScan={handleScan}
+                onError={(err) => toast("error", err)}
+              />
+            </div>
+          </div>
+
+          {/* Manual entry */}
+          <div className="rounded-xl border border-border bg-surface overflow-hidden">
+            <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+              <Package className="h-4 w-4 shrink-0 text-primary" />
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+                MANUAL ENTRY
+              </h3>
+            </div>
+            <div className="flex gap-2 p-3.5">
+              <input
+                type="text"
+                placeholder="Type or paste QR code..."
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleManualEntry(); }}
+                className="h-9 flex-1 rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+              />
+              <Button size="sm" onClick={handleManualEntry}>
+                Add
+              </Button>
+            </div>
+          </div>
+
+          {/* Scanned items cart */}
+          <BatchCart
+            items={cartItems}
+            onRemove={(id) => setCartItems((prev) => prev.filter((i) => i.id !== id))}
+            onCheckOutAll={handleBatchCheckout}
+            onCheckInAll={handleBatchCheckin}
+            onClear={() => setCartItems([])}
+            processing={processing}
+          />
+
+          {/* Active checkouts */}
+          <ActiveCheckouts />
+        </div>
+      </Drawer>
     </div>
   );
 }

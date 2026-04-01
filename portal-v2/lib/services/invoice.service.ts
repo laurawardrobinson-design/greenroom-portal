@@ -7,6 +7,7 @@ function toInvoice(row: Record<string, unknown>): VendorInvoice {
     campaignVendorId: row.campaign_vendor_id as string,
     fileUrl: row.file_url as string,
     fileName: row.file_name as string,
+    storagePath: (row.storage_path as string) || null,
     submittedAt: row.submitted_at as string,
     parsedData: (row.parsed_data as Record<string, unknown>) || null,
     autoFlags: (row.auto_flags as InvoiceFlag[]) || null,
@@ -35,10 +36,25 @@ function toInvoiceItem(row: Record<string, unknown>): VendorInvoiceItem {
   };
 }
 
+/**
+ * Generate a fresh short-lived signed URL for viewing an invoice file.
+ * Files are in a private bucket — no permanent public URLs.
+ */
+async function refreshSignedUrl(storagePath: string): Promise<string | null> {
+  if (!storagePath) return null;
+  const db = createAdminClient();
+  const { data, error } = await db.storage
+    .from("invoices")
+    .createSignedUrl(storagePath, 900); // 15-minute expiry
+  if (error || !data) return null;
+  return data.signedUrl;
+}
+
 export async function createInvoice(input: {
   campaignVendorId: string;
   fileUrl: string;
   fileName: string;
+  storagePath?: string;
 }): Promise<VendorInvoice> {
   const db = createAdminClient();
   const { data, error } = await db
@@ -47,6 +63,7 @@ export async function createInvoice(input: {
       campaign_vendor_id: input.campaignVendorId,
       file_url: input.fileUrl,
       file_name: input.fileName,
+      storage_path: input.storagePath || null,
       parse_status: "pending",
     })
     .select()
@@ -70,6 +87,17 @@ export async function getInvoiceForCampaignVendor(
 
   if (error || !invoice) return null;
 
+  // Convert to typed invoice and refresh the file URL
+  const inv = toInvoice(invoice);
+
+  // If stored in private bucket, generate a fresh signed URL
+  if (inv.storagePath) {
+    const freshUrl = await refreshSignedUrl(inv.storagePath);
+    if (freshUrl) {
+      inv.fileUrl = freshUrl;
+    }
+  }
+
   const { data: items } = await db
     .from("vendor_invoice_items")
     .select("*")
@@ -77,7 +105,7 @@ export async function getInvoiceForCampaignVendor(
     .order("sort_order", { ascending: true });
 
   return {
-    invoice: toInvoice(invoice),
+    invoice: inv,
     items: (items || []).map(toInvoiceItem),
   };
 }
@@ -125,6 +153,7 @@ export async function updateInvoiceParsed(input: {
       parsed_data: input.parsedData,
       auto_flags: input.autoFlags,
       parse_status: "completed",
+      parsed_at: new Date().toISOString(),
     })
     .eq("id", input.invoiceId);
 

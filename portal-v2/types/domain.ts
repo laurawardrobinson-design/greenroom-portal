@@ -211,6 +211,7 @@ export interface VendorInvoice {
   campaignVendorId: string;
   fileUrl: string;
   fileName: string;
+  storagePath: string | null;
   submittedAt: string;
   parsedData: Record<string, unknown> | null;
   autoFlags: InvoiceFlag[] | null;
