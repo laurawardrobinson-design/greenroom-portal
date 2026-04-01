@@ -114,7 +114,7 @@ export function CreatureAppearance({ creature, position, onDone }: CreatureAppea
   return (
     <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden">
       {creature === "peacock" && (
-        <PeacockScene x={clampedPos.x} y={clampedPos.y} phase={phase} SvgComponent={SvgComponent} sizeClass={sizeClass} />
+        <PeacockScene x={clampedPos.x} y={clampedPos.y} phase={phase} sizeClass={sizeClass} />
       )}
       {creature === "moth" && (
         <MothScene x={clampedPos.x} y={clampedPos.y} phase={phase} SvgComponent={SvgComponent} sizeClass={sizeClass} />
