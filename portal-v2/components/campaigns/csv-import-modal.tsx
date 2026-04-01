@@ -101,7 +101,7 @@ export function CsvImportModal({ open, onClose, onImported }: Props) {
                 Drop or click to upload CSV
               </p>
               <p className="text-xs text-text-tertiary mt-1">
-                Columns: WF#, Name, Brand, Budget, Shoot Dates
+                Columns: WF#, Name, Budget, Shoot Dates
               </p>
             </div>
           </div>
@@ -168,7 +168,6 @@ export function CsvImportModal({ open, onClose, onImported }: Props) {
                   <th className="text-left px-3 py-2 font-medium text-text-tertiary">#</th>
                   <th className="text-left px-3 py-2 font-medium text-text-tertiary">WF#</th>
                   <th className="text-left px-3 py-2 font-medium text-text-tertiary">Name</th>
-                  <th className="text-left px-3 py-2 font-medium text-text-tertiary">Brand</th>
                   <th className="text-right px-3 py-2 font-medium text-text-tertiary">Budget</th>
                   <th className="text-left px-3 py-2 font-medium text-text-tertiary">Dates</th>
                   <th className="text-left px-3 py-2 font-medium text-text-tertiary">Status</th>
@@ -185,7 +184,6 @@ export function CsvImportModal({ open, onClose, onImported }: Props) {
                     <td className="px-3 py-2 text-text-tertiary">{row.rowNumber}</td>
                     <td className="px-3 py-2 font-mono text-text-primary">{row.wfNumber}</td>
                     <td className="px-3 py-2 text-text-primary font-medium">{row.name}</td>
-                    <td className="px-3 py-2 text-text-secondary">{row.brand}</td>
                     <td className="px-3 py-2 text-right text-text-primary">
                       {formatCurrency(row.budget)}
                     </td>
