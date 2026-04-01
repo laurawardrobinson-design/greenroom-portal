@@ -51,6 +51,8 @@ const COLUMN_MAP: Record<string, string> = {
   name: "name",
   "campaign name": "name",
   campaign: "name",
+  brand: "brand",
+  "brand name": "brand",
   budget: "budget",
   "production budget": "budget",
   "shoot dates": "shootDates",
@@ -88,6 +90,7 @@ export function parseCSV(text: string): CsvParseResult {
     const wfRaw = cells[columnIndexes.wfNumber]?.trim() || "";
     const wfNumber = wfRaw.replace(/^WF[-\s]?(\d+)$/i, (_, n) => `WF${n}`) || wfRaw;
     const name = cells[columnIndexes.name]?.trim() || "";
+    const brand = cells[columnIndexes.brand]?.trim() || "";
     const budgetStr = cells[columnIndexes.budget]?.trim() || "0";
     const datesStr = cells[columnIndexes.shootDates]?.trim() || "";
 
@@ -158,6 +161,7 @@ export function parseCSV(text: string): CsvParseResult {
       rowNumber: i + 1,
       wfNumber,
       name,
+      brand,
       budget: isNaN(budget) ? 0 : budget,
       shootDates,
       errors,
