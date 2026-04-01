@@ -470,7 +470,7 @@ function CampaignBudgetsTab() {
 }
 
 // ─── Analysis Tab ───
-type SortField = "name" | "budget" | "committed" | "spent" | "variance" | "shootDays" | "costPerShootDay";
+type SortField = "name" | "budget" | "committed" | "spent" | "variancePct" | "shootDays" | "costPerShootDay";
 type SortDir = "asc" | "desc";
 type AnalysisView = "overview" | "category" | "vendor" | "campaign";
 
@@ -1137,8 +1137,8 @@ function AnalysisTab() {
                 <button className="w-20 shrink-0 text-right flex items-center justify-end gap-1" onClick={() => toggleCampaignSort("spent")}>
                   Spent <SortIcon field="spent" />
                 </button>
-                <button className="w-16 shrink-0 text-right flex items-center justify-end gap-1" onClick={() => toggleCampaignSort("variance")}>
-                  Var <SortIcon field="variance" />
+                <button className="w-16 shrink-0 text-right flex items-center justify-end gap-1" onClick={() => toggleCampaignSort("variancePct")}>
+                  Var <SortIcon field="variancePct" />
                 </button>
                 <button className="w-14 shrink-0 text-right flex items-center justify-end gap-1" onClick={() => toggleCampaignSort("shootDays")}>
                   Days <SortIcon field="shootDays" />

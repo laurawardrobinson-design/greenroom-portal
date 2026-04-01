@@ -7,6 +7,7 @@ export interface CsvCampaignRow {
   rowNumber: number;
   wfNumber: string;
   name: string;
+  brand: string;
   budget: number;
   shootDates: string[];
   errors: string[];
