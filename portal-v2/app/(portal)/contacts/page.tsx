@@ -690,7 +690,7 @@ function AddTeamMemberModal({
         <Select
           label="Role"
           value={role}
-          onChange={(e) => setRole(e.target.value)}
+          onChange={(e) => setRole(e.target.value as "Producer" | "Studio" | "Admin")}
           options={[
             { value: "Producer", label: "Producer" },
             { value: "Studio", label: "Studio" },
@@ -800,7 +800,7 @@ function EditTeamMemberModal({
         <Select
           label="Role"
           value={role}
-          onChange={(e) => setRole(e.target.value)}
+          onChange={(e) => setRole(e.target.value as "Producer" | "Studio" | "Admin")}
           options={[
             { value: "Producer", label: "Producer" },
             { value: "Studio", label: "Studio" },
