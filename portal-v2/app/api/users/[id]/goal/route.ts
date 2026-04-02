@@ -112,7 +112,7 @@ export async function GET(
         .eq("goal_id", goal.id);
 
       result.stakeholders = (stakeData ?? []).map((s) => {
-        const u = s.users as Record<string, unknown> | null;
+        const u = s.users as unknown as Record<string, unknown> | null;
         return {
           id: s.id,
           goalId: s.goal_id,
