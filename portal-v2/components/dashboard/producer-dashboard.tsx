@@ -35,6 +35,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/loading-skeleton";
 import { CampaignStatusBadge } from "@/components/campaigns/campaign-status-badge";
+import { HighlightsCard } from "@/components/dashboard/highlights-card";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -345,7 +346,7 @@ export function ProducerDashboard({ user }: Props) {
                     setSelectedDay((prev) => (prev && isSameDay(prev, day) ? null : day))
                   }
                   className={`
-                    relative min-h-[88px] cursor-pointer border-b border-r border-border-light p-1.5 transition-colors
+                    relative min-h-[64px] cursor-pointer border-b border-r border-border-light p-1.5 transition-colors
                     ${!inMonth ? "bg-surface-secondary/40" : "hover:bg-surface-secondary/50"}
                     ${isSelected ? "bg-primary/5 ring-1 ring-inset ring-primary/40" : ""}
                   `}
@@ -460,127 +461,128 @@ export function ProducerDashboard({ user }: Props) {
           )}
         </Card>
 
-        {/* ── Stats column ── */}
-        <div className="flex flex-col gap-3 lg:col-span-3">
-
-          {/* Active Campaigns */}
-          <StatCard
-            icon={<Film className="h-4 w-4" />}
-            label="Active Campaigns"
-            count={stats?.activeCampaigns}
-            colorText="text-blue-600"
-            colorBg="bg-blue-50"
-            isExpanded={expandedPanel === "campaigns"}
-            onToggle={() => togglePanel("campaigns")}
-          >
-            {stats?.activeCampaignsList.map((c) => (
-              <Link
-                key={c.id}
-                href={`/campaigns/${c.id}`}
-                className="flex items-center justify-between gap-2 px-4 py-2.5 transition-colors hover:bg-surface-secondary"
-              >
-                <span className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
-                  {c.name}
-                </span>
-                <CampaignStatusBadge status={c.status as CampaignStatus} />
-              </Link>
-            ))}
-          </StatCard>
-
-          {/* Pending Tasks */}
-          <StatCard
-            icon={<ClipboardCheck className="h-4 w-4" />}
-            label="Pending Tasks"
-            count={stats?.pendingTasks}
-            colorText="text-amber-600"
-            colorBg="bg-amber-50"
-            isExpanded={expandedPanel === "tasks"}
-            onToggle={() => togglePanel("tasks")}
-          >
-            {stats?.pendingTasksList.map((t) => (
-              <Link
-                key={t.id}
-                href={`/campaigns/${t.campaignId}`}
-                className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-secondary"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-text-primary">{t.type}</p>
-                  <p className="truncate text-xs text-text-tertiary">
-                    {t.vendorName} · {t.campaignName}
-                  </p>
-                </div>
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
-              </Link>
-            ))}
-          </StatCard>
-
-          {/* Shoots This Week */}
-          <StatCard
-            icon={<Calendar className="h-4 w-4" />}
-            label="Shoots This Week"
-            count={stats?.shootsThisWeek}
-            colorText="text-purple-600"
-            colorBg="bg-purple-50"
-            isExpanded={expandedPanel === "shoots"}
-            onToggle={() => togglePanel("shoots")}
-          >
-            {stats?.shootsThisWeekList.map((s) => (
-              <Link
-                key={s.id}
-                href={`/campaigns/${s.campaignId}`}
-                className="flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-surface-secondary"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-text-primary">{s.shootName}</p>
-                  <p className="truncate text-xs text-text-tertiary">
-                    {format(parseISO(s.date), "EEE, MMM d")} · {s.campaignName}
-                  </p>
-                  {s.callTime && (
-                    <p className="mt-0.5 flex items-center gap-1 text-xs text-text-tertiary">
-                      <Clock className="h-3 w-3" />
-                      {s.callTime}
-                    </p>
-                  )}
-                </div>
-                <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-tertiary" />
-              </Link>
-            ))}
-          </StatCard>
-
-          {/* Calendars filter */}
-          {producers.length > 0 && (
-            <Card padding="none" className="overflow-hidden">
-              <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
-                <Calendar className="h-4 w-4 shrink-0 text-primary" />
-                <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Calendars</span>
-              </div>
-              <div className="divide-y divide-border-light">
-                {producers.map(({ id, name, color }) => {
-                  const visible = !hiddenProducers.has(id);
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => toggleProducer(id)}
-                      className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-surface-secondary"
-                    >
-                      <span
-                        className={`h-3 w-3 shrink-0 rounded-sm transition-opacity ${color.swatch} ${visible ? "opacity-100" : "opacity-25"}`}
-                      />
-                      <span className={`flex-1 truncate text-sm ${visible ? "text-text-primary" : "text-text-tertiary"}`}>
-                        {name}
-                      </span>
-                      {!visible && (
-                        <span className="text-[10px] text-text-tertiary">hidden</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </Card>
-          )}
+        {/* ── Highlights ── */}
+        <div className="lg:col-span-3">
+          <HighlightsCard />
         </div>
       </div>
+
+      {/* Stats row below calendar */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {/* Active Campaigns */}
+        <StatCard
+          icon={<Film className="h-4 w-4" />}
+          label="Active Campaigns"
+          count={stats?.activeCampaigns}
+          colorText="text-blue-600"
+          colorBg="bg-blue-50"
+          isExpanded={expandedPanel === "campaigns"}
+          onToggle={() => togglePanel("campaigns")}
+        >
+          {stats?.activeCampaignsList.map((c) => (
+            <Link
+              key={c.id}
+              href={`/campaigns/${c.id}`}
+              className="flex items-center justify-between gap-2 px-4 py-2.5 transition-colors hover:bg-surface-secondary"
+            >
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
+                {c.name}
+              </span>
+              <CampaignStatusBadge status={c.status as CampaignStatus} />
+            </Link>
+          ))}
+        </StatCard>
+
+        {/* Pending Tasks */}
+        <StatCard
+          icon={<ClipboardCheck className="h-4 w-4" />}
+          label="Pending Tasks"
+          count={stats?.pendingTasks}
+          colorText="text-amber-600"
+          colorBg="bg-amber-50"
+          isExpanded={expandedPanel === "tasks"}
+          onToggle={() => togglePanel("tasks")}
+        >
+          {stats?.pendingTasksList.map((t) => (
+            <Link
+              key={t.id}
+              href={`/campaigns/${t.campaignId}`}
+              className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-secondary"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-text-primary">{t.type}</p>
+                <p className="truncate text-xs text-text-tertiary">
+                  {t.vendorName} · {t.campaignName}
+                </p>
+              </div>
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+            </Link>
+          ))}
+        </StatCard>
+
+        {/* Shoots This Week */}
+        <StatCard
+          icon={<Calendar className="h-4 w-4" />}
+          label="Shoots This Week"
+          count={stats?.shootsThisWeek}
+          colorText="text-purple-600"
+          colorBg="bg-purple-50"
+          isExpanded={expandedPanel === "shoots"}
+          onToggle={() => togglePanel("shoots")}
+        >
+          {stats?.shootsThisWeekList.map((s) => (
+            <Link
+              key={s.id}
+              href={`/campaigns/${s.campaignId}`}
+              className="flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-surface-secondary"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-text-primary">{s.shootName}</p>
+                <p className="truncate text-xs text-text-tertiary">
+                  {format(parseISO(s.date), "EEE, MMM d")} · {s.campaignName}
+                </p>
+                {s.callTime && (
+                  <p className="mt-0.5 flex items-center gap-1 text-xs text-text-tertiary">
+                    <Clock className="h-3 w-3" />
+                    {s.callTime}
+                  </p>
+                )}
+              </div>
+              <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+            </Link>
+          ))}
+        </StatCard>
+      </div>
+
+      {/* Calendars filter */}
+      {producers.length > 0 && (
+        <Card padding="none" className="overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
+            <Calendar className="h-4 w-4 shrink-0 text-primary" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Calendars</span>
+          </div>
+          <div className="flex flex-wrap gap-0 divide-x divide-border-light">
+            {producers.map(({ id, name, color }) => {
+              const visible = !hiddenProducers.has(id);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => toggleProducer(id)}
+                  className="flex items-center gap-2 px-3.5 py-2.5 text-left transition-colors hover:bg-surface-secondary"
+                >
+                  <span
+                    className={`h-3 w-3 shrink-0 rounded-sm transition-opacity ${color.swatch} ${visible ? "opacity-100" : "opacity-25"}`}
+                  />
+                  <span className={`truncate text-sm ${visible ? "text-text-primary" : "text-text-tertiary"}`}>
+                    {name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

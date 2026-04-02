@@ -1,9 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { mutate } from "swr";
 
 const DEV_AUTH = process.env.NEXT_PUBLIC_DEV_AUTH === "true";
 
@@ -27,7 +24,6 @@ export default function LoginPage() {
   const [vendorLoading, setVendorLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetMessage, setResetMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const router = useRouter();
 
   // Fetch demo vendors when vendor role is selected
   useEffect(() => {
@@ -50,17 +46,6 @@ export default function LoginPage() {
     setVendorLoading(false);
   }
 
-  async function handleGoogleLogin() {
-    setLoading("google");
-    const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
-      },
-    });
-  }
-
   async function handleDevLogin(role: string, vendorId?: string) {
     setLoading(role);
     try {
@@ -80,8 +65,8 @@ export default function LoginPage() {
         return;
       }
 
-      await mutate("/api/auth/me", undefined, { revalidate: true });
-      router.replace("/dashboard");
+      // Full page load so the browser picks up the new auth cookies
+      window.location.href = "/dashboard";
     } catch {
       alert("Login failed");
       setLoading(null);
@@ -111,7 +96,7 @@ export default function LoginPage() {
 
       setResetMessage({
         type: "success",
-        text: "Gretchen & Laura reset! They will see onboarding on next login.",
+        text: "HOP & Producer reset! They will see onboarding on next login.",
       });
     } catch {
       setResetMessage({
@@ -142,17 +127,10 @@ export default function LoginPage() {
 
         {/* Sign in card */}
         <div className="rounded-xl bg-white/[0.07] backdrop-blur-sm border border-white/10 p-6">
-          {/* SSO Button */}
-          <button
-            onClick={handleGoogleLogin}
-            disabled={loading !== null}
-            className="flex w-full items-center justify-center gap-3 rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-800 shadow-sm transition-all hover:bg-gray-50 disabled:opacity-50"
-          >
-            {loading === "google" && (
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-800" />
-            )}
-            {loading === "google" ? "Signing in..." : "Placeholder - Single Sign On"}
-          </button>
+          {/* SSO Placeholder (not yet wired up) */}
+          <div className="flex w-full items-center justify-center gap-3 rounded-lg bg-white/40 px-4 py-3 text-sm font-medium text-gray-400 shadow-sm cursor-not-allowed select-none">
+            Placeholder - Single Sign On
+          </div>
 
           {/* Dev login */}
           {DEV_AUTH && (
@@ -241,7 +219,7 @@ export default function LoginPage() {
                       {resetLoading ? (
                         <div className="mx-auto h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                       ) : (
-                        "Reset Gretchen & Laura"
+                        "Reset Users"
                       )}
                     </button>
                     {resetMessage && (

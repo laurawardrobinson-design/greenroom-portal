@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
+import { formatDistanceToNow, parseISO } from "date-fns";
 import type { AppUser, Vendor } from "@/types/domain";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useVendors } from "@/hooks/use-vendors";
@@ -32,6 +33,8 @@ import {
   AlertCircle,
   X,
   Edit2,
+  Heart,
+  Send,
 } from "lucide-react";
 
 const fetcher = (url: string) =>
@@ -389,6 +392,14 @@ function TeamSection({
   );
 }
 
+interface UserNote {
+  id: string;
+  text: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+}
+
 // --- Contact Detail Modal (unified detail + inline edit) ---
 function ContactDetailModal({
   person,
@@ -416,6 +427,42 @@ function ContactDetailModal({
   const [coffeeOrder, setCoffeeOrder] = useState(person?.energyBoost ?? "");
   const [allergies, setAllergies] = useState(person?.allergies ?? "");
   const [selectedProduct, setSelectedProduct] = useState(person?.favoritePublixProduct ?? "");
+
+  // Praise notes
+  const { user: currentUser } = useCurrentUser();
+  const { data: userNotes, mutate: mutateNotes } = useSWR<UserNote[]>(
+    person ? `/api/users/${person.id}/notes` : null,
+    (url: string) => fetch(url).then((r) => r.json())
+  );
+  const [newNote, setNewNote] = useState("");
+  const [addingNote, setAddingNote] = useState(false);
+
+  async function handleAddNote() {
+    if (!newNote.trim() || !person) return;
+    setAddingNote(true);
+    try {
+      await fetch(`/api/users/${person.id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: newNote.trim() }),
+      });
+      setNewNote("");
+      mutateNotes();
+    } catch {
+      toast("error", "Failed to add note");
+    }
+    setAddingNote(false);
+  }
+
+  async function handleDeleteNote(noteId: string) {
+    if (!person) return;
+    try {
+      await fetch(`/api/users/${person.id}/notes/${noteId}`, { method: "DELETE" });
+      mutateNotes();
+    } catch {
+      toast("error", "Failed to delete note");
+    }
+  }
 
   useEffect(() => {
     if (person) {
@@ -675,6 +722,75 @@ function ContactDetailModal({
             </div>
           </div>
         </div>
+
+        {/* ── What We Love ── */}
+        {!editMode && person && (
+          <div className="rounded-xl border border-border overflow-hidden">
+            <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+              <Heart className="h-4 w-4 shrink-0 text-primary" />
+              <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+                What We Love About {person.name.split(" ")[0]}
+              </span>
+              {userNotes && userNotes.length > 0 && (
+                <span className="text-[10px] text-text-tertiary ml-auto">{userNotes.length}</span>
+              )}
+            </div>
+            <div className="px-3.5 py-3 space-y-3">
+              <p className="text-[10px] italic text-text-tertiary">
+                Share something kind — a great quality, a helpful moment, or something that makes this person awesome to work with.
+              </p>
+              {userNotes && userNotes.length > 0 ? (
+                <div className="space-y-2.5 max-h-[180px] overflow-y-auto">
+                  {userNotes.map((n) => (
+                    <div key={n.id} className="group flex gap-2">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                        {n.authorName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-xs font-medium text-text-primary">{n.authorName}</span>
+                          <span className="text-[10px] text-text-tertiary">
+                            {formatDistanceToNow(parseISO(n.createdAt), { addSuffix: true })}
+                          </span>
+                        </div>
+                        <p className="text-xs text-text-secondary mt-0.5 break-words">{n.text}</p>
+                      </div>
+                      {currentUser && n.authorId === currentUser.id && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteNote(n.id)}
+                          className="shrink-0 opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded text-text-tertiary hover:text-red-500 transition-all"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-text-tertiary">No notes yet — be the first!</p>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddNote(); } }}
+                  placeholder="Say something nice..."
+                  className="flex-1 h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddNote}
+                  disabled={!newNote.trim() || addingNote}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-white disabled:opacity-40 hover:bg-primary-hover transition-colors"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer actions */}
         {editMode ? (

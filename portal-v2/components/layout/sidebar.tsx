@@ -181,7 +181,7 @@ export function Sidebar({
       {/* User section */}
       <div className="border-t border-white/10 p-3">
         <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
-          <UserAvatar name={userName} favoriteProduct={userFavoriteProduct} size="md" variant="dark" />
+          <UserAvatar name={userName} favoriteProduct={userFavoriteProduct} size="sm" variant="dark" />
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-medium">{userName}</p>
             <p className="text-xs text-white/50 capitalize">{userRole}</p>
