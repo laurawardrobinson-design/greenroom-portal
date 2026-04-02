@@ -6,9 +6,16 @@ export const createVendorSchema = z.object({
   email: z.string().email("Valid email required").or(z.literal("")),
   phone: z.string().default(""),
   category: z.string().default(""),
+  title: z.string().default(""),
   specialty: z.string().default(""),
   taxId: z.string().default(""),
   notes: z.string().default(""),
+  favoriteDrinks: z.string().default(""),
+  favoriteSnacks: z.string().default(""),
+  dietaryRestrictions: z.string().default(""),
+  allergies: z.string().default(""),
+  energyBoost: z.string().default(""),
+  favoritePublixProduct: z.string().default(""),
 });
 
 export const updateVendorSchema = createVendorSchema.partial();

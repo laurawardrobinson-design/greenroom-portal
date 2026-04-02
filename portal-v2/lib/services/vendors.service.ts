@@ -10,11 +10,18 @@ function toVendor(row: Record<string, unknown>): Vendor {
     email: row.email as string,
     phone: row.phone as string,
     category: row.category as string,
+    title: (row.title as string) || "",
     specialty: row.specialty as string,
     taxId: row.tax_id as string,
     active: row.active as boolean,
     onboardedDate: (row.onboarded_date as string) || null,
     notes: row.notes as string,
+    favoriteDrinks: (row.favorite_drinks as string) || "",
+    favoriteSnacks: (row.favorite_snacks as string) || "",
+    dietaryRestrictions: (row.dietary_restrictions as string) || "",
+    allergies: (row.allergies as string) || "",
+    energyBoost: (row.energy_boost as string) || "",
+    favoritePublixProduct: (row.favorite_publix_product as string) || "",
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -94,6 +101,13 @@ export async function updateVendor(
   if (input.specialty !== undefined) updateData.specialty = input.specialty;
   if (input.taxId !== undefined) updateData.tax_id = input.taxId;
   if (input.notes !== undefined) updateData.notes = input.notes;
+  if (input.title !== undefined) updateData.title = input.title;
+  if (input.favoriteDrinks !== undefined) updateData.favorite_drinks = input.favoriteDrinks;
+  if (input.favoriteSnacks !== undefined) updateData.favorite_snacks = input.favoriteSnacks;
+  if (input.dietaryRestrictions !== undefined) updateData.dietary_restrictions = input.dietaryRestrictions;
+  if (input.allergies !== undefined) updateData.allergies = input.allergies;
+  if (input.energyBoost !== undefined) updateData.energy_boost = input.energyBoost;
+  if (input.favoritePublixProduct !== undefined) updateData.favorite_publix_product = input.favoritePublixProduct;
 
   const { data, error } = await db
     .from("vendors")

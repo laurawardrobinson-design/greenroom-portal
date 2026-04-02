@@ -127,11 +127,18 @@ export interface Vendor {
   email: string;
   phone: string;
   category: string;
+  title: string;
   specialty: string;
   taxId: string;
   active: boolean;
   onboardedDate: string | null;
   notes: string;
+  favoriteDrinks: string;
+  favoriteSnacks: string;
+  dietaryRestrictions: string;
+  allergies: string;
+  energyBoost: string;
+  favoritePublixProduct: string;
   createdAt: string;
   updatedAt: string;
 }

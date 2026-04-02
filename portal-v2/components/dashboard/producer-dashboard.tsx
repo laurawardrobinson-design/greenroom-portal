@@ -20,8 +20,6 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  ChevronUp,
   Film,
   ClipboardCheck,
   Calendar,
@@ -482,20 +480,19 @@ export function ProducerDashboard({ user }: Props) {
       {/* Stats row below calendar */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {/* Active Campaigns */}
-        <StatCard
+        <InfoCard
           icon={<Film className="h-4 w-4" />}
           label="Active Campaigns"
           count={stats?.activeCampaigns}
+          accentBorder="border-l-blue-500"
           colorText="text-blue-600"
           colorBg="bg-blue-50"
-          isExpanded={expandedPanel === "campaigns"}
-          onToggle={() => togglePanel("campaigns")}
         >
           {stats?.activeCampaignsList.map((c) => (
             <Link
               key={c.id}
               href={`/campaigns/${c.id}`}
-              className="flex items-center justify-between gap-2 px-4 py-2.5 transition-colors hover:bg-surface-secondary"
+              className="flex items-center justify-between gap-2 px-4 py-2 transition-colors hover:bg-surface-secondary"
             >
               <span className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
                 {c.name}
@@ -503,23 +500,22 @@ export function ProducerDashboard({ user }: Props) {
               <CampaignStatusBadge status={c.status as CampaignStatus} />
             </Link>
           ))}
-        </StatCard>
+        </InfoCard>
 
         {/* Pending Tasks */}
-        <StatCard
+        <InfoCard
           icon={<ClipboardCheck className="h-4 w-4" />}
           label="Pending Tasks"
           count={stats?.pendingTasks}
+          accentBorder="border-l-amber-500"
           colorText="text-amber-600"
           colorBg="bg-amber-50"
-          isExpanded={expandedPanel === "tasks"}
-          onToggle={() => togglePanel("tasks")}
         >
           {stats?.pendingTasksList.map((t) => (
             <Link
               key={t.id}
               href={`/campaigns/${t.campaignId}`}
-              className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-secondary"
+              className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-surface-secondary"
             >
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-text-primary">{t.type}</p>
@@ -530,23 +526,22 @@ export function ProducerDashboard({ user }: Props) {
               <ChevronRight className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
             </Link>
           ))}
-        </StatCard>
+        </InfoCard>
 
         {/* Shoots This Week */}
-        <StatCard
+        <InfoCard
           icon={<Calendar className="h-4 w-4" />}
           label="Shoots This Week"
           count={stats?.shootsThisWeek}
+          accentBorder="border-l-purple-500"
           colorText="text-purple-600"
           colorBg="bg-purple-50"
-          isExpanded={expandedPanel === "shoots"}
-          onToggle={() => togglePanel("shoots")}
         >
           {stats?.shootsThisWeekList.map((s) => (
             <Link
               key={s.id}
               href={`/campaigns/${s.campaignId}`}
-              className="flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-surface-secondary"
+              className="flex items-start gap-3 px-4 py-2 transition-colors hover:bg-surface-secondary"
             >
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-text-primary">{s.shootName}</p>
@@ -563,11 +558,11 @@ export function ProducerDashboard({ user }: Props) {
               <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-tertiary" />
             </Link>
           ))}
-        </StatCard>
+        </InfoCard>
       </div>
 
-      {/* Calendars filter */}
-      {producers.length > 0 && (
+      {/* Calendars filter — only in Team view */}
+      {scope === "all" && producers.length > 0 && (
         <Card padding="none" className="overflow-hidden">
           <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
             <Calendar className="h-4 w-4 shrink-0 text-primary" />

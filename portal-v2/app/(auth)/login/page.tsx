@@ -128,7 +128,7 @@ export default function LoginPage() {
         {/* Sign in card */}
         <div className="rounded-xl bg-white/[0.07] backdrop-blur-sm border border-white/10 p-6">
           {/* SSO Placeholder (not yet wired up) */}
-          <div className="flex w-full items-center justify-center gap-3 rounded-lg bg-white/40 px-4 py-3 text-sm font-medium text-gray-400 shadow-sm cursor-not-allowed select-none">
+          <div className="flex w-full items-center justify-center gap-3 rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-400 shadow-sm cursor-not-allowed select-none">
             Placeholder - Single Sign On
           </div>
 

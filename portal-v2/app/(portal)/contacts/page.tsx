@@ -296,50 +296,54 @@ function TeamSection({
                   </div>
                 </div>
               </div>
-              {(person.favoriteDrinks || person.favoriteSnacks || person.dietaryRestrictions || person.allergies) && (
-                <div className="mt-3 pt-3 border-t border-border-light space-y-2">
-                  {person.favoriteDrinks && (
-                    <div className="flex items-start gap-2">
-                      <Coffee className="h-3 w-3 shrink-0 mt-1 text-text-tertiary" />
-                      <div className="flex flex-wrap gap-1">
-                        {person.favoriteDrinks.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                          <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-[10px] text-text-secondary">{item}</span>
-                        ))}
+              <div className="mt-3 pt-3 border-t border-border-light space-y-2">
+                {(person.favoriteDrinks || person.favoriteSnacks || person.dietaryRestrictions || person.allergies) ? (
+                  <>
+                    {person.favoriteDrinks && (
+                      <div className="flex items-start gap-2">
+                        <Coffee className="h-3 w-3 shrink-0 mt-1 text-text-tertiary" />
+                        <div className="flex flex-wrap gap-1">
+                          {person.favoriteDrinks.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                            <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-[10px] text-text-secondary">{item}</span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {person.favoriteSnacks && (
-                    <div className="flex items-start gap-2">
-                      <Cookie className="h-3 w-3 shrink-0 mt-1 text-text-tertiary" />
-                      <div className="flex flex-wrap gap-1">
-                        {person.favoriteSnacks.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                          <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-[10px] text-text-secondary">{item}</span>
-                        ))}
+                    )}
+                    {person.favoriteSnacks && (
+                      <div className="flex items-start gap-2">
+                        <Cookie className="h-3 w-3 shrink-0 mt-1 text-text-tertiary" />
+                        <div className="flex flex-wrap gap-1">
+                          {person.favoriteSnacks.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                            <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-[10px] text-text-secondary">{item}</span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {person.dietaryRestrictions && (
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="h-3 w-3 shrink-0 mt-1 text-amber-500" />
-                      <div className="flex flex-wrap gap-1">
-                        {person.dietaryRestrictions.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                          <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700">{item}</span>
-                        ))}
+                    )}
+                    {person.dietaryRestrictions && (
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-3 w-3 shrink-0 mt-1 text-amber-500" />
+                        <div className="flex flex-wrap gap-1">
+                          {person.dietaryRestrictions.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                            <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700">{item}</span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {person.allergies && (
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="h-3 w-3 shrink-0 mt-1 text-red-500" />
-                      <div className="flex flex-wrap gap-1">
-                        {person.allergies.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                          <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] text-red-700">{item}</span>
-                        ))}
+                    )}
+                    {person.allergies && (
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-3 w-3 shrink-0 mt-1 text-red-500" />
+                        <div className="flex flex-wrap gap-1">
+                          {person.allergies.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                            <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] text-red-700">{item}</span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[10px] text-text-tertiary">No preferences set</p>
+                )}
+              </div>
             </Card>
           ))}
         </div>
@@ -815,6 +819,7 @@ function VendorSection({
   onCloseAdd: () => void;
 }) {
   const { vendors, isLoading, mutate } = useVendors({ search: search || undefined });
+  const [detailVendor, setDetailVendor] = useState<Vendor | null>(null);
 
   const filtered = categoryFilter
     ? vendors.filter((v) => v.category === categoryFilter)
@@ -835,18 +840,15 @@ function VendorSection({
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {filtered.map((vendor) => (
-            <Card key={vendor.id} hover padding="md">
+            <Card key={vendor.id} hover padding="md" className="cursor-pointer" onClick={() => setDetailVendor(vendor)}>
               <div className="flex items-start gap-3">
-                <UserAvatar name={vendor.contactName || vendor.companyName} size="lg" />
+                <UserAvatar name={vendor.contactName || vendor.companyName} favoriteProduct={vendor.favoritePublixProduct} size="lg" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <h3 className="text-sm font-semibold text-text-primary truncate">{vendor.companyName}</h3>
                   </div>
-                  {vendor.contactName && (
-                    <p className="text-xs text-text-secondary mb-1">{vendor.contactName}</p>
-                  )}
-                  {vendor.category && (
-                    <p className="mb-1"><Badge variant="default">{vendor.category}</Badge></p>
+                  {(vendor.title || vendor.category) && (
+                    <p className="text-xs text-text-secondary mb-1">{vendor.title || vendor.category}</p>
                   )}
                   <div className="space-y-0.5 text-xs text-text-tertiary">
                     {vendor.email && (
@@ -863,6 +865,54 @@ function VendorSection({
                     )}
                   </div>
                 </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-border-light space-y-2">
+                {(vendor.favoriteDrinks || vendor.favoriteSnacks || vendor.dietaryRestrictions || vendor.allergies) ? (
+                  <>
+                    {vendor.favoriteDrinks && (
+                      <div className="flex items-start gap-2">
+                        <Coffee className="h-3 w-3 shrink-0 mt-1 text-text-tertiary" />
+                        <div className="flex flex-wrap gap-1">
+                          {vendor.favoriteDrinks.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                            <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-[10px] text-text-secondary">{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {vendor.favoriteSnacks && (
+                      <div className="flex items-start gap-2">
+                        <Cookie className="h-3 w-3 shrink-0 mt-1 text-text-tertiary" />
+                        <div className="flex flex-wrap gap-1">
+                          {vendor.favoriteSnacks.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                            <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-[10px] text-text-secondary">{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {vendor.dietaryRestrictions && (
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-3 w-3 shrink-0 mt-1 text-amber-500" />
+                        <div className="flex flex-wrap gap-1">
+                          {vendor.dietaryRestrictions.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                            <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700">{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {vendor.allergies && (
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-3 w-3 shrink-0 mt-1 text-red-500" />
+                        <div className="flex flex-wrap gap-1">
+                          {vendor.allergies.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                            <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] text-red-700">{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[10px] text-text-tertiary">No preferences set</p>
+                )}
               </div>
             </Card>
           ))}
@@ -906,7 +956,343 @@ function VendorSection({
         onClose={onCloseAdd}
         onCreated={() => { mutate(); onCloseAdd(); }}
       />
+
+      {detailVendor && (
+        <VendorDetailModal
+          vendor={detailVendor}
+          onClose={() => setDetailVendor(null)}
+          onSaved={() => mutate()}
+        />
+      )}
     </>
+  );
+}
+
+// --- Vendor Detail Modal ---
+interface VendorNote {
+  id: string;
+  text: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+}
+
+function VendorDetailModal({
+  vendor,
+  onClose,
+  onSaved,
+}: {
+  vendor: Vendor;
+  onClose: () => void;
+  onSaved?: () => void;
+}) {
+  const { toast } = useToast();
+  const { user: currentUser } = useCurrentUser();
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Form state
+  const [vendorTitle, setVendorTitle] = useState(vendor.title || vendor.category || "");
+  const [favoriteDrinks, setFavoriteDrinks] = useState(vendor.favoriteDrinks || "");
+  const [favoriteSnacks, setFavoriteSnacks] = useState(vendor.favoriteSnacks || "");
+  const [dietaryRestrictions, setDietaryRestrictions] = useState(vendor.dietaryRestrictions || "");
+  const [allergies, setAllergies] = useState(vendor.allergies || "");
+  const [coffeeOrder, setCoffeeOrder] = useState(vendor.energyBoost || "");
+
+  // Praise notes
+  const { data: vendorNotes, mutate: mutateNotes } = useSWR<VendorNote[]>(
+    `/api/vendors/${vendor.id}/notes`,
+    (url: string) => fetch(url).then((r) => r.json())
+  );
+  const [newNote, setNewNote] = useState("");
+  const [addingNote, setAddingNote] = useState(false);
+
+  async function handleAddNote() {
+    if (!newNote.trim()) return;
+    setAddingNote(true);
+    try {
+      await fetch(`/api/vendors/${vendor.id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: newNote.trim() }),
+      });
+      setNewNote("");
+      mutateNotes();
+    } catch {
+      toast("error", "Failed to add note");
+    }
+    setAddingNote(false);
+  }
+
+  async function handleDeleteNote(noteId: string) {
+    try {
+      await fetch(`/api/vendors/${vendor.id}/notes/${noteId}`, { method: "DELETE" });
+      mutateNotes();
+    } catch {
+      toast("error", "Failed to delete note");
+    }
+  }
+
+  useEffect(() => {
+    setVendorTitle(vendor.title || vendor.category || "");
+    setFavoriteDrinks(vendor.favoriteDrinks || "");
+    setFavoriteSnacks(vendor.favoriteSnacks || "");
+    setDietaryRestrictions(vendor.dietaryRestrictions || "");
+    setAllergies(vendor.allergies || "");
+    setCoffeeOrder(vendor.energyBoost || "");
+    setEditMode(false);
+  }, [vendor]);
+
+  function resetForm() {
+    setVendorTitle(vendor.title || vendor.category || "");
+    setFavoriteDrinks(vendor.favoriteDrinks || "");
+    setFavoriteSnacks(vendor.favoriteSnacks || "");
+    setDietaryRestrictions(vendor.dietaryRestrictions || "");
+    setAllergies(vendor.allergies || "");
+    setCoffeeOrder(vendor.energyBoost || "");
+    setEditMode(false);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await fetch(`/api/vendors/${vendor.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: vendorTitle,
+          favoriteDrinks,
+          favoriteSnacks,
+          dietaryRestrictions,
+          allergies,
+          energyBoost: coffeeOrder,
+        }),
+      });
+      toast("success", "Vendor updated");
+      onSaved?.();
+      setEditMode(false);
+    } catch {
+      toast("error", "Failed to save");
+    }
+    setSaving(false);
+  }
+
+  const displayTitle = vendor.title || vendor.category || "";
+
+  return (
+    <Modal open={true} onClose={onClose} title={editMode ? "Edit Vendor" : vendor.companyName} size="md">
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex flex-col items-center text-center gap-1">
+          <UserAvatar name={vendor.contactName || vendor.companyName} favoriteProduct={vendor.favoritePublixProduct} size="xl" />
+          {editMode ? (
+            <input
+              value={vendorTitle}
+              onChange={(e) => setVendorTitle(e.target.value)}
+              placeholder="Title (e.g. Photographer)"
+              className="mt-1 w-full max-w-[200px] bg-transparent text-sm text-text-secondary text-center border-b border-dashed border-border p-0 outline-none focus:border-primary"
+            />
+          ) : displayTitle ? (
+            <p className="text-sm text-text-secondary">{displayTitle}</p>
+          ) : null}
+          {vendor.contactName && (
+            <p className="text-xs text-text-tertiary">{vendor.contactName}</p>
+          )}
+          {vendor.category && !editMode && (
+            <Badge variant="default">{vendor.category}</Badge>
+          )}
+        </div>
+
+        {/* Contact info */}
+        <div className="space-y-1 text-sm text-text-secondary">
+          {vendor.email && (
+            <p className="flex items-center gap-2">
+              <Mail className="h-3.5 w-3.5 text-text-tertiary" />
+              <a href={`mailto:${vendor.email}`} className="hover:underline">{vendor.email}</a>
+            </p>
+          )}
+          {vendor.phone && (
+            <p className="flex items-center gap-2">
+              <Phone className="h-3.5 w-3.5 text-text-tertiary" />
+              {vendor.phone}
+            </p>
+          )}
+        </div>
+
+        {/* Preferences */}
+        <div className="rounded-xl border border-border p-4 space-y-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Preferences</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Coffee className="h-3.5 w-3.5 text-text-tertiary" />
+                <p className="text-[10px] text-text-tertiary">Drinks</p>
+              </div>
+              {editMode ? (
+                <input value={favoriteDrinks} onChange={(e) => setFavoriteDrinks(e.target.value)} placeholder="e.g. Iced coffee" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {vendor.favoriteDrinks ? vendor.favoriteDrinks.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                    <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-xs text-text-secondary">{item}</span>
+                  )) : <span className="text-xs text-text-tertiary">—</span>}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Coffee className="h-3.5 w-3.5 text-text-tertiary" />
+                <p className="text-[10px] text-text-tertiary">Coffee Order</p>
+              </div>
+              {editMode ? (
+                <input value={coffeeOrder} onChange={(e) => setCoffeeOrder(e.target.value)} placeholder="e.g. Oat milk latte" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {vendor.energyBoost ? vendor.energyBoost.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                    <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-xs text-text-secondary">{item}</span>
+                  )) : <span className="text-xs text-text-tertiary">—</span>}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Cookie className="h-3.5 w-3.5 text-text-tertiary" />
+                <p className="text-[10px] text-text-tertiary">Snacks</p>
+              </div>
+              {editMode ? (
+                <input value={favoriteSnacks} onChange={(e) => setFavoriteSnacks(e.target.value)} placeholder="e.g. Trail mix" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {vendor.favoriteSnacks ? vendor.favoriteSnacks.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                    <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-xs text-text-secondary">{item}</span>
+                  )) : <span className="text-xs text-text-tertiary">—</span>}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+                <p className="text-[10px] text-text-tertiary">Allergies</p>
+              </div>
+              {editMode ? (
+                <input value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder="e.g. Peanuts" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {vendor.allergies ? vendor.allergies.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                    <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700">{item}</span>
+                  )) : <span className="text-xs text-text-tertiary">—</span>}
+                </div>
+              )}
+            </div>
+          </div>
+          {editMode && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                <p className="text-[10px] text-text-tertiary">Dietary Restrictions</p>
+              </div>
+              <input value={dietaryRestrictions} onChange={(e) => setDietaryRestrictions(e.target.value)} placeholder="e.g. Vegan, Gluten-free" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
+            </div>
+          )}
+          {!editMode && vendor.dietaryRestrictions && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                <p className="text-[10px] text-text-tertiary">Dietary</p>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {vendor.dietaryRestrictions.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                  <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700">{item}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* What We Love */}
+        {!editMode && (
+          <div className="rounded-xl border border-border overflow-hidden">
+            <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+              <Heart className="h-4 w-4 shrink-0 text-primary" />
+              <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+                What We Love About {vendor.contactName?.split(" ")[0] || vendor.companyName}
+              </span>
+              {vendorNotes && vendorNotes.length > 0 && (
+                <span className="text-[10px] text-text-tertiary ml-auto">{vendorNotes.length}</span>
+              )}
+            </div>
+            <div className="px-3.5 py-3 space-y-3">
+              <p className="text-[10px] italic text-text-tertiary">
+                Share something kind — a great quality, a helpful moment, or something that makes working with them awesome.
+              </p>
+              {vendorNotes && vendorNotes.length > 0 ? (
+                <div className="space-y-2.5 max-h-[180px] overflow-y-auto">
+                  {vendorNotes.map((n) => (
+                    <div key={n.id} className="group flex gap-2">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                        {n.authorName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-xs font-medium text-text-primary">{n.authorName}</span>
+                          <span className="text-[10px] text-text-tertiary">
+                            {formatDistanceToNow(parseISO(n.createdAt), { addSuffix: true })}
+                          </span>
+                        </div>
+                        <p className="text-xs text-text-secondary mt-0.5 break-words">{n.text}</p>
+                      </div>
+                      {currentUser && n.authorId === currentUser.id && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteNote(n.id)}
+                          className="shrink-0 opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded text-text-tertiary hover:text-red-500 transition-all"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-text-tertiary">No notes yet — be the first!</p>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddNote(); } }}
+                  placeholder="Say something nice..."
+                  className="flex-1 h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddNote}
+                  disabled={!newNote.trim() || addingNote}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-white disabled:opacity-40 hover:bg-primary-hover transition-colors"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        {editMode ? (
+          <div className="flex gap-2 pt-2 border-t border-border justify-end">
+            <Button size="sm" variant="ghost" onClick={resetForm}>Cancel</Button>
+            <Button size="sm" loading={saving} onClick={handleSave}>Save Changes</Button>
+          </div>
+        ) : onSaved && (
+          <div className="flex pt-2 border-t border-border">
+            <Button size="sm" variant="secondary" onClick={() => setEditMode(true)}>
+              <Edit2 className="h-3.5 w-3.5" />
+              Edit
+            </Button>
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }
 
