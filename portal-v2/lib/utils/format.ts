@@ -4,7 +4,7 @@ export function formatCurrency(amount: number): string {
     currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(amount || 0);
 }
 
 export function formatCurrencyFull(amount: number): string {
@@ -12,7 +12,7 @@ export function formatCurrencyFull(amount: number): string {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 2,
-  }).format(amount);
+  }).format(amount || 0);
 }
 
 export function formatFileSize(bytes: number): string {

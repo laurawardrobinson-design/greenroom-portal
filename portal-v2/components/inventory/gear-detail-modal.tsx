@@ -161,7 +161,6 @@ export function GearDetailModal({
     setRfidTag(item.rfidTag ?? null);
     setImageUrl(item.imageUrl || null);
     imageFileRef.current = null;
-    setConfirmRetire(false);
     setAssigningRfid(false);
   }
 

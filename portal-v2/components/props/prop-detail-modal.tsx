@@ -7,14 +7,13 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { PROPS_CATEGORIES } from "@/lib/constants/categories";
 import type { GearItem, GearCondition } from "@/types/domain";
-import { Camera, Pencil, X, Archive } from "lucide-react";
+import { Camera, Pencil, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 
 const STATUS_BADGE: Record<string, string> = {
   Available: "bg-emerald-50 text-emerald-700",
   Reserved: "bg-blue-50 text-blue-700",
   "Checked Out": "bg-amber-50 text-amber-700",
-  Retired: "bg-slate-100 text-slate-500",
 };
 
 const CONDITION_BADGE: Record<string, string> = {
@@ -41,8 +40,6 @@ export function PropDetailModal({
   const { toast } = useToast();
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [retiring, setRetiring] = useState(false);
-  const [confirmRetire, setConfirmRetire] = useState(false);
 
   // Form fields
   const [name, setName] = useState("");
@@ -64,7 +61,6 @@ export function PropDetailModal({
       setPurchasePrice(item.purchasePrice > 0 ? String(item.purchasePrice) : "");
       setImageUrl(item.imageUrl || null);
       imageFileRef.current = null;
-      setConfirmRetire(false);
       setEditMode(false);
     }
   }, [item]);
@@ -118,27 +114,6 @@ export function PropDetailModal({
     }
   }
 
-  async function handleRetire() {
-    if (!item) return;
-    if (!confirmRetire) {
-      setConfirmRetire(true);
-      return;
-    }
-    setRetiring(true);
-    try {
-      const res = await fetch(`/api/gear?id=${item.id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to retire prop");
-      toast("success", `${item.name} retired`);
-      onSaved?.();
-      onClose();
-    } catch (err) {
-      toast("error", err instanceof Error ? err.message : "Failed to retire prop");
-    } finally {
-      setRetiring(false);
-      setConfirmRetire(false);
-    }
-  }
 
   function handleCancel() {
     if (item) {
@@ -150,7 +125,6 @@ export function PropDetailModal({
       setPurchasePrice(item.purchasePrice > 0 ? String(item.purchasePrice) : "");
       setImageUrl(item.imageUrl || null);
       imageFileRef.current = null;
-      setConfirmRetire(false);
     }
     setEditMode(false);
   }
@@ -302,18 +276,6 @@ export function PropDetailModal({
         <ModalFooter>
           {editMode ? (
             <>
-              {item.status !== "Retired" && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  loading={retiring}
-                  onClick={handleRetire}
-                  className={confirmRetire ? "text-red-600 hover:text-red-700" : "text-text-tertiary"}
-                >
-                  <Archive className="h-3.5 w-3.5" />
-                  {confirmRetire ? "Confirm Retire?" : "Retire"}
-                </Button>
-              )}
               <div className="flex gap-2 ml-auto">
                 <Button type="button" variant="ghost" onClick={handleCancel}>Cancel</Button>
                 <Button type="submit" loading={saving}>Save Changes</Button>

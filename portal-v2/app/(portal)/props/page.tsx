@@ -37,7 +37,6 @@ const STATUS_BADGE: Record<string, string> = {
   Available: "bg-emerald-50 text-emerald-700",
   Reserved: "bg-blue-50 text-blue-700",
   "Checked Out": "bg-amber-50 text-amber-700",
-  Retired: "bg-slate-100 text-slate-500",
 };
 
 type Tab = "items" | "reservations";
