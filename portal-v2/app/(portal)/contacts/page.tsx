@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { formatDistanceToNow, parseISO } from "date-fns";
-import type { AppUser, Vendor, UserGoal, GoalAdvice, GoalMilestone, GoalHighlight, GoalStakeholder } from "@/types/domain";
+import type { AppUser, Vendor, UserGoal } from "@/types/domain";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useVendors } from "@/hooks/use-vendors";
 import { Button } from "@/components/ui/button";
@@ -37,15 +37,7 @@ import {
   Send,
   Compass,
   Pencil,
-  CheckCircle2,
-  Circle,
-  Link2,
-  Paperclip,
-  Upload,
-  Sparkles,
-  Calendar,
 } from "lucide-react";
-import { ProgressBar } from "@/components/ui/progress-bar";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -454,12 +446,6 @@ function ContactDetailModal({
   // Goal ("Growing Toward")
   interface GoalResponse {
     goal: UserGoal | null;
-    advice: GoalAdvice[];
-    milestones: GoalMilestone[];
-    highlights: GoalHighlight[];
-    stakeholders: GoalStakeholder[];
-    isPrivateViewer: boolean;
-    milestoneProgress?: { total: number; completed: number };
   }
   const { data: goalData, mutate: mutateGoal } = useSWR<GoalResponse>(
     person ? `/api/users/${person.id}/goal` : null,
@@ -469,29 +455,16 @@ function ContactDetailModal({
   const [goalText, setGoalText] = useState("");
   const [goalRoleContext, setGoalRoleContext] = useState("");
   const [savingGoal, setSavingGoal] = useState(false);
-  const [newAdvice, setNewAdvice] = useState("");
-  const [addingAdvice, setAddingAdvice] = useState(false);
-  const [newMilestone, setNewMilestone] = useState("");
-  const [addingMilestone, setAddingMilestone] = useState(false);
-  const [highlightText, setHighlightText] = useState("");
-  const [highlightLinks, setHighlightLinks] = useState("");
-  const [submittingHighlight, setSubmittingHighlight] = useState(false);
 
   // Reset goal edit state when goal data loads/changes
   useEffect(() => {
     setGoalEditMode(false);
     setGoalText(goalData?.goal?.goalText ?? "");
     setGoalRoleContext(goalData?.goal?.currentRoleContext ?? "");
-    setNewAdvice("");
-    setNewMilestone("");
-    setHighlightText("");
-    setHighlightLinks("");
   }, [goalData?.goal?.goalText, goalData?.goal?.currentRoleContext]);
 
   const isOwnProfile = !!(currentUser && person && currentUser.id === person.id);
   const canEditGoal = isOwnProfile || currentUser?.role === "Admin";
-  const isPrivateViewer = goalData?.isPrivateViewer ?? false;
-  const canSeeAdvice = isPrivateViewer;
 
   async function handleSaveGoal() {
     if (!goalText.trim() || !person) return;
@@ -523,108 +496,6 @@ function ContactDetailModal({
       toast("error", "Failed to clear goal");
     }
     setSavingGoal(false);
-  }
-
-  async function handleAddAdvice() {
-    if (!newAdvice.trim() || !person) return;
-    setAddingAdvice(true);
-    try {
-      await fetch(`/api/users/${person.id}/goal/advice`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: newAdvice.trim() }),
-      });
-      setNewAdvice("");
-      mutateGoal();
-    } catch {
-      toast("error", "Failed to add suggestion");
-    }
-    setAddingAdvice(false);
-  }
-
-  async function handleDeleteAdvice(adviceId: string) {
-    if (!person) return;
-    try {
-      await fetch(`/api/users/${person.id}/goal/advice/${adviceId}`, { method: "DELETE" });
-      mutateGoal();
-    } catch {
-      toast("error", "Failed to delete suggestion");
-    }
-  }
-
-  async function handleAddMilestone() {
-    if (!newMilestone.trim() || !person) return;
-    setAddingMilestone(true);
-    try {
-      await fetch(`/api/users/${person.id}/goal/milestones`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: newMilestone.trim() }),
-      });
-      setNewMilestone("");
-      mutateGoal();
-    } catch {
-      toast("error", "Failed to add milestone");
-    }
-    setAddingMilestone(false);
-  }
-
-  async function handleToggleMilestone(milestoneId: string, completed: boolean) {
-    if (!person) return;
-    try {
-      await fetch(`/api/users/${person.id}/goal/milestones/${milestoneId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed }),
-      });
-      mutateGoal();
-    } catch {
-      toast("error", "Failed to update milestone");
-    }
-  }
-
-  async function handleDeleteMilestone(milestoneId: string) {
-    if (!person) return;
-    try {
-      await fetch(`/api/users/${person.id}/goal/milestones/${milestoneId}`, { method: "DELETE" });
-      mutateGoal();
-    } catch {
-      toast("error", "Failed to delete milestone");
-    }
-  }
-
-  async function handleSubmitHighlight() {
-    if (!highlightText.trim() || !person) return;
-    setSubmittingHighlight(true);
-    try {
-      const links = highlightLinks.split("\n").map((l) => l.trim()).filter(Boolean);
-      await fetch(`/api/users/${person.id}/goal/highlights`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: highlightText.trim(), links }),
-      });
-      setHighlightText("");
-      setHighlightLinks("");
-      mutateGoal();
-      toast("success", "Progress update shared!");
-    } catch {
-      toast("error", "Failed to share update");
-    }
-    setSubmittingHighlight(false);
-  }
-
-  async function handleAddFeedback(highlightId: string, feedbackText: string) {
-    if (!person || !feedbackText.trim()) return;
-    try {
-      await fetch(`/api/users/${person.id}/goal/highlights/${highlightId}/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: feedbackText.trim() }),
-      });
-      mutateGoal();
-    } catch {
-      toast("error", "Failed to add feedback");
-    }
   }
 
   async function handleAddNote() {
@@ -1048,262 +919,12 @@ function ContactDetailModal({
                   </div>
                 </div>
               ) : goalData?.goal ? (
-                /* View mode with goal set */
-                <div className="space-y-3">
+                /* View mode — just the headline */
+                <div className="space-y-1">
                   <p className="text-sm text-text-primary">{goalData.goal.goalText}</p>
                   {goalData.goal.currentRoleContext && (
                     <p className="text-[10px] text-text-tertiary">
                       Currently: {goalData.goal.currentRoleContext}
-                    </p>
-                  )}
-
-                  {/* Progress bar — private viewers only */}
-                  {isPrivateViewer && goalData.milestoneProgress && goalData.milestoneProgress.total > 0 && (
-                    <ProgressBar
-                      completed={goalData.milestoneProgress.completed}
-                      total={goalData.milestoneProgress.total}
-                    />
-                  )}
-
-                  {/* Milestones — private viewers only */}
-                  {isPrivateViewer && (
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-medium text-text-secondary uppercase tracking-wider">Milestones</p>
-                      {goalData.milestones && goalData.milestones.length > 0 ? (
-                        <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-                          {goalData.milestones.map((m) => (
-                            <div key={m.id} className="group flex items-start gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleToggleMilestone(m.id, !m.completed)}
-                                className="shrink-0 mt-0.5"
-                              >
-                                {m.completed ? (
-                                  <CheckCircle2 className="h-4 w-4 text-primary" />
-                                ) : (
-                                  <Circle className="h-4 w-4 text-text-tertiary hover:text-primary transition-colors" />
-                                )}
-                              </button>
-                              <div className="flex-1 min-w-0">
-                                <span className={`text-xs ${m.completed ? "text-text-tertiary line-through" : "text-text-primary"}`}>
-                                  {m.description}
-                                </span>
-                                {m.targetDate && (
-                                  <span className="ml-1.5 inline-flex items-center gap-0.5 text-[10px] text-text-tertiary">
-                                    <Calendar className="h-2.5 w-2.5" />
-                                    {m.targetDate}
-                                  </span>
-                                )}
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteMilestone(m.id)}
-                                className="shrink-0 opacity-0 group-hover:opacity-100 flex h-4 w-4 items-center justify-center rounded text-text-tertiary hover:text-red-500 transition-all"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-[10px] text-text-tertiary">No milestones yet.</p>
-                      )}
-                      {/* Add milestone input */}
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={newMilestone}
-                          onChange={(e) => setNewMilestone(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddMilestone(); } }}
-                          placeholder="Add a step..."
-                          className="flex-1 h-7 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddMilestone}
-                          disabled={!newMilestone.trim() || addingMilestone}
-                          className="flex h-7 px-2.5 items-center justify-center rounded-lg bg-primary text-white text-[10px] font-medium disabled:opacity-40 hover:bg-primary-hover transition-colors"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Highlights — private viewers only */}
-                  {isPrivateViewer && (
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-medium text-text-secondary uppercase tracking-wider">Progress Updates</p>
-                      {goalData.highlights && goalData.highlights.length > 0 ? (
-                        <div className="space-y-3 max-h-[250px] overflow-y-auto">
-                          {goalData.highlights.map((h) => (
-                            <div key={h.id} className="rounded-lg border border-border p-2.5 space-y-2">
-                              <div className="flex items-start gap-2">
-                                <Sparkles className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs text-text-primary break-words">{h.text}</p>
-                                  <span className="text-[10px] text-text-tertiary">
-                                    {formatDistanceToNow(parseISO(h.createdAt), { addSuffix: true })}
-                                  </span>
-                                </div>
-                              </div>
-                              {/* Links */}
-                              {h.links && h.links.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 pl-5">
-                                  {h.links.map((link, i) => (
-                                    <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-primary hover:text-primary-hover transition-colors">
-                                      <Link2 className="h-2.5 w-2.5" />
-                                      {new URL(link).hostname}
-                                    </a>
-                                  ))}
-                                </div>
-                              )}
-                              {/* Files */}
-                              {h.files && h.files.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 pl-5">
-                                  {h.files.map((f) => (
-                                    <a key={f.id} href={f.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded bg-surface-secondary px-2 py-0.5 text-[10px] text-text-secondary hover:text-text-primary transition-colors">
-                                      <Paperclip className="h-2.5 w-2.5" />
-                                      {f.fileName}
-                                    </a>
-                                  ))}
-                                </div>
-                              )}
-                              {/* Feedback thread */}
-                              {h.feedback && h.feedback.length > 0 && (
-                                <div className="pl-5 space-y-1.5 border-l-2 border-primary/20 ml-1">
-                                  {h.feedback.map((fb) => (
-                                    <div key={fb.id} className="flex gap-1.5">
-                                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
-                                        {fb.authorName.charAt(0).toUpperCase()}
-                                      </div>
-                                      <div className="min-w-0">
-                                        <span className="text-[10px] font-medium text-text-primary">{fb.authorName}</span>
-                                        <span className="text-[10px] text-text-tertiary ml-1">
-                                          {formatDistanceToNow(parseISO(fb.createdAt), { addSuffix: true })}
-                                        </span>
-                                        <p className="text-[10px] text-text-secondary break-words">{fb.text}</p>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              {/* Feedback input — stakeholders only (not the owner) */}
-                              {!isOwnProfile && isPrivateViewer && (
-                                <HighlightFeedbackInput highlightId={h.id} onSubmit={handleAddFeedback} />
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-[10px] text-text-tertiary">No updates yet.</p>
-                      )}
-                      {/* Submit highlight — owner only */}
-                      {isOwnProfile && (
-                        <div className="space-y-1.5 rounded-lg border border-dashed border-border p-2.5">
-                          <textarea
-                            value={highlightText}
-                            onChange={(e) => setHighlightText(e.target.value)}
-                            placeholder="Share a progress update..."
-                            rows={2}
-                            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none"
-                          />
-                          <input
-                            type="text"
-                            value={highlightLinks}
-                            onChange={(e) => setHighlightLinks(e.target.value)}
-                            placeholder="Add links (one per line)"
-                            className="w-full h-7 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-                          />
-                          <div className="flex justify-end">
-                            <button
-                              type="button"
-                              onClick={handleSubmitHighlight}
-                              disabled={!highlightText.trim() || submittingHighlight}
-                              className="flex h-7 px-3 items-center gap-1.5 rounded-lg bg-primary text-white text-[10px] font-medium disabled:opacity-40 hover:bg-primary-hover transition-colors"
-                            >
-                              <Sparkles className="h-3 w-3" />
-                              {submittingHighlight ? "Sharing..." : "Share Update"}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Advice section — private viewers only */}
-                  {canSeeAdvice && goalData.advice && goalData.advice.length > 0 && (
-                    <div className="space-y-2.5">
-                      <p className="text-[10px] font-medium text-text-secondary uppercase tracking-wider">Suggestions</p>
-                      <div className="space-y-2.5 max-h-[180px] overflow-y-auto">
-                        {goalData.advice.map((a) => (
-                          <div key={a.id} className="group flex gap-2">
-                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
-                              {a.authorName.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-baseline gap-1.5">
-                                <span className="text-xs font-medium text-text-primary">{a.authorName}</span>
-                                <span className="text-[10px] text-text-tertiary">
-                                  {formatDistanceToNow(parseISO(a.createdAt), { addSuffix: true })}
-                                </span>
-                              </div>
-                              <p className="text-xs text-text-secondary mt-0.5 break-words">{a.text}</p>
-                            </div>
-                            {currentUser && (a.authorId === currentUser.id || currentUser.role === "Admin") && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteAdvice(a.id)}
-                                className="shrink-0 opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded text-text-tertiary hover:text-red-500 transition-all"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Advice input — anyone can leave suggestions */}
-                  {currentUser && person && currentUser.id !== person.id && (
-                    <div className="space-y-1.5">
-                      <p className="text-[10px] italic text-text-tertiary">
-                        {goalData.goal.currentRoleContext
-                          ? `If you were a ${goalData.goal.currentRoleContext} working toward ${goalData.goal.goalText.toLowerCase().startsWith("becoming") ? goalData.goal.goalText.toLowerCase() : `"${goalData.goal.goalText}"`}, what would you suggest?`
-                          : `What advice would you give someone working toward ${goalData.goal.goalText.toLowerCase().startsWith("becoming") ? goalData.goal.goalText.toLowerCase() : `"${goalData.goal.goalText}"`}?`
-                        }
-                      </p>
-                      {!canSeeAdvice && (
-                        <p className="text-[10px] text-text-tertiary">
-                          Your suggestion will be shared privately with {person.name.split(" ")[0]}.
-                        </p>
-                      )}
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={newAdvice}
-                          onChange={(e) => setNewAdvice(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddAdvice(); } }}
-                          placeholder="Share a suggestion..."
-                          className="flex-1 h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddAdvice}
-                          disabled={!newAdvice.trim() || addingAdvice}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-white disabled:opacity-40 hover:bg-primary-hover transition-colors"
-                        >
-                          <Send className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Own profile message */}
-                  {isOwnProfile && !isPrivateViewer && (
-                    <p className="text-[10px] italic text-text-tertiary">
-                      Others can leave you private suggestions to help you grow.
                     </p>
                   )}
                 </div>
@@ -1311,7 +932,7 @@ function ContactDetailModal({
                 /* No goal set */
                 <p className="text-xs text-text-tertiary">
                   {isOwnProfile
-                    ? "No goal set yet. Share what you're working toward and get advice from the team."
+                    ? "No goal set yet."
                     : "No goal set yet."}
                 </p>
               )}
@@ -1335,41 +956,6 @@ function ContactDetailModal({
         )}
       </div>
     </Modal>
-  );
-}
-
-// --- Highlight Feedback Input (inline component) ---
-function HighlightFeedbackInput({ highlightId, onSubmit }: { highlightId: string; onSubmit: (id: string, text: string) => Promise<void> }) {
-  const [text, setText] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit() {
-    if (!text.trim()) return;
-    setSubmitting(true);
-    await onSubmit(highlightId, text);
-    setText("");
-    setSubmitting(false);
-  }
-
-  return (
-    <div className="flex gap-1.5 pl-5">
-      <input
-        type="text"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-        placeholder="Leave feedback..."
-        className="flex-1 h-6 rounded border border-border bg-surface px-2 text-[10px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-      />
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={!text.trim() || submitting}
-        className="flex h-6 px-2 items-center rounded bg-primary text-white text-[10px] disabled:opacity-40 hover:bg-primary-hover transition-colors"
-      >
-        <Send className="h-2.5 w-2.5" />
-      </button>
-    </div>
   );
 }
 
