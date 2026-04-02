@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import useSWR from "swr";
 import type { BudgetPoolSummary, CampaignListItem } from "@/types/domain";
 import {
@@ -39,6 +39,8 @@ import {
   ChevronDown,
   ChevronRight,
   Undo2,
+  Receipt,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -761,6 +763,7 @@ function AnalysisTab() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [vendorSort, setVendorSort] = useState<"spend" | "variance" | "campaigns">("spend");
   const [categorySort, setCategorySort] = useState<"invoiced" | "variance">("invoiced");
+  const [drilldown, setDrilldown] = useState<{ type: "vendor" | "category"; id: string; label: string } | null>(null);
 
   const CHART_COLORS = [
     "#2d6a4f", "#40916c", "#52b788", "#74c69d", "#95d5b2",
@@ -1185,7 +1188,11 @@ function AnalysisTab() {
               {sortedCategories.map((cat) => {
                 const pct = (cat.invoiced / totalCategorySpend) * 100;
                 return (
-                  <div key={cat.category} className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-secondary/50 transition-colors">
+                  <div
+                    key={cat.category}
+                    className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-secondary/50 transition-colors cursor-pointer"
+                    onClick={() => setDrilldown({ type: "category", id: cat.category, label: cat.category })}
+                  >
                     <div className="flex-1">
                       <span className="text-sm font-medium text-text-primary">{cat.category}</span>
                     </div>
@@ -1286,7 +1293,11 @@ function AnalysisTab() {
                 <div className="w-20 shrink-0 text-right">Accuracy</div>
               </div>
               {sortedVendors.map((v) => (
-                <div key={v.id} className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-secondary/50 transition-colors">
+                <div
+                  key={v.id}
+                  className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-secondary/50 transition-colors cursor-pointer"
+                  onClick={() => setDrilldown({ type: "vendor", id: v.id, label: v.name })}
+                >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-text-primary truncate">{v.name}</p>
                     <p className="text-xs text-text-tertiary">{v.category}</p>
@@ -1417,7 +1428,147 @@ function AnalysisTab() {
           )}
         </div>
       )}
+
+      {/* Transaction Drilldown Modal */}
+      {drilldown && (
+        <TransactionDrilldownModal
+          type={drilldown.type}
+          id={drilldown.id}
+          label={drilldown.label}
+          onClose={() => setDrilldown(null)}
+        />
+      )}
     </div>
+  );
+}
+
+// ─── Transaction Drilldown Modal ───
+function TransactionDrilldownModal({
+  type,
+  id,
+  label,
+  onClose,
+}: {
+  type: "vendor" | "category";
+  id: string;
+  label: string;
+  onClose: () => void;
+}) {
+  const param = type === "vendor" ? `vendorId=${id}` : `category=${encodeURIComponent(id)}`;
+  const { data, isLoading } = useSWR<any>(`/api/budget/transactions?${param}`, fetcher);
+
+  const transactions = data?.transactions || [];
+
+  return (
+    <Modal open onClose={onClose} title={`${label} — Recent Transactions`} size="lg">
+      <div className="space-y-3 max-h-[60vh] overflow-y-auto px-1">
+        {isLoading ? (
+          <div className="space-y-3 py-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-16 animate-pulse rounded-lg bg-surface-secondary" />
+            ))}
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="py-8 text-center">
+            <Receipt className="mx-auto h-8 w-8 text-text-tertiary/40" />
+            <p className="mt-2 text-sm text-text-tertiary">No transactions found</p>
+          </div>
+        ) : type === "vendor" ? (
+          /* ─── Vendor transactions: grouped by campaign ─── */
+          transactions.map((t: any) => (
+            <div key={t.campaignVendorId} className="rounded-xl border border-border bg-surface overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2.5 bg-surface-secondary/40 border-b border-border">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <span className="text-sm font-medium text-text-primary truncate">
+                    {t.wfNumber ? `${t.wfNumber} ` : ""}{t.campaignName}
+                  </span>
+                </div>
+                <Badge variant={
+                  t.status === "Paid" ? "success" :
+                  t.status?.includes("Invoice") ? "warning" : "default"
+                }>
+                  {t.status}
+                </Badge>
+              </div>
+              <div className="px-4 py-3 space-y-2">
+                <div className="flex items-center gap-4 text-xs text-text-secondary">
+                  <span>Est: <strong className="text-text-primary">{formatCurrency(t.estimateTotal)}</strong></span>
+                  <span>Inv: <strong className="text-text-primary">{formatCurrency(t.invoiceTotal)}</strong></span>
+                  {t.paidAmount > 0 && (
+                    <span>Paid: <strong className="text-emerald-600">{formatCurrency(t.paidAmount)}</strong></span>
+                  )}
+                  {t.paidDate && (
+                    <span className="text-text-tertiary">
+                      {new Date(t.paidDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </span>
+                  )}
+                </div>
+                {t.invoices?.length > 0 && t.invoices.map((inv: any) => (
+                  <div key={inv.id} className="ml-2 pl-3 border-l-2 border-border space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Receipt className="h-3 w-3 text-text-tertiary" />
+                      <span className="text-xs font-medium text-text-secondary">{inv.fileName || "Invoice"}</span>
+                      <span className="text-[10px] text-text-tertiary">
+                        {new Date(inv.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </span>
+                      {inv.hopApproved && <Badge variant="success" className="text-[10px] py-0">HOP Approved</Badge>}
+                      {inv.producerApproved && !inv.hopApproved && <Badge variant="warning" className="text-[10px] py-0">Producer Approved</Badge>}
+                    </div>
+                    {inv.lineItems?.length > 0 && (
+                      <div className="space-y-0.5">
+                        {inv.lineItems.map((li: any, idx: number) => (
+                          <div key={idx} className="flex items-center justify-between text-xs pl-5">
+                            <span className={`text-text-secondary ${li.flagged ? "text-amber-600" : ""}`}>
+                              {li.flagged && <AlertTriangle className="inline h-2.5 w-2.5 mr-1" />}
+                              {li.description || li.category || "Line item"}
+                            </span>
+                            <span className="font-medium text-text-primary">{formatCurrency(li.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
+        ) : (
+          /* ─── Category transactions: flat list of line items ─── */
+          <div className="rounded-xl border border-border bg-surface overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border">
+              <div className="flex-1">Description</div>
+              <div className="w-28 shrink-0">Vendor</div>
+              <div className="w-36 shrink-0">Campaign</div>
+              <div className="w-20 shrink-0 text-right">Amount</div>
+            </div>
+            {transactions.map((t: any, idx: number) => (
+              <div key={idx} className="flex items-center gap-3 px-4 py-2.5 border-b border-border last:border-b-0 hover:bg-surface-secondary/30 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <span className={`text-sm ${t.flagged ? "text-amber-600 font-medium" : "text-text-primary"}`}>
+                    {t.flagged && <AlertTriangle className="inline h-3 w-3 mr-1" />}
+                    {t.description || "Line item"}
+                  </span>
+                  {t.invoiceFileName && (
+                    <p className="text-[10px] text-text-tertiary truncate">{t.invoiceFileName}</p>
+                  )}
+                </div>
+                <div className="w-28 shrink-0 text-xs text-text-secondary truncate">{t.vendorName}</div>
+                <div className="w-36 shrink-0 text-xs text-text-secondary truncate">
+                  {t.wfNumber ? `${t.wfNumber} ` : ""}{t.campaignName}
+                </div>
+                <div className="w-20 shrink-0 text-right text-sm font-medium text-text-primary">
+                  {formatCurrency(t.amount)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <ModalFooter>
+        <Button variant="ghost" onClick={onClose}>Close</Button>
+      </ModalFooter>
+    </Modal>
   );
 }
 

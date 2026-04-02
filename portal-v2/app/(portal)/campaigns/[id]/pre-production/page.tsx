@@ -656,7 +656,7 @@ export default function PreProductionWorkspacePage({
     : campaign.name;
 
   return (
-    <div className="space-y-0 -mt-3">
+    <div className="space-y-0">
       {/* Header */}
       <div className="space-y-3 pb-4 border-b border-border">
         <div className="flex items-start justify-between gap-4">
