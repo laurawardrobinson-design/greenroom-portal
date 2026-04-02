@@ -31,5 +31,5 @@ CREATE POLICY "Admin users can manage highlights"
 INSERT INTO public.highlights (title, body, emoji, active, pinned) VALUES
   ('Summer Grilling Hero Shoot', 'The hero shot from the Summer Grilling campaign was featured on the Publix homepage — incredible work by the whole team!', '🔥', true, true),
   ('New Studio Lighting', 'Studio A got a full lighting upgrade this month. Book your shoots early — the new softboxes are a game-changer.', '💡', true, false),
-  ('Did You Know?', 'Publix was founded in 1930 in Lakeland, Florida. That''s over 95 years of serving communities!', '🛒', true, false),
+  ('New Team Record', 'Our team processed 47 campaigns last quarter — a new record. Cheers to the crew that makes it happen!', '🏆', true, false),
   ('Sarah Chen — 100 Shoots!', 'Sarah just hit her 100th shoot with us. Thank you for your amazing eye and dedication to every single frame.', '📸', true, false);

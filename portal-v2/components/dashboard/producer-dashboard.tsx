@@ -98,63 +98,48 @@ interface ProducerStats {
   }[];
 }
 
-// ── Stat card ──────────────────────────────────────────────────────────────────
+// ── Info card (always expanded) ───────────────────────────────────────────────
 
-interface StatCardProps {
+interface InfoCardProps {
   icon: ReactNode;
   label: string;
   count: number | undefined;
+  accentBorder: string;
   colorText: string;
   colorBg: string;
-  isExpanded: boolean;
-  onToggle: () => void;
   children: ReactNode;
 }
 
-function StatCard({
+function InfoCard({
   icon,
   label,
   count,
+  accentBorder,
   colorText,
   colorBg,
-  isExpanded,
-  onToggle,
   children,
-}: StatCardProps) {
-  const hasContent = count !== undefined && count > 0;
+}: InfoCardProps) {
   return (
-    <Card padding="none" className="overflow-hidden">
-      <button
-        onClick={hasContent ? onToggle : undefined}
-        className={`flex w-full items-center gap-3 p-4 text-left transition-colors ${
-          hasContent ? "cursor-pointer hover:bg-surface-secondary" : "cursor-default"
-        }`}
-      >
+    <Card padding="none" className={`overflow-hidden border-l-[3px] ${accentBorder}`}>
+      <div className="flex items-center gap-3 px-4 py-3">
         <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${colorBg} ${colorText}`}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${colorBg} ${colorText}`}
         >
           {icon}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-text-tertiary">{label}</p>
-          <div className="text-xl font-semibold text-text-primary">
-            {count === undefined ? (
-              <Skeleton className="mt-1 h-5 w-8" />
-            ) : (
-              count
-            )}
-          </div>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">{label}</p>
         </div>
-        {hasContent &&
-          (isExpanded ? (
-            <ChevronUp className="h-4 w-4 shrink-0 text-text-tertiary" />
+        <div className="text-lg font-semibold text-text-primary">
+          {count === undefined ? (
+            <Skeleton className="h-5 w-8" />
           ) : (
-            <ChevronDown className="h-4 w-4 shrink-0 text-text-tertiary" />
-          ))}
-      </button>
-
-      {isExpanded && hasContent && (
-        <div className="max-h-72 overflow-y-auto border-t border-border">
+            count
+          )}
+        </div>
+      </div>
+      {count !== undefined && count > 0 && (
+        <div className="max-h-56 overflow-y-auto border-t border-border">
           {children}
         </div>
       )}
@@ -171,9 +156,7 @@ interface Props {
 export function ProducerDashboard({ user }: Props) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [expandedPanel, setExpandedPanel] = useState<"campaigns" | "tasks" | "shoots" | null>(
-    null
-  );
+  const [scope, setScope] = useState<"mine" | "all">("mine");
   const [hiddenProducers, setHiddenProducers] = useState<Set<string>>(new Set());
 
   const monthStr = format(currentMonth, "yyyy-MM");
@@ -182,9 +165,18 @@ export function ProducerDashboard({ user }: Props) {
     `/api/calendar?month=${monthStr}`,
     fetcher
   );
-  const events: ShootEvent[] = Array.isArray(rawEvents) ? rawEvents : [];
+  const allEvents: ShootEvent[] = Array.isArray(rawEvents) ? rawEvents : [];
 
-  const { data: stats } = useSWR<ProducerStats>("/api/dashboard", fetcher);
+  // Filter calendar events based on scope
+  const events = useMemo(() => {
+    if (scope === "all") return allEvents;
+    return allEvents.filter((e) => e.campaign?.producerId === user.id);
+  }, [allEvents, scope, user.id]);
+
+  const { data: stats } = useSWR<ProducerStats>(
+    `/api/dashboard?scope=${scope}`,
+    fetcher
+  );
 
   // Derive unique producers from all events (stable across months for color assignment)
   const producers = useMemo(() => {
@@ -262,10 +254,6 @@ export function ProducerDashboard({ user }: Props) {
   }, [events]);
   const selectedDayAllEvents = selectedDateStr ? allGrouped.get(selectedDateStr) || [] : [];
 
-  const togglePanel = (panel: "campaigns" | "tasks" | "shoots") => {
-    setExpandedPanel((prev) => (prev === panel ? null : panel));
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -276,12 +264,36 @@ export function ProducerDashboard({ user }: Props) {
           </h2>
           <p className="text-sm text-text-secondary">Your campaigns and tasks</p>
         </div>
-        <Link href="/campaigns/new">
-          <Button size="md">
-            <Plus className="h-4 w-4" />
-            New Campaign
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <div className="flex rounded-lg border border-border bg-surface-secondary p-0.5">
+            <button
+              onClick={() => setScope("mine")}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                scope === "mine"
+                  ? "bg-surface text-text-primary shadow-sm"
+                  : "text-text-tertiary hover:text-text-secondary"
+              }`}
+            >
+              My Work
+            </button>
+            <button
+              onClick={() => setScope("all")}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                scope === "all"
+                  ? "bg-surface text-text-primary shadow-sm"
+                  : "text-text-tertiary hover:text-text-secondary"
+              }`}
+            >
+              Team
+            </button>
+          </div>
+          <Link href="/campaigns/new">
+            <Button size="md">
+              <Plus className="h-4 w-4" />
+              New Campaign
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Main grid: calendar + stats */}

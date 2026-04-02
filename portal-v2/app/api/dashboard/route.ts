@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { getAuthUser, authErrorResponse } from "@/lib/auth/guards";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const user = await getAuthUser();
     const db = createAdminClient();
+    const { searchParams } = new URL(request.url);
+    const scope = searchParams.get("scope") || "mine";
     const today = new Date().toISOString().split("T")[0];
     const weekEnd = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
 
@@ -38,19 +40,26 @@ export async function GET() {
     }
 
     if (user.role === "Producer") {
-      // Get producer's active campaigns with details
-      const { data: rawCampaigns } = await db
+      const showAll = scope === "all";
+
+      // Get campaigns — either mine or all active
+      let campaignQuery = db
         .from("campaigns")
         .select("id, name, wf_number, status")
-        .eq("created_by", user.id)
         .neq("status", "Complete")
         .neq("status", "Cancelled")
         .order("created_at", { ascending: false });
 
+      if (!showAll) {
+        campaignQuery = campaignQuery.eq("created_by", user.id);
+      }
+
+      const { data: rawCampaigns } = await campaignQuery;
+
       const myCampaigns = rawCampaigns || [];
       const myCampaignIds = myCampaigns.map((c: any) => c.id as string);
 
-      // Parallel: pending vendor actions + my shoots
+      // Parallel: pending vendor actions + shoots
       const [pendingVendorResult, myShootsResult] = await Promise.all([
         myCampaignIds.length > 0
           ? db
@@ -68,7 +77,7 @@ export async function GET() {
       const myShootRows = myShootsResult.data || [];
       const myShootIds = myShootRows.map((s: any) => s.id as string);
 
-      // Shoots this week (filtered to producer's campaigns)
+      // Shoots this week
       const weekShootDatesResult =
         myShootIds.length > 0
           ? await db

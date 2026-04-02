@@ -550,101 +550,98 @@ function ContactDetailModal({
         <X className="h-4 w-4" />
       </button>
       <div className="space-y-4">
-        {/* Avatar + role */}
-        <div className="flex items-center gap-3">
-          {editMode ? (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIconPickerOpen(!iconPickerOpen)}
-                className="group flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/15 transition-all hover:ring-2 hover:ring-primary/40"
-              >
-                {selectedProduct && getProductIcon(selectedProduct) ? (
-                  <img src={getProductIcon(selectedProduct)!} alt={selectedProduct} className="h-9 w-9 object-contain" />
-                ) : (
-                  <span className="text-lg font-bold text-primary">
-                    {name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                  </span>
-                )}
-                <div className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white shadow-sm">
-                  <Edit2 className="h-2.5 w-2.5" />
-                </div>
-              </button>
-            </div>
-          ) : (
-            <UserAvatar name={person.name} favoriteProduct={person.favoritePublixProduct} size="xl" />
-          )}
-          <div>
-            {(editMode ? title : person.title) && (
-              <p className="text-sm text-text-secondary">{editMode ? title : person.title}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Icon picker — rendered inline so it doesn't fight the modal's overflow-y-auto */}
-        {editMode && iconPickerOpen && (
-          <div className="rounded-xl border border-border bg-surface-primary p-3 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">Choose Icon</p>
-            <div className="grid grid-cols-6 gap-1.5">
-              {PUBLIX_PRODUCTS.map((product) => (
-                <button
-                  key={product.name}
-                  type="button"
-                  onClick={() => { setSelectedProduct(product.name); setIconPickerOpen(false); }}
-                  className={`flex flex-col items-center gap-0.5 rounded-lg p-1.5 border text-center transition-all ${
-                    selectedProduct === product.name
-                      ? "border-primary bg-primary/5 ring-1 ring-primary"
-                      : "border-transparent hover:border-primary/40 hover:bg-surface-secondary"
-                  }`}
-                >
-                  <img src={product.icon} alt={product.name} className="h-6 w-6" />
-                  <span className="text-[10px] font-medium text-text-secondary leading-tight truncate w-full">
-                    {product.name}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Contact info */}
+        {/* Avatar + name + role header */}
         {editMode ? (
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
-              <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIconPickerOpen(!iconPickerOpen)}
+                  className="group flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/15 transition-all hover:ring-2 hover:ring-primary/40"
+                >
+                  {selectedProduct && getProductIcon(selectedProduct) ? (
+                    <img src={getProductIcon(selectedProduct)!} alt={selectedProduct} className="h-9 w-9 object-contain" />
+                  ) : (
+                    <span className="text-lg font-bold text-primary">
+                      {name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                  <div className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white shadow-sm">
+                    <Edit2 className="h-2.5 w-2.5" />
+                  </div>
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Input label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="555-123-4567" />
-              <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Photographer, Art Director, etc." />
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-text-secondary">
-              <Mail className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
-              <a href={`mailto:${person.email}`} className="hover:underline">{person.email}</a>
-            </div>
-            {person.phone && (
-              <div className="flex items-center gap-2 text-sm text-text-secondary">
-                <Phone className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
-                <span>{person.phone}</span>
+            {iconPickerOpen && (
+              <div className="rounded-xl border border-border bg-surface-primary p-3 shadow-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">Choose Icon</p>
+                <div className="grid grid-cols-6 gap-1.5">
+                  {PUBLIX_PRODUCTS.map((product) => (
+                    <button
+                      key={product.name}
+                      type="button"
+                      onClick={() => { setSelectedProduct(product.name); setIconPickerOpen(false); }}
+                      className={`flex flex-col items-center gap-0.5 rounded-lg p-1.5 border text-center transition-all ${
+                        selectedProduct === product.name
+                          ? "border-primary bg-primary/5 ring-1 ring-primary"
+                          : "border-transparent hover:border-primary/40 hover:bg-surface-secondary"
+                      }`}
+                    >
+                      <img src={product.icon} alt={product.name} className="h-6 w-6" />
+                      <span className="text-[10px] font-medium text-text-secondary leading-tight truncate w-full">
+                        {product.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+                <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Input label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="555-123-4567" />
+                <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Photographer, Art Director, etc." />
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-start gap-4">
+            <UserAvatar name={person.name} favoriteProduct={person.favoritePublixProduct} size="xl" />
+            <div className="flex-1 min-w-0 pt-0.5">
+              {person.title && (
+                <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-0.5">{person.title}</p>
+              )}
+              <div className="space-y-1.5 mt-2">
+                <a href={`mailto:${person.email}`} className="flex items-center gap-2 text-sm text-text-secondary hover:text-primary transition-colors">
+                  <Mail className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+                  {person.email}
+                </a>
+                {person.phone && (
+                  <div className="flex items-center gap-2 text-sm text-text-secondary">
+                    <Phone className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+                    <span>{person.phone}</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Preferences — 2-col layout */}
-        <div className="pt-3 border-t border-border">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-3">Preferences</p>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+        {/* Preferences */}
+        <div className="rounded-xl border border-border overflow-hidden">
+          <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+            <Coffee className="h-4 w-4 shrink-0 text-primary" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Preferences</span>
+          </div>
+          <div className="px-3.5 py-3 grid grid-cols-2 gap-x-6 gap-y-3">
             {/* Left col: Drinks, Snacks, Dietary */}
             <div className="space-y-3">
               <div>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Coffee className="h-3.5 w-3.5 text-text-tertiary" />
-                  <p className="text-[10px] text-text-tertiary">Drinks</p>
-                </div>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary mb-1.5">Drinks</p>
                 {editMode ? (
                   <input value={favoriteDrinks} onChange={(e) => setFavoriteDrinks(e.target.value)} placeholder="e.g. Sparkling water" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
                 ) : (
@@ -656,10 +653,7 @@ function ContactDetailModal({
                 )}
               </div>
               <div>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Cookie className="h-3.5 w-3.5 text-text-tertiary" />
-                  <p className="text-[10px] text-text-tertiary">Snacks</p>
-                </div>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary mb-1.5">Snacks</p>
                 {editMode ? (
                   <input value={favoriteSnacks} onChange={(e) => setFavoriteSnacks(e.target.value)} placeholder="e.g. Trail mix" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
                 ) : (
@@ -671,10 +665,7 @@ function ContactDetailModal({
                 )}
               </div>
               <div>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-                  <p className="text-[10px] text-text-tertiary">Dietary</p>
-                </div>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary mb-1.5">Dietary</p>
                 {editMode ? (
                   <input value={dietaryRestrictions} onChange={(e) => setDietaryRestrictions(e.target.value)} placeholder="e.g. Gluten-free" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
                 ) : (
@@ -690,10 +681,7 @@ function ContactDetailModal({
             {/* Right col: Coffee Order, Allergies */}
             <div className="space-y-3">
               <div>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Coffee className="h-3.5 w-3.5 text-text-tertiary" />
-                  <p className="text-[10px] text-text-tertiary">Coffee Order</p>
-                </div>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary mb-1.5">Coffee Order</p>
                 {editMode ? (
                   <input value={coffeeOrder} onChange={(e) => setCoffeeOrder(e.target.value)} placeholder="e.g. Oat milk latte" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
                 ) : (
@@ -705,10 +693,7 @@ function ContactDetailModal({
                 )}
               </div>
               <div>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <AlertCircle className="h-3.5 w-3.5 text-red-500" />
-                  <p className="text-[10px] text-text-tertiary">Allergies</p>
-                </div>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary mb-1.5">Allergies</p>
                 {editMode ? (
                   <input value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder="e.g. Peanuts, shellfish" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
                 ) : (
@@ -851,60 +836,62 @@ function VendorSection({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {filtered.map((vendor) => (
             <Card key={vendor.id} hover padding="md">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <h3 className="text-sm font-semibold text-text-primary">{vendor.companyName}</h3>
-                {vendor.category && (
-                  <Badge variant="default">{vendor.category}</Badge>
-                )}
-              </div>
-              {vendor.contactName && (
-                <p className="text-sm text-text-secondary mb-2">{vendor.contactName}</p>
-              )}
-              <div className="space-y-1 text-xs text-text-tertiary">
-                {vendor.email && (
-                  <p className="flex items-center gap-1.5">
-                    <Mail className="h-3 w-3" />
-                    {vendor.email}
-                  </p>
-                )}
-                {vendor.phone && (
-                  <p className="flex items-center gap-1.5">
-                    <Phone className="h-3 w-3" />
-                    {vendor.phone}
-                  </p>
-                )}
+              <div className="flex items-start gap-3">
+                <UserAvatar name={vendor.contactName || vendor.companyName} size="lg" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <h3 className="text-sm font-semibold text-text-primary truncate">{vendor.companyName}</h3>
+                  </div>
+                  {vendor.contactName && (
+                    <p className="text-xs text-text-secondary mb-1">{vendor.contactName}</p>
+                  )}
+                  {vendor.category && (
+                    <p className="mb-1"><Badge variant="default">{vendor.category}</Badge></p>
+                  )}
+                  <div className="space-y-0.5 text-xs text-text-tertiary">
+                    {vendor.email && (
+                      <p className="flex items-center gap-1.5 truncate">
+                        <Mail className="h-3 w-3 shrink-0" />
+                        {vendor.email}
+                      </p>
+                    )}
+                    {vendor.phone && (
+                      <p className="flex items-center gap-1.5">
+                        <Phone className="h-3 w-3 shrink-0" />
+                        {vendor.phone}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </Card>
           ))}
         </div>
       ) : (
         <div className="rounded-xl border border-border overflow-hidden">
-          <div className="hidden sm:grid grid-cols-[1fr_160px_1fr_140px] gap-0 bg-surface-secondary border-b border-border px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+          <div className="hidden sm:grid grid-cols-[1fr_120px_1fr_140px] gap-0 bg-surface-secondary border-b border-border px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
             <div>Company</div>
             <div>Category</div>
-            <div>Contact</div>
+            <div>Email</div>
             <div>Phone</div>
           </div>
           {filtered.map((vendor) => (
             <div
               key={vendor.id}
-              className="grid grid-cols-1 sm:grid-cols-[1fr_160px_1fr_140px] gap-0 px-4 py-3 border-b border-border-light last:border-b-0 hover:bg-surface-secondary transition-colors"
+              className="grid grid-cols-1 sm:grid-cols-[1fr_120px_1fr_140px] gap-0 px-4 py-3 border-b border-border-light last:border-b-0 hover:bg-surface-secondary transition-colors"
             >
-              <div className="flex items-center min-w-0">
-                <span className="text-sm font-medium text-text-primary truncate">{vendor.companyName}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <UserAvatar name={vendor.contactName || vendor.companyName} size="xs" />
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-text-primary truncate block">{vendor.companyName}</span>
+                  {vendor.contactName && <span className="text-xs text-text-tertiary truncate block">{vendor.contactName}</span>}
+                </div>
               </div>
               <div className="hidden sm:flex items-center">
                 <span className="text-xs text-text-secondary">{vendor.category || "—"}</span>
               </div>
               <div className="hidden sm:flex items-center">
-                <div className="min-w-0">
-                  {vendor.contactName && (
-                    <span className="text-xs text-text-secondary truncate block">{vendor.contactName}</span>
-                  )}
-                  {vendor.email && (
-                    <span className="text-xs text-text-tertiary truncate block">{vendor.email}</span>
-                  )}
-                </div>
+                <span className="text-xs text-text-secondary truncate">{vendor.email || "—"}</span>
               </div>
               <div className="hidden sm:flex items-center">
                 <span className="text-xs text-text-secondary">{vendor.phone || "—"}</span>
