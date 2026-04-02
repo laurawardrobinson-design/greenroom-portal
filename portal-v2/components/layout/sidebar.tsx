@@ -15,6 +15,7 @@ import {
   LogOut,
   X,
   ClipboardList,
+  Compass,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -27,6 +28,7 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   roles: UserRole[];
+  adminLabel?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -71,6 +73,13 @@ const NAV_ITEMS: NavItem[] = [
     href: "/contacts",
     icon: Contact,
     roles: ["Admin", "Producer", "Studio"],
+  },
+  {
+    label: "Goals",
+    adminLabel: "Team Goals",
+    href: "/goals",
+    icon: Compass,
+    roles: ["Admin", "Producer", "Studio", "Art Director"],
   },
   {
     label: "Budget",
@@ -166,7 +175,7 @@ export function Sidebar({
                   isActive ? "text-primary" : "text-[#D9E4D6]/40 group-hover:text-[#D9E4D6]/60"
                 }`}
               />
-              {item.label}
+              {(userRole === "Admin" && item.adminLabel) ? item.adminLabel : item.label}
               {isActive && (
                 <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
               )}

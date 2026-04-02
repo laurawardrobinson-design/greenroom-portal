@@ -28,6 +28,75 @@ export interface AppUser {
   updatedAt: string;
 }
 
+// --- Goals ("Growing Toward") ---
+export interface UserGoal {
+  id: string;
+  userId: string;
+  goalText: string;
+  currentRoleContext: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GoalAdvice {
+  id: string;
+  goalId: string;
+  text: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+}
+
+export interface GoalStakeholder {
+  id: string;
+  goalId: string;
+  userId: string;
+  assignedBy: string;
+  createdAt: string;
+  user?: { id: string; name: string; role: string; favoritePublixProduct: string };
+}
+
+export interface GoalMilestone {
+  id: string;
+  goalId: string;
+  description: string;
+  completed: boolean;
+  completedAt: string | null;
+  targetDate: string | null;
+  sortOrder: number;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface GoalHighlight {
+  id: string;
+  goalId: string;
+  text: string;
+  links: string[];
+  createdAt: string;
+  files?: GoalHighlightFile[];
+  feedback?: GoalHighlightFeedback[];
+}
+
+export interface GoalHighlightFile {
+  id: string;
+  highlightId: string;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  createdAt: string;
+}
+
+export interface GoalHighlightFeedback {
+  id: string;
+  highlightId: string;
+  text: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+}
+
 // --- Campaigns ---
 export type CampaignStatus =
   | "Planning"
@@ -548,7 +617,9 @@ export type NotificationType =
   | "invoice_approved"
   | "budget_alert"
   | "assets_due"
-  | "campaign_created";
+  | "campaign_created"
+  | "goal_highlight"
+  | "goal_stale_checkin";
 
 export interface Notification {
   id: string;
