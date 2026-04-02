@@ -10,6 +10,7 @@ export function GatorEasterEgg() {
   const [zookeeperWalking, setZookeeperWalking] = useState(false);
   const {
     discoverCreature,
+    activateMenagerie,
     enabled,
     hasCollectedCreature,
     isDiscovered,
@@ -24,6 +25,7 @@ export function GatorEasterEgg() {
   function triggerChomp() {
     if (chomping || zookeeperWalking) return;
     setChomping(true);
+    activateMenagerie();
     if (gatorCurrentlyLoose) {
       discoverCreature("gator");
     }

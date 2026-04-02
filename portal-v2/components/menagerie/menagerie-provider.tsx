@@ -11,6 +11,7 @@ interface MenagerieContext {
   discoverCreature: (key: CreatureKey) => Promise<void>;
   isLoading: boolean;
   enabled: boolean;
+  activateMenagerie: () => void;
   resetCollection: () => Promise<void>;
   releaseKey: number;
   releaseCreatures: () => void;

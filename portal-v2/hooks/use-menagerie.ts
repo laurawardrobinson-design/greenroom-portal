@@ -119,14 +119,17 @@ export function useMenagerie(userId: string | null) {
   const [zookeeperRequest, setZookeeperRequest] = useState(0);
   const requestZookeeper = useCallback(() => setZookeeperRequest((r) => r + 1), []);
 
-  // Enabled is derived from whether the gator has been collected — no localStorage needed.
-  // This prevents cross-user leakage when multiple accounts share the same browser.
-  const enabled = hasCollectedCreature("gator");
+  // Enabled is session-only — always false on login, set true when gator is triggered.
+  // This ensures the menagerie is always hidden on fresh login regardless of DB state.
+  const [enabled, setEnabled] = useState(false);
+  const activateMenagerie = useCallback(() => setEnabled(true), []);
 
-  // Zookeeper — wipe collection (which also disables since gator is removed)
+  // Zookeeper — wipe collection and deactivate for this session
   const resetCollection = useCallback(async () => {
     const previousReleased = activeReleasedCreatures;
+    const previousEnabled = enabled;
     setReleasedCreatures([]);
+    setEnabled(false);
     try {
       await mutate(
         async () => {
@@ -142,9 +145,10 @@ export function useMenagerie(userId: string | null) {
       );
     } catch (error) {
       setReleasedCreatures(previousReleased);
+      setEnabled(previousEnabled);
       throw error;
     }
-  }, [activeReleasedCreatures, mutate]);
+  }, [activeReleasedCreatures, enabled, mutate]);
 
   return {
     collection,
@@ -153,6 +157,7 @@ export function useMenagerie(userId: string | null) {
     discoverCreature,
     isLoading,
     enabled,
+    activateMenagerie,
     resetCollection,
     releaseKey,
     releaseCreatures,
