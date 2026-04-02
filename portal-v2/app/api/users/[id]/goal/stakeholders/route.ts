@@ -29,7 +29,8 @@ export async function GET(
     if (error) throw error;
 
     const mapped = (data ?? []).map((s) => {
-      const u = s.users as unknown as Record<string, unknown> | null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const u = s.users as any;
       return {
         id: s.id,
         goalId: s.goal_id,

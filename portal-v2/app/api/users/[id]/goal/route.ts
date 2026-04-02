@@ -112,14 +112,16 @@ export async function GET(
         .eq("goal_id", goal.id);
 
       result.stakeholders = (stakeData ?? []).map((s) => {
-        const u = s.users as unknown as Record<string, unknown> | null;
+        // s.users is a joined row object; cast via any to safely access its fields
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const u = s.users as any;
         return {
           id: s.id,
           goalId: s.goal_id,
           userId: s.user_id,
           assignedBy: s.assigned_by,
           createdAt: s.created_at,
-          user: u ? { id: u.id, name: u.name, role: u.role, favoritePublixProduct: u.favorite_publix_product || "" } : undefined,
+          user: u ? { id: u.id as string, name: u.name as string, role: u.role as string, favoritePublixProduct: (u.favorite_publix_product as string) || "" } : undefined,
         };
       });
 
