@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireRole, authErrorResponse } from "@/lib/auth/guards";
-import { decideBudgetRequest } from "@/lib/services/budget.service";
+import { decideBudgetRequest, revertBudgetRequest } from "@/lib/services/budget.service";
 
 export async function PATCH(
   request: Request,
@@ -10,6 +10,12 @@ export async function PATCH(
     const user = await requireRole(["Admin"]);
     const { id } = await params;
     const body = await request.json();
+
+    // Revert action — undo an approval or decline
+    if (body.action === "revert") {
+      await revertBudgetRequest(id);
+      return NextResponse.json({ success: true });
+    }
 
     await decideBudgetRequest({
       requestId: id,

@@ -103,6 +103,95 @@ export async function createBudgetPool(input: {
   };
 }
 
+export async function updateBudgetPool(
+  id: string,
+  input: { name?: string; totalAmount?: number; periodStart?: string; periodEnd?: string }
+): Promise<void> {
+  const db = createAdminClient();
+  const updateData: Record<string, unknown> = {};
+  if (input.name !== undefined) updateData.name = input.name;
+  if (input.totalAmount !== undefined) updateData.total_amount = input.totalAmount;
+  if (input.periodStart !== undefined) updateData.period_start = input.periodStart;
+  if (input.periodEnd !== undefined) updateData.period_end = input.periodEnd;
+
+  const { error } = await db.from("budget_pools").update(updateData).eq("id", id);
+  if (error) throw error;
+}
+
+export async function getPoolTransactions(poolId: string): Promise<Array<{
+  type: string;
+  description: string;
+  amount: number;
+  date: string;
+  campaignName?: string;
+}>> {
+  const db = createAdminClient();
+  const transactions: Array<{
+    type: string;
+    description: string;
+    amount: number;
+    date: string;
+    campaignName?: string;
+  }> = [];
+
+  // Get campaigns in this pool
+  const { data: campaigns } = await db
+    .from("campaigns")
+    .select("id, name, wf_number, production_budget, created_at")
+    .eq("budget_pool_id", poolId);
+
+  for (const c of campaigns || []) {
+    // Campaign budget allocation
+    transactions.push({
+      type: "allocation",
+      description: `Budget allocated to ${c.wf_number || ""} ${c.name}`,
+      amount: -Number(c.production_budget),
+      date: c.created_at,
+      campaignName: c.name,
+    });
+
+    // Budget requests (approved = money added)
+    const { data: requests } = await db
+      .from("budget_requests")
+      .select("amount, status, reviewed_at, created_at")
+      .eq("campaign_id", c.id)
+      .eq("status", "Approved");
+
+    for (const req of requests || []) {
+      transactions.push({
+        type: "overage_approved",
+        description: `Additional funds approved for ${c.wf_number || ""} ${c.name}`,
+        amount: -Number(req.amount),
+        date: req.reviewed_at || req.created_at,
+        campaignName: c.name,
+      });
+    }
+
+    // Vendor payments (money out)
+    const { data: vendors } = await db
+      .from("campaign_vendors")
+      .select("vendor_id, payment_amount, status, updated_at, vendors(company_name)")
+      .eq("campaign_id", c.id)
+      .eq("status", "Paid");
+
+    for (const v of vendors || []) {
+      const vendorData = v.vendors as unknown as { company_name: string } | null;
+      transactions.push({
+        type: "payment",
+        description: `Payment to ${vendorData?.company_name || "vendor"} for ${c.name}`,
+        amount: -Number(v.payment_amount),
+        date: v.updated_at,
+        campaignName: c.name,
+      });
+    }
+  }
+
+  // Sort by date descending
+  transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return transactions;
+}
+
 // --- Budget Requests (overages) ---
 export async function listBudgetRequests(filters?: {
   status?: string;
@@ -200,6 +289,51 @@ export async function decideBudgetRequest(input: {
         .eq("id", request.campaign_id);
     }
   }
+}
+
+// --- Revert a budget request back to Pending ---
+export async function revertBudgetRequest(requestId: string): Promise<void> {
+  const db = createAdminClient();
+
+  const { data: request, error: fetchErr } = await db
+    .from("budget_requests")
+    .select("campaign_id, amount, status")
+    .eq("id", requestId)
+    .single();
+
+  if (fetchErr || !request) throw new Error("Request not found");
+  if (request.status === "Pending") return; // Already pending
+
+  // If it was approved, reverse the budget increase
+  if (request.status === "Approved") {
+    const { data: campaign } = await db
+      .from("campaigns")
+      .select("production_budget")
+      .eq("id", request.campaign_id)
+      .single();
+
+    if (campaign) {
+      await db
+        .from("campaigns")
+        .update({
+          production_budget: Math.max(0, Number(campaign.production_budget) - Number(request.amount)),
+        })
+        .eq("id", request.campaign_id);
+    }
+  }
+
+  // Reset the request to Pending
+  const { error } = await db
+    .from("budget_requests")
+    .update({
+      status: "Pending",
+      reviewed_by: null,
+      reviewed_at: null,
+      review_notes: "",
+    })
+    .eq("id", requestId);
+
+  if (error) throw error;
 }
 
 // --- Category Spending ---

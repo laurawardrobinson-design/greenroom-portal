@@ -33,6 +33,9 @@ function toCampaignListItem(row: Record<string, unknown>): CampaignListItem {
     vendorCount: Number(row.vendor_count) || 0,
     shootsSummary: [],
     committed: 0,
+    producerName: null,
+    additionalFundsRequested: 0,
+    additionalFundsApproved: 0,
   };
 }
 
@@ -150,9 +153,47 @@ export async function listCampaigns(filters?: {
       committedByCampaign.set(cid, (committedByCampaign.get(cid) || 0) + (Number(v.estimate_total) || 0));
     }
 
+    // Fetch producer names
+    const producerIds = [...new Set(items.map((c) => c.producerId).filter(Boolean))] as string[];
+    const producerMap = new Map<string, string>();
+    if (producerIds.length > 0) {
+      const { data: producers } = await db
+        .from("users")
+        .select("id, name")
+        .in("id", producerIds);
+      for (const p of producers || []) {
+        producerMap.set(p.id, p.name);
+      }
+    }
+
+    // Fetch budget requests (additional funds) per campaign
+    const { data: budgetReqs } = await db
+      .from("budget_requests")
+      .select("campaign_id, amount, status")
+      .in("campaign_id", campaignIds);
+
+    const additionalFundsByCampaign = new Map<string, { requested: number; approved: number }>();
+    for (const req of budgetReqs || []) {
+      const cid = req.campaign_id as string;
+      if (!additionalFundsByCampaign.has(cid)) {
+        additionalFundsByCampaign.set(cid, { requested: 0, approved: 0 });
+      }
+      const entry = additionalFundsByCampaign.get(cid)!;
+      const amount = Number(req.amount) || 0;
+      if (req.status === "Pending") {
+        entry.requested += amount;
+      } else if (req.status === "Approved") {
+        entry.approved += amount;
+      }
+    }
+
     for (const item of items) {
       item.shootsSummary = shootsByCampaign.get(item.id) || [];
       item.committed = committedByCampaign.get(item.id) || 0;
+      item.producerName = producerMap.get(item.producerId || "") || null;
+      const funds = additionalFundsByCampaign.get(item.id);
+      item.additionalFundsRequested = funds?.requested || 0;
+      item.additionalFundsApproved = funds?.approved || 0;
     }
   }
 

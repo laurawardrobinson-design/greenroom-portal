@@ -56,6 +56,13 @@ export function CampaignRow({ campaign }: Props) {
         </span>
       </div>
 
+      {/* Producer */}
+      <div className="w-24 shrink-0 hidden lg:block">
+        <span className="text-xs text-text-secondary truncate block">
+          {campaign.producerName || "—"}
+        </span>
+      </div>
+
       {/* Status */}
       <div className="w-28 shrink-0">
         <CampaignStatusBadge status={campaign.status} />
@@ -98,6 +105,26 @@ export function CampaignRow({ campaign }: Props) {
             ? formatCurrency(campaign.productionBudget)
             : "—"}
         </span>
+      </div>
+
+      {/* Additional Funds */}
+      <div className="w-24 shrink-0 text-right hidden lg:block">
+        {(campaign.additionalFundsRequested > 0 || campaign.additionalFundsApproved > 0) ? (
+          <div className="space-y-0.5">
+            {campaign.additionalFundsRequested > 0 && (
+              <span className="text-xs font-medium text-amber-600 block">
+                {formatCurrency(campaign.additionalFundsRequested)} pending
+              </span>
+            )}
+            {campaign.additionalFundsApproved > 0 && (
+              <span className="text-xs font-medium text-emerald-600 block">
+                {formatCurrency(campaign.additionalFundsApproved)} approved
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-xs text-text-tertiary">—</span>
+        )}
       </div>
     </Link>
   );

@@ -187,10 +187,12 @@ export default function CampaignsPage() {
               <div className="w-2.5 shrink-0" />
               <div className="w-24 shrink-0">WF#</div>
               <div className="flex-1">Campaign</div>
+              <div className="w-24 shrink-0 hidden lg:block">Producer</div>
               <div className="w-28 shrink-0">Status</div>
               <div className="w-24 shrink-0 text-right">Next Shoot</div>
               <div className="w-24 shrink-0 text-right hidden lg:block">Assets Due</div>
               <div className="w-20 shrink-0 text-right">Budget</div>
+              <div className="w-24 shrink-0 text-right hidden lg:block">Add&apos;l Funds</div>
             </div>
             {displayedCampaigns.map((campaign) => (
               <CampaignRow key={campaign.id} campaign={campaign} />

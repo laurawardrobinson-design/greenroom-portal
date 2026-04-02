@@ -95,6 +95,9 @@ export interface CampaignListItem extends Campaign {
   vendorCount: number;
   shootsSummary: ShootSummary[];
   committed: number;
+  producerName: string | null;
+  additionalFundsRequested: number;
+  additionalFundsApproved: number;
 }
 
 export interface ShootSummary {

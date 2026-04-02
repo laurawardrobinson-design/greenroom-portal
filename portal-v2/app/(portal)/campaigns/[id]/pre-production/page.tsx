@@ -20,7 +20,10 @@ import {
   Building2,
   Star,
   UserCircle,
+  AlertTriangle,
 } from "lucide-react";
+import { Modal, ModalFooter } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
 import { ScheduleTab } from "@/components/pre-production/schedule-tab";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -95,14 +98,274 @@ function PaymentsTab() {
   );
 }
 
-function ContractsTab() {
+function ContractsTab({ campaignId, shoots, vendors }: { campaignId: string; shoots: Shoot[]; vendors: CampaignVendor[] }) {
+  const [showCoiModal, setShowCoiModal] = useState(false);
+
   return (
-    <PlaceholderTab
-      icon={FileText}
-      title="Contracts"
-      description="Legal and compliance — talent releases, crew deal memos, location agreements, and insurance certificates."
-      items={["Talent Releases", "Crew Deals", "Location Agreements", "Insurance"]}
-    />
+    <div className="space-y-6">
+      {/* Contract categories */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: "Talent Releases", count: 0 },
+          { label: "Crew Deals", count: 0 },
+          { label: "Location Agreements", count: 0 },
+          { label: "Insurance", count: 0 },
+        ].map((item) => (
+          <div
+            key={item.label}
+            className="rounded-xl border border-border bg-surface p-4 text-center"
+          >
+            <p className="text-sm font-medium text-text-primary">{item.label}</p>
+            <p className="text-2xl font-bold text-text-primary mt-1">{item.count}</p>
+            <p className="text-xs text-text-tertiary">documents</p>
+          </div>
+        ))}
+      </div>
+
+      {/* COI Request */}
+      <div className="rounded-xl border border-border bg-surface overflow-hidden">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+          <FileText className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Insurance Certificates</span>
+        </div>
+        <div className="p-4">
+          <p className="text-sm text-text-secondary mb-3">
+            Generate a Certificate of Insurance (COI) request to send to your insurance broker.
+          </p>
+          <Button size="sm" onClick={() => setShowCoiModal(true)}>
+            <FileText className="h-3.5 w-3.5" />
+            Generate COI Request
+          </Button>
+        </div>
+      </div>
+
+      <CoiRequestModal
+        open={showCoiModal}
+        onClose={() => setShowCoiModal(false)}
+        shoots={shoots}
+        vendors={vendors}
+      />
+    </div>
+  );
+}
+
+function CoiRequestModal({
+  open,
+  onClose,
+  shoots,
+  vendors,
+}: {
+  open: boolean;
+  onClose: () => void;
+  shoots: Shoot[];
+  vendors: CampaignVendor[];
+}) {
+  const [selectedVendor, setSelectedVendor] = useState("");
+  const [addressSource, setAddressSource] = useState<"vendor" | "location">("vendor");
+  const [holderAddress, setHolderAddress] = useState("");
+  const [selectedShootDates, setSelectedShootDates] = useState<string[]>([]);
+  const [copied, setCopied] = useState(false);
+
+  // Gather all vendors for selection
+  const vendorOptions = vendors
+    .filter((cv) => cv.vendor)
+    .map((cv) => ({
+      id: cv.vendorId,
+      name: cv.vendor?.companyName || "Unknown",
+      contactName: cv.vendor?.contactName || "",
+    }));
+
+  // Gather all shoot dates
+  const allShootDates = shoots.flatMap((s) =>
+    s.dates.map((d) => ({
+      id: d.id,
+      date: d.shootDate,
+      location: d.location || s.location || "TBD",
+      shootName: s.name,
+    }))
+  );
+
+  const selectedVendorData = vendorOptions.find((v) => v.id === selectedVendor);
+  const holderName = selectedVendorData?.name || "";
+
+  const shootDateText = selectedShootDates
+    .map((id) => {
+      const sd = allShootDates.find((d) => d.id === id);
+      if (!sd) return "";
+      return new Date(sd.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    })
+    .filter(Boolean)
+    .join(", ");
+
+  function generateEmailBody() {
+    return `COI Request
+
+Certificate Holder Name: ${holderName}
+Certificate Holder Address: ${holderAddress}
+Shoot Date(s): ${shootDateText || "TBD"}
+
+Please issue a Certificate of Insurance for the above holder and dates.
+
+Thank you.`;
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(generateEmailBody());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Generate COI Request" size="lg">
+      <div className="space-y-4">
+        {/* Warning */}
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <div className="flex gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+            <p className="text-xs text-amber-800 leading-relaxed">
+              Production insurance does <strong>NOT</strong> automatically cover hazardous and/or unusual activity including wild animals, horses, stunts, racing, watercraft, aircraft, railroads, pyrotechnics, adverse weather, filming outside of the US or Canada. You must not generate any COI for these activities and notify HOP for unusual scenarios.
+            </p>
+          </div>
+        </div>
+
+        {/* Vendor (Certificate Holder) */}
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-1.5">
+            Certificate Holder Name (Vendor Legal Name)
+          </label>
+          <select
+            value={selectedVendor}
+            onChange={(e) => setSelectedVendor(e.target.value)}
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <option value="">Select a vendor...</option>
+            {vendorOptions.map((v) => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Address Source */}
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-1.5">
+            Certificate Holder Address
+          </label>
+          <div className="flex gap-2 mb-2">
+            <button
+              type="button"
+              onClick={() => {
+                setAddressSource("vendor");
+                setHolderAddress("");
+              }}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-all ${
+                addressSource === "vendor"
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border text-text-secondary hover:border-primary/40"
+              }`}
+            >
+              Vendor Address
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAddressSource("location");
+                const firstDate = allShootDates[0];
+                if (firstDate) setHolderAddress(firstDate.location);
+              }}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-all ${
+                addressSource === "location"
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border text-text-secondary hover:border-primary/40"
+              }`}
+            >
+              Location Address
+            </button>
+          </div>
+          {addressSource === "location" && allShootDates.length > 0 && (
+            <select
+              value=""
+              onChange={(e) => setHolderAddress(e.target.value)}
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary mb-2 focus:outline-none focus:ring-2 focus:ring-primary/40"
+            >
+              <option value="">Pick a shoot location...</option>
+              {allShootDates.map((sd) => (
+                <option key={sd.id} value={sd.location}>{sd.shootName} — {sd.location}</option>
+              ))}
+            </select>
+          )}
+          <input
+            type="text"
+            value={holderAddress}
+            onChange={(e) => setHolderAddress(e.target.value)}
+            placeholder="Enter or select certificate holder address"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+
+        {/* Shoot Dates */}
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-1.5">
+            Shoot Dates
+          </label>
+          {allShootDates.length === 0 ? (
+            <p className="text-sm text-text-tertiary">No shoot dates scheduled yet.</p>
+          ) : (
+            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+              {allShootDates.map((sd) => (
+                <label
+                  key={sd.id}
+                  className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 cursor-pointer hover:bg-surface-secondary transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedShootDates.includes(sd.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedShootDates((prev) => [...prev, sd.id]);
+                      } else {
+                        setSelectedShootDates((prev) => prev.filter((id) => id !== sd.id));
+                      }
+                    }}
+                    className="rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm text-text-primary">
+                    {new Date(sd.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                  <span className="text-xs text-text-tertiary ml-auto">{sd.shootName} — {sd.location}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Preview */}
+        {selectedVendor && (
+          <div className="rounded-lg border border-border bg-surface-secondary p-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary mb-2">Email Preview</p>
+            <pre className="text-xs text-text-primary whitespace-pre-wrap font-sans leading-relaxed">
+              {generateEmailBody()}
+            </pre>
+          </div>
+        )}
+
+        <ModalFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleCopy} disabled={!selectedVendor}>
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <FileText className="h-3.5 w-3.5" />
+                Copy to Clipboard
+              </>
+            )}
+          </Button>
+        </ModalFooter>
+      </div>
+    </Modal>
   );
 }
 
@@ -447,7 +710,7 @@ export default function PreProductionWorkspacePage({
         {activeTab === "logistics" && <LogisticsTab />}
         {activeTab === "people"    && <PeopleTab shoots={shoots} vendors={vendors} producerId={campaign.producerId} />}
         {activeTab === "payments"  && <PaymentsTab />}
-        {activeTab === "contracts" && <ContractsTab />}
+        {activeTab === "contracts" && <ContractsTab campaignId={id} shoots={shoots} vendors={vendors} />}
       </div>
     </div>
   );

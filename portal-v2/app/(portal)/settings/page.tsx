@@ -465,103 +465,103 @@ export default function SettingsPage() {
   if (loadingUser) return <DashboardSkeleton />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <h2 className="text-2xl font-bold text-text-primary">Settings</h2>
 
-      {/* My Card */}
+      {/* Top row: My Card + Account side by side */}
       {user && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Contact className="h-4 w-4" />
-              My Card
-            </CardTitle>
-          </CardHeader>
-          <MyCard user={user} />
-        </Card>
-      )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* My Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Contact className="h-4 w-4" />
+                My Card
+              </CardTitle>
+            </CardHeader>
+            <MyCard user={user} />
+          </Card>
 
-      {/* My Preferences */}
-      {user && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Settings className="h-4 w-4" />
-              My Preferences
-            </CardTitle>
-            {!editingPrefs && (
-              <button
-                onClick={() => setEditingPrefs(true)}
-                className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                Edit
-              </button>
-            )}
-            {editingPrefs && (
-              <button
-                onClick={() => setEditingPrefs(false)}
-                className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
-                Cancel
-              </button>
-            )}
-          </CardHeader>
-          {editingPrefs ? (
-            <PreferencesForm
-              user={user}
-              onSaved={() => {
-                mutate();
-                setEditingPrefs(false);
-              }}
-            />
-          ) : (
-            <div className="space-y-2 text-sm text-text-secondary">
-              {user.favoritePublixProduct ? (
-                <ProductRowItem productName={user.favoritePublixProduct} />
+          {/* Account + Preferences */}
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  <User className="h-4 w-4" />
+                  Account
+                </CardTitle>
+              </CardHeader>
+              <dl className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-text-tertiary">Name</dt>
+                  <dd className="font-medium text-text-primary">{user.name}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-text-tertiary">Email</dt>
+                  <dd className="text-text-primary">{user.email}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-text-tertiary">Role</dt>
+                  <dd>
+                    <Badge variant="custom" className={ROLE_COLORS[user.role] || ""}>
+                      {user.role}
+                    </Badge>
+                  </dd>
+                </div>
+                {user.title && (
+                  <div className="flex justify-between">
+                    <dt className="text-text-tertiary">Title</dt>
+                    <dd className="text-text-primary">{user.title}</dd>
+                  </div>
+                )}
+              </dl>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  <Settings className="h-4 w-4" />
+                  My Preferences
+                </CardTitle>
+                {!editingPrefs && (
+                  <button
+                    onClick={() => setEditingPrefs(true)}
+                    className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </button>
+                )}
+                {editingPrefs && (
+                  <button
+                    onClick={() => setEditingPrefs(false)}
+                    className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Cancel
+                  </button>
+                )}
+              </CardHeader>
+              {editingPrefs ? (
+                <PreferencesForm
+                  user={user}
+                  onSaved={() => {
+                    mutate();
+                    setEditingPrefs(false);
+                  }}
+                />
               ) : (
-                <p className="text-text-tertiary italic">No preferences set yet — click Edit to get started.</p>
+                <div className="space-y-2 text-sm text-text-secondary">
+                  {user.favoritePublixProduct ? (
+                    <ProductRowItem productName={user.favoritePublixProduct} />
+                  ) : (
+                    <p className="text-text-tertiary italic">No preferences set yet — click Edit to get started.</p>
+                  )}
+                </div>
               )}
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* Account */}
-      {user && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <User className="h-4 w-4" />
-              Account
-            </CardTitle>
-          </CardHeader>
-          <dl className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-text-tertiary">Name</dt>
-              <dd className="font-medium text-text-primary">{user.name}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-text-tertiary">Email</dt>
-              <dd className="text-text-primary">{user.email}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-text-tertiary">Role</dt>
-              <dd>
-                <Badge variant="custom" className={ROLE_COLORS[user.role] || ""}>
-                  {user.role}
-                </Badge>
-              </dd>
-            </div>
-            {user.title && (
-              <div className="flex justify-between">
-                <dt className="text-text-tertiary">Title</dt>
-                <dd className="text-text-primary">{user.title}</dd>
-              </div>
-            )}
-          </dl>
-        </Card>
+            </Card>
+          </div>
+        </div>
       )}
 
       {/* Dev mode indicator */}

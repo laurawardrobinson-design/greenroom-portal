@@ -29,7 +29,7 @@ import { LogMaintenanceModal } from "@/components/inventory/log-maintenance-moda
 import { QrScanner } from "@/components/ui/qr-scanner";
 import { BatchCart } from "@/components/inventory/batch-cart";
 import { ActiveCheckouts } from "@/components/inventory/active-checkouts";
-import { Drawer } from "@/components/ui/drawer";
+import { Modal } from "@/components/ui/modal";
 import {
   Plus,
   Package,
@@ -792,8 +792,8 @@ export default function InventoryPage() {
         onCreated={() => { mutateMaintenance(); setShowMaintenance(false); }}
       />
 
-      {/* Scanner drawer */}
-      <Drawer
+      {/* Scanner modal (centered) */}
+      <Modal
         open={showScanner}
         onClose={() => setShowScanner(false)}
         title="Check Out / Check In"
@@ -854,7 +854,7 @@ export default function InventoryPage() {
           {/* Active checkouts */}
           <ActiveCheckouts />
         </div>
-      </Drawer>
+      </Modal>
     </div>
   );
 }

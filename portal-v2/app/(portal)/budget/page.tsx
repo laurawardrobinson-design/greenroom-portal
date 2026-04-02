@@ -38,6 +38,7 @@ import {
   Layers,
   ChevronDown,
   ChevronRight,
+  Undo2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -103,11 +104,183 @@ export default function BudgetPage() {
   );
 }
 
+// ─── Budget Pool Detail Modal ───
+function PoolDetailModal({
+  pool,
+  open,
+  onClose,
+  onUpdated,
+  isAdmin,
+}: {
+  pool: BudgetPoolSummary | null;
+  open: boolean;
+  onClose: () => void;
+  onUpdated: () => void;
+  isAdmin: boolean;
+}) {
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
+
+  const { data: transactions } = useSWR(
+    pool ? `/api/budget?type=transactions&poolId=${pool.id}` : null,
+    fetcher
+  );
+
+  function startEditing() {
+    if (!pool) return;
+    setEditName(pool.name);
+    setEditAmount(String(pool.totalAmount));
+    setEditStart(pool.periodStart);
+    setEditEnd(pool.periodEnd);
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    if (!pool) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/budget", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: pool.id,
+          name: editName,
+          totalAmount: Number(editAmount),
+          periodStart: editStart,
+          periodEnd: editEnd,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast("success", "Pool updated");
+      setEditing(false);
+      onUpdated();
+    } catch {
+      toast("error", "Failed to update pool");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!pool) return null;
+
+  const pctUsed = pool.totalAmount > 0
+    ? Math.round((pool.allocated / pool.totalAmount) * 100)
+    : 0;
+
+  function formatTxDate(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title={editing ? "Edit Pool" : pool.name} size="lg">
+      {editing ? (
+        <div className="space-y-4">
+          <Input label="Pool Name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+          <Input label="Total Amount" type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} />
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Period Start" type="date" value={editStart} onChange={(e) => setEditStart(e.target.value)} />
+            <Input label="Period End" type="date" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} />
+          </div>
+          <ModalFooter>
+            <Button variant="ghost" onClick={() => setEditing(false)} disabled={saving}>Cancel</Button>
+            <Button onClick={handleSave} loading={saving}>
+              <Check className="h-3.5 w-3.5" />
+              Save
+            </Button>
+          </ModalFooter>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {/* Summary stats */}
+          <div>
+            <p className="text-xs text-text-tertiary mb-3">
+              {pool.periodStart} — {pool.periodEnd}
+            </p>
+            <div className="mb-3">
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-text-secondary">{formatCurrency(pool.allocated)} allocated</span>
+                <span className="text-text-tertiary">{formatCurrency(pool.totalAmount)} total</span>
+              </div>
+              <div className="h-2 rounded-full bg-surface-tertiary overflow-hidden">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(pctUsed, 100)}%` }} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Allocated</p>
+                <p className="text-sm font-semibold text-text-primary">{formatCurrency(pool.allocated)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Remaining</p>
+                <p className="text-sm font-semibold text-emerald-600">{formatCurrency(pool.remaining)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Used</p>
+                <p className="text-sm font-semibold text-text-primary">{pctUsed}%</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Transaction history */}
+          <div>
+            <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-text-tertiary mb-2">
+              <Clock className="h-3.5 w-3.5" />
+              Transaction History
+            </p>
+            {!transactions || transactions.length === 0 ? (
+              <p className="text-sm text-text-tertiary py-4 text-center">No transactions yet.</p>
+            ) : (
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {(transactions as Array<{ type: string; description: string; amount: number; date: string }>).map((tx, i) => (
+                  <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-secondary/50 transition-colors">
+                    <div className={`h-2 w-2 rounded-full shrink-0 ${
+                      tx.type === "allocation" ? "bg-blue-500" :
+                      tx.type === "overage_approved" ? "bg-amber-500" :
+                      "bg-red-500"
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-text-primary truncate">{tx.description}</p>
+                      <p className="text-xs text-text-tertiary">{formatTxDate(tx.date)}</p>
+                    </div>
+                    <span className={`shrink-0 text-sm font-medium ${tx.amount < 0 ? "text-red-600" : "text-emerald-600"}`}>
+                      {tx.amount < 0 ? "-" : "+"}{formatCurrency(Math.abs(tx.amount))}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Edit button */}
+          {isAdmin && (
+            <div className="flex justify-end pt-2 border-t border-border">
+              <Button size="sm" variant="secondary" onClick={startEditing}>
+                <Pencil className="h-3.5 w-3.5" />
+                Edit Pool
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 // ─── Budget Pools Tab ───
 function BudgetPoolsTab({ isAdmin }: { isAdmin: boolean }) {
   const { data: rawPools, mutate } = useSWR<BudgetPoolSummary[]>("/api/budget", fetcher);
   const pools: BudgetPoolSummary[] = Array.isArray(rawPools) ? rawPools : [];
   const [showAdd, setShowAdd] = useState(false);
+  const [selectedPool, setSelectedPool] = useState<BudgetPoolSummary | null>(null);
 
   return (
     <>
@@ -146,7 +319,7 @@ function BudgetPoolsTab({ isAdmin }: { isAdmin: boolean }) {
                 : 0;
 
             return (
-              <Card key={pool.id}>
+              <Card key={pool.id} className="cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all" onClick={() => setSelectedPool(pool)}>
                 <CardHeader>
                   <CardTitle>{pool.name}</CardTitle>
                 </CardHeader>
@@ -207,6 +380,14 @@ function BudgetPoolsTab({ isAdmin }: { isAdmin: boolean }) {
           setShowAdd(false);
         }}
       />
+
+      <PoolDetailModal
+        pool={selectedPool}
+        open={!!selectedPool}
+        onClose={() => setSelectedPool(null)}
+        onUpdated={() => { mutate(); setSelectedPool(null); }}
+        isAdmin={isAdmin}
+      />
     </>
   );
 }
@@ -215,6 +396,11 @@ function BudgetPoolsTab({ isAdmin }: { isAdmin: boolean }) {
 function CampaignBudgetsTab() {
   const { toast } = useToast();
   const { data: campaigns, mutate } = useSWR<CampaignListItem[]>("/api/campaigns", fetcher);
+  const { data: allUsers } = useSWR<Array<{ id: string; name: string; role: string }>>(
+    "/api/users?roles=Admin,Producer",
+    fetcher
+  );
+  const producers = (allUsers || []).filter((u) => u.role === "Admin" || u.role === "Producer");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [editAll, setEditAll] = useState(false);
@@ -224,6 +410,21 @@ function CampaignBudgetsTab() {
   const activeCampaigns = (campaigns || []).filter(
     (c) => c.status !== "Complete" && c.status !== "Cancelled"
   );
+
+  async function changeProducer(campaignId: string, producerId: string) {
+    try {
+      const res = await fetch(`/api/campaigns/${campaignId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ producerId: producerId || null }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast("success", "Producer updated");
+      mutate();
+    } catch {
+      toast("error", "Failed to update producer");
+    }
+  }
 
   function startEdit(campaign: CampaignListItem) {
     setEditingId(campaign.id);
@@ -360,9 +561,11 @@ function CampaignBudgetsTab() {
           <div className="flex items-center gap-3 px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border">
             <div className="w-20 shrink-0">WF#</div>
             <div className="flex-1">Campaign</div>
+            <div className="w-28 shrink-0">Producer</div>
             <div className="w-24 shrink-0">Status</div>
             <div className="w-24 shrink-0 text-right">Committed</div>
             <div className="w-32 shrink-0 text-right">Budget</div>
+            <div className="w-28 shrink-0 text-right">Add&apos;l Funds</div>
             {!editAll && <div className="w-16 shrink-0" />}
           </div>
 
@@ -385,6 +588,18 @@ function CampaignBudgetsTab() {
                   >
                     {c.name}
                   </Link>
+                </div>
+                <div className="w-28 shrink-0">
+                  <select
+                    value={c.producerId || ""}
+                    onChange={(e) => changeProducer(c.id, e.target.value)}
+                    className="h-7 w-full rounded border border-border bg-surface px-1.5 text-xs font-medium text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="">Unassigned</option>
+                    {producers.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="w-24 shrink-0">
                   <Badge
@@ -427,6 +642,24 @@ function CampaignBudgetsTab() {
                     <span className="text-sm font-semibold text-text-primary">
                       {formatCurrency(c.productionBudget)}
                     </span>
+                  )}
+                </div>
+                <div className="w-28 shrink-0 text-right">
+                  {(c.additionalFundsRequested > 0 || c.additionalFundsApproved > 0) ? (
+                    <div className="space-y-0.5">
+                      {c.additionalFundsRequested > 0 && (
+                        <span className="text-xs font-medium text-amber-600 block">
+                          {formatCurrency(c.additionalFundsRequested)} pending
+                        </span>
+                      )}
+                      {c.additionalFundsApproved > 0 && (
+                        <span className="text-xs font-medium text-emerald-600 block">
+                          +{formatCurrency(c.additionalFundsApproved)} approved
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-text-tertiary">—</span>
                   )}
                 </div>
                 {!editAll && (
@@ -1283,6 +1516,20 @@ function ApprovalsTab() {
     }
   }
 
+  async function handleRevertBudgetRequest(id: string) {
+    try {
+      await fetch(`/api/budget/requests/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "revert" }),
+      });
+      toast("success", "Budget request reverted to pending");
+      mutate();
+    } catch {
+      toast("error", "Failed to revert request");
+    }
+  }
+
   function formatDate(dateStr?: string) {
     if (!dateStr) return "—";
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -1484,6 +1731,15 @@ function ApprovalsTab() {
                     <span className="shrink-0 text-xs text-text-tertiary w-24 text-right">
                       {formatDate(req.reviewedAt)}
                     </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleRevertBudgetRequest(req.id)}
+                      className="shrink-0 text-xs"
+                    >
+                      <Undo2 className="h-3.5 w-3.5" />
+                      Undo
+                    </Button>
                   </div>
                 ))}
               </div>

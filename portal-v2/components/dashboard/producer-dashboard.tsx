@@ -270,7 +270,7 @@ export function ProducerDashboard({ user }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-text-primary">
+          <h2 className="text-2xl font-bold text-text-primary">
             Welcome back, {user.name.split(" ")[0]}
           </h2>
           <p className="text-sm text-text-secondary">Your campaigns and tasks</p>
