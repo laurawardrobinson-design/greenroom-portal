@@ -289,13 +289,11 @@ function CampaignSwitcher({ currentId, currentName, currentWf }: { currentId: st
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-md px-2 py-1 -mx-2 hover:bg-surface-secondary transition-colors group"
+        className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white shadow-xs transition-all hover:bg-primary-hover hover:shadow-sm"
       >
-        <span className="text-base font-medium text-text-primary truncate max-w-[320px]">
-          {currentWf && <span className="text-text-primary mr-1.5">{currentWf}</span>}
-          {currentName}
-        </span>
-        <ChevronDown className={`h-3 w-3 shrink-0 text-text-tertiary/60 transition-transform ${open ? "rotate-180" : ""}`} />
+        {currentWf && <span>{currentWf}</span>}
+        <span className="truncate max-w-[240px]">{currentName}</span>
+        <ChevronDown className={`h-3 w-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
@@ -390,18 +388,19 @@ export default function PreProductionWorkspacePage({
     );
   }
 
+  const campaignLabel = campaign.wfNumber
+    ? `${campaign.wfNumber} ${campaign.name}`
+    : campaign.name;
+
   return (
     <div className="space-y-0 -mt-3">
       {/* Header */}
-      <PageHeader
-        breadcrumb="Pre Production"
-        breadcrumbHref="/pre-production"
-        title={
-          <div className="text-2xl font-bold">
-            <CampaignSwitcher currentId={id} currentName={campaign.name} currentWf={campaign.wfNumber} />
-          </div>
-        }
-      />
+      <div className="space-y-3 pb-4 border-b border-border">
+        <div className="flex items-start justify-between gap-4">
+          <h2 className="text-2xl font-bold text-text-primary">Pre Production</h2>
+          <CampaignSwitcher currentId={id} currentName={campaign.name} currentWf={campaign.wfNumber} />
+        </div>
+      </div>
 
       {/* Tab bar */}
       <div className="border-b border-border">

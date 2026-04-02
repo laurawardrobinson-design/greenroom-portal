@@ -67,7 +67,7 @@ export default function BudgetPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-text-primary">Budget</h2>
+        <h2 className="text-2xl font-bold text-text-primary">Budget</h2>
         <p className="text-sm text-text-secondary">
           Production budget pools, approvals, and spending analysis
         </p>

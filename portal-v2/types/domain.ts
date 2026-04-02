@@ -271,8 +271,7 @@ export type GearStatus =
   | "Reserved"
   | "Checked Out"
   | "Under Maintenance"
-  | "In Repair"
-  | "Retired";
+  | "In Repair";
 
 export type GearCondition =
   | "Excellent"

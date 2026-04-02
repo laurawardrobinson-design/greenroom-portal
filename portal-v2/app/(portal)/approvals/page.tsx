@@ -74,7 +74,7 @@ export default function ApprovalsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-text-primary">Approvals</h2>
+        <h2 className="text-2xl font-bold text-text-primary">Approvals</h2>
         <p className="text-sm text-text-secondary">
           {totalPending} item{totalPending !== 1 ? "s" : ""} pending your review
         </p>

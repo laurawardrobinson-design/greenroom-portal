@@ -1,17 +1,31 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import useSWR from "swr";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { RfidScanner } from "@/components/ui/rfid-scanner";
 import { GEAR_CATEGORIES } from "@/lib/constants/categories";
-import type { GearItem, GearCondition } from "@/types/domain";
-import { Camera, QrCode, Printer, X, Pencil, Archive, Radio } from "lucide-react";
+import type { GearItem, GearCondition, GearMaintenance } from "@/types/domain";
+import { Camera, QrCode, Printer, X, Pencil, Radio, MessageSquare, Send, Wrench } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
+import { formatDistanceToNow, parseISO, format } from "date-fns";
+
+const noteFetcher = (url: string) =>
+  fetch(url).then((r) => { if (!r.ok) throw new Error("Failed"); return r.json(); });
+
+interface GearNote {
+  id: string;
+  text: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+}
 
 const STATUS_BADGE: Record<string, string> = {
   Available: "bg-emerald-50 text-emerald-700",
@@ -19,7 +33,6 @@ const STATUS_BADGE: Record<string, string> = {
   "Checked Out": "bg-amber-50 text-amber-700",
   "Under Maintenance": "bg-purple-50 text-purple-700",
   "In Repair": "bg-red-50 text-red-600",
-  Retired: "bg-slate-100 text-slate-500",
 };
 
 const CONDITION_BADGE: Record<string, string> = {
@@ -50,7 +63,51 @@ export function GearDetailModal({
   onSaved?: () => void;
 }) {
   const { toast } = useToast();
+  const { user: currentUser } = useCurrentUser();
   const [editMode, setEditMode] = useState(false);
+
+  // Maintenance logs
+  const { data: maintenanceLogs } = useSWR<GearMaintenance[]>(
+    item ? `/api/gear/maintenance?gearItemId=${item.id}` : null,
+    noteFetcher
+  );
+
+  // User notes
+  const { data: gearNotes, mutate: mutateNotes } = useSWR<GearNote[]>(
+    item ? `/api/gear/${item.id}/notes` : null,
+    noteFetcher
+  );
+  const [newNote, setNewNote] = useState("");
+  const [addingNote, setAddingNote] = useState(false);
+
+  async function handleAddNote() {
+    if (!item || !newNote.trim()) return;
+    setAddingNote(true);
+    try {
+      const res = await fetch(`/api/gear/${item.id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: newNote.trim() }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+      setNewNote("");
+      mutateNotes();
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Failed to add note");
+    } finally {
+      setAddingNote(false);
+    }
+  }
+
+  async function handleDeleteNote(noteId: string) {
+    if (!item) return;
+    try {
+      await fetch(`/api/gear/${item.id}/notes/${noteId}`, { method: "DELETE" });
+      mutateNotes();
+    } catch {
+      toast("error", "Failed to delete note");
+    }
+  }
 
   // Form state
   const [name, setName] = useState("");
@@ -68,8 +125,6 @@ export function GearDetailModal({
 
   // UI state
   const [saving, setSaving] = useState(false);
-  const [retiring, setRetiring] = useState(false);
-  const [confirmRetire, setConfirmRetire] = useState(false);
   const [assigningRfid, setAssigningRfid] = useState(false);
   const [savingRfid, setSavingRfid] = useState(false);
 
@@ -87,7 +142,6 @@ export function GearDetailModal({
       setRfidTag(item.rfidTag ?? null);
       setImageUrl(item.imageUrl || null);
       imageFileRef.current = null;
-      setConfirmRetire(false);
       setAssigningRfid(false);
       setEditMode(false);
     }
@@ -160,28 +214,6 @@ export function GearDetailModal({
       toast("error", err instanceof Error ? err.message : "Failed to update item");
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleRetire() {
-    if (!item) return;
-    if (!confirmRetire) {
-      setConfirmRetire(true);
-      return;
-    }
-    setRetiring(true);
-    try {
-      const res = await fetch(`/api/gear?id=${item.id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to retire item");
-      toast("success", `${item.name} retired`);
-      onSaved?.();
-      onClose();
-    } catch (err) {
-      toast("error", err instanceof Error ? err.message : "Failed to retire item");
-    } finally {
-      setRetiring(false);
-      setConfirmRetire(false);
     }
   }
 
@@ -407,6 +439,109 @@ export function GearDetailModal({
           />
         </div>
 
+        {/* ── User Notes ── */}
+        <div className="rounded-xl border border-border overflow-hidden">
+          <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+            <MessageSquare className="h-4 w-4 shrink-0 text-primary" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+              Notes
+            </span>
+            {gearNotes && gearNotes.length > 0 && (
+              <span className="text-[10px] text-text-tertiary ml-auto">{gearNotes.length}</span>
+            )}
+          </div>
+          <div className="px-3.5 py-3 space-y-3">
+            {gearNotes && gearNotes.length > 0 ? (
+              <div className="space-y-2.5 max-h-[160px] overflow-y-auto">
+                {gearNotes.map((n) => (
+                  <div key={n.id} className="group flex gap-2">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                      {n.authorName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-xs font-medium text-text-primary">{n.authorName}</span>
+                        <span className="text-[10px] text-text-tertiary">
+                          {formatDistanceToNow(parseISO(n.createdAt), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-text-secondary mt-0.5 break-words">{n.text}</p>
+                    </div>
+                    {currentUser && n.authorId === currentUser.id && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteNote(n.id)}
+                        className="shrink-0 opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded text-text-tertiary hover:text-red-500 transition-all"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-text-tertiary">No notes yet</p>
+            )}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddNote(); } }}
+                placeholder="Add a note..."
+                className="flex-1 h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+              />
+              <button
+                type="button"
+                onClick={handleAddNote}
+                disabled={!newNote.trim() || addingNote}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-white disabled:opacity-40 hover:bg-primary-hover transition-colors"
+              >
+                <Send className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Maintenance Log ── */}
+        {maintenanceLogs && maintenanceLogs.length > 0 && (
+          <div className="rounded-xl border border-border overflow-hidden">
+            <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+              <Wrench className="h-4 w-4 shrink-0 text-primary" />
+              <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+                Maintenance History
+              </span>
+              <span className="text-[10px] text-text-tertiary ml-auto">{maintenanceLogs.length}</span>
+            </div>
+            <div className="divide-y divide-border max-h-[160px] overflow-y-auto">
+              {maintenanceLogs.map((m) => {
+                const statusColor: Record<string, string> = {
+                  Scheduled: "text-blue-600",
+                  "In Progress": "text-amber-600",
+                  "Sent for Repair": "text-purple-600",
+                  Completed: "text-emerald-600",
+                  Cancelled: "text-slate-400",
+                };
+                return (
+                  <div key={m.id} className="px-3.5 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium text-text-primary truncate">{m.description}</p>
+                      <span className={`text-[10px] font-medium shrink-0 ${statusColor[m.status] || "text-text-secondary"}`}>
+                        {m.status}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-text-tertiary mt-0.5">
+                      {m.type}
+                      {m.scheduledDate && ` · ${format(parseISO(m.scheduledDate), "MMM d, yyyy")}`}
+                      {m.cost > 0 && ` · ${formatCurrency(m.cost)}`}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ── RFID Tag ── */}
         <div className="rounded-lg border border-border p-3 space-y-2">
           <div className="flex items-center justify-between">
@@ -479,18 +614,6 @@ export function GearDetailModal({
         <ModalFooter>
           {editMode ? (
             <>
-              {item.status !== "Retired" && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  loading={retiring}
-                  onClick={handleRetire}
-                  className={confirmRetire ? "text-red-600 hover:text-red-700" : "text-text-tertiary"}
-                >
-                  <Archive className="h-3.5 w-3.5" />
-                  {confirmRetire ? "Confirm Retire?" : "Retire"}
-                </Button>
-              )}
               <div className="flex gap-2 ml-auto">
                 <Button
                   type="button"

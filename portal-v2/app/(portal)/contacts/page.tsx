@@ -72,7 +72,7 @@ export default function ContactsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-lg font-semibold text-text-primary">Contacts</h2>
+        <h2 className="text-2xl font-bold text-text-primary">Contacts</h2>
         <p className="text-sm text-text-secondary">
           {tab === "team" ? "Internal team members" : "External vendors and partners"}
         </p>

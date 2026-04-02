@@ -2,29 +2,6 @@ import { NextResponse } from "next/server";
 import { requireRole, authErrorResponse } from "@/lib/auth/guards";
 import { listGearItems, createGearItem, checkoutGear, checkinGear, getGearItemByQr, getGearItemByRfid, getActiveCheckouts, batchCheckoutGear, batchCheckinGear, updateGearItem } from "@/lib/services/gear.service";
 import type { GearCategory, GearCondition } from "@/types/domain";
-import { createAdminClient } from "@/lib/supabase/admin";
-
-// DELETE /api/gear?id=xxx — soft-delete (retire) a gear item
-export async function DELETE(request: Request) {
-  try {
-    await requireRole(["Admin", "Studio"]);
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-    if (!id) {
-      return NextResponse.json({ error: "id is required" }, { status: 400 });
-    }
-    const db = createAdminClient();
-    const { error } = await db
-      .from("gear_items")
-      .update({ status: "Retired" })
-      .eq("id", id);
-    if (error) throw error;
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return authErrorResponse(error);
-  }
-}
-
 export async function GET(request: Request) {
   try {
     await requireRole(["Admin", "Producer", "Studio"]);

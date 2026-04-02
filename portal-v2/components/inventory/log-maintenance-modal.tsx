@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
@@ -22,11 +22,38 @@ export function LogMaintenanceModal({
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [gearItemId, setGearItemId] = useState("");
+  const [gearSearch, setGearSearch] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
   const [type, setType] = useState<"Scheduled" | "Repair">("Scheduled");
   const [description, setDescription] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
   const [cost, setCost] = useState("");
   const [notes, setNotes] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = gearSearch.trim()
+    ? items.filter((i) =>
+        `${i.name} ${i.brand} ${i.model}`.toLowerCase().includes(gearSearch.toLowerCase())
+      ).slice(0, 8)
+    : items.slice(0, 8);
+
+  function selectItem(item: GearItem) {
+    setGearItemId(item.id);
+    setGearSearch(`${item.name} (${item.brand} ${item.model})`);
+    setShowDropdown(false);
+  }
+
+  // Reset when modal opens/closes
+  useEffect(() => {
+    if (!open) {
+      setGearItemId("");
+      setGearSearch("");
+      setDescription("");
+      setScheduledDate("");
+      setCost("");
+      setNotes("");
+    }
+  }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,11 +78,6 @@ export function LogMaintenanceModal({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to log maintenance");
       toast("success", "Maintenance logged");
-      setGearItemId("");
-      setDescription("");
-      setScheduledDate("");
-      setCost("");
-      setNotes("");
       onCreated();
     } catch (err) {
       toast("error", err instanceof Error ? err.message : "Failed to log maintenance");
@@ -66,37 +88,76 @@ export function LogMaintenanceModal({
 
   return (
     <Modal open={open} onClose={onClose} title="Log Maintenance">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {/* Gear item typeahead */}
+        <div className="relative">
+          <label className="block text-xs font-medium text-text-primary mb-1">
             Gear Item
           </label>
-          <select
-            value={gearItemId}
-            onChange={(e) => setGearItemId(e.target.value)}
-            className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="">Select item...</option>
-            {items.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} ({item.brand} {item.model})
-              </option>
-            ))}
-          </select>
+          <input
+            ref={inputRef}
+            type="text"
+            value={gearSearch}
+            onChange={(e) => {
+              setGearSearch(e.target.value);
+              setGearItemId("");
+              setShowDropdown(true);
+            }}
+            onFocus={() => setShowDropdown(true)}
+            placeholder="Search by name, brand, or model..."
+            className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          {showDropdown && !gearItemId && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowDropdown(false)} />
+              <div className="absolute left-0 right-0 top-full mt-1 z-20 max-h-[180px] overflow-y-auto rounded-lg border border-border bg-surface shadow-md">
+                {filtered.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-text-tertiary">No items found</p>
+                ) : (
+                  filtered.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => selectItem(item)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-secondary transition-colors"
+                    >
+                      <span className="font-medium">{item.name}</span>
+                      <span className="text-xs text-text-tertiary">
+                        {item.brand} {item.model}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </div>
-        <Select
-          label="Type"
-          value={type}
-          onChange={(e) => setType(e.target.value as "Scheduled" | "Repair")}
-          options={[
-            { value: "Scheduled", label: "Scheduled Maintenance" },
-            { value: "Repair", label: "Repair" },
-          ]}
-        />
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-text-primary mb-1">Type</label>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as "Scheduled" | "Repair")}
+              className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="Scheduled">Scheduled</option>
+              <option value="Repair">Repair</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-primary mb-1">Scheduled Date</label>
+            <input
+              type="date"
+              value={scheduledDate}
+              onChange={(e) => setScheduledDate(e.target.value)}
+              className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+        </div>
+
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">
-            Description
-          </label>
+          <label className="block text-xs font-medium text-text-primary mb-1">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -105,28 +166,31 @@ export function LogMaintenanceModal({
             className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="Scheduled Date"
-            type="date"
-            value={scheduledDate}
-            onChange={(e) => setScheduledDate(e.target.value)}
-          />
-          <Input
-            label="Estimated Cost"
-            type="number"
-            min={0}
-            step="0.01"
-            value={cost}
-            onChange={(e) => setCost(e.target.value)}
-            placeholder="0.00"
-          />
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-text-primary mb-1">Estimated Cost</label>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={cost}
+              onChange={(e) => setCost(e.target.value)}
+              placeholder="0.00"
+              className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-primary mb-1">Notes</label>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
         </div>
-        <Input
-          label="Notes (optional)"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
+
         <ModalFooter>
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel

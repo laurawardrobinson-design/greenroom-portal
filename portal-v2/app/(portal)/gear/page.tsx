@@ -23,7 +23,9 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { GEAR_CATEGORIES } from "@/lib/constants/categories";
 import { GearDetailModal } from "@/components/inventory/gear-detail-modal";
 import { AddGearModal } from "@/components/inventory/add-gear-modal";
+import { BatchAddGearModal } from "@/components/inventory/batch-add-gear-modal";
 import { ReserveGearModal } from "@/components/inventory/reserve-gear-modal";
+import { LogMaintenanceModal } from "@/components/inventory/log-maintenance-modal";
 import { QrScanner } from "@/components/ui/qr-scanner";
 import { BatchCart } from "@/components/inventory/batch-cart";
 import { ActiveCheckouts } from "@/components/inventory/active-checkouts";
@@ -36,8 +38,6 @@ import {
   LayoutGrid,
   List,
   Pencil,
-  Eye,
-  EyeOff,
   Check,
   ChevronRight,
   Printer,
@@ -45,6 +45,7 @@ import {
   ArrowDownToLine,
   ScanLine,
   X,
+  Wrench,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -60,7 +61,6 @@ const STATUS_BADGE: Record<string, string> = {
   "Checked Out": "bg-amber-50 text-amber-700",
   "Under Maintenance": "bg-purple-50 text-purple-700",
   "In Repair": "bg-red-50 text-red-600",
-  Retired: "bg-slate-100 text-slate-500",
 };
 
 const CONDITIONS: GearCondition[] = [
@@ -71,7 +71,7 @@ const CONDITIONS: GearCondition[] = [
   "Damaged",
 ];
 
-type Tab = "items" | "reservations";
+type Tab = "items" | "reservations" | "maintenance";
 
 export default function InventoryPage() {
   const { toast } = useToast();
@@ -82,11 +82,12 @@ export default function InventoryPage() {
   // Items state
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
-  const [showRetired, setShowRetired] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Modal state
   const [showAdd, setShowAdd] = useState(false);
+  const [showBatchAdd, setShowBatchAdd] = useState(false);
+  const [showAddMenu, setShowAddMenu] = useState(false);
   const [showReserve, setShowReserve] = useState(false);
   const [selectedItem, setSelectedItem] = useState<GearItem | null>(null);
   const [detailItem, setDetailItem] = useState<GearItem | null>(null);
@@ -120,13 +121,21 @@ export default function InventoryPage() {
     fetcher
   );
   const allItems: GearItem[] = Array.isArray(rawAllItems) ? rawAllItems : [];
-  const items = showRetired ? allItems : allItems.filter((i) => i.status !== "Retired");
+  const items = allItems;
 
   const { data: rawReservations, mutate: mutateReservations } = useSWR<GearReservation[]>(
     tab === "reservations" ? "/api/gear/reservations?upcoming=true" : null,
     fetcher
   );
   const reservations: GearReservation[] = Array.isArray(rawReservations) ? rawReservations : [];
+
+  const { data: rawMaintenance, mutate: mutateMaintenance } = useSWR<GearMaintenance[]>(
+    tab === "maintenance" ? "/api/gear/maintenance" : null,
+    fetcher
+  );
+  const maintenance: GearMaintenance[] = Array.isArray(rawMaintenance) ? rawMaintenance : [];
+
+  const [showMaintenance, setShowMaintenance] = useState(false);
 
   const canEdit = user?.role === "Admin" || user?.role === "Studio" || user?.role === "Producer";
 
@@ -263,7 +272,7 @@ export default function InventoryPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-text-primary">Gear</h2>
+          <h2 className="text-2xl font-bold text-text-primary">Gear</h2>
           <p className="text-sm text-text-secondary">
             {items.length} item{items.length !== 1 ? "s" : ""} · {availableCount} available
           </p>
@@ -274,10 +283,37 @@ export default function InventoryPage() {
             Scan
           </Button>
           {canEdit && tab === "items" && (
-            <Button onClick={() => setShowAdd(true)}>
-              <Plus className="h-4 w-4" />
-              Add Item
-            </Button>
+            <div className="relative">
+              <button
+                onClick={() => setShowAddMenu((v) => !v)}
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white shadow-xs transition-all hover:bg-primary-hover hover:shadow-sm"
+              >
+                <Plus className="h-4 w-4" />
+                Add Item
+                <ChevronRight className={`h-3 w-3 ml-1 transition-transform ${showAddMenu ? "rotate-90" : ""}`} />
+              </button>
+              {showAddMenu && (
+                <>
+                  <div className="fixed inset-0 z-20" onClick={() => setShowAddMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-30 w-40 rounded-lg border border-border bg-surface py-1 shadow-md">
+                    <button
+                      onClick={() => { setShowAdd(true); setShowAddMenu(false); }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-secondary transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Single Item
+                    </button>
+                    <button
+                      onClick={() => { setShowBatchAdd(true); setShowAddMenu(false); }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-secondary transition-colors"
+                    >
+                      <List className="h-3.5 w-3.5" />
+                      Batch Add
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -287,6 +323,7 @@ export default function InventoryPage() {
         {([
           { key: "items" as Tab, label: "Items" },
           { key: "reservations" as Tab, label: "Reservations" },
+          { key: "maintenance" as Tab, label: "Maintenance" },
         ]).map((t) => (
           <button
             key={t.key}
@@ -341,16 +378,6 @@ export default function InventoryPage() {
                   title="List view"
                 >
                   <List className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setShowRetired(!showRetired)}
-                  className={`flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors ${
-                    showRetired ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"
-                  }`}
-                  title={showRetired ? "Hide retired" : "Show retired"}
-                >
-                  {showRetired ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                  Retired
                 </button>
                 <button
                   onClick={() => {
@@ -665,11 +692,85 @@ export default function InventoryPage() {
         </div>
       )}
 
+      {/* Maintenance tab */}
+      {tab === "maintenance" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-text-secondary">
+              {maintenance.length} maintenance record{maintenance.length !== 1 ? "s" : ""}
+            </p>
+            {canEdit && (
+              <Button size="sm" onClick={() => setShowMaintenance(true)}>
+                <Wrench className="h-3.5 w-3.5" />
+                Log Maintenance
+              </Button>
+            )}
+          </div>
+          {maintenance.length === 0 ? (
+            <EmptyState
+              icon={<Wrench className="h-5 w-5" />}
+              title="No maintenance records"
+              description="Log maintenance and repairs for your gear."
+              action={
+                canEdit ? (
+                  <Button size="sm" onClick={() => setShowMaintenance(true)}>
+                    <Plus className="h-3.5 w-3.5" />
+                    Log Maintenance
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : (
+            <div className="space-y-2">
+              {maintenance.map((m) => {
+                const gearItem = allItems.find((i) => i.id === m.gearItemId);
+                const statusColor: Record<string, string> = {
+                  Scheduled: "bg-blue-50 text-blue-700",
+                  "In Progress": "bg-amber-50 text-amber-700",
+                  "Sent for Repair": "bg-purple-50 text-purple-700",
+                  Completed: "bg-emerald-50 text-emerald-700",
+                  Cancelled: "bg-slate-100 text-slate-500",
+                };
+                return (
+                  <div
+                    key={m.id}
+                    className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4"
+                  >
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${m.type === "Repair" ? "bg-red-50 text-red-600" : "bg-purple-50 text-purple-700"}`}>
+                      <Wrench className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-text-primary">
+                        {gearItem?.name || "Unknown Item"}
+                      </p>
+                      <p className="text-xs text-text-secondary truncate">{m.description}</p>
+                      <p className="text-[10px] text-text-tertiary mt-0.5">
+                        {m.type}
+                        {m.scheduledDate && ` · ${format(parseISO(m.scheduledDate), "MMM d, yyyy")}`}
+                        {m.cost > 0 && ` · $${m.cost.toFixed(2)}`}
+                      </p>
+                    </div>
+                    <Badge variant="custom" className={statusColor[m.status] || ""}>
+                      {m.status}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Modals */}
       <AddGearModal
         open={showAdd}
         onClose={() => setShowAdd(false)}
         onCreated={() => { mutate(); setShowAdd(false); }}
+      />
+      <BatchAddGearModal
+        open={showBatchAdd}
+        onClose={() => setShowBatchAdd(false)}
+        onCreated={() => { mutate(); setShowBatchAdd(false); }}
       />
       <ReserveGearModal
         open={showReserve}
@@ -683,6 +784,12 @@ export default function InventoryPage() {
         open={!!detailItem}
         onClose={() => setDetailItem(null)}
         onSaved={canEdit ? () => { mutate(); } : undefined}
+      />
+      <LogMaintenanceModal
+        open={showMaintenance}
+        onClose={() => setShowMaintenance(false)}
+        items={items}
+        onCreated={() => { mutateMaintenance(); setShowMaintenance(false); }}
       />
 
       {/* Scanner drawer */}
