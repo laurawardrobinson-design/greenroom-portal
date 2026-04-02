@@ -1,10 +1,13 @@
 "use client";
 
-import { Modal } from "@/components/ui/modal";
+import { useState, useEffect, useRef } from "react";
+import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { GearItem } from "@/types/domain";
-import { Camera, Pencil, X } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
+import { PROPS_CATEGORIES } from "@/lib/constants/categories";
+import type { GearItem, GearCondition } from "@/types/domain";
+import { Camera, Pencil, X, Archive } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 
 const STATUS_BADGE: Record<string, string> = {
@@ -22,84 +25,310 @@ const CONDITION_BADGE: Record<string, string> = {
   Damaged: "bg-red-50 text-red-600",
 };
 
+const CONDITIONS: GearCondition[] = ["Excellent", "Good", "Fair", "Poor", "Damaged"];
+
 export function PropDetailModal({
   item,
   open,
   onClose,
-  onEdit,
+  onSaved,
 }: {
   item: GearItem | null;
   open: boolean;
   onClose: () => void;
-  onEdit?: (item: GearItem) => void;
+  onSaved?: () => void;
 }) {
+  const { toast } = useToast();
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [retiring, setRetiring] = useState(false);
+  const [confirmRetire, setConfirmRetire] = useState(false);
+
+  // Form fields
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [brand, setBrand] = useState("");
+  const [condition, setCondition] = useState<string>("Good");
+  const [notes, setNotes] = useState("");
+  const [purchasePrice, setPurchasePrice] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const imageFileRef = useRef<File | null>(null);
+
+  useEffect(() => {
+    if (item) {
+      setName(item.name);
+      setCategory(item.category);
+      setBrand(item.brand);
+      setCondition(item.condition);
+      setNotes(item.notes || "");
+      setPurchasePrice(item.purchasePrice > 0 ? String(item.purchasePrice) : "");
+      setImageUrl(item.imageUrl || null);
+      imageFileRef.current = null;
+      setConfirmRetire(false);
+      setEditMode(false);
+    }
+  }, [item]);
+
+  async function uploadImage(file: File): Promise<string> {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("folder", "props");
+    const res = await fetch("/api/upload-image", { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Image upload failed");
+    return data.url;
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!item || !name.trim()) {
+      toast("error", "Name is required");
+      return;
+    }
+    setSaving(true);
+    try {
+      let finalImageUrl = imageUrl;
+      if (imageFileRef.current) {
+        finalImageUrl = await uploadImage(imageFileRef.current);
+      }
+      const res = await fetch("/api/gear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          id: item.id,
+          name,
+          category,
+          brand,
+          condition,
+          notes,
+          purchasePrice: purchasePrice ? parseFloat(purchasePrice) : 0,
+          imageUrl: finalImageUrl,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update prop");
+      toast("success", "Prop updated");
+      onSaved?.();
+      setEditMode(false);
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Failed to update prop");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleRetire() {
+    if (!item) return;
+    if (!confirmRetire) {
+      setConfirmRetire(true);
+      return;
+    }
+    setRetiring(true);
+    try {
+      const res = await fetch(`/api/gear?id=${item.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to retire prop");
+      toast("success", `${item.name} retired`);
+      onSaved?.();
+      onClose();
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Failed to retire prop");
+    } finally {
+      setRetiring(false);
+      setConfirmRetire(false);
+    }
+  }
+
+  function handleCancel() {
+    if (item) {
+      setName(item.name);
+      setCategory(item.category);
+      setBrand(item.brand);
+      setCondition(item.condition);
+      setNotes(item.notes || "");
+      setPurchasePrice(item.purchasePrice > 0 ? String(item.purchasePrice) : "");
+      setImageUrl(item.imageUrl || null);
+      imageFileRef.current = null;
+      setConfirmRetire(false);
+    }
+    setEditMode(false);
+  }
+
   if (!item) return null;
 
   return (
-    <Modal open={open} onClose={onClose} title={item.name} size="sm">
+    <Modal open={open} onClose={onClose} title={item.name} size="md">
       <button
         onClick={onClose}
         className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-lg text-text-tertiary hover:bg-surface-secondary hover:text-text-primary transition-colors"
       >
         <X className="h-4 w-4" />
       </button>
-      <div className="space-y-4">
-        {/* Image */}
-        {item.imageUrl ? (
-          <img
-            src={item.imageUrl}
-            alt={item.name}
-            className="h-40 w-full rounded-xl object-cover"
-          />
-        ) : (
-          <div className="flex h-28 w-full items-center justify-center rounded-xl bg-surface-tertiary">
-            <Camera className="h-8 w-8 text-text-tertiary" />
-          </div>
-        )}
 
-        {/* Status + condition */}
+      <form onSubmit={handleSave} className="space-y-4">
+        {/* ── Image ── always h-40, edit mode adds click-to-change overlay */}
+        <div className="relative">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={item.name}
+              className="h-40 w-full rounded-xl object-cover"
+            />
+          ) : (
+            <div className="flex h-40 w-full items-center justify-center rounded-xl bg-surface-tertiary">
+              <Camera className="h-8 w-8 text-text-tertiary" />
+            </div>
+          )}
+          {editMode && (
+            <>
+              <label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-xl bg-black/30 opacity-0 hover:opacity-100 transition-opacity">
+                <Camera className="h-6 w-6 text-white" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      imageFileRef.current = file;
+                      setImageUrl(URL.createObjectURL(file));
+                    }
+                  }}
+                />
+              </label>
+              {imageUrl && (
+                <button
+                  type="button"
+                  onClick={() => { imageFileRef.current = null; setImageUrl(null); }}
+                  className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* ── Status / condition / category row ── always same layout */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Status — always read-only */}
           <Badge variant="custom" className={STATUS_BADGE[item.status] || ""}>
             {item.status}
           </Badge>
-          <Badge variant="custom" className={CONDITION_BADGE[item.condition] || ""}>
-            {item.condition}
-          </Badge>
-          <Badge variant="default">{item.category}</Badge>
+          {/* Condition — badge in view, badge-styled select in edit */}
+          {editMode ? (
+            <select
+              value={condition}
+              onChange={(e) => setCondition(e.target.value)}
+              className={`appearance-none cursor-pointer rounded-full px-2.5 py-0.5 text-xs font-medium outline-none ${CONDITION_BADGE[condition] || "bg-surface-secondary text-text-secondary"}`}
+            >
+              {CONDITIONS.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          ) : (
+            <Badge variant="custom" className={CONDITION_BADGE[item.condition] || ""}>
+              {item.condition}
+            </Badge>
+          )}
+          {/* Category — badge in view, badge-styled select in edit */}
+          {editMode ? (
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="appearance-none cursor-pointer rounded-full bg-surface-secondary px-2.5 py-0.5 text-xs font-medium text-text-secondary outline-none"
+            >
+              {PROPS_CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          ) : (
+            <Badge variant="default">{item.category}</Badge>
+          )}
         </div>
 
-        {/* Details */}
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          {item.brand && (
-            <div>
-              <p className="text-text-tertiary text-xs mb-0.5">Brand / Source</p>
-              <p className="text-text-primary font-medium">{item.brand}</p>
-            </div>
-          )}
-          {item.purchasePrice > 0 && (
-            <div>
-              <p className="text-text-tertiary text-xs mb-0.5">Value</p>
-              <p className="text-text-primary font-medium">{formatCurrency(item.purchasePrice)}</p>
-            </div>
-          )}
-        </div>
+        {/* ── Detail grid — always same elements, readOnly toggles ── */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+          {/* Name */}
+          <div className="col-span-2">
+            <p className="text-text-tertiary text-xs mb-0.5">Name</p>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              readOnly={!editMode}
+              required
+              className={`w-full bg-transparent text-text-primary font-medium text-sm p-0 outline-none border-b ${editMode ? "border-dashed border-border focus:border-primary" : "border-transparent cursor-default"}`}
+            />
+          </div>
 
-        {item.notes && (
+          {/* Brand / Source */}
+          <div className="col-span-2">
+            <p className="text-text-tertiary text-xs mb-0.5">Brand / Source</p>
+            <input
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              readOnly={!editMode}
+              className={`w-full bg-transparent text-text-primary font-medium text-sm p-0 outline-none border-b ${editMode ? "border-dashed border-border focus:border-primary" : "border-transparent cursor-default"}`}
+            />
+          </div>
+
+          {/* Purchase Price */}
           <div>
-            <p className="text-text-tertiary text-xs mb-0.5">Notes</p>
-            <p className="text-sm text-text-secondary">{item.notes}</p>
+            <p className="text-text-tertiary text-xs mb-0.5">Value</p>
+            <input
+              value={editMode ? purchasePrice : (item.purchasePrice > 0 ? formatCurrency(item.purchasePrice) : "—")}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+              readOnly={!editMode}
+              placeholder={editMode ? "0.00" : undefined}
+              className={`w-full bg-transparent text-text-primary font-medium text-sm p-0 outline-none border-b ${editMode ? "border-dashed border-border focus:border-primary" : "border-transparent cursor-default"}`}
+            />
           </div>
-        )}
+        </div>
 
-        {onEdit && (
-          <div className="flex gap-2 pt-2 border-t border-border-light">
-            <Button size="sm" onClick={() => onEdit(item)}>
-              <Pencil className="h-3.5 w-3.5" />
-              Edit
-            </Button>
-          </div>
-        )}
-      </div>
+        {/* ── Notes — always a textarea, readOnly toggles ── */}
+        <div>
+          <p className="text-text-tertiary text-xs mb-0.5">Notes</p>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            readOnly={!editMode}
+            rows={2}
+            className={`w-full bg-transparent text-text-primary font-medium text-sm p-0 resize-none outline-none border-b ${editMode ? "border-dashed border-border focus:border-primary" : "border-transparent cursor-default"}`}
+          />
+        </div>
+
+        {/* ── Footer ── */}
+        <ModalFooter>
+          {editMode ? (
+            <>
+              {item.status !== "Retired" && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  loading={retiring}
+                  onClick={handleRetire}
+                  className={confirmRetire ? "text-red-600 hover:text-red-700" : "text-text-tertiary"}
+                >
+                  <Archive className="h-3.5 w-3.5" />
+                  {confirmRetire ? "Confirm Retire?" : "Retire"}
+                </Button>
+              )}
+              <div className="flex gap-2 ml-auto">
+                <Button type="button" variant="ghost" onClick={handleCancel}>Cancel</Button>
+                <Button type="submit" loading={saving}>Save Changes</Button>
+              </div>
+            </>
+          ) : (
+            onSaved && (
+              <Button type="button" size="sm" onClick={() => setEditMode(true)}>
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </Button>
+            )
+          )}
+        </ModalFooter>
+      </form>
     </Modal>
   );
 }

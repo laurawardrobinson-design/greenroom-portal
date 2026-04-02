@@ -15,7 +15,6 @@ import { Modal, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { AddPropModal } from "@/components/props/add-prop-modal";
-import { EditPropModal } from "@/components/props/edit-prop-modal";
 import { PropDetailModal } from "@/components/props/prop-detail-modal";
 import {
   Plus,
@@ -51,7 +50,6 @@ export default function PropsPage() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showAdd, setShowAdd] = useState(false);
-  const [editingItem, setEditingItem] = useState<GearItem | null>(null);
   const [detailItem, setDetailItem] = useState<GearItem | null>(null);
   const [checkoutItem, setCheckoutItem] = useState<GearItem | null>(null);
   const [checkinItem, setCheckinItem] = useState<GearItem | null>(null);
@@ -169,7 +167,7 @@ export default function PropsPage() {
 
           {/* Items */}
           {isLoading ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
             </div>
           ) : items.length === 0 ? (
@@ -191,7 +189,7 @@ export default function PropsPage() {
               }
             />
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {items.map((item) => (
                 <Card
                   key={item.id}
@@ -287,18 +285,11 @@ export default function PropsPage() {
         onClose={() => setShowAdd(false)}
         onCreated={() => { setShowAdd(false); mutate(); }}
       />
-      <EditPropModal
-        item={editingItem}
-        open={!!editingItem}
-        onClose={() => setEditingItem(null)}
-        onUpdated={() => { setEditingItem(null); mutate(); }}
-        onRetired={() => { setEditingItem(null); mutate(); }}
-      />
       <PropDetailModal
         item={detailItem}
         open={!!detailItem}
         onClose={() => setDetailItem(null)}
-        onEdit={(item) => { setDetailItem(null); setEditingItem(item); }}
+        onSaved={() => { setDetailItem(null); mutate(); }}
       />
       {checkoutItem && (
         <CheckoutModal

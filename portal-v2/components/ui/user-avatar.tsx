@@ -31,7 +31,7 @@ export function UserAvatar({ name, favoriteProduct, size = "md", variant = "ligh
   const iconSrc = favoriteProduct ? getProductIcon(favoriteProduct) : null;
   const config = sizeConfig[size];
 
-  const bg = variant === "dark" ? "bg-white/10" : "bg-primary/10";
+  const bg = variant === "dark" ? "bg-white/10" : (iconSrc ? "bg-primary/15" : "bg-primary/10");
   const textColor = variant === "dark" ? "text-white" : "text-primary";
 
   return (
@@ -39,7 +39,7 @@ export function UserAvatar({ name, favoriteProduct, size = "md", variant = "ligh
       className={`flex shrink-0 items-center justify-center rounded-full ${bg} ${config.container}`}
     >
       {iconSrc ? (
-        <img src={iconSrc} alt="" className={config.icon} />
+        <img src={iconSrc} alt="" className={`${config.icon} object-contain`} />
       ) : (
         <span className={`font-semibold leading-none ${textColor} ${config.text}`}>
           {getInitials(name)}

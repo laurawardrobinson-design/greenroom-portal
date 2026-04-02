@@ -175,7 +175,7 @@ export default function ProductDirectoryPage() {
 
           {/* Product grid */}
           {isLoading ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <CardSkeleton key={i} />
               ))}
@@ -199,7 +199,7 @@ export default function ProductDirectoryPage() {
               }
             />
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {products.map((product) => (
                 <button
                   key={product.id}
@@ -241,7 +241,7 @@ export default function ProductDirectoryPage() {
                     </p>
                   )}
                   {product.restrictions && (
-                    <p className="mt-1 text-xs text-amber-600 font-medium">
+                    <p className="mt-1 text-xs text-orange-700 font-medium">
                       {product.restrictions}
                     </p>
                   )}
@@ -278,7 +278,7 @@ export default function ProductDirectoryPage() {
                     </Badge>
                   </div>
                   <div className="hidden sm:flex items-center">
-                    <span className="text-xs text-amber-600 font-medium truncate">{product.restrictions || "—"}</span>
+                    <span className="text-xs text-orange-700 font-medium truncate">{product.restrictions || "—"}</span>
                   </div>
                 </div>
               ))}
@@ -572,16 +572,22 @@ function ProductDrawer({
           className={`text-lg font-semibold text-text-primary bg-transparent flex-1 min-w-0 focus:outline-none ${editMode ? "border-b border-transparent hover:border-border focus:border-primary pb-0.5" : "pointer-events-none truncate"}`}
         />
         <div className="flex items-center gap-1 shrink-0">
-          <select
-            value={department}
-            onChange={(e) => setDepartment(e.target.value as ProductDepartment)}
-            className={`text-xs font-medium rounded-full px-2 py-0.5 focus:outline-none appearance-none ${editMode ? "cursor-pointer focus:ring-1 focus:ring-primary" : "pointer-events-none"} ${department ? (DEPT_COLORS[department] || DEPT_COLORS.Other) : "bg-surface-secondary text-text-tertiary"}`}
-          >
-            <option value="">Dept…</option>
-            {PRODUCT_DEPARTMENTS.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
+          {editMode ? (
+            <select
+              value={department}
+              onChange={(e) => setDepartment(e.target.value as ProductDepartment)}
+              className={`text-xs font-medium rounded-full px-2.5 py-0.5 focus:outline-none appearance-none cursor-pointer focus:ring-1 focus:ring-primary ${department ? (DEPT_COLORS[department] || DEPT_COLORS.Other) : "bg-surface-secondary text-text-tertiary"}`}
+            >
+              <option value="">Dept…</option>
+              {PRODUCT_DEPARTMENTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          ) : (
+            <span className={`text-xs font-medium rounded-full px-2.5 py-0.5 ${department ? (DEPT_COLORS[department] || DEPT_COLORS.Other) : "bg-surface-secondary text-text-tertiary"}`}>
+              {department || "No dept"}
+            </span>
+          )}
           <input
             type="text"
             value={itemCode}
@@ -766,7 +772,7 @@ function ProductDrawer({
               onChange={(e) => setRestrictions(e.target.value)}
               readOnly={!editMode}
               placeholder={editMode ? "None" : "None"}
-              className={`w-full bg-transparent text-sm font-medium placeholder:text-text-tertiary italic focus:outline-none resize-none ${!editMode ? "pointer-events-none" : ""} ${!editMode && restrictions ? "text-amber-700" : "text-text-primary"}`}
+              className={`w-full bg-transparent text-sm font-medium placeholder:text-text-tertiary italic focus:outline-none resize-none ${!editMode ? "pointer-events-none" : ""} ${restrictions ? "text-orange-700" : "text-text-primary"}`}
             />
           </div>
 

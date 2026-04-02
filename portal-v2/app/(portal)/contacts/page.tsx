@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { PUBLIX_PRODUCTS, getProductIcon } from "@/components/onboarding/onboarding-modal";
 import { VENDOR_CATEGORIES } from "@/lib/constants/categories";
 import {
   Plus,
@@ -227,11 +228,11 @@ function TeamSection({
 }) {
   const { data: rawAllUsers, isLoading, mutate } = useSWR<AppUser[]>(
     "/api/users?roles=Admin,Producer,Studio",
-    fetcher
+    fetcher,
+    { revalidateOnMount: true, dedupingInterval: 0 }
   );
   const allUsers: AppUser[] = Array.isArray(rawAllUsers) ? rawAllUsers : [];
   const [detailPerson, setDetailPerson] = useState<AppUser | null>(null);
-  const [editingPerson, setEditingPerson] = useState<AppUser | null>(null);
 
   const filtered = allUsers.filter((u) => {
     const matchesSearch =
@@ -245,7 +246,7 @@ function TeamSection({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
       </div>
     );
@@ -260,7 +261,7 @@ function TeamSection({
           description={search || roleFilter ? "Try adjusting your search or filter." : "Add your internal team members."}
         />
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {filtered.map((person) => (
             <Card
               key={person.id}
@@ -274,9 +275,6 @@ function TeamSection({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <h3 className="text-sm font-semibold text-text-primary truncate">{person.name}</h3>
-                    <Badge variant="custom" className={ROLE_BADGE[person.role] || "bg-slate-50 text-slate-600"}>
-                      {person.role}
-                    </Badge>
                   </div>
                   {person.title && (
                     <p className="text-xs text-text-secondary mb-1">{person.title}</p>
@@ -295,7 +293,7 @@ function TeamSection({
                   </div>
                 </div>
               </div>
-              {(person.favoriteDrinks || person.favoriteSnacks || person.dietaryRestrictions) && (
+              {(person.favoriteDrinks || person.favoriteSnacks || person.dietaryRestrictions || person.allergies) && (
                 <div className="mt-3 pt-3 border-t border-border-light space-y-2">
                   {person.favoriteDrinks && (
                     <div className="flex items-start gap-2">
@@ -327,6 +325,16 @@ function TeamSection({
                       </div>
                     </div>
                   )}
+                  {person.allergies && (
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-3 w-3 shrink-0 mt-1 text-red-500" />
+                      <div className="flex flex-wrap gap-1">
+                        {person.allergies.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                          <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] text-red-700">{item}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </Card>
@@ -354,9 +362,7 @@ function TeamSection({
                 </div>
               </div>
               <div className="hidden sm:flex items-center">
-                <Badge variant="custom" className={`text-[10px] ${ROLE_BADGE[person.role] || "bg-slate-50 text-slate-600"}`}>
-                  {person.role}
-                </Badge>
+                <span className="text-xs text-text-secondary truncate">{person.title || "—"}</span>
               </div>
               <div className="hidden sm:flex items-center">
                 <span className="text-xs text-text-secondary truncate">{person.email}</span>
@@ -377,31 +383,119 @@ function TeamSection({
       <ContactDetailModal
         person={detailPerson}
         onClose={() => setDetailPerson(null)}
-        onEdit={canEdit ? (p) => { setDetailPerson(null); setEditingPerson(p); } : undefined}
-      />
-      <EditTeamMemberModal
-        person={editingPerson}
-        onClose={() => setEditingPerson(null)}
-        onSaved={() => { mutate(); setEditingPerson(null); }}
+        onSaved={canEdit ? () => { mutate(); setDetailPerson(null); } : undefined}
       />
     </>
   );
 }
 
-// --- Contact Detail Modal ---
+// --- Contact Detail Modal (unified detail + inline edit) ---
 function ContactDetailModal({
   person,
   onClose,
-  onEdit,
+  onSaved,
 }: {
   person: AppUser | null;
   onClose: () => void;
-  onEdit?: (person: AppUser) => void;
+  onSaved?: () => void;
 }) {
+  const { toast } = useToast();
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
+
+  // Form state
+  const [name, setName] = useState(person?.name ?? "");
+  const [email, setEmail] = useState(person?.email ?? "");
+  const [phone, setPhone] = useState(person?.phone ?? "");
+  const [title, setTitle] = useState(person?.title ?? "");
+  const [role, setRole] = useState(person?.role ?? "Studio");
+  const [favoriteDrinks, setFavoriteDrinks] = useState(person?.favoriteDrinks ?? "");
+  const [favoriteSnacks, setFavoriteSnacks] = useState(person?.favoriteSnacks ?? "");
+  const [dietaryRestrictions, setDietaryRestrictions] = useState(person?.dietaryRestrictions ?? "");
+  const [coffeeOrder, setCoffeeOrder] = useState(person?.energyBoost ?? "");
+  const [allergies, setAllergies] = useState(person?.allergies ?? "");
+  const [selectedProduct, setSelectedProduct] = useState(person?.favoritePublixProduct ?? "");
+
+  useEffect(() => {
+    if (person) {
+      setName(person.name);
+      setEmail(person.email);
+      setPhone(person.phone || "");
+      setTitle(person.title || "");
+      setRole(person.role);
+      setFavoriteDrinks(person.favoriteDrinks || "");
+      setFavoriteSnacks(person.favoriteSnacks || "");
+      setDietaryRestrictions(person.dietaryRestrictions || "");
+      setCoffeeOrder(person.energyBoost || "");
+      setAllergies(person.allergies || "");
+      setSelectedProduct(person.favoritePublixProduct || "");
+      setEditMode(false);
+      setIconPickerOpen(false);
+    }
+  }, [person]);
+
+  function resetForm() {
+    if (!person) return;
+    setName(person.name);
+    setEmail(person.email);
+    setPhone(person.phone || "");
+    setTitle(person.title || "");
+    setRole(person.role);
+    setFavoriteDrinks(person.favoriteDrinks || "");
+    setFavoriteSnacks(person.favoriteSnacks || "");
+    setDietaryRestrictions(person.dietaryRestrictions || "");
+    setCoffeeOrder(person.energyBoost || "");
+    setAllergies(person.allergies || "");
+    setSelectedProduct(person.favoritePublixProduct || "");
+    setEditMode(false);
+    setIconPickerOpen(false);
+  }
+
+  async function handleSave() {
+    if (!person) return;
+    if (!name.trim() || !email.trim()) {
+      toast("error", "Name and email are required");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: person.id,
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          title: title.trim(),
+          role,
+          favoritePublixProduct: selectedProduct,
+          favoriteDrinks: favoriteDrinks.trim(),
+          favoriteSnacks: favoriteSnacks.trim(),
+          dietaryRestrictions: dietaryRestrictions.trim(),
+          energyBoost: coffeeOrder.trim(),
+          allergies: allergies.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed");
+      }
+      toast("success", "Saved");
+      setEditMode(false);
+      onSaved?.();
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!person) return null;
 
   return (
-    <Modal open={true} onClose={onClose} title={person.name} size="md">
+    <Modal open={true} onClose={onClose} title={editMode ? "Edit Team Member" : person.name} size="md">
       <button
         onClick={onClose}
         className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-lg text-text-tertiary hover:bg-surface-secondary hover:text-text-primary transition-colors"
@@ -411,82 +505,184 @@ function ContactDetailModal({
       <div className="space-y-4">
         {/* Avatar + role */}
         <div className="flex items-center gap-3">
-          <UserAvatar name={person.name} favoriteProduct={person.favoritePublixProduct} size="xl" />
-          <div>
-            <div className="flex items-center gap-2">
-              <Badge variant="custom" className={ROLE_BADGE[person.role] || "bg-slate-50 text-slate-600"}>
-                {person.role}
-              </Badge>
+          {editMode ? (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIconPickerOpen(!iconPickerOpen)}
+                className="group flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/15 transition-all hover:ring-2 hover:ring-primary/40"
+              >
+                {selectedProduct && getProductIcon(selectedProduct) ? (
+                  <img src={getProductIcon(selectedProduct)!} alt={selectedProduct} className="h-9 w-9 object-contain" />
+                ) : (
+                  <span className="text-lg font-bold text-primary">
+                    {name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                  </span>
+                )}
+                <div className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white shadow-sm">
+                  <Edit2 className="h-2.5 w-2.5" />
+                </div>
+              </button>
+              {iconPickerOpen && (
+                <div className="absolute top-16 left-0 z-50 w-64 rounded-xl border border-border bg-surface-primary p-3 shadow-lg">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">Choose Icon</p>
+                  <div className="grid grid-cols-4 gap-1.5 max-h-48 overflow-y-auto overscroll-contain">
+                    {PUBLIX_PRODUCTS.map((product) => (
+                      <button
+                        key={product.name}
+                        type="button"
+                        onClick={() => { setSelectedProduct(product.name); setIconPickerOpen(false); }}
+                        className={`flex flex-col items-center gap-0.5 rounded-lg p-1.5 border text-center transition-all ${
+                          selectedProduct === product.name
+                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                            : "border-transparent hover:border-primary/40 hover:bg-surface-secondary"
+                        }`}
+                      >
+                        <img src={product.icon} alt={product.name} className="h-6 w-6" />
+                        <span className="text-[10px] font-medium text-text-secondary leading-tight truncate w-full">
+                          {product.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            {person.title && (
-              <p className="text-sm text-text-secondary mt-0.5">{person.title}</p>
+          ) : (
+            <UserAvatar name={person.name} favoriteProduct={person.favoritePublixProduct} size="xl" />
+          )}
+          <div>
+            {(editMode ? title : person.title) && (
+              <p className="text-sm text-text-secondary">{editMode ? title : person.title}</p>
             )}
           </div>
         </div>
 
         {/* Contact info */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-text-secondary">
-            <Mail className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
-            <a href={`mailto:${person.email}`} className="hover:underline">{person.email}</a>
-          </div>
-          {person.phone && (
-            <div className="flex items-center gap-2 text-sm text-text-secondary">
-              <Phone className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
-              <span>{person.phone}</span>
+        {editMode ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+              <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
-          )}
-        </div>
-
-        {/* Preferences */}
-        {(person.favoriteDrinks || person.favoriteSnacks || person.dietaryRestrictions) && (
-          <div className="pt-3 border-t border-border space-y-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Preferences</p>
-            {person.favoriteDrinks && (
-              <div className="flex items-start gap-2">
-                <Coffee className="h-3.5 w-3.5 shrink-0 mt-0.5 text-text-tertiary" />
-                <div>
-                  <p className="text-[10px] text-text-tertiary mb-1">Drinks</p>
-                  <div className="flex flex-wrap gap-1">
-                    {person.favoriteDrinks.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                      <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-xs text-text-secondary">{item}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            {person.favoriteSnacks && (
-              <div className="flex items-start gap-2">
-                <Cookie className="h-3.5 w-3.5 shrink-0 mt-0.5 text-text-tertiary" />
-                <div>
-                  <p className="text-[10px] text-text-tertiary mb-1">Snacks</p>
-                  <div className="flex flex-wrap gap-1">
-                    {person.favoriteSnacks.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                      <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-xs text-text-secondary">{item}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            {person.dietaryRestrictions && (
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-500" />
-                <div>
-                  <p className="text-[10px] text-text-tertiary mb-1">Dietary Restrictions</p>
-                  <div className="flex flex-wrap gap-1">
-                    {person.dietaryRestrictions.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                      <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700">{item}</span>
-                    ))}
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Input label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="555-123-4567" />
+              <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Photographer, Art Director, etc." />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-text-secondary">
+              <Mail className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+              <a href={`mailto:${person.email}`} className="hover:underline">{person.email}</a>
+            </div>
+            {person.phone && (
+              <div className="flex items-center gap-2 text-sm text-text-secondary">
+                <Phone className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+                <span>{person.phone}</span>
               </div>
             )}
           </div>
         )}
 
-        {onEdit && (
+        {/* Preferences — 2-col layout */}
+        <div className="pt-3 border-t border-border">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-3">Preferences</p>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+            {/* Left col: Drinks, Snacks, Dietary */}
+            <div className="space-y-3">
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Coffee className="h-3.5 w-3.5 text-text-tertiary" />
+                  <p className="text-[10px] text-text-tertiary">Drinks</p>
+                </div>
+                {editMode ? (
+                  <input value={favoriteDrinks} onChange={(e) => setFavoriteDrinks(e.target.value)} placeholder="e.g. Sparkling water" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {person.favoriteDrinks ? person.favoriteDrinks.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                      <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-xs text-text-secondary">{item}</span>
+                    )) : <span className="text-xs text-text-tertiary">—</span>}
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Cookie className="h-3.5 w-3.5 text-text-tertiary" />
+                  <p className="text-[10px] text-text-tertiary">Snacks</p>
+                </div>
+                {editMode ? (
+                  <input value={favoriteSnacks} onChange={(e) => setFavoriteSnacks(e.target.value)} placeholder="e.g. Trail mix" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {person.favoriteSnacks ? person.favoriteSnacks.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                      <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-xs text-text-secondary">{item}</span>
+                    )) : <span className="text-xs text-text-tertiary">—</span>}
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                  <p className="text-[10px] text-text-tertiary">Dietary</p>
+                </div>
+                {editMode ? (
+                  <input value={dietaryRestrictions} onChange={(e) => setDietaryRestrictions(e.target.value)} placeholder="e.g. Gluten-free" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {person.dietaryRestrictions ? person.dietaryRestrictions.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                      <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700">{item}</span>
+                    )) : <span className="text-xs text-text-tertiary">—</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right col: Coffee Order, Allergies */}
+            <div className="space-y-3">
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Coffee className="h-3.5 w-3.5 text-text-tertiary" />
+                  <p className="text-[10px] text-text-tertiary">Coffee Order</p>
+                </div>
+                {editMode ? (
+                  <input value={coffeeOrder} onChange={(e) => setCoffeeOrder(e.target.value)} placeholder="e.g. Oat milk latte" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {person.energyBoost ? person.energyBoost.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                      <span key={item} className="rounded-full bg-surface-secondary px-2 py-0.5 text-xs text-text-secondary">{item}</span>
+                    )) : <span className="text-xs text-text-tertiary">—</span>}
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+                  <p className="text-[10px] text-text-tertiary">Allergies</p>
+                </div>
+                {editMode ? (
+                  <input value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder="e.g. Peanuts, shellfish" className="w-full bg-transparent text-xs text-text-primary border-b border-dashed border-border p-0 outline-none focus:border-primary" />
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {person.allergies ? person.allergies.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
+                      <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700">{item}</span>
+                    )) : <span className="text-xs text-text-tertiary">—</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer actions */}
+        {editMode ? (
+          <div className="flex gap-2 pt-2 border-t border-border justify-end">
+            <Button size="sm" variant="ghost" onClick={resetForm}>Cancel</Button>
+            <Button size="sm" loading={saving} onClick={handleSave}>Save Changes</Button>
+          </div>
+        ) : onSaved && (
           <div className="flex pt-2 border-t border-border">
-            <Button size="sm" variant="secondary" onClick={() => onEdit(person)}>
+            <Button size="sm" variant="secondary" onClick={() => setEditMode(true)}>
               <Edit2 className="h-3.5 w-3.5" />
               Edit
             </Button>
@@ -524,7 +720,7 @@ function VendorSection({
   return (
     <>
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
         </div>
       ) : filtered.length === 0 ? (
@@ -534,7 +730,7 @@ function VendorSection({
           description={search || categoryFilter ? "Try adjusting your search or category filter." : "Add vendors to your approved roster."}
         />
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {filtered.map((vendor) => (
             <Card key={vendor.id} hover padding="md">
               <div className="flex items-start justify-between gap-2 mb-2">
@@ -703,116 +899,6 @@ function AddTeamMemberModal({
         <ModalFooter>
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
           <Button type="submit" loading={saving}>Add Team Member</Button>
-        </ModalFooter>
-      </form>
-    </Modal>
-  );
-}
-
-// --- Edit Team Member Modal ---
-function EditTeamMemberModal({
-  person,
-  onClose,
-  onSaved,
-}: {
-  person: AppUser | null;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const { toast } = useToast();
-  const [saving, setSaving] = useState(false);
-  const [name, setName] = useState(person?.name ?? "");
-  const [email, setEmail] = useState(person?.email ?? "");
-  const [phone, setPhone] = useState(person?.phone ?? "");
-  const [title, setTitle] = useState(person?.title ?? "");
-  const [role, setRole] = useState(person?.role ?? "Studio");
-  const [favoriteDrinks, setFavoriteDrinks] = useState(person?.favoriteDrinks ?? "");
-  const [favoriteSnacks, setFavoriteSnacks] = useState(person?.favoriteSnacks ?? "");
-  const [dietaryRestrictions, setDietaryRestrictions] = useState(person?.dietaryRestrictions ?? "");
-
-  // Sync state when person changes (modal opens for a different person)
-  useEffect(() => {
-    if (person) {
-      setName(person.name);
-      setEmail(person.email);
-      setPhone(person.phone || "");
-      setTitle(person.title || "");
-      setRole(person.role);
-      setFavoriteDrinks(person.favoriteDrinks || "");
-      setFavoriteSnacks(person.favoriteSnacks || "");
-      setDietaryRestrictions(person.dietaryRestrictions || "");
-    }
-  }, [person]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!person) return;
-    if (!name.trim() || !email.trim()) {
-      toast("error", "Name and email are required");
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await fetch("/api/users", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: person.id,
-          name: name.trim(),
-          email: email.trim(),
-          phone: phone.trim(),
-          title: title.trim(),
-          role,
-          favoriteDrinks: favoriteDrinks.trim(),
-          favoriteSnacks: favoriteSnacks.trim(),
-          dietaryRestrictions: dietaryRestrictions.trim(),
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed");
-      }
-      toast("success", "Saved");
-      onSaved();
-    } catch (err) {
-      toast("error", err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <Modal open={!!person} onClose={onClose} title="Edit Team Member" size="lg">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
-          <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="555-123-4567" />
-          <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Photographer, Art Director, etc." />
-        </div>
-        <Select
-          label="Role"
-          value={role}
-          onChange={(e) => setRole(e.target.value as "Producer" | "Studio" | "Admin")}
-          options={[
-            { value: "Producer", label: "Producer" },
-            { value: "Studio", label: "Studio" },
-            { value: "Admin", label: "Admin / HOP" },
-          ]}
-        />
-        <div className="border-t border-border pt-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-3">Preferences</p>
-          <div className="space-y-3">
-            <Input label="Favorite Drinks" value={favoriteDrinks} onChange={(e) => setFavoriteDrinks(e.target.value)} placeholder="e.g. Oat milk latte, sparkling water" />
-            <Input label="Favorite Snacks" value={favoriteSnacks} onChange={(e) => setFavoriteSnacks(e.target.value)} placeholder="e.g. Trail mix, dark chocolate" />
-            <Input label="Dietary Restrictions" value={dietaryRestrictions} onChange={(e) => setDietaryRestrictions(e.target.value)} placeholder="e.g. Gluten-free, vegan, nut allergy" />
-          </div>
-        </div>
-        <ModalFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit" loading={saving}>Save Changes</Button>
         </ModalFooter>
       </form>
     </Modal>

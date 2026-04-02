@@ -24,7 +24,6 @@ import { GEAR_CATEGORIES } from "@/lib/constants/categories";
 import { GearDetailModal } from "@/components/inventory/gear-detail-modal";
 import { AddGearModal } from "@/components/inventory/add-gear-modal";
 import { ReserveGearModal } from "@/components/inventory/reserve-gear-modal";
-import { EditGearModal } from "@/components/inventory/edit-gear-modal";
 import { QrScanner } from "@/components/ui/qr-scanner";
 import { BatchCart } from "@/components/inventory/batch-cart";
 import { ActiveCheckouts } from "@/components/inventory/active-checkouts";
@@ -91,7 +90,6 @@ export default function InventoryPage() {
   const [showReserve, setShowReserve] = useState(false);
   const [selectedItem, setSelectedItem] = useState<GearItem | null>(null);
   const [detailItem, setDetailItem] = useState<GearItem | null>(null);
-  const [editItem, setEditItem] = useState<GearItem | null>(null);
 
   // Scanner drawer state
   const [showScanner, setShowScanner] = useState(false);
@@ -391,7 +389,7 @@ export default function InventoryPage() {
 
           {/* Items list */}
           {isLoading ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
             </div>
           ) : items.length === 0 ? (
@@ -413,7 +411,7 @@ export default function InventoryPage() {
               }
             />
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {items.map((item) => (
                 <Card
                   key={item.id}
@@ -684,13 +682,7 @@ export default function InventoryPage() {
         item={detailItem}
         open={!!detailItem}
         onClose={() => setDetailItem(null)}
-        onEdit={canEdit ? (item) => { setDetailItem(null); setEditItem(item); } : undefined}
-      />
-      <EditGearModal
-        item={editItem}
-        open={!!editItem}
-        onClose={() => setEditItem(null)}
-        onUpdated={() => { mutate(); setEditItem(null); }}
+        onSaved={canEdit ? () => { mutate(); } : undefined}
       />
 
       {/* Scanner drawer */}
