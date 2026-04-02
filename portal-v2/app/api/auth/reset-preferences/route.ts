@@ -13,8 +13,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
 
   try {
-    // Reset ALL user preferences and onboarding status
-    // Filter by a condition that matches all records (active = true or false)
+    // Reset preferences only for Gretchen and Laura (demo test accounts)
     const { error } = await admin
       .from("users")
       .update({
@@ -28,7 +27,7 @@ export async function POST(request: Request) {
         lunch_place: "",
         preferred_contact: "Email",
       })
-      .or("active.eq.true,active.eq.false");
+      .in("email", ["admin@test.local", "producer@test.local"]);
 
     if (error) {
       console.error("Reset preferences error:", error);
@@ -40,7 +39,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "All user preferences reset! Users will see onboarding on next login.",
+      message: "Gretchen & Laura preferences reset! They will see onboarding on next login.",
     });
   } catch (err) {
     console.error("Unexpected error:", err);

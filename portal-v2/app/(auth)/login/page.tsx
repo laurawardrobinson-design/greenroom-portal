@@ -80,9 +80,8 @@ export default function LoginPage() {
         return;
       }
 
-      await mutate("/api/auth/me", undefined, { revalidate: false });
-      router.push("/dashboard");
-      router.refresh();
+      await mutate("/api/auth/me", undefined, { revalidate: true });
+      router.replace("/dashboard");
     } catch {
       alert("Login failed");
       setLoading(null);
@@ -112,7 +111,7 @@ export default function LoginPage() {
 
       setResetMessage({
         type: "success",
-        text: "All preferences reset! Users will see onboarding on next login.",
+        text: "Gretchen & Laura reset! They will see onboarding on next login.",
       });
     } catch {
       setResetMessage({
@@ -232,7 +231,7 @@ export default function LoginPage() {
                     ))}
                   </div>
 
-                  {/* Reset All Preferences Section */}
+                  {/* Reset Gretchen & Laura Preferences */}
                   <div className="mt-4 pt-4 border-t border-white/10">
                     <button
                       onClick={handleResetPreferences}
@@ -242,7 +241,7 @@ export default function LoginPage() {
                       {resetLoading ? (
                         <div className="mx-auto h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                       ) : (
-                        "Reset All Users"
+                        "Reset Gretchen & Laura"
                       )}
                     </button>
                     {resetMessage && (

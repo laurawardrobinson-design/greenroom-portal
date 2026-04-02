@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -18,8 +19,15 @@ interface AppShellProps {
 }
 
 function AppShellInner({ children }: AppShellProps) {
-  const { user, isLoading, mutate } = useCurrentUser();
+  const { user, isLoading, isError, mutate } = useCurrentUser();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && isError) {
+      router.replace("/login");
+    }
+  }, [isLoading, isError, router]);
 
   if (isLoading || !user) {
     return (

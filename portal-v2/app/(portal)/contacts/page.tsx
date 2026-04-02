@@ -523,30 +523,6 @@ function ContactDetailModal({
                   <Edit2 className="h-2.5 w-2.5" />
                 </div>
               </button>
-              {iconPickerOpen && (
-                <div className="absolute top-16 left-0 z-50 w-64 rounded-xl border border-border bg-surface-primary p-3 shadow-lg">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">Choose Icon</p>
-                  <div className="grid grid-cols-4 gap-1.5 max-h-48 overflow-y-auto overscroll-contain">
-                    {PUBLIX_PRODUCTS.map((product) => (
-                      <button
-                        key={product.name}
-                        type="button"
-                        onClick={() => { setSelectedProduct(product.name); setIconPickerOpen(false); }}
-                        className={`flex flex-col items-center gap-0.5 rounded-lg p-1.5 border text-center transition-all ${
-                          selectedProduct === product.name
-                            ? "border-primary bg-primary/5 ring-1 ring-primary"
-                            : "border-transparent hover:border-primary/40 hover:bg-surface-secondary"
-                        }`}
-                      >
-                        <img src={product.icon} alt={product.name} className="h-6 w-6" />
-                        <span className="text-[10px] font-medium text-text-secondary leading-tight truncate w-full">
-                          {product.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           ) : (
             <UserAvatar name={person.name} favoriteProduct={person.favoritePublixProduct} size="xl" />
@@ -557,6 +533,32 @@ function ContactDetailModal({
             )}
           </div>
         </div>
+
+        {/* Icon picker — rendered inline so it doesn't fight the modal's overflow-y-auto */}
+        {editMode && iconPickerOpen && (
+          <div className="rounded-xl border border-border bg-surface-primary p-3 shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">Choose Icon</p>
+            <div className="grid grid-cols-6 gap-1.5">
+              {PUBLIX_PRODUCTS.map((product) => (
+                <button
+                  key={product.name}
+                  type="button"
+                  onClick={() => { setSelectedProduct(product.name); setIconPickerOpen(false); }}
+                  className={`flex flex-col items-center gap-0.5 rounded-lg p-1.5 border text-center transition-all ${
+                    selectedProduct === product.name
+                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                      : "border-transparent hover:border-primary/40 hover:bg-surface-secondary"
+                  }`}
+                >
+                  <img src={product.icon} alt={product.name} className="h-6 w-6" />
+                  <span className="text-[10px] font-medium text-text-secondary leading-tight truncate w-full">
+                    {product.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Contact info */}
         {editMode ? (
