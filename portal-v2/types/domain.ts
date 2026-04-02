@@ -483,7 +483,6 @@ export type ProductDepartment =
   | "Meat-Seafood"
   | "Produce"
   | "Grocery"
-  | "Floral"
   | "Other";
 
 export interface Product {

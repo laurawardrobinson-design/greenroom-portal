@@ -534,7 +534,7 @@ function ProductDrawer({
     setPcomError("");
     setPcomFetched(false);
     try {
-      const res = await fetch("/api/scrape-pcom", {
+      const res = await fetch("/api/scrape-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: pcomUrl.trim() }),
@@ -572,22 +572,17 @@ function ProductDrawer({
           className={`text-lg font-semibold text-text-primary bg-transparent flex-1 min-w-0 focus:outline-none ${editMode ? "border-b border-transparent hover:border-border focus:border-primary pb-0.5" : "pointer-events-none truncate"}`}
         />
         <div className="flex items-center gap-1 shrink-0">
-          {editMode ? (
-            <select
-              value={department}
-              onChange={(e) => setDepartment(e.target.value as ProductDepartment)}
-              className={`text-xs font-medium rounded-full px-2.5 py-0.5 focus:outline-none appearance-none cursor-pointer focus:ring-1 focus:ring-primary ${department ? (DEPT_COLORS[department] || DEPT_COLORS.Other) : "bg-surface-secondary text-text-tertiary"}`}
-            >
-              <option value="">Dept…</option>
-              {PRODUCT_DEPARTMENTS.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          ) : (
-            <span className={`text-xs font-medium rounded-full px-2.5 py-0.5 ${department ? (DEPT_COLORS[department] || DEPT_COLORS.Other) : "bg-surface-secondary text-text-tertiary"}`}>
-              {department || "No dept"}
-            </span>
-          )}
+          <span
+            className={`text-xs font-medium rounded-full px-2 py-0.5 inline-flex items-center ${editMode ? "cursor-pointer ring-1 ring-primary/30" : ""} ${department ? (DEPT_COLORS[department] || DEPT_COLORS.Other) : "bg-surface-secondary text-text-tertiary"}`}
+            onClick={editMode ? () => {
+              const depts = ["", ...PRODUCT_DEPARTMENTS];
+              const idx = depts.indexOf(department);
+              setDepartment(depts[(idx + 1) % depts.length] as ProductDepartment);
+            } : undefined}
+            title={editMode ? "Click to change department" : undefined}
+          >
+            {department || "No dept"}
+          </span>
           <input
             type="text"
             value={itemCode}
@@ -612,7 +607,7 @@ function ProductDrawer({
           <div className={`rounded-xl border p-3 space-y-2 ${pcomFetched ? "border-emerald-200 bg-emerald-50" : "border-border bg-surface-secondary"}`}>
             <div className="flex items-center gap-2">
               <Link2 className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-sm font-semibold text-text-primary">Add from Pcom</span>
+              <span className="text-sm font-semibold text-text-primary">Add from link</span>
               {pcomFetched && <CheckCircle2 className="h-4 w-4 text-emerald-600 ml-auto shrink-0" />}
             </div>
             <div className="flex gap-2">
@@ -620,7 +615,7 @@ function ProductDrawer({
                 type="url"
                 value={pcomUrl}
                 onChange={(e) => { setPcomUrl(e.target.value); setPcomFetched(false); setPcomError(""); }}
-                placeholder="https://www.publix.com/pd/..."
+                placeholder="Paste any product link..."
                 className="flex-1 h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
               />
               <button
@@ -669,7 +664,7 @@ function ProductDrawer({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Pcom Link</p>
-              <input type="url" value={pcomLink} onChange={(e) => setPcomLink(e.target.value)} placeholder="https://www.publix.com/pd/..."
+              <input type="url" value={pcomLink} onChange={(e) => setPcomLink(e.target.value)} placeholder="Paste any product link..."
                 className="w-full bg-transparent text-sm text-primary placeholder:text-text-tertiary italic focus:outline-none" />
             </div>
             <div className="space-y-1">
@@ -791,7 +786,7 @@ function ProductDrawer({
                   value={editMode ? pcomLink : (pcomLink ? "View on Publix.com" : "")}
                   onChange={(e) => setPcomLink(e.target.value)}
                   readOnly={!editMode}
-                  placeholder={editMode ? "https://www.publix.com/pd/..." : "No link"}
+                  placeholder={editMode ? "Paste any product link..." : "No link"}
                   className={`w-full bg-transparent text-sm placeholder:text-text-tertiary italic focus:outline-none ${!editMode ? "pointer-events-none text-primary" : "text-primary"} ${!editMode && !pcomLink ? "text-text-tertiary" : ""}`}
                 />
               </div>

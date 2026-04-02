@@ -5,7 +5,6 @@ export const PRODUCT_DEPARTMENTS = [
   "Bakery",
   "Meat-Seafood",
   "Produce",
-  "Floral",
   "Grocery",
   "Other",
 ] as const;
