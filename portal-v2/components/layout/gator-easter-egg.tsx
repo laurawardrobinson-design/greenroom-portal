@@ -13,7 +13,6 @@ export function GatorEasterEgg() {
     enabled,
     hasCollectedCreature,
     isDiscovered,
-    setEnabled,
     resetCollection,
     zookeeperRequest,
   } = useMenagerieContext();
@@ -27,10 +26,6 @@ export function GatorEasterEgg() {
     setChomping(true);
     if (gatorCurrentlyLoose) {
       discoverCreature("gator");
-    }
-    // Re-enable the game if the zookeeper shut it down
-    if (!enabled) {
-      setEnabled(true);
     }
     setTimeout(() => { setChomping(false); setShowCritterLine(false); }, 8000);
     setTimeout(() => setShowCritterLine(true), 5600);

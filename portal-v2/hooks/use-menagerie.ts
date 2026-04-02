@@ -4,7 +4,6 @@ import useSWR from "swr";
 import { useCallback, useMemo, useState } from "react";
 import type { CreatureKey } from "@/lib/constants/menagerie";
 
-const MENAGERIE_ENABLED_KEY = "menagerie-enabled";
 const EMPTY_COLLECTION: Discovery[] = [];
 
 interface Discovery {
@@ -32,9 +31,10 @@ async function fetcher<T>(url: string): Promise<T> {
   return res.json();
 }
 
-export function useMenagerie() {
+export function useMenagerie(userId: string | null) {
+  // Scope cache key to the current user so data doesn't leak across sessions
   const { data, isLoading, mutate } = useSWR<Discovery[]>(
-    "/api/menagerie",
+    userId ? `/api/menagerie?uid=${userId}` : null,
     fetcher
   );
 
@@ -119,25 +119,14 @@ export function useMenagerie() {
   const [zookeeperRequest, setZookeeperRequest] = useState(0);
   const requestZookeeper = useCallback(() => setZookeeperRequest((r) => r + 1), []);
 
-  // Enabled toggle — persisted in localStorage
-  const [enabled, setEnabledState] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      localStorage.getItem(MENAGERIE_ENABLED_KEY) === "true"
-  );
+  // Enabled is derived from whether the gator has been collected — no localStorage needed.
+  // This prevents cross-user leakage when multiple accounts share the same browser.
+  const enabled = hasCollectedCreature("gator");
 
-  const setEnabled = useCallback((value: boolean) => {
-    setEnabledState(value);
-    localStorage.setItem(MENAGERIE_ENABLED_KEY, String(value));
-  }, []);
-
-  // Zookeeper — wipe collection and disable
+  // Zookeeper — wipe collection (which also disables since gator is removed)
   const resetCollection = useCallback(async () => {
-    const previousEnabled = enabled;
     const previousReleased = activeReleasedCreatures;
     setReleasedCreatures([]);
-    setEnabledState(false);
-    localStorage.setItem(MENAGERIE_ENABLED_KEY, "false");
     try {
       await mutate(
         async () => {
@@ -153,11 +142,9 @@ export function useMenagerie() {
       );
     } catch (error) {
       setReleasedCreatures(previousReleased);
-      setEnabledState(previousEnabled);
-      localStorage.setItem(MENAGERIE_ENABLED_KEY, String(previousEnabled));
       throw error;
     }
-  }, [activeReleasedCreatures, enabled, mutate]);
+  }, [activeReleasedCreatures, mutate]);
 
   return {
     collection,
@@ -166,7 +153,6 @@ export function useMenagerie() {
     discoverCreature,
     isLoading,
     enabled,
-    setEnabled,
     resetCollection,
     releaseKey,
     releaseCreatures,

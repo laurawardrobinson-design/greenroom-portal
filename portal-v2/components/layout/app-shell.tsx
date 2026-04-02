@@ -18,7 +18,7 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
-function AppShellInner({ children }: AppShellProps) {
+export function AppShell({ children }: AppShellProps) {
   const { user, isLoading, isError, mutate } = useCurrentUser();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -40,7 +40,7 @@ function AppShellInner({ children }: AppShellProps) {
   }
 
   return (
-    <>
+    <MenagerieProvider userId={user.id}>
       <div className="flex h-full">
         <Sidebar
           userRole={user.role}
@@ -80,14 +80,6 @@ function AppShellInner({ children }: AppShellProps) {
 
       {/* Demo Mode Icon */}
       {process.env.NEXT_PUBLIC_DEV_AUTH === "true" && <DemoIcon />}
-    </>
-  );
-}
-
-export function AppShell({ children }: AppShellProps) {
-  return (
-    <MenagerieProvider>
-      <AppShellInner>{children}</AppShellInner>
     </MenagerieProvider>
   );
 }

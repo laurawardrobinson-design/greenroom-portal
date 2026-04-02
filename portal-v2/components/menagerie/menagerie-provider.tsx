@@ -11,7 +11,6 @@ interface MenagerieContext {
   discoverCreature: (key: CreatureKey) => Promise<void>;
   isLoading: boolean;
   enabled: boolean;
-  setEnabled: (value: boolean) => void;
   resetCollection: () => Promise<void>;
   releaseKey: number;
   releaseCreatures: () => void;
@@ -24,8 +23,13 @@ interface MenagerieContext {
 
 const MenagerieCtx = createContext<MenagerieContext | null>(null);
 
-export function MenagerieProvider({ children }: { children: React.ReactNode }) {
-  const menagerie = useMenagerie();
+interface MenagerieProviderProps {
+  userId: string | null;
+  children: React.ReactNode;
+}
+
+export function MenagerieProvider({ userId, children }: MenagerieProviderProps) {
+  const menagerie = useMenagerie(userId);
 
   return (
     <MenagerieCtx.Provider value={menagerie}>{children}</MenagerieCtx.Provider>
