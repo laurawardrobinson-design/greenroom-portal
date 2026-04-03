@@ -114,7 +114,7 @@ export async function listVendorOnboardingOverview(): Promise<
   // Deduplicate vendors
   const seen = new Set<string>();
   const vendors: Array<{ id: string; name: string }> = [];
-  for (const row of bookedVendors) {
+  for (const row of bookedVendors as any[]) {
     const v = row.vendors as Record<string, unknown> | null;
     if (!v || !row.vendor_id || seen.has(row.vendor_id)) continue;
     seen.add(row.vendor_id);

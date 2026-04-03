@@ -139,7 +139,7 @@ export async function listAllCrewBookings(): Promise<Array<CrewBooking & { campa
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return (data || []).map((row: Record<string, unknown>) => {
+  return ((data || []) as any[]).map((row: Record<string, unknown>) => {
     const campaign = row.campaigns as Record<string, unknown> | undefined;
     return {
       ...toCrewBooking(row),

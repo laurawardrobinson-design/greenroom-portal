@@ -30,6 +30,9 @@ export function BookCrewDrawer({
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
 
+  // Form state (selectedPersonId must be declared before the SWR that references it)
+  const [selectedPersonId, setSelectedPersonId] = useState("");
+
   // Data sources
   const { data: vendors = [] } = useSWR<Vendor[]>(
     open ? "/api/vendors" : null,
@@ -44,9 +47,6 @@ export function BookCrewDrawer({
     fetcher
   );
   const onboardingStatus = onboardingData?.status ?? null;
-
-  // Form state
-  const [selectedPersonId, setSelectedPersonId] = useState("");
   const [personSearch, setPersonSearch] = useState("");
   const [role, setRole] = useState("");
   const [dayRate, setDayRate] = useState("");
