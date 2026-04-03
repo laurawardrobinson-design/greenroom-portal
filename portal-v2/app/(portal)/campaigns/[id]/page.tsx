@@ -29,7 +29,7 @@ import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Bell, Users, AlertCircl
 import { BudgetSidebarTile } from "@/components/campaigns/tiles/budget-sidebar-tile";
 import useSWR from "swr";
 import type { AppUser } from "@/types/domain";
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
 import type { CampaignStatus } from "@/types/domain";
 import { DraftEmailModal } from "@/components/campaigns/draft-email-modal";
 import { StatusDropdown } from "@/components/campaigns/status-dropdown";

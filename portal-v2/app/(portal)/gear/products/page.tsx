@@ -26,7 +26,7 @@ import {
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
 
 const DEPT_COLORS: Record<string, string> = {
   Deli: "bg-orange-50 text-orange-700",

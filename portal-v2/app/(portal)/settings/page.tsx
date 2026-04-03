@@ -36,7 +36,7 @@ import {
 } from "@/components/onboarding/onboarding-modal";
 import { RateCardManagement } from "@/components/settings/rate-card-management";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
 
 const ROLE_COLORS: Record<string, string> = {
   Admin: "bg-purple-50 text-purple-700",
