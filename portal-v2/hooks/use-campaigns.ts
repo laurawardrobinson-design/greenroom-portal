@@ -12,6 +12,7 @@ import type {
   CampaignProduct,
   CampaignGearLink,
   CampaignVendor,
+  CrewBooking,
 } from "@/types/domain";
 
 async function fetcher<T>(url: string): Promise<T> {
@@ -28,6 +29,7 @@ const EMPTY_SETUPS: ShotListSetup[] = [];
 const EMPTY_PRODUCTS: CampaignProduct[] = [];
 const EMPTY_GEAR: CampaignGearLink[] = [];
 const EMPTY_VENDORS: CampaignVendor[] = [];
+const EMPTY_CREW_BOOKINGS: CrewBooking[] = [];
 
 export function useCampaigns(filters?: {
   status?: CampaignStatus;
@@ -58,6 +60,7 @@ interface CampaignDetail {
   campaignProducts: CampaignProduct[];
   campaignGear: CampaignGearLink[];
   vendors: CampaignVendor[];
+  crewBookings: CrewBooking[];
 }
 
 export function useCampaign(id: string | null) {
@@ -79,6 +82,7 @@ export function useCampaign(id: string | null) {
     campaignProducts: data?.campaignProducts ?? EMPTY_PRODUCTS,
     campaignGear: data?.campaignGear ?? EMPTY_GEAR,
     vendors: data?.vendors ?? EMPTY_VENDORS,
+    crewBookings: data?.crewBookings ?? EMPTY_CREW_BOOKINGS,
     isLoading,
     isError: !!error,
     mutate,

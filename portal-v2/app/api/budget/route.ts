@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole, authErrorResponse } from "@/lib/auth/guards";
 import { listBudgetPools, createBudgetPool, getCategorySpending, updateBudgetPool, getPoolTransactions } from "@/lib/services/budget.service";
+import { listAllCrewBookings } from "@/lib/services/crew-bookings.service";
 
 export async function GET(request: Request) {
   try {
@@ -10,6 +11,11 @@ export async function GET(request: Request) {
     if (searchParams.get("type") === "spending") {
       const spending = await getCategorySpending();
       return NextResponse.json(spending);
+    }
+
+    if (searchParams.get("type") === "crew") {
+      const bookings = await listAllCrewBookings();
+      return NextResponse.json(bookings);
     }
 
     // Pool transaction history

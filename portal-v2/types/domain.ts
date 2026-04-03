@@ -660,6 +660,8 @@ export interface CallSheetData {
 // --- Computed types ---
 export interface CampaignFinancials {
   committed: number;
+  vendorCommitted: number;
+  crewCommitted: number;
   spent: number;
   budget: number;
   remaining: number;
@@ -673,6 +675,138 @@ export interface BudgetPoolSummary extends BudgetPool {
 }
 
 export interface CategorySpending {
-  category: CostCategory;
+  category: string;
+  total: number;
+}
+
+// --- Crew Bookings (Paymaster Track) ---
+export type CrewBookingStatus =
+  | "Draft"
+  | "Pending Approval"
+  | "Confirmed"
+  | "Completed"
+  | "Cancelled";
+
+export type ClassificationType = "1099" | "W2 Paymaster" | "Loan Out";
+
+export interface RateCard {
+  id: string;
+  role: string;
+  dayRate: number;
+  notes: string;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CrewBooking {
+  id: string;
+  campaignId: string;
+  vendorId: string | null;
+  userId: string | null;
+  role: string;
+  dayRate: number;
+  classification: ClassificationType;
+  status: CrewBookingStatus;
+  bookedBy: string;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  // Joined data
+  vendor?: Vendor;
+  user?: AppUser;
+  dates: CrewBookingDate[];
+  payment?: CrewPayment;
+  // Computed
+  plannedDays?: number;
+  confirmedDays?: number;
+  totalAmount?: number;
+}
+
+export interface CrewBookingDate {
+  id: string;
+  bookingId: string;
+  shootDate: string;
+  confirmed: boolean | null;
+  confirmedBy: string | null;
+  confirmedAt: string | null;
+  notes: string;
+  createdAt: string;
+}
+
+// --- Crew Payments ---
+
+export type CrewPaymentStatus =
+  | "Pending Approval"
+  | "Approved"
+  | "Sent to Paymaster"
+  | "Paid";
+
+export interface CrewPayment {
+  id: string;
+  bookingId: string;
+  totalDays: number;
+  totalAmount: number;
+  status: CrewPaymentStatus;
+  notes: string;
+  confirmedBy: string | null;
+  confirmedAt: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+// --- Payment Batches ---
+
+export type PaymentBatchStatus = "Draft" | "Sent" | "Confirmed";
+
+export interface PaymentBatchItem {
+  id: string;
+  batchId: string;
+  crewPaymentId: string;
   amount: number;
+  createdAt: string;
+  // enriched
+  personName?: string;
+  role?: string;
+  campaignName?: string;
+  wfNumber?: string;
+  campaignId?: string;
+  totalDays?: number;
+  dayRate?: number;
+  classification?: string;
+}
+
+export interface PaymentBatch {
+  id: string;
+  name: string;
+  status: PaymentBatchStatus;
+  totalAmount: number;
+  itemCount: number;
+  createdBy: string;
+  sentAt: string | null;
+  confirmedAt: string | null;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  items?: PaymentBatchItem[];
+}
+
+// --- Onboarding ---
+
+export type OnboardingStatus = "complete" | "partial" | "none";
+
+export interface OnboardingChecklist {
+  id: string;
+  vendorId: string;
+  itemName: string;
+  completed: boolean;
+  completedDate: string | null;
+  expiresAt: string | null;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
 }

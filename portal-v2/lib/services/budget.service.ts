@@ -339,19 +339,40 @@ export async function revertBudgetRequest(requestId: string): Promise<void> {
 // --- Category Spending ---
 export async function getCategorySpending(): Promise<CategorySpending[]> {
   const db = createAdminClient();
-  const { data, error } = await db
+
+  // Vendor invoice line items
+  const { data: invoiceItems, error } = await db
     .from("vendor_invoice_items")
     .select("category, amount");
 
   if (error) throw error;
 
   const totals: Record<string, number> = {};
-  for (const row of data || []) {
+  for (const row of invoiceItems || []) {
     const cat = row.category as string;
     totals[cat] = (totals[cat] || 0) + Number(row.amount);
   }
 
+  // Crew labor — aggregate all non-cancelled bookings across all campaigns
+  const { data: crewBookings } = await db
+    .from("crew_bookings")
+    .select("day_rate, crew_booking_dates(confirmed)")
+    .neq("status", "Cancelled");
+
+  let crewTotal = 0;
+  for (const booking of crewBookings || []) {
+    const dates = (booking.crew_booking_dates as { confirmed: boolean | null }[]) || [];
+    const dayRate = Number(booking.day_rate) || 0;
+    const confirmedDays = dates.filter((d) => d.confirmed === true).length;
+    const plannedDays = dates.length;
+    crewTotal += (confirmedDays > 0 ? confirmedDays : plannedDays) * dayRate;
+  }
+
+  if (crewTotal > 0) {
+    totals["Crew Labor"] = (totals["Crew Labor"] || 0) + crewTotal;
+  }
+
   return Object.entries(totals)
-    .map(([category, amount]) => ({ category: category as never, amount }))
-    .sort((a, b) => b.amount - a.amount);
+    .map(([category, total]) => ({ category, total }))
+    .sort((a, b) => b.total - a.total);
 }

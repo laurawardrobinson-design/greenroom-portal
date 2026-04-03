@@ -12,6 +12,7 @@ import { getShoots } from "@/lib/services/shoots.service";
 import { listSetups } from "@/lib/services/shot-list.service";
 import { listCampaignProducts, listCampaignGear } from "@/lib/services/products.service";
 import { listCampaignVendors } from "@/lib/services/campaign-vendors.service";
+import { listCrewBookings } from "@/lib/services/crew-bookings.service";
 import { updateCampaignSchema } from "@/lib/validation/campaigns.schema";
 
 // GET /api/campaigns/[id] — campaign detail with related data
@@ -24,7 +25,7 @@ export async function GET(
     const { id } = await params;
     await requireCampaignAccess(user, id);
 
-    const [campaign, shoots, deliverables, financials, setups, campaignProducts, campaignGear, vendors] = await Promise.all([
+    const [campaign, shoots, deliverables, financials, setups, campaignProducts, campaignGear, vendors, crewBookings] = await Promise.all([
       getCampaign(id),
       getShoots(id),
       getDeliverables(id),
@@ -33,6 +34,7 @@ export async function GET(
       listCampaignProducts(id),
       listCampaignGear(id),
       listCampaignVendors(id),
+      listCrewBookings(id),
     ]);
 
     if (!campaign) {
@@ -48,6 +50,7 @@ export async function GET(
       campaignProducts,
       campaignGear,
       vendors,
+      crewBookings,
     });
   } catch (error) {
     return authErrorResponse(error);

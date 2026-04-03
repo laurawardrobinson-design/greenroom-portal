@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole, authErrorResponse } from "@/lib/auth/guards";
 import { listBudgetRequests } from "@/lib/services/budget.service";
+import { listPendingCrewPayments } from "@/lib/services/crew-payments.service";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // GET /api/approvals — pending + resolved items for HOP
@@ -43,9 +44,40 @@ export async function GET() {
       };
     }
 
+    // Pending crew booking approvals (rate exceeds standard → needs HOP)
+    const { data: pendingCrewBookings } = await db
+      .from("crew_bookings")
+      .select("*, vendors(company_name, contact_name), users(name), campaigns(name, wf_number), crew_booking_dates(*)")
+      .eq("status", "Pending Approval")
+      .order("created_at", { ascending: false });
+
+    function mapCrewBooking(row: any) {
+      const personName = row.vendors
+        ? row.vendors.contact_name || row.vendors.company_name
+        : row.users?.name || "Unknown";
+      return {
+        id: row.id,
+        campaignId: row.campaign_id,
+        personName,
+        campaignName: row.campaigns?.name || "Unknown",
+        wfNumber: row.campaigns?.wf_number || "",
+        role: row.role,
+        dayRate: Number(row.day_rate),
+        classification: row.classification,
+        plannedDays: (row.crew_booking_dates || []).length,
+        totalAmount: (row.crew_booking_dates || []).length * Number(row.day_rate),
+        createdAt: row.created_at,
+      };
+    }
+
+    // Pending crew payment approvals (days confirmed → awaiting HOP to approve for paymaster)
+    const pendingCrewPayments = await listPendingCrewPayments();
+
     return NextResponse.json({
       budgetRequests,
       pendingInvoices: (pendingInvoices || []).map(mapInvoice),
+      pendingCrewBookings: (pendingCrewBookings || []).map(mapCrewBooking),
+      pendingCrewPayments,
       resolvedRequests,
       resolvedInvoices: (completedInvoices || []).map(mapInvoice),
     });

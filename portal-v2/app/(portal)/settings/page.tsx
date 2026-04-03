@@ -34,6 +34,7 @@ import {
   TagInput,
   getProductIcon,
 } from "@/components/onboarding/onboarding-modal";
+import { RateCardManagement } from "@/components/settings/rate-card-management";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -619,6 +620,9 @@ export default function SettingsPage() {
           )}
         </Card>
       )}
+
+      {/* Rate Card Management (Admin only) */}
+      {isAdmin && <RateCardManagement />}
     </div>
   );
 }

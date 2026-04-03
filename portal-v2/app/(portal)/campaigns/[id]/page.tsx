@@ -20,10 +20,12 @@ import { LinkProductDrawer } from "@/components/campaigns/link-product-drawer";
 import { LinkGearDrawer } from "@/components/campaigns/link-gear-drawer";
 import { VendorAssignmentPanel, type VendorAssignmentPanelHandle } from "@/components/campaigns/vendor-assignment-panel";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import { CrewBookingsTile } from "@/components/campaigns/tiles/crew-bookings-tile";
+import { BookCrewDrawer } from "@/components/campaigns/book-crew-drawer";
 import { useToast } from "@/components/ui/toast";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Bell, Users, AlertCircle, Calendar, ChevronDown, X, UserCircle, Info } from "lucide-react";
+import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Bell, Users, AlertCircle, Calendar, ChevronDown, X, UserCircle, Info, HardHat } from "lucide-react";
 import { BudgetSidebarTile } from "@/components/campaigns/tiles/budget-sidebar-tile";
 import useSWR from "swr";
 import type { AppUser } from "@/types/domain";
@@ -48,6 +50,7 @@ export default function CampaignDetailPage({
     campaignProducts,
     campaignGear,
     vendors,
+    crewBookings,
     isLoading,
     mutate,
   } = useCampaign(id);
@@ -82,6 +85,7 @@ export default function CampaignDetailPage({
   const [showAddSetup, setShowAddSetup] = useState(false);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showAddGear, setShowAddGear] = useState(false);
+  const [showBookCrew, setShowBookCrew] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -226,6 +230,22 @@ export default function CampaignDetailPage({
         context: v.vendor?.companyName,
       });
     }
+    // Crew booking attention items
+    const pendingBookings = crewBookings.filter((b) => b.status === "Pending Approval");
+    const unconfirmedBookings = crewBookings.filter(
+      (b) => b.status === "Confirmed" && b.dates.some((d) => d.confirmed === null)
+    );
+    if (pendingBookings.length > 0) {
+      attentionItems.push({
+        label: `${pendingBookings.length} crew booking${pendingBookings.length !== 1 ? "s" : ""} pending approval`,
+      });
+    }
+    if (unconfirmedBookings.length > 0) {
+      attentionItems.push({
+        label: `${unconfirmedBookings.length} crew member${unconfirmedBookings.length !== 1 ? "s" : ""} need day confirmation`,
+      });
+    }
+
     if (campaign.assetsDeliveryDate) {
       const due = new Date(campaign.assetsDeliveryDate);
       const today = new Date();
@@ -482,6 +502,49 @@ export default function CampaignDetailPage({
             </CollapsibleSection>
           )}
 
+          {/* Crew Bookings */}
+          {showFinancials && (
+            <CollapsibleSection
+              id={`campaign-${id}-crew-sidebar`}
+              title="Crew"
+              icon={HardHat}
+              defaultExpanded={true}
+              badge={crewBookings.filter((b) => b.status !== "Cancelled").length > 0
+                ? `${crewBookings.filter((b) => b.status !== "Cancelled").length} booked`
+                : undefined
+              }
+            >
+              {crewBookings.filter((b) => b.status !== "Cancelled").length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-4 px-5">
+                  {canEdit && (
+                    <button type="button" onClick={() => setShowBookCrew(true)}
+                      className="inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-sm font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors">
+                      <Plus className="h-3 w-3" />
+                      Book Crew
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <CrewBookingsTile
+                    bookings={crewBookings}
+                    canEdit={canEdit}
+                    onMutate={mutate}
+                  />
+                  {canEdit && (
+                    <div className="pt-2 px-1">
+                      <button type="button" onClick={() => setShowBookCrew(true)}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors">
+                        <Plus className="h-3 w-3" />
+                        Book More Crew
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CollapsibleSection>
+          )}
+
           {/* Products */}
           {(campaignProducts.length > 0 || canEdit) && (
             <CollapsibleSection
@@ -589,6 +652,14 @@ export default function CampaignDetailPage({
         onClose={() => setShowAddGear(false)}
         campaignId={id}
         onLinked={() => { setShowAddGear(false); mutate(); }}
+      />
+
+      <BookCrewDrawer
+        open={showBookCrew}
+        onClose={() => setShowBookCrew(false)}
+        campaignId={id}
+        shoots={shoots}
+        onBooked={() => { setShowBookCrew(false); mutate(); }}
       />
 
       {/* Draft Email Modal */}

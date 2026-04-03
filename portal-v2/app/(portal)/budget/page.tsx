@@ -41,6 +41,10 @@ import {
   Undo2,
   Receipt,
   ExternalLink,
+  HardHat,
+  CheckCircle2,
+  Circle,
+  UserCheck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -62,10 +66,7 @@ const TABS: { key: Tab; label: string; icon: React.ElementType; adminOnly?: bool
 
 export default function BudgetPage() {
   const { user } = useCurrentUser();
-  const [tab, setTab] = useState<Tab>("overview");
   const isAdmin = user?.role === "Admin";
-
-  const visibleTabs = TABS.filter((t) => !t.adminOnly || isAdmin);
 
   return (
     <div className="space-y-6">
@@ -76,32 +77,12 @@ export default function BudgetPage() {
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
-        {visibleTabs.map((t) => {
-          const Icon = t.icon;
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                tab === t.key
-                  ? "border-primary text-primary"
-                  : "border-transparent text-text-secondary hover:text-text-primary hover:border-border"
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {tab === "overview" && <BudgetPoolsTab isAdmin={isAdmin} />}
-      {tab === "budgets" && isAdmin && <CampaignBudgetsTab />}
-      {tab === "analysis" && isAdmin && <AnalysisTab />}
-      {tab === "approvals" && isAdmin && <ApprovalsTab />}
-      {tab === "spending" && <SpendingTab />}
+      <BudgetPoolsTab isAdmin={isAdmin} />
+      {isAdmin && <CampaignBudgetsTab />}
+      {isAdmin && <AnalysisTab />}
+      {isAdmin && <ApprovalsTab />}
+      {isAdmin && <OnboardingTab />}
+      <SpendingTab />
     </div>
   );
 }
@@ -1947,12 +1928,209 @@ function ApprovalsTab() {
 }
 
 // ─── Spending Tab ───
+const PAYMENT_STATUS_COLOR: Record<string, string> = {
+  "Pending Approval": "text-amber-600 bg-amber-50",
+  "Approved": "text-green-700 bg-green-50",
+  "Sent to Paymaster": "text-blue-700 bg-blue-50",
+  "Paid": "text-text-secondary bg-surface-secondary",
+};
+
+const BOOKING_STATUS_COLOR: Record<string, string> = {
+  "Confirmed": "text-green-700 bg-green-50",
+  "Completed": "text-blue-700 bg-blue-50",
+  "Pending Approval": "text-amber-600 bg-amber-50",
+  "Draft": "text-text-tertiary bg-surface-secondary",
+};
+
+// ─── Onboarding Tab ───
+function OnboardingTab() {
+  const { data: overview = [], isLoading, mutate } = useSWR<Array<{
+    vendorId: string;
+    vendorName: string;
+    status: "complete" | "partial" | "none";
+    completedCount: number;
+    totalCount: number;
+    items: Array<{
+      id: string;
+      itemName: string;
+      completed: boolean;
+      completedDate: string | null;
+      expiresAt: string | null;
+      notes: string;
+    }>;
+  }>>("/api/onboarding", fetcher);
+
+  const { toast } = useToast();
+  const [expandedVendor, setExpandedVendor] = useState<string | null>(null);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  async function handleToggle(vendorId: string, itemId: string, completed: boolean) {
+    setSaving(itemId);
+    try {
+      await fetch(`/api/onboarding/${vendorId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemId,
+          completed,
+          completedDate: completed ? new Date().toISOString().split("T")[0] : null,
+        }),
+      });
+      mutate();
+    } catch {
+      toast("error", "Failed to update onboarding item");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  const STATUS_ICON = {
+    complete: <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />,
+    partial:  <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />,
+    none:     <Circle className="h-4 w-4 text-red-400 shrink-0" />,
+  };
+
+  const STATUS_LABEL = {
+    complete: "Onboarded",
+    partial:  "In Progress",
+    none:     "Not Started",
+  };
+
+  const STATUS_STYLE = {
+    complete: "text-emerald-700 bg-emerald-50",
+    partial:  "text-amber-700 bg-amber-50",
+    none:     "text-red-700 bg-red-50",
+  };
+
+  const notComplete = overview.filter((v) => v.status !== "complete");
+  const complete = overview.filter((v) => v.status === "complete");
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <UserCheck className="h-4 w-4 text-text-tertiary" />
+          Paymaster Onboarding
+          {notComplete.length > 0 && (
+            <Badge variant="warning">{notComplete.length} incomplete</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+
+      {isLoading ? (
+        <div className="h-24 animate-pulse rounded-lg bg-surface-secondary mx-3 mb-3" />
+      ) : overview.length === 0 ? (
+        <EmptyState
+          icon={<UserCheck className="h-5 w-5" />}
+          title="No crew booked yet"
+          description="Onboarding status for booked crew will appear here."
+        />
+      ) : (
+        <div className="divide-y divide-border">
+          {[...notComplete, ...complete].map((vendor) => (
+            <div key={vendor.vendorId}>
+              <button
+                type="button"
+                onClick={() =>
+                  setExpandedVendor(expandedVendor === vendor.vendorId ? null : vendor.vendorId)
+                }
+                className="flex w-full items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-secondary transition-colors"
+              >
+                {expandedVendor === vendor.vendorId
+                  ? <ChevronDown className="h-4 w-4 text-text-tertiary shrink-0" />
+                  : <ChevronRight className="h-4 w-4 text-text-tertiary shrink-0" />
+                }
+                {STATUS_ICON[vendor.status]}
+                <span className="flex-1 text-sm font-medium text-text-primary">
+                  {vendor.vendorName}
+                </span>
+                <span className="text-[10px] text-text-tertiary mr-2">
+                  {vendor.completedCount}/{vendor.totalCount} items
+                </span>
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_STYLE[vendor.status]}`}>
+                  {STATUS_LABEL[vendor.status]}
+                </span>
+              </button>
+
+              {expandedVendor === vendor.vendorId && (
+                <div className="border-t border-border bg-surface-secondary divide-y divide-border">
+                  {vendor.items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-3 px-5 py-2.5"
+                    >
+                      <button
+                        type="button"
+                        disabled={saving === item.id}
+                        onClick={() => handleToggle(vendor.vendorId, item.id, !item.completed)}
+                        className="shrink-0 transition-opacity disabled:opacity-50"
+                      >
+                        {item.completed
+                          ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          : <Circle className="h-4 w-4 text-text-tertiary" />
+                        }
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm ${item.completed ? "text-text-tertiary line-through" : "text-text-primary"}`}>
+                          {item.itemName}
+                        </p>
+                        {item.completedDate && (
+                          <p className="text-[10px] text-text-tertiary">
+                            Completed {new Date(item.completedDate).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+type CrewBookingRow = {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  wfNumber: string;
+  role: string;
+  dayRate: number;
+  classification: string;
+  status: string;
+  plannedDays: number;
+  confirmedDays: number;
+  totalAmount: number;
+  notes?: string;
+  vendor?: { contactName: string; companyName: string };
+  user?: { name: string };
+  payment?: { status: string; totalDays: number; totalAmount: number };
+};
+
+const CLASSIFICATIONS = ["1099", "Paymaster", "W-2 via Paymaster", "Loan Out"];
+
 function SpendingTab() {
   const { data: spending, isLoading } = useSWR<
     Array<{ category: string; total: number }>
   >("/api/budget?type=spending", fetcher);
 
+  const { data: crewBookings = [], isLoading: crewLoading, mutate: mutateBookings } = useSWR<CrewBookingRow[]>(
+    "/api/budget?type=crew",
+    fetcher
+  );
+
+  const { toast } = useToast();
+  const [editingBooking, setEditingBooking] = useState<CrewBookingRow | null>(null);
+  const [draft, setDraft] = useState<{ role: string; dayRate: string; classification: string; notes: string }>({
+    role: "", dayRate: "", classification: "", notes: "",
+  });
+  const [saving, setSaving] = useState(false);
+
   const CATEGORY_COLORS: Record<string, string> = {
+    "Crew Labor": "#10442B",
     Talent: "#6366f1",
     Styling: "#ec4899",
     "Equipment Rental": "#f59e0b",
@@ -1969,8 +2147,196 @@ function SpendingTab() {
   const hasData = spending && spending.length > 0;
   const totalSpent = hasData ? spending.reduce((s, c) => s + c.total, 0) : 0;
 
+  function startEdit(booking: CrewBookingRow) {
+    setEditingBooking(booking);
+    setDraft({
+      role: booking.role,
+      dayRate: String(booking.dayRate),
+      classification: booking.classification,
+      notes: booking.notes || "",
+    });
+  }
+
+  function cancelEdit() {
+    setEditingBooking(null);
+  }
+
+  async function saveEdit() {
+    if (!editingBooking) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/crew-bookings/${editingBooking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: draft.role,
+          dayRate: Number(draft.dayRate),
+          classification: draft.classification,
+          notes: draft.notes,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      toast("success", "Deal memo updated");
+      setEditingBooking(null);
+      mutateBookings();
+    } catch {
+      toast("error", "Failed to save changes");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Locked = payment already in progress, can't edit core fields
+  function isLocked(booking: CrewBookingRow) {
+    const payStatus = booking.payment?.status;
+    return payStatus === "Approved" || payStatus === "Sent to Paymaster" || payStatus === "Paid";
+  }
+
+  const editingPersonName = editingBooking?.vendor
+    ? editingBooking.vendor.contactName || editingBooking.vendor.companyName
+    : editingBooking?.user?.name || "";
+
   return (
     <div className="space-y-6">
+      {/* Edit modal — rendered outside the table so nothing shifts */}
+      <Modal open={!!editingBooking} onClose={cancelEdit} title={`Edit Deal Memo — ${editingPersonName}`}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">Role</label>
+              <input
+                type="text"
+                value={draft.role}
+                onChange={(e) => setDraft((d) => ({ ...d, role: e.target.value }))}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">Day Rate</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-tertiary">$</span>
+                <input
+                  type="number"
+                  value={draft.dayRate}
+                  onChange={(e) => setDraft((d) => ({ ...d, dayRate: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-surface pl-6 pr-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">Classification</label>
+            <select
+              value={draft.classification}
+              onChange={(e) => setDraft((d) => ({ ...d, classification: e.target.value }))}
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              {CLASSIFICATIONS.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">Notes</label>
+            <input
+              type="text"
+              value={draft.notes}
+              onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
+              placeholder="Optional notes…"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+        </div>
+        <ModalFooter>
+          <Button variant="ghost" onClick={cancelEdit} disabled={saving}>Cancel</Button>
+          <Button onClick={saveEdit} disabled={saving}>
+            <Check className="h-3.5 w-3.5" />
+            {saving ? "Saving…" : "Save Changes"}
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Individual crew deal memos */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <HardHat className="h-4 w-4 text-text-tertiary" />
+            Crew Deal Memos
+          </CardTitle>
+        </CardHeader>
+
+        {crewLoading ? (
+          <div className="h-24 animate-pulse rounded-lg bg-surface-secondary mx-3 mb-3" />
+        ) : crewBookings.length === 0 ? (
+          <EmptyState
+            icon={<HardHat className="h-5 w-5" />}
+            title="No crew booked"
+            description="Crew bookings will appear here once added to campaigns."
+          />
+        ) : (
+          <div className="divide-y divide-border">
+            {/* Header */}
+            <div className="grid grid-cols-12 gap-3 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+              <div className="col-span-3">Person</div>
+              <div className="col-span-2">Campaign</div>
+              <div className="col-span-2">Role</div>
+              <div className="col-span-1 text-center">Days</div>
+              <div className="col-span-2 text-right">Amount</div>
+              <div className="col-span-2 text-right">Status</div>
+            </div>
+            {crewBookings.map((booking) => {
+              const personName = booking.vendor
+                ? booking.vendor.contactName || booking.vendor.companyName
+                : booking.user?.name || "Unknown";
+              const days = booking.payment?.totalDays ?? booking.confirmedDays ?? booking.plannedDays ?? 0;
+              const amount = booking.payment?.totalAmount ?? booking.totalAmount ?? 0;
+              const statusLabel = booking.payment?.status ?? booking.status;
+              const statusClass = booking.payment
+                ? (PAYMENT_STATUS_COLOR[booking.payment.status] ?? "text-text-tertiary bg-surface-secondary")
+                : (BOOKING_STATUS_COLOR[booking.status] ?? "text-text-tertiary bg-surface-secondary");
+              const locked = isLocked(booking);
+
+              return (
+                <div
+                  key={booking.id}
+                  className={`group grid grid-cols-12 gap-3 items-center px-3.5 py-2.5 transition-colors ${locked ? "" : "hover:bg-surface-secondary cursor-pointer"}`}
+                  onClick={() => !locked && startEdit(booking)}
+                >
+                  <div className="col-span-3 min-w-0">
+                    <p className="text-sm font-medium text-text-primary truncate">{personName}</p>
+                    <p className="text-[10px] text-text-tertiary">{booking.classification}</p>
+                  </div>
+                  <div className="col-span-2 min-w-0" onClick={(e) => e.stopPropagation()}>
+                    <Link href={`/campaigns/${booking.campaignId}`} className="text-xs text-text-secondary hover:text-primary transition-colors truncate block">
+                      {booking.wfNumber}
+                    </Link>
+                    <p className="text-[10px] text-text-tertiary truncate">{booking.campaignName}</p>
+                  </div>
+                  <div className="col-span-2 min-w-0">
+                    <p className="text-xs text-text-primary truncate">{booking.role}</p>
+                    <p className="text-[10px] text-text-tertiary">{formatCurrency(booking.dayRate)}/day</p>
+                  </div>
+                  <div className="col-span-1 text-center">
+                    <p className="text-sm text-text-primary">{days}</p>
+                  </div>
+                  <div className="col-span-2 text-right">
+                    <p className="text-sm font-medium text-text-primary">{formatCurrency(amount)}</p>
+                  </div>
+                  <div className="col-span-2 flex items-center justify-end gap-2">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusClass}`}>
+                      {statusLabel}
+                    </span>
+                    {!locked && (
+                      <Pencil className="h-3 w-3 text-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
       {/* Summary cards */}
       {hasData && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -2023,7 +2389,7 @@ function SpendingTab() {
           <EmptyState
             icon={<BarChart3 className="h-5 w-5" />}
             title="No spending data yet"
-            description="Category spending will appear here as vendor estimates are approved and invoices are processed."
+            description="Crew labor and vendor spending by category will appear here as bookings and invoices are processed."
           />
         ) : (
           <div className="space-y-3">

@@ -13,7 +13,7 @@ interface CampaignVendor {
 
 interface Props {
   campaignId: string;
-  financials: { budget: number; committed: number; spent: number; remaining: number };
+  financials: { budget: number; committed: number; vendorCommitted?: number; crewCommitted?: number; spent: number; remaining: number };
   vendors: CampaignVendor[];
   canEdit: boolean;
   onRequestOverage: () => void;
@@ -32,6 +32,8 @@ export function BudgetSidebarTile({ financials, canEdit, onRequestOverage }: Pro
   const budget = financials.budget;
   const spent = financials.spent;
   const committed = financials.committed;
+  const vendorCommitted = financials.vendorCommitted ?? 0;
+  const crewCommitted = financials.crewCommitted ?? 0;
 
   const spentPct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
   const committedOnlyPct =
@@ -99,6 +101,31 @@ export function BudgetSidebarTile({ financials, canEdit, onRequestOverage }: Pro
               </span>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Committed breakdown — vendor vs crew */}
+      {committed > 0 && (vendorCommitted > 0 || crewCommitted > 0) && (
+        <div className="rounded-lg bg-surface-secondary px-3 py-2.5 space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1">
+            Committed Breakdown
+          </p>
+          {vendorCommitted > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-text-tertiary">Vendors</span>
+              <span className="text-xs font-medium text-text-primary tabular-nums">
+                {formatCurrency(vendorCommitted)}
+              </span>
+            </div>
+          )}
+          {crewCommitted > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-text-tertiary">Crew Labor</span>
+              <span className="text-xs font-medium text-text-primary tabular-nums">
+                {formatCurrency(crewCommitted)}
+              </span>
+            </div>
+          )}
         </div>
       )}
 

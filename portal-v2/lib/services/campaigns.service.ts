@@ -461,11 +461,13 @@ export async function duplicateCampaign(
   return newCampaign;
 }
 
-// --- Get campaign financials ---
+// --- Get campaign financials (vendors + crew labor) ---
 export async function getCampaignFinancials(
   campaignId: string
 ): Promise<CampaignFinancials> {
   const db = createAdminClient();
+
+  // Vendor financials from existing RPC
   const { data, error } = await db.rpc("get_campaign_financials", {
     p_campaign_id: campaignId,
   });
@@ -473,12 +475,38 @@ export async function getCampaignFinancials(
   const campaign = await getCampaign(campaignId);
   const budget = campaign?.productionBudget || 0;
 
-  if (error || !data || !data[0]) {
-    return { committed: 0, spent: 0, budget, remaining: budget };
+  let vendorCommitted = 0;
+  let vendorSpent = 0;
+  if (!error && data && data[0]) {
+    vendorCommitted = Number(data[0].committed) || 0;
+    vendorSpent = Number(data[0].spent) || 0;
   }
 
-  const committed = Number(data[0].committed) || 0;
-  const spent = Number(data[0].spent) || 0;
-  return { committed, spent, budget, remaining: budget - committed };
+  // Crew labor commitments
+  const { data: crewBookings } = await db
+    .from("crew_bookings")
+    .select("day_rate, status, crew_booking_dates(confirmed)")
+    .eq("campaign_id", campaignId)
+    .neq("status", "Cancelled");
+
+  let crewCommitted = 0;
+  for (const booking of crewBookings || []) {
+    const dates = (booking.crew_booking_dates as { confirmed: boolean | null }[]) || [];
+    const dayRate = Number(booking.day_rate) || 0;
+    // Use confirmed days if any are confirmed, otherwise planned days
+    const confirmedDays = dates.filter((d) => d.confirmed === true).length;
+    const plannedDays = dates.length;
+    crewCommitted += (confirmedDays > 0 ? confirmedDays : plannedDays) * dayRate;
+  }
+
+  const totalCommitted = vendorCommitted + crewCommitted;
+  return {
+    committed: totalCommitted,
+    vendorCommitted,
+    crewCommitted,
+    spent: vendorSpent,
+    budget,
+    remaining: budget - totalCommitted,
+  };
 }
 
