@@ -6,7 +6,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Only works when NEXT_PUBLIC_DEV_AUTH=true
 
 export async function POST(request: Request) {
-  if (process.env.NEXT_PUBLIC_DEV_AUTH !== "true") {
+  if (
+    process.env.NODE_ENV !== "development" ||
+    process.env.NEXT_PUBLIC_DEV_AUTH !== "true"
+  ) {
     return NextResponse.json({ error: "Dev auth disabled" }, { status: 403 });
   }
 

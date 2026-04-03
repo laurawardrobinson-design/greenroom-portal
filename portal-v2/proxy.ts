@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function proxy(request: NextRequest) {
   const { user, response } = await updateSession(request);
   const pathname = request.nextUrl.pathname;
+
+  // Rate-limit API routes before any further processing
+  if (pathname.startsWith("/api")) {
+    const blocked = checkRateLimit(request, response);
+    if (blocked) return blocked;
+  }
 
   // Public routes that don't require authentication
   const publicRoutes = ["/login", "/"];
