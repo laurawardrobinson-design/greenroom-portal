@@ -39,7 +39,10 @@ interface ScheduleData {
     sort_order_in_day: number;
   }>;
   links: Array<{ shot_id: string; deliverable_id: string }>;
+  productLinks: Array<{ shot_id: string; campaign_product_id: string }>;
   deliverables: Array<{ id: string; channel: string }>;
+  campaignProducts: Array<{ id: string; product?: { name: string; item_code: string } }>;
+  talent: Array<{ id: string; shot_id: string; campaign_id: string; talent_number: number; label: string }>;
 }
 
 // Colors for setup badges

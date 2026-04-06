@@ -51,7 +51,9 @@ interface ScheduleData {
     sort_order_in_day: number;
   }>;
   links: Array<{ shot_id: string; deliverable_id: string }>;
+  productLinks: Array<{ shot_id: string; campaign_product_id: string }>;
   deliverables: Array<{ id: string; channel: string; aspect_ratio: string }>;
+  campaignProducts: Array<{ id: string; product?: { name: string; item_code: string } }>;
 }
 
 export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Props) {
