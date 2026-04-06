@@ -31,7 +31,7 @@ export function DocumentsTile({ campaignId, isVendor, canEdit, uploading, onUplo
             categories={isVendor ? ["Deliverable"] : ["Shot List", "Concept Deck", "Reference", "Product Info"]}
             onUpload={onUpload}
             uploading={uploading}
-            canUpload={isVendor || canEdit || hideAdminDocs}
+            canUpload={isVendor || canEdit || !!hideAdminDocs}
           />
           {showAdminSection && (
             <FileSection
