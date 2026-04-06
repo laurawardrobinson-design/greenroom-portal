@@ -19,7 +19,13 @@ const TEST_USERS: Record<
 const TEST_PASSWORD = "testpass123456";
 
 export async function POST(request: Request) {
-  if (process.env.NEXT_PUBLIC_DEV_AUTH !== "true") {
+  // Double-guard: must be in development AND have DEV_AUTH enabled.
+  // NODE_ENV check prevents this from ever responding in production,
+  // even if NEXT_PUBLIC_DEV_AUTH is accidentally set to true.
+  if (
+    process.env.NODE_ENV !== "development" ||
+    process.env.NEXT_PUBLIC_DEV_AUTH !== "true"
+  ) {
     return NextResponse.json({ error: "Dev auth disabled" }, { status: 403 });
   }
 

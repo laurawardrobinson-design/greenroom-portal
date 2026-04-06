@@ -8,6 +8,7 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ label, error, className = "", id, ...props }, ref) => {
     const textareaId = id || label?.toLowerCase().replace(/\s+/g, "-");
+    const errorId = error && textareaId ? `${textareaId}-error` : undefined;
 
     return (
       <div className="space-y-1.5">
@@ -22,6 +23,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           ref={ref}
           id={textareaId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={errorId}
+          aria-label={!label ? (props.placeholder || undefined) : undefined}
           className={`
             block w-full rounded-lg border bg-surface px-3.5 py-2.5
             text-sm text-text-primary placeholder:text-text-tertiary
@@ -33,7 +37,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           `}
           {...props}
         />
-        {error && <p className="text-xs text-error">{error}</p>}
+        {error && <p id={errorId} className="text-xs text-error" role="alert">{error}</p>}
       </div>
     );
   }

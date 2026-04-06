@@ -141,7 +141,9 @@ export async function requireVendorOwnership(
   }
 }
 
-// Helper to return a JSON error response
+// Helper to return a JSON error response.
+// Sanitizes all non-AuthError responses to prevent leaking DB details,
+// column names, constraint names, or stack traces to clients.
 export function authErrorResponse(error: unknown) {
   if (error instanceof AuthError) {
     return Response.json(
@@ -149,5 +151,15 @@ export function authErrorResponse(error: unknown) {
       { status: error.statusCode }
     );
   }
+
+  // Zod validation errors — return 400 with generic message
+  if (error instanceof Error && error.name === "ZodError") {
+    return Response.json({ error: "Invalid input" }, { status: 400 });
+  }
+
+  // Log the real error server-side for debugging
+  console.error("[API Error]", error);
+
+  // Never expose internal details to the client
   return Response.json({ error: "Internal server error" }, { status: 500 });
 }

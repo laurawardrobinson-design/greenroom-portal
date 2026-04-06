@@ -9,6 +9,9 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, hint, className = "", id, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
+    const errorId = error && inputId ? `${inputId}-error` : undefined;
+    const hintId = hint && !error && inputId ? `${inputId}-hint` : undefined;
+    const describedBy = [errorId, hintId].filter(Boolean).join(" ") || undefined;
 
     return (
       <div className="space-y-1.5">
@@ -23,6 +26,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={inputId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          aria-label={!label ? (props.placeholder || undefined) : undefined}
           className={`
             block w-full rounded-lg border bg-surface px-3.5 py-2.5
             text-sm text-text-primary placeholder:text-text-tertiary
@@ -35,10 +41,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         {error && (
-          <p className="text-xs text-error">{error}</p>
+          <p id={errorId} className="text-xs text-error" role="alert">{error}</p>
         )}
         {hint && !error && (
-          <p className="text-xs text-text-tertiary">{hint}</p>
+          <p id={hintId} className="text-xs text-text-tertiary">{hint}</p>
         )}
       </div>
     );

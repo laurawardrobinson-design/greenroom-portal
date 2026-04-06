@@ -438,7 +438,7 @@ function ContactDetailModal({
   const { user: currentUser } = useCurrentUser();
   const { data: userNotes, mutate: mutateNotes } = useSWR<UserNote[]>(
     person ? `/api/users/${person.id}/notes` : null,
-    (url: string) => fetch(url).then((r) => r.json())
+    (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); })
   );
   const [newNote, setNewNote] = useState("");
   const [addingNote, setAddingNote] = useState(false);
@@ -449,7 +449,7 @@ function ContactDetailModal({
   }
   const { data: goalData, mutate: mutateGoal } = useSWR<GoalResponse>(
     person ? `/api/users/${person.id}/goal` : null,
-    (url: string) => fetch(url).then((r) => r.json())
+    (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); })
   );
   const [goalEditMode, setGoalEditMode] = useState(false);
   const [goalText, setGoalText] = useState("");
@@ -1161,7 +1161,7 @@ function VendorDetailModal({
   // Praise notes
   const { data: vendorNotes, mutate: mutateNotes } = useSWR<VendorNote[]>(
     `/api/vendors/${vendor.id}/notes`,
-    (url: string) => fetch(url).then((r) => r.json())
+    (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); })
   );
   const [newNote, setNewNote] = useState("");
   const [addingNote, setAddingNote] = useState(false);

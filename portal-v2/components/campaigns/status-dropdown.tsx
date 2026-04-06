@@ -35,7 +35,7 @@ export function StatusDropdown({ status, onStatusChange, disabled }: Props) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
-  const colors = PILL_COLORS[status];
+  const colors = PILL_COLORS[status] || PILL_COLORS.Planning;
   const canChange = !disabled && onStatusChange;
 
   function handleSelect(newStatus: CampaignStatus) {
@@ -73,7 +73,7 @@ export function StatusDropdown({ status, onStatusChange, disabled }: Props) {
         <div className="absolute left-0 top-full mt-1.5 z-30 w-48 rounded-xl border border-border bg-surface shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
           <div className="p-1">
             {CAMPAIGN_STATUS_ORDER.map((s) => {
-              const itemColors = PILL_COLORS[s];
+              const itemColors = PILL_COLORS[s] || PILL_COLORS.Planning;
               const isActive = s === status;
               const isDisabled = false;
 

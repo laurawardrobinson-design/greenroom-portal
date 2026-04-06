@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthUser, requireRole, authErrorResponse } from "@/lib/auth/guards";
+import { getAuthUser, requireRole, requireVendorOwnership, authErrorResponse } from "@/lib/auth/guards";
 import {
   createInvoice,
   getInvoiceForCampaignVendor,
@@ -11,12 +11,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // GET /api/invoices?campaignVendorId=xxx
 export async function GET(request: Request) {
   try {
-    await getAuthUser();
+    const user = await getAuthUser();
     const { searchParams } = new URL(request.url);
     const campaignVendorId = searchParams.get("campaignVendorId");
     if (!campaignVendorId) {
       return NextResponse.json({ error: "campaignVendorId required" }, { status: 400 });
     }
+    // Verify vendor can only access their own assignment
+    await requireVendorOwnership(user, campaignVendorId);
     const result = await getInvoiceForCampaignVendor(campaignVendorId);
     return NextResponse.json(result || { invoice: null, items: [] });
   } catch (error) {

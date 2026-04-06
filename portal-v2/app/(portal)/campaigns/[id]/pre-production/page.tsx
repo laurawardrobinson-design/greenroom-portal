@@ -26,7 +26,7 @@ import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { ScheduleTab } from "@/components/pre-production/schedule-tab";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 const TABS = [

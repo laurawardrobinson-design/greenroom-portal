@@ -39,6 +39,39 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate file type — only allow known safe MIME types
+    const ALLOWED_TYPES = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "application/pdf",
+      "video/mp4",
+      "video/quicktime",
+      "text/csv",
+      "application/zip",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/vnd.ms-excel",
+      "application/msword",
+    ];
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        { error: "File type not allowed" },
+        { status: 400 }
+      );
+    }
+
+    // Enforce 50MB size limit server-side
+    const MAX_FILE_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: "File exceeds 50MB limit" },
+        { status: 400 }
+      );
+    }
+
     // Vendor upload restrictions
     if (user.role === "Vendor") {
       const allowed: AssetCategory[] = ["Deliverable", "Invoice"];
