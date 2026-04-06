@@ -166,6 +166,7 @@ export interface CampaignListItem extends Campaign {
   shootsSummary: ShootSummary[];
   committed: number;
   producerName: string | null;
+  artDirectorName: string | null;
   additionalFundsRequested: number;
   additionalFundsApproved: number;
 }

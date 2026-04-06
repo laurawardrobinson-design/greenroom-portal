@@ -44,7 +44,10 @@ export const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/calendar": ["Admin", "Producer", "Studio"],
   "/approvals": ["Admin"],
   "/budget": ["Admin", "Producer"],
-  "/settings": ["Admin", "Producer", "Studio", "Vendor"],
+  "/contacts": ["Admin", "Producer", "Studio", "Art Director"],
+  "/props": ["Admin", "Producer", "Studio", "Art Director"],
+  "/goals": ["Admin", "Producer", "Studio"],
+  "/settings": ["Admin", "Producer", "Studio", "Vendor", "Art Director"],
 };
 
 export function hasPermission(

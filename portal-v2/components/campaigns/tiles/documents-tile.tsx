@@ -10,9 +10,11 @@ interface Props {
   canEdit: boolean;
   uploading: boolean;
   onUpload: (file: File, category: string) => Promise<void>;
+  hideAdminDocs?: boolean;
 }
 
-export function DocumentsTile({ campaignId, isVendor, canEdit, uploading, onUpload }: Props) {
+export function DocumentsTile({ campaignId, isVendor, canEdit, uploading, onUpload, hideAdminDocs }: Props) {
+  const showAdminSection = !isVendor && !hideAdminDocs;
   return (
     <Card padding="none" className="h-full flex flex-col">
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
@@ -21,7 +23,7 @@ export function DocumentsTile({ campaignId, isVendor, canEdit, uploading, onUplo
       </div>
 
       <div className="flex-1 overflow-y-auto px-3.5 py-3">
-        <div className={isVendor ? "" : "grid grid-cols-1 md:grid-cols-2 gap-6"}>
+        <div className={showAdminSection ? "grid grid-cols-1 md:grid-cols-2 gap-6" : ""}>
           <FileSection
             title={isVendor ? "Campaign Documents" : "Creative"}
             campaignId={campaignId}
@@ -29,9 +31,9 @@ export function DocumentsTile({ campaignId, isVendor, canEdit, uploading, onUplo
             categories={isVendor ? ["Deliverable"] : ["Shot List", "Concept Deck", "Reference", "Product Info"]}
             onUpload={onUpload}
             uploading={uploading}
-            canUpload={isVendor || canEdit}
+            canUpload={isVendor || canEdit || hideAdminDocs}
           />
-          {!isVendor && (
+          {showAdminSection && (
             <FileSection
               title="Admin"
               campaignId={campaignId}

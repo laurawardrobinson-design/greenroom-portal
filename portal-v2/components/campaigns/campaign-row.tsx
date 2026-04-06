@@ -63,6 +63,13 @@ export function CampaignRow({ campaign }: Props) {
         </span>
       </div>
 
+      {/* Art Director */}
+      <div className="w-24 shrink-0 hidden lg:block">
+        <span className="text-xs text-text-secondary truncate block">
+          {campaign.artDirectorName || "—"}
+        </span>
+      </div>
+
       {/* Status */}
       <div className="w-28 shrink-0">
         <CampaignStatusBadge status={campaign.status} />

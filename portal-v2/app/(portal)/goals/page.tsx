@@ -68,7 +68,7 @@ const ROLE_BADGE: Record<string, string> = {
   "Art Director": "bg-amber-50 text-amber-700",
 };
 
-const FILTER_ROLES = ["Producer", "Studio", "Art Director"] as const;
+const FILTER_ROLES = ["Producer", "Studio"] as const;
 
 export default function GoalsPage() {
   const { user } = useCurrentUser();
@@ -77,9 +77,19 @@ export default function GoalsPage() {
   const [roleFilter, setRoleFilter] = useState("");
   const [selectedUser, setSelectedUser] = useState<GoalOverviewUser | null>(null);
 
-  if (!user || user.role === "Vendor") return null;
+  if (!user || user.role === "Vendor" || user.role === "Art Director") return null;
 
-  const users = data ?? [];
+  const allUsers = data ?? [];
+  const isAdmin = user.role === "Admin";
+
+  // Non-admin users only see their own goal + goals where they are a stakeholder
+  const users = isAdmin
+    ? allUsers
+    : allUsers.filter((u) => u.id === user.id || u.goal?.isStakeholder);
+
+  // Check if current user has a goal set
+  const ownEntry = allUsers.find((u) => u.id === user.id);
+  const hasOwnGoal = !!ownEntry?.goal;
 
   const filtered = users.filter((u) => {
     if (search) {
@@ -97,49 +107,61 @@ export default function GoalsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-text-primary">Team Goals</h2>
+        <h2 className="text-2xl font-bold text-text-primary">{isAdmin ? "Team Goals" : "My Goals"}</h2>
         <p className="text-sm text-text-secondary">
-          See what the team is growing toward and offer advice
+          {isAdmin
+            ? "See what the team is growing toward and offer advice"
+            : "Track your career growth and milestones"}
         </p>
       </div>
 
-      <div className="space-y-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or goal..."
-            className="w-full h-10 rounded-lg border border-border bg-surface pl-10 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-          />
+      {!isAdmin && !hasOwnGoal && !isLoading && (
+        <div className="rounded-xl border border-border bg-surface-secondary/50 px-4 py-3">
+          <p className="text-sm text-text-secondary">
+            Want to set a career goal? Talk to your manager to get started.
+          </p>
         </div>
-        <div className="flex gap-1.5 flex-wrap">
-          <button
-            onClick={() => setRoleFilter("")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
-              !roleFilter
-                ? "border-primary bg-primary/5 text-primary"
-                : "border-border text-text-secondary hover:text-text-primary hover:border-text-tertiary"
-            }`}
-          >
-            All
-          </button>
-          {FILTER_ROLES.map((r) => (
+      )}
+
+      {isAdmin && (
+        <div className="space-y-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name or goal..."
+              className="w-full h-10 rounded-lg border border-border bg-surface pl-10 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+            />
+          </div>
+          <div className="flex gap-1.5 flex-wrap">
             <button
-              key={r}
-              onClick={() => setRoleFilter(roleFilter === r ? "" : r)}
+              onClick={() => setRoleFilter("")}
               className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
-                roleFilter === r
+                !roleFilter
                   ? "border-primary bg-primary/5 text-primary"
                   : "border-border text-text-secondary hover:text-text-primary hover:border-text-tertiary"
               }`}
             >
-              {r}
+              All
             </button>
-          ))}
+            {FILTER_ROLES.map((r) => (
+              <button
+                key={r}
+                onClick={() => setRoleFilter(roleFilter === r ? "" : r)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                  roleFilter === r
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border text-text-secondary hover:text-text-primary hover:border-text-tertiary"
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {isLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

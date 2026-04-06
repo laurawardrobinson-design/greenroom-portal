@@ -431,6 +431,7 @@ export default function CampaignDetailPage({
             canEdit={canEdit}
             uploading={uploading}
             onUpload={handleFileUpload}
+            hideAdminDocs={isArtDirector}
           />
 
         </div>

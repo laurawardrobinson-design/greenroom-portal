@@ -48,7 +48,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Pre Production",
     href: "/pre-production",
     icon: ClipboardList,
-    roles: ["Admin", "Producer", "Studio", "Art Director"],
+    roles: ["Admin", "Producer", "Studio"],
   },
   {
     label: "Gear",
@@ -60,7 +60,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Props",
     href: "/props",
     icon: Boxes,
-    roles: ["Admin", "Producer", "Studio"],
+    roles: ["Admin", "Producer", "Studio", "Art Director"],
   },
   {
     label: "Food",
@@ -72,14 +72,14 @@ const NAV_ITEMS: NavItem[] = [
     label: "Contacts",
     href: "/contacts",
     icon: Contact,
-    roles: ["Admin", "Producer", "Studio"],
+    roles: ["Admin", "Producer", "Studio", "Art Director"],
   },
   {
     label: "Goals",
     adminLabel: "Team Goals",
     href: "/goals",
     icon: Compass,
-    roles: ["Admin", "Producer", "Studio", "Art Director"],
+    roles: ["Admin", "Producer", "Studio"],
   },
   {
     label: "Budget",

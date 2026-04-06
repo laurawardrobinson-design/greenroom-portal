@@ -35,6 +35,7 @@ function toCampaignListItem(row: Record<string, unknown>): CampaignListItem {
     shootsSummary: [],
     committed: 0,
     producerName: null,
+    artDirectorName: null,
     additionalFundsRequested: 0,
     additionalFundsApproved: 0,
   };
@@ -154,16 +155,18 @@ export async function listCampaigns(filters?: {
       committedByCampaign.set(cid, (committedByCampaign.get(cid) || 0) + (Number(v.estimate_total) || 0));
     }
 
-    // Fetch producer names
-    const producerIds = [...new Set(items.map((c) => c.producerId).filter(Boolean))] as string[];
-    const producerMap = new Map<string, string>();
-    if (producerIds.length > 0) {
-      const { data: producers } = await db
+    // Fetch producer + art director names in one query
+    const producerIds = items.map((c) => c.producerId).filter(Boolean) as string[];
+    const adIds = items.map((c) => c.artDirectorId).filter(Boolean) as string[];
+    const userIds = [...new Set([...producerIds, ...adIds])];
+    const userNameMap = new Map<string, string>();
+    if (userIds.length > 0) {
+      const { data: users } = await db
         .from("users")
         .select("id, name")
-        .in("id", producerIds);
-      for (const p of producers || []) {
-        producerMap.set(p.id, p.name);
+        .in("id", userIds);
+      for (const u of users || []) {
+        userNameMap.set(u.id, u.name);
       }
     }
 
@@ -191,7 +194,8 @@ export async function listCampaigns(filters?: {
     for (const item of items) {
       item.shootsSummary = shootsByCampaign.get(item.id) || [];
       item.committed = committedByCampaign.get(item.id) || 0;
-      item.producerName = producerMap.get(item.producerId || "") || null;
+      item.producerName = userNameMap.get(item.producerId || "") || null;
+      item.artDirectorName = userNameMap.get(item.artDirectorId || "") || null;
       const funds = additionalFundsByCampaign.get(item.id);
       item.additionalFundsRequested = funds?.requested || 0;
       item.additionalFundsApproved = funds?.approved || 0;
