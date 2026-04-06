@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import useSWR from "swr";
 import { useSearchParams } from "next/navigation";
 import type {
@@ -42,6 +42,7 @@ import {
   Pencil,
   Check,
   ChevronRight,
+  ChevronLeft,
   Printer,
   QrCode,
   ArrowDownToLine,
@@ -52,7 +53,20 @@ import {
   Star,
   ChevronDown,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import {
+  format,
+  parseISO,
+  addDays,
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  isSameDay,
+  isSameMonth,
+  isToday,
+} from "date-fns";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -133,6 +147,35 @@ export default function InventoryPage() {
     fetcher
   );
   const reservations: GearReservation[] = Array.isArray(rawReservations) ? rawReservations : [];
+
+  // Reservation calendar state
+  const [resCalMonth, setResCalMonth] = useState(() => new Date());
+  const [selectedReservationDate, setSelectedReservationDate] = useState<Date | null>(null);
+
+  // Set of all date strings covered by any reservation (for calendar dots)
+  const reservationDateSet = useMemo(() => {
+    const set = new Set<string>();
+    reservations.forEach((r) => {
+      let d = parseISO(r.startDate);
+      const end = parseISO(r.endDate);
+      while (d <= end) {
+        set.add(format(d, "yyyy-MM-dd"));
+        d = addDays(d, 1);
+      }
+    });
+    return set;
+  }, [reservations]);
+
+  // Reservations filtered by selected calendar date
+  const filteredReservations = useMemo(() => {
+    if (!selectedReservationDate) return reservations;
+    const sel = format(selectedReservationDate, "yyyy-MM-dd");
+    return reservations.filter((r) => {
+      const start = r.startDate.slice(0, 10);
+      const end = r.endDate.slice(0, 10);
+      return start <= sel && sel <= end;
+    });
+  }, [reservations, selectedReservationDate]);
 
   const { data: rawMaintenance, mutate: mutateMaintenance } = useSWR<GearMaintenance[]>(
     tab === "maintenance" ? "/api/gear/maintenance" : null,
@@ -717,7 +760,9 @@ export default function InventoryPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-text-secondary">
-              {reservations.length} upcoming reservation{reservations.length !== 1 ? "s" : ""}
+              {selectedReservationDate
+                ? `${filteredReservations.length} reservation${filteredReservations.length !== 1 ? "s" : ""} on ${format(selectedReservationDate, "MMM d")}`
+                : `${reservations.length} upcoming reservation${reservations.length !== 1 ? "s" : ""}`}
             </p>
             {canEdit && (
               <Button size="sm" onClick={() => setShowReserve(true)}>
@@ -726,6 +771,7 @@ export default function InventoryPage() {
               </Button>
             )}
           </div>
+
           {reservations.length === 0 ? (
             <EmptyState
               icon={<CalendarRange className="h-5 w-5" />}
@@ -741,29 +787,117 @@ export default function InventoryPage() {
               }
             />
           ) : (
-            <div className="space-y-2">
-              {reservations.map((r) => (
-                <div
-                  key={r.id}
-                  className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4"
-                >
-                  <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-                    <CalendarRange className="h-4 w-4" />
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
+              {/* Mini calendar */}
+              <div className="rounded-xl border border-border bg-surface overflow-hidden shrink-0">
+                {/* Month nav */}
+                <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
+                  <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+                    {format(resCalMonth, "MMMM yyyy")}
+                  </span>
+                  <div className="flex items-center gap-0.5">
+                    <Button variant="ghost" size="sm" onClick={() => setResCalMonth(subMonths(resCalMonth, 1))}>
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setResCalMonth(addMonths(resCalMonth, 1))}>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-text-primary">
-                      {r.gearItem?.name || "Unknown Item"}
-                    </p>
-                    <p className="text-xs text-text-tertiary">
-                      {format(parseISO(r.startDate), "MMM d")} — {format(parseISO(r.endDate), "MMM d, yyyy")}
-                      {r.notes && ` · ${r.notes}`}
-                    </p>
-                  </div>
-                  <Badge variant="custom" className="bg-blue-50 text-blue-700">
-                    {r.status}
-                  </Badge>
                 </div>
-              ))}
+                {/* Day headers */}
+                <div className="grid grid-cols-7 border-b border-border">
+                  {["Su","Mo","Tu","We","Th","Fr","Sa"].map((d) => (
+                    <div key={d} className="py-1.5 text-center text-[10px] font-medium uppercase tracking-wide text-text-tertiary">
+                      {d}
+                    </div>
+                  ))}
+                </div>
+                {/* Day grid */}
+                <div className="grid grid-cols-7">
+                  {(() => {
+                    const monthStart = startOfMonth(resCalMonth);
+                    const monthEnd = endOfMonth(resCalMonth);
+                    const calStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+                    const calEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+                    const days: Date[] = [];
+                    let cur = calStart;
+                    while (cur <= calEnd) { days.push(cur); cur = addDays(cur, 1); }
+                    return days.map((day) => {
+                      const dateStr = format(day, "yyyy-MM-dd");
+                      const inMonth = isSameMonth(day, resCalMonth);
+                      const hasRes = reservationDateSet.has(dateStr);
+                      const isSelected = selectedReservationDate ? isSameDay(day, selectedReservationDate) : false;
+                      const todayDate = isToday(day);
+                      return (
+                        <button
+                          key={dateStr}
+                          onClick={() => setSelectedReservationDate((prev) => prev && isSameDay(prev, day) ? null : day)}
+                          className={`
+                            relative flex flex-col items-center py-1.5 transition-colors
+                            ${!inMonth ? "opacity-30" : ""}
+                            ${isSelected ? "bg-primary/10" : "hover:bg-surface-secondary"}
+                          `}
+                        >
+                          <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                            todayDate ? "bg-primary font-bold text-white" : isSelected ? "text-primary font-semibold" : "text-text-primary"
+                          }`}>
+                            {format(day, "d")}
+                          </span>
+                          {hasRes && (
+                            <span className={`mt-0.5 h-1 w-1 rounded-full ${isSelected ? "bg-primary" : "bg-blue-400"}`} />
+                          )}
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
+                {selectedReservationDate && (
+                  <div className="border-t border-border px-3.5 py-2">
+                    <button
+                      onClick={() => setSelectedReservationDate(null)}
+                      className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
+                    >
+                      Clear filter
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Reservation list */}
+              <div className="min-w-0">
+                {filteredReservations.length === 0 ? (
+                  <EmptyState
+                    icon={<CalendarRange className="h-5 w-5" />}
+                    title="No reservations on this date"
+                    description="Select another date or clear the filter."
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    {filteredReservations.map((r) => (
+                      <div
+                        key={r.id}
+                        className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4"
+                      >
+                        <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                          <CalendarRange className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-text-primary">
+                            {r.gearItem?.name || "Unknown Item"}
+                          </p>
+                          <p className="text-xs text-text-tertiary">
+                            {format(parseISO(r.startDate), "MMM d")} — {format(parseISO(r.endDate), "MMM d, yyyy")}
+                            {r.notes && ` · ${r.notes}`}
+                          </p>
+                        </div>
+                        <Badge variant="custom" className="bg-blue-50 text-blue-700">
+                          {r.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
