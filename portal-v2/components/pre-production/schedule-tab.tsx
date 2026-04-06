@@ -31,6 +31,7 @@ interface ScheduleTabProps {
   assetsDeliveryDate: string | null;
   producerId: string | null;
   shoots: Shoot[];
+  isArtDirector?: boolean;
   vendors: Array<{
     id: string;
     vendor?: {
@@ -50,15 +51,19 @@ export function ScheduleTab({
   assetsDeliveryDate,
   producerId,
   shoots,
+  isArtDirector,
   vendors,
 }: ScheduleTabProps) {
   const [activeView, setActiveView] = useState<SubViewId>("shot-list");
+  const visibleViews = isArtDirector
+    ? SUB_VIEWS.filter((v) => v.id === "shot-list")
+    : SUB_VIEWS;
 
   return (
     <div className="space-y-4">
       {/* Pill sub-navigation */}
       <div className="flex items-center gap-2">
-        {SUB_VIEWS.map(({ id, label, icon: Icon }) => {
+        {visibleViews.map(({ id, label, icon: Icon }) => {
           const active = activeView === id;
           return (
             <button

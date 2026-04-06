@@ -16,6 +16,7 @@ import {
   X,
   ClipboardList,
   Compass,
+  List,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -49,6 +50,12 @@ const NAV_ITEMS: NavItem[] = [
     href: "/pre-production",
     icon: ClipboardList,
     roles: ["Admin", "Producer", "Studio"],
+  },
+  {
+    label: "Shot List",
+    href: "/pre-production",
+    icon: List,
+    roles: ["Art Director"],
   },
   {
     label: "Gear",

@@ -8,7 +8,7 @@ import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import useSWR from "swr";
-import type { AppUser, Shoot, CampaignVendor } from "@/types/domain";
+import type { AppUser, Shoot, CampaignVendor, Vendor } from "@/types/domain";
 import {
   CalendarDays,
   Truck,
@@ -373,17 +373,20 @@ Thank you.`;
 function PeopleSection({
   title,
   icon: Icon,
+  actions,
   children,
 }: {
   title: string;
   icon: React.ElementType;
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="rounded-lg border border-border bg-surface overflow-hidden">
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
         <Icon className="h-4 w-4 shrink-0 text-primary" />
-        <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">{title}</span>
+        <span className="text-sm font-semibold uppercase tracking-wider text-text-primary flex-1">{title}</span>
+        {actions}
       </div>
       <div className="p-3.5">{children}</div>
     </div>
@@ -406,22 +409,310 @@ interface ShotTalentEntry {
   notes: string;
 }
 
+// ─── Add Internal modal ───────────────────────────────────────────────────────
+function AddInternalModal({
+  allUsers,
+  shoots,
+  assignedUserIds,
+  campaignId,
+  onClose,
+  onSuccess,
+}: {
+  allUsers: AppUser[];
+  shoots: Shoot[];
+  assignedUserIds: Set<string>;
+  campaignId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const internalRoles: AppUser["role"][] = ["Admin", "Producer", "Studio", "Art Director"];
+  const available = allUsers.filter(
+    (u) => internalRoles.includes(u.role) && !assignedUserIds.has(u.id)
+  );
+  const [search, setSearch] = useState("");
+  const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
+  const [role, setRole] = useState("");
+  const [selectedShootIds, setSelectedShootIds] = useState<Set<string>>(
+    shoots.length === 1 ? new Set([shoots[0].id]) : new Set()
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const filtered = available.filter((u) =>
+    u.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  function toggleShoot(id: string) {
+    setSelectedShootIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleSave() {
+    if (!selectedUser) return;
+    if (shoots.length > 0 && selectedShootIds.size === 0) {
+      setError("Select at least one shoot day.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const shootTargets = shoots.length === 0 ? [] : [...selectedShootIds];
+      if (shootTargets.length === 0 && shoots.length === 0) {
+        setError("No shoot days exist yet. Add shoot dates first.");
+        setSaving(false);
+        return;
+      }
+      await Promise.all(
+        shootTargets.map((shootId) =>
+          fetch(`/api/shoots/${shootId}/crew`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: selectedUser.id, roleOnShoot: role || selectedUser.role }),
+          })
+        )
+      );
+      onSuccess();
+      onClose();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal open title="Add Internal Person" onClose={onClose}>
+      <div className="space-y-4">
+        {/* User search */}
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-text-secondary uppercase tracking-wider">Person</label>
+          <input
+            type="text"
+            placeholder="Search by name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <div className="max-h-40 overflow-y-auto rounded-md border border-border divide-y divide-border">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-text-tertiary">No people found.</p>
+            ) : (
+              filtered.map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => { setSelectedUser(u); setRole(u.role); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-secondary ${selectedUser?.id === u.id ? "bg-primary/5" : ""}`}
+                >
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                    <UserCircle className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-text-primary truncate">{u.name}</p>
+                    <p className="text-xs text-text-tertiary">{u.role}</p>
+                  </div>
+                  {selectedUser?.id === u.id && (
+                    <Check className="h-4 w-4 shrink-0 text-primary" />
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Role label */}
+        {selectedUser && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-text-secondary uppercase tracking-wider">Role on This Campaign</label>
+            <input
+              type="text"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+        )}
+
+        {/* Shoot day selector */}
+        {selectedUser && shoots.length > 1 && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-text-secondary uppercase tracking-wider">Shoot Days</label>
+            <div className="space-y-1">
+              {shoots.map((s) => (
+                <label key={s.id} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedShootIds.has(s.id)}
+                    onChange={() => toggleShoot(s.id)}
+                    className="h-4 w-4 rounded border-border accent-primary"
+                  />
+                  <span className="text-sm text-text-primary">{s.name}</span>
+                  {s.dates.length > 0 && (
+                    <span className="text-xs text-text-tertiary">
+                      {new Date(s.dates[0].shootDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {s.dates.length > 1 && ` +${s.dates.length - 1}`}
+                    </span>
+                  )}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {shoots.length === 0 && selectedUser && (
+          <p className="text-sm text-amber-600 bg-amber-50 rounded-md px-3 py-2">
+            No shoot days exist yet. Add shoot dates to this campaign first.
+          </p>
+        )}
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+      </div>
+      <ModalFooter>
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button
+          onClick={handleSave}
+          disabled={saving || !selectedUser || (shoots.length > 0 && selectedShootIds.size === 0)}
+        >
+          {saving ? "Adding..." : "Add"}
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+// ─── Add Vendor modal ────────────────────────────────────────────────────────
+function AddVendorModal({
+  campaignId,
+  assignedVendorIds,
+  talentOnly,
+  onClose,
+  onSuccess,
+}: {
+  campaignId: string;
+  assignedVendorIds: Set<string>;
+  talentOnly: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const { data: allVendors = [] } = useSWR<Vendor[]>(
+    `/api/vendors${talentOnly ? "?category=Talent" : ""}`,
+    fetcher
+  );
+  const [selected, setSelected] = useState<Vendor | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const filtered = allVendors
+    .filter((v) => !assignedVendorIds.has(v.id))
+    .filter((v) =>
+      v.companyName.toLowerCase().includes(search.toLowerCase()) ||
+      v.contactName.toLowerCase().includes(search.toLowerCase())
+    );
+
+  async function handleSave() {
+    if (!selected) return;
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/campaign-vendors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId, vendorId: selected.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to add vendor");
+      }
+      onSuccess();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal open title={talentOnly ? "Add Talent Agency" : "Add Vendor"} onClose={onClose}>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+            {talentOnly ? "Talent Agency" : "Vendor"}
+          </label>
+          <input
+            type="text"
+            placeholder="Search by company or contact..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <div className="max-h-48 overflow-y-auto rounded-md border border-border divide-y divide-border">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-text-tertiary">No {talentOnly ? "talent agencies" : "vendors"} found.</p>
+            ) : (
+              filtered.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => setSelected(v)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-secondary ${selected?.id === v.id ? "bg-primary/5" : ""}`}
+                >
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
+                    <Building2 className="h-3.5 w-3.5 text-text-tertiary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-text-primary truncate">{v.companyName}</p>
+                    <p className="text-xs text-text-tertiary truncate">{v.contactName}{v.category ? ` · ${v.category}` : ""}</p>
+                  </div>
+                  {selected?.id === v.id && (
+                    <Check className="h-4 w-4 shrink-0 text-primary" />
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+      </div>
+      <ModalFooter>
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button onClick={handleSave} disabled={saving || !selected}>
+          {saving ? "Adding..." : "Add"}
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+// ─── People tab main component ────────────────────────────────────────────────
 function PeopleTab({
   campaignId,
   shoots,
   vendors,
   producerId,
+  canManage,
+  onRefresh,
 }: {
   campaignId: string;
   shoots: Shoot[];
   vendors: CampaignVendor[];
   producerId: string | null;
+  canManage: boolean;
+  onRefresh: () => void;
 }) {
   const { data: allUsers = [] } = useSWR<AppUser[]>("/api/users", fetcher);
   const { data: talentEntries = [] } = useSWR<ShotTalentEntry[]>(
     `/api/shot-list/talent?campaignId=${campaignId}`,
     fetcher
   );
+  const [addInternalOpen, setAddInternalOpen] = useState(false);
+  const [addVendorOpen, setAddVendorOpen] = useState(false);
+  const [addTalentOpen, setAddTalentOpen] = useState(false);
 
   // Deduplicate talent by number (same person across shots)
   const uniqueTalent = talentEntries.reduce((acc, t) => {
@@ -457,6 +748,7 @@ function PeopleTab({
   }
 
   const internalPeople = [...crewMap.values()];
+  const assignedUserIds = new Set(crewMap.keys());
 
   // Split vendors vs talent
   const talentVendors = vendors.filter((cv) =>
@@ -465,107 +757,162 @@ function PeopleTab({
   const companyVendors = vendors.filter((cv) =>
     cv.vendor?.category?.toLowerCase() !== "talent"
   );
+  const assignedVendorIds = new Set(vendors.map((cv) => cv.vendor?.id).filter(Boolean) as string[]);
+
+  const addBtn = (onClick: () => void) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium text-text-tertiary hover:text-text-primary hover:bg-surface-secondary transition-colors"
+    >
+      + Add
+    </button>
+  );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* Internal */}
-      <PeopleSection title="Internal" icon={Users}>
-        {internalPeople.length === 0 ? (
-          <p className="text-sm text-text-tertiary py-2">No crew assigned to any shoots yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {internalPeople.map(({ user, roles }) => (
-              <div key={user.id} className="flex items-center gap-3 py-1.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <UserCircle className="h-4 w-4 text-primary" />
+    <>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Internal */}
+        <PeopleSection
+          title="Internal"
+          icon={Users}
+          actions={canManage ? addBtn(() => setAddInternalOpen(true)) : undefined}
+        >
+          {internalPeople.length === 0 ? (
+            <p className="text-sm text-text-tertiary py-2">No crew assigned to any shoots yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {internalPeople.map(({ user, roles }) => (
+                <div key={user.id} className="flex items-center gap-3 py-1.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                    <UserCircle className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-text-primary truncate">{user.name}</p>
+                    <p className="text-xs text-text-tertiary truncate">
+                      {roles.length > 0 ? roles.join(", ") : user.role}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-text-primary truncate">{user.name}</p>
-                  <p className="text-xs text-text-tertiary truncate">
-                    {roles.length > 0 ? roles.join(", ") : user.role}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </PeopleSection>
+              ))}
+            </div>
+          )}
+        </PeopleSection>
 
-      {/* Vendors */}
-      <PeopleSection title="Vendors" icon={Building2}>
-        {companyVendors.length === 0 ? (
-          <p className="text-sm text-text-tertiary py-2">No vendors assigned yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {companyVendors.map((cv) => (
-              <div key={cv.id} className="flex items-start gap-3 py-1.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
-                  <Building2 className="h-4 w-4 text-text-tertiary" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-text-primary truncate">
-                    {cv.vendor?.companyName ?? "Unknown"}
-                  </p>
-                  {cv.vendor?.contactName && (
-                    <p className="text-xs text-text-tertiary truncate">{cv.vendor.contactName}</p>
-                  )}
-                  {cv.vendor?.category && (
-                    <p className="text-xs text-text-tertiary truncate">{cv.vendor.category}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </PeopleSection>
-
-      {/* Talent */}
-      <PeopleSection title="Talent" icon={Star}>
-        {uniqueTalent.length === 0 && talentVendors.length === 0 ? (
-          <p className="text-sm text-text-tertiary py-2">No talent assigned yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {/* Shot talent (structured casting) */}
-            {uniqueTalent.map((t) => {
-              const shotCount = talentEntries.filter((e) => e.talent_number === t.talent_number).length;
-              const details = [t.age_range, t.gender, t.ethnicity].filter((v) => v && v !== "Open");
-              return (
-                <div key={t.talent_number} className="flex items-start gap-3 py-1.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100">
-                    <span className="text-xs font-bold text-violet-700">T{t.talent_number}</span>
+        {/* Vendors */}
+        <PeopleSection
+          title="Vendors"
+          icon={Building2}
+          actions={canManage ? addBtn(() => setAddVendorOpen(true)) : undefined}
+        >
+          {companyVendors.length === 0 ? (
+            <p className="text-sm text-text-tertiary py-2">No vendors assigned yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {companyVendors.map((cv) => (
+                <div key={cv.id} className="flex items-start gap-3 py-1.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
+                    <Building2 className="h-4 w-4 text-text-tertiary" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-text-primary truncate">
-                      {t.label || `Talent ${t.talent_number}`}
+                      {cv.vendor?.companyName ?? "Unknown"}
                     </p>
-                    <p className="text-xs text-text-tertiary truncate">
-                      {details.length > 0 ? details.join(" · ") : "Open casting"}
-                      {" · "}{shotCount} shot{shotCount !== 1 ? "s" : ""}
-                    </p>
+                    {cv.vendor?.contactName && (
+                      <p className="text-xs text-text-tertiary truncate">{cv.vendor.contactName}</p>
+                    )}
+                    {cv.vendor?.category && (
+                      <p className="text-xs text-text-tertiary truncate">{cv.vendor.category}</p>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-            {/* Vendor-sourced talent */}
-            {talentVendors.map((cv) => (
-              <div key={cv.id} className="flex items-start gap-3 py-1.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
-                  <Star className="h-4 w-4 text-text-tertiary" />
+              ))}
+            </div>
+          )}
+        </PeopleSection>
+
+        {/* Talent */}
+        <PeopleSection
+          title="Talent"
+          icon={Star}
+          actions={canManage ? addBtn(() => setAddTalentOpen(true)) : undefined}
+        >
+          {uniqueTalent.length === 0 && talentVendors.length === 0 ? (
+            <p className="text-sm text-text-tertiary py-2">No talent assigned yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {/* Shot talent (structured casting) */}
+              {uniqueTalent.map((t) => {
+                const shotCount = talentEntries.filter((e) => e.talent_number === t.talent_number).length;
+                const details = [t.age_range, t.gender, t.ethnicity].filter((v) => v && v !== "Open");
+                return (
+                  <div key={t.talent_number} className="flex items-start gap-3 py-1.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100">
+                      <span className="text-xs font-bold text-violet-700">T{t.talent_number}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-text-primary truncate">
+                        {t.label || `Talent ${t.talent_number}`}
+                      </p>
+                      <p className="text-xs text-text-tertiary truncate">
+                        {details.length > 0 ? details.join(" · ") : "Open casting"}
+                        {" · "}{shotCount} shot{shotCount !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+              {/* Vendor-sourced talent */}
+              {talentVendors.map((cv) => (
+                <div key={cv.id} className="flex items-start gap-3 py-1.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
+                    <Star className="h-4 w-4 text-text-tertiary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-text-primary truncate">
+                      {cv.vendor?.companyName ?? "Unknown"}
+                    </p>
+                    {cv.vendor?.contactName && (
+                      <p className="text-xs text-text-tertiary truncate">{cv.vendor.contactName}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-text-primary truncate">
-                    {cv.vendor?.companyName ?? "Unknown"}
-                  </p>
-                  {cv.vendor?.contactName && (
-                    <p className="text-xs text-text-tertiary truncate">{cv.vendor.contactName}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </PeopleSection>
-    </div>
+              ))}
+            </div>
+          )}
+        </PeopleSection>
+      </div>
+
+      {/* Modals */}
+      {addInternalOpen && (
+        <AddInternalModal
+          allUsers={allUsers}
+          shoots={shoots}
+          assignedUserIds={assignedUserIds}
+          campaignId={campaignId}
+          onClose={() => setAddInternalOpen(false)}
+          onSuccess={onRefresh}
+        />
+      )}
+      {addVendorOpen && (
+        <AddVendorModal
+          campaignId={campaignId}
+          assignedVendorIds={assignedVendorIds}
+          talentOnly={false}
+          onClose={() => setAddVendorOpen(false)}
+          onSuccess={onRefresh}
+        />
+      )}
+      {addTalentOpen && (
+        <AddVendorModal
+          campaignId={campaignId}
+          assignedVendorIds={assignedVendorIds}
+          talentOnly={true}
+          onClose={() => setAddTalentOpen(false)}
+          onSuccess={onRefresh}
+        />
+      )}
+    </>
   );
 }
 
@@ -673,7 +1020,7 @@ export default function PreProductionWorkspacePage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { campaign, shoots, vendors, isLoading } = useCampaign(id);
+  const { campaign, shoots, vendors, isLoading, mutate: refreshCampaign } = useCampaign(id);
   const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState<TabId>("schedule");
 
@@ -701,6 +1048,12 @@ export default function PreProductionWorkspacePage({
     );
   }
 
+  const isArtDirector = user?.role === "Art Director";
+  const canManagePeople = user?.role === "Admin" || user?.role === "Producer";
+  const visibleTabs = isArtDirector
+    ? TABS.filter((t) => t.id === "schedule" || t.id === "people")
+    : TABS;
+
   const campaignLabel = campaign.wfNumber
     ? `${campaign.wfNumber} ${campaign.name}`
     : campaign.name;
@@ -718,7 +1071,7 @@ export default function PreProductionWorkspacePage({
       {/* Tab bar */}
       <div className="border-b border-border">
         <nav className="flex gap-0">
-          {TABS.map(({ id: tabId, label, icon: Icon }) => {
+          {visibleTabs.map(({ id: tabId, label, icon: Icon }) => {
             const active = activeTab === tabId;
             return (
               <button
@@ -755,10 +1108,11 @@ export default function PreProductionWorkspacePage({
             producerId={campaign.producerId}
             shoots={shoots}
             vendors={vendors}
+            isArtDirector={isArtDirector}
           />
         )}
         {activeTab === "logistics" && <LogisticsTab />}
-        {activeTab === "people"    && <PeopleTab campaignId={id} shoots={shoots} vendors={vendors} producerId={campaign.producerId} />}
+        {activeTab === "people"    && <PeopleTab campaignId={id} shoots={shoots} vendors={vendors} producerId={campaign.producerId} canManage={canManagePeople} onRefresh={refreshCampaign} />}
         {activeTab === "payments"  && <PaymentsTab />}
         {activeTab === "contracts" && <ContractsTab campaignId={id} shoots={shoots} vendors={vendors} />}
       </div>
