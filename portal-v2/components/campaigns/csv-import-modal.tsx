@@ -182,7 +182,7 @@ export function CsvImportModal({ open, onClose, onImported }: Props) {
                     }`}
                   >
                     <td className="px-3 py-2 text-text-tertiary">{row.rowNumber}</td>
-                    <td className="px-3 py-2 font-mono text-text-primary">{row.wfNumber}</td>
+                    <td className="px-3 py-2 text-text-primary">{row.wfNumber}</td>
                     <td className="px-3 py-2 text-text-primary font-medium">{row.name}</td>
                     <td className="px-3 py-2 text-right text-text-primary">
                       {formatCurrency(row.budget)}

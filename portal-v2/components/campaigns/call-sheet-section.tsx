@@ -34,7 +34,7 @@ export function CallSheetSection({
       )}
 
       {callSheet && (
-        <div className="rounded-lg bg-surface-secondary p-4 font-mono text-xs space-y-3">
+        <div className="rounded-lg bg-surface-secondary p-4 text-xs space-y-3">
           <div>
             <p className="font-semibold text-text-primary">{callSheet.campaignName} ({callSheet.wfNumber})</p>
             <p className="text-text-secondary">

@@ -544,8 +544,13 @@ export interface ShotListShot {
   talent: string;
   props: string;
   wardrobe: string;
+  surface: string;
+  lighting: string;
+  priority: string;
+  retouchingNotes: string;
   sortOrder: number;
   deliverableLinks: ShotDeliverableLink[];
+  productLinks: ShotProductLink[];
   createdAt: string;
   updatedAt: string;
 }
@@ -554,6 +559,14 @@ export interface ShotDeliverableLink {
   id: string;
   shotId: string;
   deliverableId: string;
+}
+
+export interface ShotProductLink {
+  id: string;
+  shotId: string;
+  campaignProductId: string;
+  notes: string;
+  quantity: string;
 }
 
 // --- Product Directory ---

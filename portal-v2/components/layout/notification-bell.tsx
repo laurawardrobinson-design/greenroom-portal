@@ -56,7 +56,7 @@ function NotificationRow({ n, onAction }: NotificationRowProps) {
         )}
         <div className="mt-1 flex items-center gap-2">
           {n.campaign && (
-            <span className="text-xs text-text-tertiary font-mono">
+            <span className="text-xs text-text-tertiary">
               {n.campaign.wfNumber}
             </span>
           )}

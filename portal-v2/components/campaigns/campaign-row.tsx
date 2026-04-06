@@ -44,7 +44,7 @@ export function CampaignRow({ campaign }: Props) {
 
       {/* WF Number */}
       <div className="w-24 shrink-0">
-        <span className="text-[10px] font-mono text-text-secondary">
+        <span className="text-[10px] text-text-secondary">
           {campaign.wfNumber || "—"}
         </span>
       </div>

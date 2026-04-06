@@ -5,12 +5,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShotListSpreadsheet } from "@/components/campaigns/shot-list-spreadsheet";
 import { Crosshair } from "lucide-react";
-import type { ShotListSetup, CampaignDeliverable, CampaignStatus } from "@/types/domain";
+import type { ShotListSetup, CampaignDeliverable, CampaignStatus, CampaignProduct } from "@/types/domain";
 
 interface Props {
   campaignId: string;
   setups: ShotListSetup[];
   deliverables: CampaignDeliverable[];
+  campaignProducts?: CampaignProduct[];
   wfNumber?: string;
   firstShootDate?: string;
   canEditShots: boolean;
@@ -25,6 +26,7 @@ export function ShotListTile({
   campaignId,
   setups,
   deliverables,
+  campaignProducts = [],
   wfNumber,
   firstShootDate,
   canEditShots,
@@ -35,10 +37,6 @@ export function ShotListTile({
   onMutate,
 }: Props) {
   const router = useRouter();
-  const allShots = setups.flatMap((s) => s.shots);
-  const completedShots = allShots.filter((s) => s.status === "Complete").length;
-  const totalShots = allShots.length;
-
   return (
     <Card padding="none">
       {/* Header */}
@@ -57,26 +55,11 @@ export function ShotListTile({
         </Button>
       </div>
 
-      {/* On-set progress bar */}
-      {onSetMode && totalShots > 0 && (
-        <div className="px-5 pt-3 pb-1">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-semibold text-primary">Shot Progress</span>
-            <span className="text-xs font-medium text-primary">{completedShots} of {totalShots}</span>
-          </div>
-          <div className="h-2.5 rounded-full bg-surface-tertiary overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-500"
-              style={{ width: `${totalShots > 0 ? (completedShots / totalShots) * 100 : 0}%` }}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Spreadsheet */}
       <ShotListSpreadsheet
         setups={setups}
         deliverables={deliverables}
+        campaignProducts={campaignProducts}
         campaignId={campaignId}
         wfNumber={wfNumber}
         firstShootDate={firstShootDate}

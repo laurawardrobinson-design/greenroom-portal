@@ -502,7 +502,7 @@ export function CallSheetBuilder({
               <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-3">Call Sheet Preview</p>
 
               {/* Mini preview — simplified text representation */}
-              <div className="bg-white rounded border border-border p-3 space-y-3 text-[10px] font-mono text-text-primary overflow-y-auto max-h-[600px]">
+              <div className="bg-white rounded border border-border p-3 space-y-3 text-[10px] text-text-primary overflow-y-auto max-h-[600px]">
                 {/* Header */}
                 <div className="grid grid-cols-3 gap-2 border-b border-gray-200 pb-2">
                   <div>

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireRole, getAuthUser, authErrorResponse } from "@/lib/auth/guards";
-import { updateShot, deleteShot, linkDeliverable, unlinkDeliverable } from "@/lib/services/shot-list.service";
+import {
+  updateShot, deleteShot,
+  linkDeliverable, unlinkDeliverable,
+  linkProduct, unlinkProduct,
+} from "@/lib/services/shot-list.service";
 import { updateShotSchema } from "@/lib/validation/shot-list.schema";
 
 export async function PATCH(
@@ -37,7 +41,7 @@ export async function DELETE(
   }
 }
 
-// POST to link/unlink deliverables
+// POST to link/unlink deliverables or products
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -46,10 +50,23 @@ export async function POST(
     await requireRole(["Admin", "Producer", "Art Director"]);
     const { id: shotId } = await params;
     const body = await request.json();
-    const { deliverableId, action } = body;
 
+    // Product linking
+    if (body.campaignProductId) {
+      const { campaignProductId, action, notes, quantity } = body;
+      if (action === "unlink") {
+        await unlinkProduct(shotId, campaignProductId);
+        return NextResponse.json({ success: true });
+      } else {
+        const link = await linkProduct(shotId, campaignProductId, notes || "", quantity || "");
+        return NextResponse.json(link, { status: 201 });
+      }
+    }
+
+    // Deliverable linking
+    const { deliverableId, action } = body;
     if (!deliverableId) {
-      return NextResponse.json({ error: "deliverableId required" }, { status: 400 });
+      return NextResponse.json({ error: "deliverableId or campaignProductId required" }, { status: 400 });
     }
 
     if (action === "unlink") {

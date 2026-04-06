@@ -39,12 +39,26 @@ export const updateShotSchema = z.object({
   talent: z.string().optional(),
   props: z.string().optional(),
   wardrobe: z.string().optional(),
+  surface: z.string().optional(),
+  lighting: z.string().optional(),
+  priority: z.string().optional(),
+  retouchingNotes: z.string().optional(),
   sortOrder: z.number().int().min(0).optional(),
 });
 
 export const linkDeliverableSchema = z.object({
   shotId: z.string().uuid(),
   deliverableId: z.string().uuid(),
+});
+
+export const linkProductSchema = z.object({
+  campaignProductId: z.string().uuid(),
+  notes: z.string().default(""),
+  quantity: z.string().default(""),
+});
+
+export const unlinkProductSchema = z.object({
+  campaignProductId: z.string().uuid(),
 });
 
 export type CreateSetupInput = z.infer<typeof createSetupSchema>;

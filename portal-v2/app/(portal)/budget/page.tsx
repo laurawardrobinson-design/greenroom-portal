@@ -561,7 +561,7 @@ function CampaignBudgetsTab() {
                 key={c.id}
                 className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-secondary/50 transition-colors"
               >
-                <div className="w-20 shrink-0 text-xs font-mono text-text-tertiary">
+                <div className="w-20 shrink-0 text-xs text-text-tertiary">
                   {c.wfNumber}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1374,7 +1374,7 @@ function AnalysisTab() {
               </div>
               {sortedCampaigns.map((c) => (
                 <div key={c.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-border last:border-b-0 hover:bg-surface-secondary/50 transition-colors">
-                  <div className="w-16 shrink-0 text-xs font-mono text-text-tertiary">{c.wfNumber}</div>
+                  <div className="w-16 shrink-0 text-xs text-text-tertiary">{c.wfNumber}</div>
                   <div className="flex-1 min-w-0">
                     <Link href={`/campaigns/${c.id}`} className="text-sm font-medium text-text-primary hover:text-primary transition-colors truncate block">
                       {c.name}

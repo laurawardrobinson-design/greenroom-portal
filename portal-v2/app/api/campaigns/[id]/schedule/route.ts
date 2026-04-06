@@ -30,28 +30,32 @@ export async function GET(
 
     if (shotErr) throw shotErr;
 
-    // Deliverable links
+    // Deliverable links + product links
     const shotIds = (shots || []).map((s) => s.id);
     let links: Record<string, unknown>[] = [];
+    let productLinks: Record<string, unknown>[] = [];
     if (shotIds.length > 0) {
-      const { data } = await db
-        .from("shot_deliverable_links")
-        .select("*")
-        .in("shot_id", shotIds);
-      links = (data || []) as Record<string, unknown>[];
+      const [linkRes, prodRes] = await Promise.all([
+        db.from("shot_deliverable_links").select("*").in("shot_id", shotIds),
+        db.from("shot_product_links").select("*").in("shot_id", shotIds),
+      ]);
+      links = (linkRes.data || []) as Record<string, unknown>[];
+      productLinks = (prodRes.data || []) as Record<string, unknown>[];
     }
 
-    // Deliverables for this campaign
-    const { data: deliverables } = await db
-      .from("campaign_deliverables")
-      .select("*")
-      .eq("campaign_id", campaignId);
+    // Deliverables + campaign products
+    const [delRes, cpRes] = await Promise.all([
+      db.from("campaign_deliverables").select("*").eq("campaign_id", campaignId),
+      db.from("campaign_products").select("*, product:products(*)").eq("campaign_id", campaignId),
+    ]);
 
     return NextResponse.json({
       setups: setups || [],
       shots: shots || [],
       links: links,
-      deliverables: deliverables || [],
+      productLinks: productLinks,
+      deliverables: delRes.data || [],
+      campaignProducts: cpRes.data || [],
     });
   } catch (error) {
     return authErrorResponse(error);

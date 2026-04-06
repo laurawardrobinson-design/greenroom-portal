@@ -3,6 +3,7 @@ import type {
   ShotListSetup,
   ShotListShot,
   ShotDeliverableLink,
+  ShotProductLink,
   ShotStatus,
 } from "@/types/domain";
 import type {
@@ -29,7 +30,11 @@ function toSetup(row: Record<string, unknown>, shots: ShotListShot[] = []): Shot
   };
 }
 
-function toShot(row: Record<string, unknown>, links: ShotDeliverableLink[] = []): ShotListShot {
+function toShot(
+  row: Record<string, unknown>,
+  links: ShotDeliverableLink[] = [],
+  productLinks: ShotProductLink[] = [],
+): ShotListShot {
   return {
     id: row.id as string,
     setupId: row.setup_id as string,
@@ -47,8 +52,13 @@ function toShot(row: Record<string, unknown>, links: ShotDeliverableLink[] = [])
     talent: (row.talent as string) || "",
     props: (row.props as string) || "",
     wardrobe: (row.wardrobe as string) || "",
+    surface: (row.surface as string) || "",
+    lighting: (row.lighting as string) || "",
+    priority: (row.priority as string) || "",
+    retouchingNotes: (row.retouching_notes as string) || "",
     sortOrder: Number(row.sort_order) || 0,
     deliverableLinks: links,
+    productLinks,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -59,6 +69,16 @@ function toLink(row: Record<string, unknown>): ShotDeliverableLink {
     id: row.id as string,
     shotId: row.shot_id as string,
     deliverableId: row.deliverable_id as string,
+  };
+}
+
+function toProductLink(row: Record<string, unknown>): ShotProductLink {
+  return {
+    id: row.id as string,
+    shotId: row.shot_id as string,
+    campaignProductId: row.campaign_product_id as string,
+    notes: (row.notes as string) || "",
+    quantity: (row.quantity as string) || "",
   };
 }
 
@@ -88,12 +108,14 @@ export async function listSetups(campaignId: string): Promise<ShotListSetup[]> {
   // Fetch all deliverable links for shots in this campaign
   const shotIds = (shots || []).map((s) => s.id);
   let links: Record<string, unknown>[] = [];
+  let prodLinks: Record<string, unknown>[] = [];
   if (shotIds.length > 0) {
-    const { data: linkData } = await db
-      .from("shot_deliverable_links")
-      .select("*")
-      .in("shot_id", shotIds);
-    links = (linkData || []) as Record<string, unknown>[];
+    const [linkRes, prodRes] = await Promise.all([
+      db.from("shot_deliverable_links").select("*").in("shot_id", shotIds),
+      db.from("shot_product_links").select("*").in("shot_id", shotIds),
+    ]);
+    links = (linkRes.data || []) as Record<string, unknown>[];
+    prodLinks = (prodRes.data || []) as Record<string, unknown>[];
   }
 
   // Group links by shot
@@ -104,13 +126,25 @@ export async function listSetups(campaignId: string): Promise<ShotListSetup[]> {
     linksByShot.get(shotId)!.push(toLink(l));
   }
 
+  // Group product links by shot
+  const prodLinksByShot = new Map<string, ShotProductLink[]>();
+  for (const l of prodLinks) {
+    const shotId = l.shot_id as string;
+    if (!prodLinksByShot.has(shotId)) prodLinksByShot.set(shotId, []);
+    prodLinksByShot.get(shotId)!.push(toProductLink(l));
+  }
+
   // Group shots by setup
   const shotsBySetup = new Map<string, ShotListShot[]>();
   for (const s of shots || []) {
     const setupId = s.setup_id as string;
     if (!shotsBySetup.has(setupId)) shotsBySetup.set(setupId, []);
     shotsBySetup.get(setupId)!.push(
-      toShot(s as Record<string, unknown>, linksByShot.get(s.id) || [])
+      toShot(
+        s as Record<string, unknown>,
+        linksByShot.get(s.id) || [],
+        prodLinksByShot.get(s.id) || [],
+      )
     );
   }
 
@@ -183,7 +217,7 @@ export async function createShot(input: CreateShotInput): Promise<ShotListShot> 
     .single();
 
   if (error) throw error;
-  return toShot(data as Record<string, unknown>, []);
+  return toShot(data as Record<string, unknown>, [], []);
 }
 
 export async function updateShot(
@@ -203,6 +237,10 @@ export async function updateShot(
   if (input.talent !== undefined) update.talent = input.talent;
   if (input.props !== undefined) update.props = input.props;
   if (input.wardrobe !== undefined) update.wardrobe = input.wardrobe;
+  if (input.surface !== undefined) update.surface = input.surface;
+  if (input.lighting !== undefined) update.lighting = input.lighting;
+  if (input.priority !== undefined) update.priority = input.priority;
+  if (input.retouchingNotes !== undefined) update.retouching_notes = input.retouchingNotes;
   if (input.sortOrder !== undefined) update.sort_order = input.sortOrder;
   if (input.status !== undefined) {
     update.status = input.status;
@@ -256,5 +294,39 @@ export async function unlinkDeliverable(shotId: string, deliverableId: string): 
     .delete()
     .eq("shot_id", shotId)
     .eq("deliverable_id", deliverableId);
+  if (error) throw error;
+}
+
+// --- Product Links ---
+
+export async function linkProduct(
+  shotId: string,
+  campaignProductId: string,
+  notes: string = "",
+  quantity: string = "",
+): Promise<ShotProductLink> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("shot_product_links")
+    .insert({
+      shot_id: shotId,
+      campaign_product_id: campaignProductId,
+      notes,
+      quantity,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return toProductLink(data as Record<string, unknown>);
+}
+
+export async function unlinkProduct(shotId: string, campaignProductId: string): Promise<void> {
+  const db = createAdminClient();
+  const { error } = await db
+    .from("shot_product_links")
+    .delete()
+    .eq("shot_id", shotId)
+    .eq("campaign_product_id", campaignProductId);
   if (error) throw error;
 }

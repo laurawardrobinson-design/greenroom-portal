@@ -464,7 +464,7 @@ export default function InventoryPage() {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-text-tertiary mt-3 pt-3 border-t border-border-light">
-                    <span className="flex items-center gap-1 font-mono">
+                    <span className="flex items-center gap-1">
                       <QrCode className="h-3 w-3" />
                       {item.qrCode}
                     </span>

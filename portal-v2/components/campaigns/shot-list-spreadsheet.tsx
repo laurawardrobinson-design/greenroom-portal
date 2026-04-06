@@ -10,8 +10,9 @@ import { useToast } from "@/components/ui/toast";
 import { generateOverlayPng } from "@/lib/utils/overlay-generator";
 import { CHANNEL_TEMPLATES, SPEC_DIMENSIONS } from "@/lib/constants/channels";
 import type { ChannelTemplate } from "@/lib/constants/channels";
-import type { ShotListSetup, ShotListShot, CampaignDeliverable, CampaignStatus } from "@/types/domain";
+import type { ShotListSetup, ShotListShot, CampaignDeliverable, CampaignStatus, CampaignProduct } from "@/types/domain";
 import { ShotDetailModal } from "@/components/campaigns/shot-detail-modal";
+import { ProductDetailModal } from "@/components/campaigns/product-detail-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -93,7 +94,7 @@ function OverlayPreview({ spec }: { spec: string }) {
   }
   if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) {
     return (
-      <div className="flex items-center justify-center h-20 rounded-lg bg-neutral-600/30 text-text-tertiary text-sm font-mono">
+      <div className="flex items-center justify-center h-20 rounded-lg bg-neutral-600/30 text-text-tertiary text-sm ">
         {spec}
       </div>
     );
@@ -118,7 +119,7 @@ function OverlayPreview({ spec }: { spec: string }) {
         <div className="absolute bg-white/35" style={{ top: "50%", left: "44%", right: "44%", height: 1 }} />
         <div className="absolute bg-white/35" style={{ left: "50%", top: "44%", bottom: "44%", width: 1 }} />
         {/* Spec label */}
-        <div className="absolute bottom-1 left-1.5 font-mono text-white/55" style={{ fontSize: labelSize }}>
+        <div className="absolute bottom-1 left-1.5  text-white/55" style={{ fontSize: labelSize }}>
           {spec}
         </div>
       </div>
@@ -178,7 +179,7 @@ function ChannelPickerPanel({
           <div className="flex flex-wrap gap-1 px-3 pt-2.5">
             {active.specs.map((spec) => (
               <button key={spec} type="button" onClick={() => setDetailSpec(spec)}
-                className={`px-2 py-0.5 rounded text-xs font-mono font-semibold transition-colors ${
+                className={`px-2 py-0.5 rounded text-xs  font-semibold transition-colors ${
                   detailSpec === spec
                     ? "bg-primary text-white"
                     : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
@@ -200,7 +201,7 @@ function ChannelPickerPanel({
             className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-secondary px-2.5 py-2 text-sm font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors">
             <Download className="h-3 w-3 shrink-0" />
             Capture One Overlay
-            <span className="ml-auto font-mono text-xs text-text-tertiary">{detailSpec}</span>
+            <span className="ml-auto  text-xs text-text-tertiary">{detailSpec}</span>
           </button>
         </div>
 
@@ -279,7 +280,7 @@ function DraftChannelChip({ sel, tmpl, onRemove }: {
     <span className="relative inline-block">
       <button ref={anchorRef} type="button" onClick={toggle}
         className="group inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors">
-        {tmpl?.abbr ?? sel.channel} <span className="font-mono font-normal opacity-70">{sel.spec}</span>
+        {tmpl?.abbr ?? sel.channel} <span className=" font-normal opacity-70">{sel.spec}</span>
       </button>
       {open && typeof document !== "undefined" && createPortal(
         <>
@@ -288,7 +289,7 @@ function DraftChannelChip({ sel, tmpl, onRemove }: {
             className="rounded-xl border border-border bg-surface shadow-lg overflow-hidden">
             <div className="px-3 pt-2.5 pb-1">
               <p className="text-[13px] font-semibold text-text-primary">{tmpl?.name ?? sel.channel}</p>
-              <p className="font-mono text-xs text-text-tertiary mt-0.5">{sel.spec}</p>
+              <p className=" text-xs text-text-tertiary mt-0.5">{sel.spec}</p>
             </div>
             <div className="px-3 pt-1 pb-1">
               <OverlayPreview spec={sel.spec} />
@@ -303,7 +304,7 @@ function DraftChannelChip({ sel, tmpl, onRemove }: {
                 className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-secondary px-2.5 py-2 text-sm font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors">
                 <Download className="h-3 w-3 shrink-0" />
                 Capture One Overlay
-                <span className="ml-auto font-mono text-xs text-text-tertiary">{sel.spec}</span>
+                <span className="ml-auto  text-xs text-text-tertiary">{sel.spec}</span>
               </button>
             </div>
           </div>
@@ -391,7 +392,7 @@ function DeliverableChip({ del, canEdit, onRemove }: {
     <span className="relative inline-block">
       <button ref={anchorRef} type="button" onClick={toggle}
         className="group inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors">
-        {channelLabel} <span className="font-mono font-normal opacity-70">{del.aspectRatio}</span>
+        {channelLabel} <span className=" font-normal opacity-70">{del.aspectRatio}</span>
       </button>
 
       {open && typeof document !== "undefined" && createPortal(
@@ -401,7 +402,7 @@ function DeliverableChip({ del, canEdit, onRemove }: {
             className="rounded-xl border border-border bg-surface shadow-lg overflow-hidden">
             <div className="px-3 pt-2.5 pb-1">
               <p className="text-[13px] font-semibold text-text-primary">{del.channel}</p>
-              <p className="font-mono text-xs text-text-tertiary mt-0.5">{del.format} · {del.width}×{del.height}</p>
+              <p className=" text-xs text-text-tertiary mt-0.5">{del.format} · {del.width}×{del.height}</p>
             </div>
             <div className="px-3 pt-1 pb-1">
               <OverlayPreview spec={del.aspectRatio} />
@@ -416,7 +417,7 @@ function DeliverableChip({ del, canEdit, onRemove }: {
                 className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-secondary px-2.5 py-2 text-sm font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors">
                 <Download className="h-3 w-3 shrink-0" />
                 Capture One Overlay
-                <span className="ml-auto font-mono text-xs text-text-tertiary">{del.aspectRatio}</span>
+                <span className="ml-auto  text-xs text-text-tertiary">{del.aspectRatio}</span>
               </button>
             </div>
           </div>
@@ -525,9 +526,9 @@ function DeliverableCell({ shot, deliverables, canEdit, onMutate }: {
 }
 
 // ─── Spreadsheet cell ─────────────────────────────────────────────────────────
-function Cell({ value, placeholder, onSave, readOnly = false, mono = false, className = "" }: {
+function Cell({ value, placeholder, onSave, readOnly = false, className = "" }: {
   value: string; placeholder?: string; onSave?: (v: string) => void;
-  readOnly?: boolean; mono?: boolean; className?: string;
+  readOnly?: boolean; className?: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -541,7 +542,7 @@ function Cell({ value, placeholder, onSave, readOnly = false, mono = false, clas
 
   if (readOnly) {
     return (
-      <div className={`px-2 py-1.5 h-full min-h-[32px] text-sm text-text-primary ${mono ? "font-mono" : ""} ${className}`}>
+      <div className={`px-2 py-1.5 h-full min-h-[32px] text-sm text-text-primary ${className}`}>
         {value || "—"}
       </div>
     );
@@ -559,12 +560,12 @@ function Cell({ value, placeholder, onSave, readOnly = false, mono = false, clas
             if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); commit(); }
             if (e.key === "Escape") { setDraft(value); setEditing(false); }
           }}
-          className={`absolute inset-0 px-2 py-1.5 text-sm bg-white dark:bg-surface outline-none z-10 ring-2 ring-inset ring-primary text-text-primary ${mono ? "font-mono" : ""}`}
+          className="absolute inset-0 px-2 py-1.5 text-sm bg-white dark:bg-surface outline-none z-10 ring-2 ring-inset ring-primary text-text-primary"
           placeholder={placeholder}
         />
       ) : (
         <div className={`px-2 py-1.5 text-sm h-full ${
-          value ? (mono ? "font-mono text-text-primary" : "text-text-primary") : "text-text-tertiary/40"
+          value ? "text-text-primary" : "text-text-tertiary/40"
         } group-hover:bg-primary/3 transition-colors`}>
           {value || placeholder}
         </div>
@@ -748,11 +749,13 @@ function SetupHeaderRow({ setup, canEdit, onMutate }: {
 }
 
 // ─── Saved shot row ───────────────────────────────────────────────────────────
-function ShotRow({ shot, deliverables, campaignId, canEdit, canComplete, onMutate,
+function ShotRow({ shot, deliverables, campaignProducts, campaignId, wfNumber, shotIndex, canEdit, canComplete, onMutate,
   isDragOver, onDragStart, onDragOver, onDrop, onDragEnd,
 }: {
   shot: ShotListShot; deliverables: CampaignDeliverable[];
-  campaignId: string; canEdit: boolean; canComplete: boolean; onMutate: () => void;
+  campaignProducts: CampaignProduct[];
+  campaignId: string; wfNumber?: string; shotIndex?: number;
+  canEdit: boolean; canComplete: boolean; onMutate: () => void;
   isDragOver: boolean;
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -761,6 +764,7 @@ function ShotRow({ shot, deliverables, campaignId, canEdit, canComplete, onMutat
 }) {
   const { toast } = useToast();
   const [showDetail, setShowDetail] = useState(false);
+  const [viewProductId, setViewProductId] = useState<string | null>(null);
 
   async function patch(u: Record<string, unknown>) {
     try {
@@ -778,17 +782,24 @@ function ShotRow({ shot, deliverables, campaignId, canEdit, canComplete, onMutat
     } catch { toast("error", "Failed to delete shot"); }
   }
 
-  const done = shot.status === "Complete";
-  const retouch = shot.status === "Needs Retouching";
-
   return (
     <>
+      {viewProductId && (
+        <ProductDetailModal
+          productId={viewProductId}
+          open={!!viewProductId}
+          onClose={() => setViewProductId(null)}
+        />
+      )}
       {showDetail && (
         <ShotDetailModal
           shot={shot}
           open={showDetail}
           onClose={() => setShowDetail(false)}
           onSaved={() => { onMutate(); setShowDetail(false); }}
+          campaignProducts={campaignProducts}
+          wfNumber={wfNumber}
+          shotIndex={shotIndex}
         />
       )}
     <tr
@@ -797,9 +808,7 @@ function ShotRow({ shot, deliverables, campaignId, canEdit, canComplete, onMutat
       onDragOver={canEdit ? onDragOver : undefined}
       onDrop={canEdit ? onDrop : undefined}
       onDragEnd={canEdit ? onDragEnd : undefined}
-      className={`group transition-colors ${isDragOver ? "outline outline-2 outline-primary/50 outline-offset-[-1px]" : ""} ${
-        done ? "bg-emerald-50/40" : retouch ? "bg-amber-50/40" : "bg-white hover:bg-primary/[0.015]"
-      }`}
+      className={`group transition-colors ${isDragOver ? "outline outline-2 outline-primary/50 outline-offset-[-1px]" : ""} bg-white hover:bg-primary/[0.015]`}
     >
       {/* Drag handle */}
       <td className="border border-border/60 w-5 p-0">
@@ -811,26 +820,11 @@ function ShotRow({ shot, deliverables, campaignId, canEdit, canComplete, onMutat
           )}
         </div>
       </td>
-      <td className="border border-border/60 w-9 text-center p-0">
-        <div className="flex items-center justify-center min-h-[32px]">
-          {canComplete && (
-            <button type="button" onClick={() => patch({ status: done ? "Pending" : "Complete" })}
-              className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${
-                done    ? "border-emerald-500 bg-emerald-500 text-white" :
-                retouch ? "border-amber-400 bg-amber-400 text-white" :
-                          "border-border hover:border-emerald-400 hover:bg-emerald-50"
-              }`}>
-              {done && <Check className="h-3 w-3" />}
-              {retouch && <AlertTriangle className="h-2.5 w-2.5" />}
-            </button>
-          )}
-        </div>
-      </td>
       <td className="border border-border/60 p-0 w-28">
         <button
           type="button"
           onClick={() => setShowDetail(true)}
-          className="w-full text-left px-2 py-1.5 min-h-[32px] text-sm font-mono text-text-primary hover:bg-primary/5 transition-colors"
+          className="w-full text-left px-2 py-1.5 min-h-[32px] text-sm  text-text-primary hover:bg-primary/5 transition-colors"
         >
           {shot.name || <span className="text-text-tertiary/40">Shot name…</span>}
         </button>
@@ -840,6 +834,27 @@ function ShotRow({ shot, deliverables, campaignId, canEdit, canComplete, onMutat
       </td>
       <td className="border border-border/60 p-0">
         <Cell value={shot.description} placeholder="Description…" onSave={(v) => patch({ description: v })} />
+      </td>
+      <td className="border border-border/60 p-0 w-40">
+        <div className="flex flex-wrap items-center gap-1 px-2 py-1.5 min-h-[32px]">
+          {(shot.productLinks || []).map((lnk) => {
+            const cp = campaignProducts.find((p) => p.id === lnk.campaignProductId);
+            if (!cp?.product) return null;
+            return (
+              <button key={lnk.id} type="button"
+                onClick={() => setViewProductId(cp.product!.id)}
+                className="inline-flex items-center gap-1 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-colors cursor-pointer max-w-[160px]">
+                <span className="truncate">{cp.product.name}</span>
+                {cp.product.itemCode && (
+                  <span className="text-[10px] opacity-70 shrink-0">{cp.product.itemCode}</span>
+                )}
+              </button>
+            );
+          })}
+          {(shot.productLinks || []).length === 0 && (
+            <span className="text-text-tertiary/40 text-sm">—</span>
+          )}
+        </div>
       </td>
       <td className="border border-border/60 p-0 w-12">
         <RefCell shotId={shot.id} campaignId={campaignId} value={shot.referenceImageUrl} canEdit={canEdit} onMutate={onMutate} />
@@ -926,6 +941,7 @@ function BottomBar({ setups, campaignId, wf, date, onMutate, onAddSetup, onReset
 interface Props {
   setups: ShotListSetup[];
   deliverables: CampaignDeliverable[];
+  campaignProducts?: CampaignProduct[];
   campaignId: string;
   wfNumber?: string;
   firstShootDate?: string;
@@ -937,7 +953,7 @@ interface Props {
 }
 
 export function ShotListSpreadsheet({
-  setups, deliverables, campaignId, wfNumber, firstShootDate,
+  setups, deliverables, campaignProducts = [], campaignId, wfNumber, firstShootDate,
   canEdit, canComplete, campaignStatus, onAddSetup, onMutate,
 }: Props) {
   const { toast } = useToast();
@@ -1069,24 +1085,31 @@ export function ShotListSpreadsheet({
           <thead>
             <tr className="bg-surface-secondary/80">
               <th className="border border-border/60 w-5" />
-              <th className="border border-border/60 w-9 px-2 py-2" />
               <th className="border border-border/60 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary w-28">Shot</th>
               <th className="border border-border/60 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary w-52">Channel</th>
               <th className="border border-border/60 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary">Description</th>
+              <th className="border border-border/60 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary w-36">Products</th>
               <th className="border border-border/60 px-2 py-2 text-center text-xs font-semibold uppercase tracking-wider text-text-tertiary w-12">Ref</th>
               <th className="border border-border/60 w-8" />
             </tr>
           </thead>
           <tbody>
-            {localSetups.map((setup) => (
+            {(() => {
+              let globalShotIdx = 0;
+              return localSetups.map((setup) => (
               <Fragment key={setup.id}>
                 <SetupHeaderRow setup={setup} canEdit={canEdit} onMutate={onMutate} />
-                {setup.shots.map((shot) => (
+                {setup.shots.map((shot) => {
+                  globalShotIdx++;
+                  return (
                   <ShotRow
                     key={shot.id}
                     shot={shot}
                     deliverables={deliverables}
+                    campaignProducts={campaignProducts}
                     campaignId={campaignId}
+                    wfNumber={wfNumber}
+                    shotIndex={globalShotIdx}
                     canEdit={canEdit}
                     canComplete={canComplete}
                     onMutate={onMutate}
@@ -1096,9 +1119,11 @@ export function ShotListSpreadsheet({
                     onDrop={() => handleShotDrop(shot.id, setup.id)}
                     onDragEnd={handleShotDragEnd}
                   />
-                ))}
+                  );
+                })}
               </Fragment>
-            ))}
+            ));
+            })()}
           </tbody>
         </table>
 

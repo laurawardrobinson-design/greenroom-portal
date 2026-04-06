@@ -578,7 +578,7 @@ export function GearDetailModal({
             </div>
           ) : rfidTag ? (
             <div className="flex items-center justify-between gap-2">
-              <code className="flex-1 truncate rounded bg-surface-secondary px-2 py-1 text-xs font-mono text-text-secondary">
+              <code className="flex-1 truncate rounded bg-surface-secondary px-2 py-1 text-xs text-text-secondary">
                 {rfidTag}
               </code>
               {editMode && (

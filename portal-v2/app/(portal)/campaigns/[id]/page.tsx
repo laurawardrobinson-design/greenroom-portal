@@ -415,6 +415,7 @@ export default function CampaignDetailPage({
             campaignId={id}
             setups={setups}
             deliverables={deliverables}
+            campaignProducts={campaignProducts}
             wfNumber={campaign.wfNumber ?? undefined}
             firstShootDate={allDates[0]?.shootDate}
             canEditShots={canEditShots}

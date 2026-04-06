@@ -71,7 +71,7 @@ export default function PrintLabelsPage() {
               <p className="text-[10px] text-text-tertiary print:text-gray-600">
                 {item.brand} {item.model}
               </p>
-              <p className="text-[10px] font-mono text-text-tertiary mt-0.5 print:text-gray-500">
+              <p className="text-[10px] text-text-tertiary mt-0.5 print:text-gray-500">
                 {item.qrCode}
               </p>
             </div>

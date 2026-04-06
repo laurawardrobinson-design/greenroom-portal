@@ -129,11 +129,23 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
         .filter(Boolean)
         .join(", ");
 
+      // Resolve real product names
+      const shotProductLinks = (data.productLinks || []).filter((l: { shot_id: string }) => l.shot_id === shot.id);
+      const productNames = shotProductLinks
+        .map((l: { campaign_product_id: string }) => {
+          const cp = (data.campaignProducts || []).find((p: { id: string }) => p.id === l.campaign_product_id);
+          if (!cp?.product) return null;
+          const code = cp.product.item_code ? ` (${cp.product.item_code})` : "";
+          return `${cp.product.name}${code}`;
+        })
+        .filter(Boolean)
+        .join(", ");
+
       return {
         shotNumber: i + 1,
         description: shot.description as string,
-        products: (shot.props || "") as string,
-        environment: (shot.location || data.setups.find((s) => s.id === shot.setup_id)?.location || "") as string,
+        products: productNames || (shot.props || "") as string,
+        environment: ((shot as Record<string, unknown>).surface as string) || (shot.location || data.setups.find((s) => s.id === shot.setup_id)?.location || "") as string,
         channels,
         timeEst: `${shot.estimated_duration_minutes || 15}m`,
         notes: (shot.notes || "") as string,

@@ -69,7 +69,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
       <div className="group flex flex-col rounded-xl bg-surface border border-transparent shadow-sm hover:shadow-md hover:border-border transition-all duration-200 p-5 h-full">
         {/* WF# above name */}
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[12px] font-mono text-text-tertiary tracking-wide">
+          <span className="text-[12px] text-text-tertiary tracking-wide">
             {campaign.wfNumber || "\u00A0"}
           </span>
           <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${pill.bg} ${pill.text}`}>

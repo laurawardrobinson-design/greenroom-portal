@@ -93,12 +93,18 @@ interface ScheduleData {
     notes: string;
     talent: string;
     props: string;
+    surface: string;
+    lighting: string;
+    priority: string;
+    retouching_notes: string;
     sort_order: number;
     estimated_duration_minutes: number;
     shoot_date_id: string | null;
   }>;
   links: Array<{ shot_id: string; deliverable_id: string }>;
+  productLinks: Array<{ shot_id: string; campaign_product_id: string }>;
   deliverables: Array<{ id: string; channel: string; format: string; aspect_ratio: string }>;
+  campaignProducts: Array<{ id: string; product: { name: string; item_code: string | null } | null }>;
 }
 
 // ─── Editable Cell ───────────────────────────────────────────────────────────
@@ -106,13 +112,11 @@ function Cell({
   value,
   placeholder,
   onSave,
-  mono = false,
   className = "",
 }: {
   value: string;
   placeholder?: string;
   onSave: (v: string) => void;
-  mono?: boolean;
   className?: string;
 }) {
   const [editing, setEditing] = useState(false);
@@ -156,17 +160,13 @@ function Cell({
               setEditing(false);
             }
           }}
-          className={`absolute inset-0 px-2.5 py-2 text-xs bg-white outline-none z-10 ring-2 ring-inset ring-primary text-text-primary ${mono ? "font-mono" : ""}`}
+          className="absolute inset-0 px-2.5 py-2 text-xs bg-white outline-none z-10 ring-2 ring-inset ring-primary text-text-primary"
           placeholder={placeholder}
         />
       ) : (
         <div
           className={`px-2.5 py-2 text-xs h-full ${
-            value
-              ? mono
-                ? "font-mono text-text-primary"
-                : "text-text-primary"
-              : "text-text-tertiary/40"
+            value ? "text-text-primary" : "text-text-tertiary/40"
           } group-hover:bg-primary/3 transition-colors`}
         >
           {value || placeholder || "—"}
@@ -190,7 +190,7 @@ function OverlayPreview({ spec }: { spec: string }) {
   }
   if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) {
     return (
-      <div className="flex items-center justify-center h-20 rounded-lg bg-neutral-600/30 text-text-tertiary text-sm font-mono">
+      <div className="flex items-center justify-center h-20 rounded-lg bg-neutral-600/30 text-text-tertiary text-sm">
         {spec}
       </div>
     );
@@ -211,7 +211,7 @@ function OverlayPreview({ spec }: { spec: string }) {
         <div className="absolute border border-white/40" style={{ inset: "5%" }} />
         <div className="absolute bg-white/35" style={{ top: "50%", left: "44%", right: "44%", height: 1 }} />
         <div className="absolute bg-white/35" style={{ left: "50%", top: "44%", bottom: "44%", width: 1 }} />
-        <div className="absolute bottom-1 left-1.5 font-mono text-white/55" style={{ fontSize: labelSize }}>
+        <div className="absolute bottom-1 left-1.5 text-white/55" style={{ fontSize: labelSize }}>
           {spec}
         </div>
       </div>
@@ -367,7 +367,7 @@ function ChannelChip({ sel, tmpl, onRemove }: {
     <span className="relative inline-block">
       <button ref={anchorRef} type="button" onClick={toggle}
         className="group inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary hover:bg-primary/20 transition-colors">
-        {tmpl?.abbr ?? sel.channel} <span className="font-mono font-normal opacity-70">{sel.spec}</span>
+        {tmpl?.abbr ?? sel.channel} <span className="font-normal opacity-70">{sel.spec}</span>
       </button>
       {open && typeof document !== "undefined" && createPortal(
         <>
@@ -376,7 +376,7 @@ function ChannelChip({ sel, tmpl, onRemove }: {
             className="rounded-xl border border-border bg-surface shadow-lg overflow-hidden">
             <div className="px-3 pt-2.5 pb-1">
               <p className="text-[11px] font-semibold text-text-primary">{tmpl?.name ?? sel.channel}</p>
-              <p className="font-mono text-[11px] text-text-tertiary mt-0.5">{sel.spec}</p>
+              <p className="text-[11px] text-text-tertiary mt-0.5">{sel.spec}</p>
             </div>
             <div className="px-3 pt-1 pb-1">
               <OverlayPreview spec={sel.spec} />
@@ -391,7 +391,7 @@ function ChannelChip({ sel, tmpl, onRemove }: {
                 className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-secondary px-2.5 py-2 text-sm font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors">
                 <Download className="h-3 w-3 shrink-0" />
                 Capture One Overlay
-                <span className="ml-auto font-mono text-[11px] text-text-tertiary">{sel.spec}</span>
+                <span className="ml-auto text-[11px] text-text-tertiary">{sel.spec}</span>
               </button>
             </div>
           </div>
@@ -761,6 +761,10 @@ export function ShotListCleanView({
                     body: JSON.stringify({ name }),
                   }).then(() => globalMutate(swrKey))
                 }
+                onDelete={() =>
+                  fetch(`/api/shot-list/setups/${setup.id}`, { method: "DELETE" })
+                    .then(() => globalMutate(swrKey))
+                }
               />
 
               {/* Table */}
@@ -786,6 +790,12 @@ export function ShotListCleanView({
                       </th>
                       <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary min-w-[180px]">
                         Description
+                      </th>
+                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary min-w-[100px]">
+                        Surface
+                      </th>
+                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary min-w-[100px]">
+                        Lighting
                       </th>
                       <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary min-w-[130px]">
                         Products
@@ -911,6 +921,20 @@ export function ShotListCleanView({
                             }
                           />
 
+                          {/* Surface */}
+                          <Cell
+                            value={shot.surface || ""}
+                            placeholder="Surface"
+                            onSave={(v) => patchShot(shot.id, "surface", v)}
+                          />
+
+                          {/* Lighting */}
+                          <Cell
+                            value={shot.lighting || ""}
+                            placeholder="Lighting"
+                            onSave={(v) => patchShot(shot.id, "lighting", v)}
+                          />
+
                           {/* Products */}
                           <Cell
                             value={shot.props}
@@ -975,13 +999,16 @@ function SetupHeader({
   setup,
   shotCount,
   onSaveName,
+  onDelete,
 }: {
   setup: { id: string; name: string; location: string };
   shotCount: number;
   onSaveName: (name: string) => void;
+  onDelete: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(setup.name);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -994,7 +1021,7 @@ function SetupHeader({
   }
 
   return (
-    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-surface-secondary/60 border-b border-border">
+    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-surface-secondary/60 border-b border-border group">
       {editing ? (
         <input
           ref={inputRef}
@@ -1029,6 +1056,27 @@ function SetupHeader({
       {setup.location && (
         <span className="text-xs text-text-tertiary">· {setup.location}</span>
       )}
+      <div className="ml-auto">
+        {confirmDelete ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-red-500">Delete setup{shotCount > 0 ? ` and ${shotCount} shot${shotCount !== 1 ? "s" : ""}` : ""}?</span>
+            <button type="button" onClick={onDelete}
+              className="text-xs font-semibold text-red-500 hover:text-red-600 transition-colors">
+              Yes
+            </button>
+            <button type="button" onClick={() => setConfirmDelete(false)}
+              className="text-xs text-text-tertiary hover:text-text-secondary transition-colors">
+              No
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setConfirmDelete(true)}
+            className="flex h-5 w-5 items-center justify-center rounded text-text-tertiary/30 opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-50 transition-all"
+            title="Delete setup">
+            <Trash2 className="h-3 w-3" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -1076,15 +1124,27 @@ function buildShotListRows(data: ScheduleData) {
         ),
       ].join(", ");
 
+      // Resolve real product names from product links
+      const shotProductLinks = (data.productLinks || []).filter((l) => l.shot_id === shot.id);
+      const productNames = shotProductLinks
+        .map((l) => {
+          const cp = (data.campaignProducts || []).find((p) => p.id === l.campaign_product_id);
+          if (!cp?.product) return null;
+          const code = cp.product.item_code ? ` (${cp.product.item_code})` : "";
+          return `${cp.product.name}${code}`;
+        })
+        .filter(Boolean)
+        .join(", ");
+
       rows.push({
         shotNumber: shotNum,
         fileName: shot.name,
         fileType: shot.media_type || "Still",
         angle: shot.angle,
         ratio: ratios,
-        environment: shot.location || setup.location,
+        environment: shot.surface || shot.location || setup.location,
         description: shot.description,
-        products: shot.props,
+        products: productNames || shot.props,
         talent: shot.talent || "No",
         channel: channels,
         notes: shot.notes,

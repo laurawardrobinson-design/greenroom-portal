@@ -223,7 +223,7 @@ export default function ProductDirectoryPage() {
                         {product.name}
                       </p>
                       {product.itemCode && (
-                        <p className="text-[10px] font-mono text-text-tertiary leading-tight">
+                        <p className="text-[10px] text-text-tertiary leading-tight">
                           {product.itemCode}
                         </p>
                       )}
@@ -268,7 +268,7 @@ export default function ProductDirectoryPage() {
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-text-primary truncate block">{product.name}</span>
                       {product.itemCode && (
-                        <span className="text-[10px] font-mono text-text-tertiary">{product.itemCode}</span>
+                        <span className="text-[10px] text-text-tertiary">{product.itemCode}</span>
                       )}
                     </div>
                   </div>
@@ -819,7 +819,7 @@ function ProductDrawer({
                 {campaigns.map((c: { campaignId: string; campaignName: string; wfNumber: string }) => (
                   <Link key={c.campaignId} href={`/campaigns/${c.campaignId}`}
                     className="flex items-center gap-2 rounded-lg bg-surface-secondary p-2.5 text-sm hover:bg-surface-tertiary transition-colors">
-                    <span className="text-text-tertiary font-mono text-xs">{c.wfNumber || "—"}</span>
+                    <span className="text-text-tertiary text-xs">{c.wfNumber || "—"}</span>
                     <span className="text-text-primary font-medium">{c.campaignName}</span>
                   </Link>
                 ))}

@@ -146,7 +146,7 @@ export function DeliverablesSection({ campaignId, deliverables, vendors, canEdit
                   </p>
 
                   <div className="flex items-center gap-1.5 mt-1">
-                    <span className="text-[10px] text-text-tertiary font-mono bg-surface-secondary rounded px-1 py-0.5">
+                    <span className="text-[10px] text-text-tertiary bg-surface-secondary rounded px-1 py-0.5">
                       {d.aspectRatio}
                     </span>
                     {d.quantity > 1 && (
@@ -185,7 +185,7 @@ export function DeliverablesSection({ campaignId, deliverables, vendors, canEdit
                     >
                       <Download className="h-3 w-3 shrink-0" />
                       <span>Capture One Overlay</span>
-                      <span className="ml-auto font-mono text-text-tertiary">{d.width}×{d.height}</span>
+                      <span className="ml-auto text-text-tertiary">{d.width}×{d.height}</span>
                     </button>
 
                     {/* Vendor assignment */}
@@ -278,7 +278,7 @@ export function DeliverablesSection({ campaignId, deliverables, vendors, canEdit
                           }`}
                         >
                           {p.format}
-                          <span className="ml-1.5 font-mono text-[10px] opacity-60">{p.aspectRatio}</span>
+                          <span className="ml-1.5 text-[10px] opacity-60">{p.aspectRatio}</span>
                         </button>
                       );
                     })}

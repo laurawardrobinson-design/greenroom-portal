@@ -8,6 +8,7 @@ import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { ShotDetailModal } from "@/components/campaigns/shot-detail-modal";
+import { ProductDetailModal } from "@/components/campaigns/product-detail-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -15,7 +16,7 @@ import {
   MapPin, User, Package, Shirt, FileText, RotateCcw, Plus, Trash2,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import type { ShotListShot, ShotListSetup, CampaignDeliverable } from "@/types/domain";
+import type { ShotListShot, ShotListSetup, CampaignDeliverable, CampaignProduct } from "@/types/domain";
 import { CHANNEL_TEMPLATES } from "@/lib/constants/channels";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -25,20 +26,6 @@ function buildShotName(wf: string | undefined, date: string | undefined, n: numb
   const num = String(n).padStart(2, "0");
   if (w || d) return `${w}${d}-Shot${num}`;
   return `Shot${num}`;
-}
-
-function StatusBadge({ status }: { status: ShotListShot["status"] }) {
-  const styles: Record<string, string> = {
-    Complete: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    "Needs Retouching": "bg-amber-100 text-amber-700 border-amber-200",
-    Cancelled: "bg-neutral-100 text-neutral-400 border-neutral-200",
-    Pending: "bg-surface-secondary text-text-tertiary border-border",
-  };
-  return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${styles[status] ?? styles.Pending}`}>
-      {status}
-    </span>
-  );
 }
 
 function MetaChip({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
@@ -61,7 +48,7 @@ function ChannelChips({ shot, deliverables }: { shot: ShotListShot; deliverables
         const abbr = CHANNEL_TEMPLATES.find((t) => t.name === del.channel)?.abbr ?? del.channel;
         return (
           <span key={lnk.id} className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
-            {abbr} <span className="font-mono font-normal opacity-70">{del.aspectRatio}</span>
+            {abbr} <span className="font-normal opacity-70">{del.aspectRatio}</span>
           </span>
         );
       })}
@@ -71,11 +58,14 @@ function ChannelChips({ shot, deliverables }: { shot: ShotListShot; deliverables
 
 // ─── Shot card ────────────────────────────────────────────────────────────────
 function ShotCard({
-  shot, deliverables, canEdit, canComplete, onMutate,
+  shot, deliverables, campaignProducts, wfNumber, shotIndex, canEdit, canComplete, onMutate,
   isDragOver, onDragStart, onDragOver, onDrop, onDragEnd,
 }: {
   shot: ShotListShot;
   deliverables: CampaignDeliverable[];
+  campaignProducts: CampaignProduct[];
+  wfNumber?: string;
+  shotIndex?: number;
   canEdit: boolean;
   canComplete: boolean;
   onMutate: () => void;
@@ -87,10 +77,7 @@ function ShotCard({
 }) {
   const { toast } = useToast();
   const [showDetail, setShowDetail] = useState(false);
-
-  const done = shot.status === "Complete";
-  const retouch = shot.status === "Needs Retouching";
-  const cancelled = shot.status === "Cancelled";
+  const [viewProductId, setViewProductId] = useState<string | null>(null);
 
   async function patch(u: Record<string, unknown>) {
     try {
@@ -109,16 +96,31 @@ function ShotCard({
   }
 
   const mediaIcon = shot.mediaType === "Video" ? Film : shot.mediaType === "Hybrid" ? Layers : Camera;
-  const hasDetails = shot.description || shot.talent || shot.props || shot.wardrobe || shot.notes;
+  const hasDetails = shot.description || shot.talent || shot.props || shot.wardrobe || shot.notes || shot.surface || shot.lighting;
+
+  // Resolve product names from links
+  const linkedProducts = (shot.productLinks || [])
+    .map((lnk) => campaignProducts.find((cp) => cp.id === lnk.campaignProductId))
+    .filter(Boolean);
 
   return (
     <>
+      {viewProductId && (
+        <ProductDetailModal
+          productId={viewProductId}
+          open={!!viewProductId}
+          onClose={() => setViewProductId(null)}
+        />
+      )}
       {showDetail && (
         <ShotDetailModal
           shot={shot}
           open={showDetail}
           onClose={() => setShowDetail(false)}
           onSaved={() => { onMutate(); setShowDetail(false); }}
+          campaignProducts={campaignProducts}
+          wfNumber={wfNumber}
+          shotIndex={shotIndex}
         />
       )}
       <div
@@ -128,11 +130,7 @@ function ShotCard({
         onDrop={canEdit ? onDrop : undefined}
         onDragEnd={canEdit ? onDragEnd : undefined}
         className={`group relative flex gap-3 rounded-lg border bg-white px-3 py-3 transition-all ${
-          isDragOver ? "border-primary/60 shadow-sm ring-2 ring-primary/20" :
-          done ? "border-emerald-200 bg-emerald-50/30" :
-          retouch ? "border-amber-200 bg-amber-50/30" :
-          cancelled ? "border-border/50 opacity-60" :
-          "border-border hover:border-primary/20 hover:shadow-sm"
+          isDragOver ? "border-primary/60 shadow-sm ring-2 ring-primary/20" : "border-border hover:border-primary/20 hover:shadow-sm"
         }`}
       >
         {/* Drag handle */}
@@ -141,24 +139,6 @@ function ShotCard({
             <span className="text-text-tertiary/25 group-hover:text-text-tertiary/50 transition-colors cursor-grab active:cursor-grabbing">
               <GripVertical className="h-4 w-4" />
             </span>
-          </div>
-        )}
-
-        {/* Status toggle */}
-        {canComplete && (
-          <div className="flex flex-col items-center justify-start pt-0.5">
-            <button
-              type="button"
-              onClick={() => patch({ status: done ? "Pending" : "Complete" })}
-              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
-                done    ? "border-emerald-500 bg-emerald-500 text-white" :
-                retouch ? "border-amber-400 bg-amber-400 text-white" :
-                          "border-border hover:border-emerald-400 hover:bg-emerald-50"
-              }`}
-            >
-              {done && <Check className="h-3 w-3" />}
-              {retouch && <AlertTriangle className="h-2.5 w-2.5" />}
-            </button>
           </div>
         )}
 
@@ -182,11 +162,10 @@ function ShotCard({
             <button
               type="button"
               onClick={() => setShowDetail(true)}
-              className="font-mono text-sm font-semibold text-text-primary hover:text-primary transition-colors"
+              className="text-sm font-semibold text-text-primary hover:text-primary transition-colors"
             >
               {shot.name || <span className="text-text-tertiary/40 font-normal">Unnamed shot</span>}
             </button>
-            <StatusBadge status={shot.status} />
             {shot.mediaType && <MetaChip icon={mediaIcon} label={shot.mediaType} />}
             {shot.location && <MetaChip icon={MapPin} label={shot.location} />}
             {shot.angle && (
@@ -196,7 +175,23 @@ function ShotCard({
             )}
           </div>
 
-          {/* Row 2: channels */}
+          {/* Row 2: products */}
+          {linkedProducts.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {linkedProducts.map((cp) => cp && (
+                <button key={cp.id} type="button"
+                  onClick={() => cp.product && setViewProductId(cp.product.id)}
+                  className="inline-flex items-center gap-1 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-colors cursor-pointer">
+                  {cp.product?.name || "Product"}
+                  {cp.product?.itemCode && (
+                    <span className="text-[10px] opacity-70">{cp.product.itemCode}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Row 3: channels */}
           <ChannelChips shot={shot} deliverables={deliverables} />
 
           {/* Row 3: detail fields */}
@@ -224,6 +219,18 @@ function ShotCard({
                 <span className="flex items-center gap-1 text-xs text-text-secondary">
                   <Shirt className="h-3 w-3 shrink-0 text-text-tertiary" />
                   {shot.wardrobe}
+                </span>
+              )}
+              {shot.surface && (
+                <span className="flex items-center gap-1 text-xs text-text-secondary">
+                  <Package className="h-3 w-3 shrink-0 text-text-tertiary" />
+                  {shot.surface}
+                </span>
+              )}
+              {shot.lighting && (
+                <span className="flex items-center gap-1 text-xs text-text-secondary">
+                  <FileText className="h-3 w-3 shrink-0 text-text-tertiary" />
+                  {shot.lighting}
                 </span>
               )}
               {shot.notes && (
@@ -255,11 +262,14 @@ function ShotCard({
 
 // ─── Scene section ─────────────────────────────────────────────────────────────
 function SceneSection({
-  setup, deliverables, canEdit, canComplete, onMutate,
+  setup, deliverables, campaignProducts, wfNumber, shotIndexOffset, canEdit, canComplete, onMutate,
   dragOverShotId, onShotDragStart, onShotDragOver, onShotDrop, onShotDragEnd,
 }: {
   setup: ShotListSetup;
   deliverables: CampaignDeliverable[];
+  campaignProducts: CampaignProduct[];
+  wfNumber?: string;
+  shotIndexOffset: number;
   canEdit: boolean;
   canComplete: boolean;
   onMutate: () => void;
@@ -296,8 +306,6 @@ function SceneSection({
     } catch { toast("error", "Failed to delete setup"); }
   }
 
-  const done = setup.shots.filter((s) => s.status === "Complete").length;
-
   return (
     <div className="space-y-2">
       {/* Scene header */}
@@ -328,7 +336,7 @@ function SceneSection({
           )}
           {setup.shots.length > 0 && (
             <span className="text-[10px] text-text-tertiary/60">
-              {done}/{setup.shots.length} complete
+              {setup.shots.length} shot{setup.shots.length !== 1 ? "s" : ""}
             </span>
           )}
         </div>
@@ -345,11 +353,14 @@ function SceneSection({
 
       {/* Shots */}
       <div className="space-y-2">
-        {setup.shots.map((shot) => (
+        {setup.shots.map((shot, si) => (
           <ShotCard
             key={shot.id}
             shot={shot}
             deliverables={deliverables}
+            campaignProducts={campaignProducts}
+            wfNumber={wfNumber}
+            shotIndex={shotIndexOffset + si + 1}
             canEdit={canEdit}
             canComplete={canComplete}
             onMutate={onMutate}
@@ -375,7 +386,7 @@ export default function FullShotListPage({ params }: { params: Promise<{ id: str
   const { id } = use(params);
   const router = useRouter();
   const { toast } = useToast();
-  const { campaign, shoots, setups, deliverables, isLoading, mutate } = useCampaign(id);
+  const { campaign, shoots, setups, deliverables, campaignProducts, isLoading, mutate } = useCampaign(id);
   const { user } = useCurrentUser();
 
   const canEdit = user?.role === "Admin" || user?.role === "Producer" || user?.role === "Art Director";
@@ -524,10 +535,6 @@ export default function FullShotListPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const allShots = localSetups.flatMap((s) => s.shots);
-  const completedShots = allShots.filter((s) => s.status === "Complete").length;
-  const totalShots = allShots.length;
-
   return (
     <>
       <ConfirmDialog
@@ -555,21 +562,8 @@ export default function FullShotListPage({ params }: { params: Promise<{ id: str
           }
         />
 
-        {/* Progress + actions */}
+        {/* Actions */}
         <div className="flex flex-col items-end gap-3 shrink-0">
-            {totalShots > 0 && (
-              <div className="text-right space-y-1">
-                <p className="text-xs font-medium text-text-tertiary">
-                  {completedShots} of {totalShots} complete
-                </p>
-                <div className="h-1.5 w-36 rounded-full bg-surface-tertiary overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-500"
-                    style={{ width: `${totalShots > 0 ? (completedShots / totalShots) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-            )}
             {canEdit && !shootComplete && (
               <button
                 type="button"
@@ -606,11 +600,17 @@ export default function FullShotListPage({ params }: { params: Promise<{ id: str
           </div>
         ) : (
           <div className="space-y-6">
-            {localSetups.map((setup) => (
+            {(() => {
+              let shotOffset = 0;
+              return localSetups.map((setup) => {
+                const section = (
               <SceneSection
                 key={setup.id}
                 setup={setup}
                 deliverables={deliverables}
+                campaignProducts={campaignProducts}
+                wfNumber={campaign?.wfNumber ?? undefined}
+                shotIndexOffset={shotOffset}
                 canEdit={canEdit}
                 canComplete={canComplete}
                 onMutate={mutate}
@@ -620,7 +620,11 @@ export default function FullShotListPage({ params }: { params: Promise<{ id: str
                 onShotDrop={handleShotDrop}
                 onShotDragEnd={handleShotDragEnd}
               />
-            ))}
+                );
+                shotOffset += setup.shots.length;
+                return section;
+              });
+            })()}
           </div>
         )}
 

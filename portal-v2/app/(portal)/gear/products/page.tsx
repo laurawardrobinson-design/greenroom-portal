@@ -507,7 +507,7 @@ function ProductDetailDrawer({
                   href={`/campaigns/${c.campaignId}`}
                   className="flex items-center gap-2 rounded-lg bg-surface-secondary p-2.5 text-sm hover:bg-surface-tertiary transition-colors"
                 >
-                  <span className="text-text-tertiary font-mono text-xs">
+                  <span className="text-text-tertiary text-xs">
                     {c.wfNumber || "—"}
                   </span>
                   <span className="text-text-primary font-medium">
