@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 
 const DEV_AUTH = process.env.NEXT_PUBLIC_DEV_AUTH === "true";
-const DEV_MODE = process.env.NODE_ENV === "development";
+const RESET_ENABLED = process.env.NEXT_PUBLIC_RESET_ENABLED === "true" || process.env.NODE_ENV === "development";
 
 const DEV_ROLES = [
   { key: "admin", label: "HOP (Admin)", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
@@ -213,8 +213,8 @@ export default function LoginPage() {
             </>
           )}
 
-          {/* Reset test users — available in dev regardless of DEV_AUTH */}
-          {DEV_MODE && (
+          {/* Reset test users — available via NEXT_PUBLIC_RESET_ENABLED or in local dev */}
+          {RESET_ENABLED && (
             <div className="mt-4 pt-4 border-t border-white/10">
               <button
                 onClick={handleResetPreferences}

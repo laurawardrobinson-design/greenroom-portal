@@ -6,8 +6,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Only works when NEXT_PUBLIC_DEV_AUTH=true
 
 export async function POST(request: Request) {
-  if (process.env.NODE_ENV !== "development") {
-    return NextResponse.json({ error: "Dev auth disabled" }, { status: 403 });
+  const allowed =
+    process.env.NODE_ENV === "development" ||
+    process.env.NEXT_PUBLIC_RESET_ENABLED === "true";
+
+  if (!allowed) {
+    return NextResponse.json({ error: "Reset not enabled" }, { status: 403 });
   }
 
   const admin = createAdminClient();
