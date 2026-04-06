@@ -36,8 +36,8 @@ export const PERMISSIONS = {
 
 // Route-level access control
 export const ROUTE_ROLES: Record<string, UserRole[]> = {
-  "/dashboard": ["Admin", "Producer", "Studio", "Vendor"],
-  "/campaigns": ["Admin", "Producer", "Studio", "Vendor"],
+  "/dashboard": ["Admin", "Producer", "Studio", "Vendor", "Art Director"],
+  "/campaigns": ["Admin", "Producer", "Studio", "Vendor", "Art Director"],
   "/vendors": ["Admin", "Producer"],
   "/vendors/portal": ["Vendor"],
   "/inventory": ["Admin", "Producer", "Studio"],

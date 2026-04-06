@@ -63,9 +63,21 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    const user = await requireRole(["Admin", "Producer", "Art Director"]);
     const { id } = await params;
     const body = await request.json();
+
+    // Art Directors can only update artDirectorId (self-assign)
+    if (user.role === "Art Director") {
+      const allowedKeys = Object.keys(body).filter((k) => k !== "lastUpdated");
+      if (allowedKeys.length !== 1 || allowedKeys[0] !== "artDirectorId") {
+        return NextResponse.json({ error: "Art Directors can only assign themselves" }, { status: 403 });
+      }
+      // Can only assign themselves, not someone else
+      if (body.artDirectorId !== null && body.artDirectorId !== user.id) {
+        return NextResponse.json({ error: "Can only assign yourself" }, { status: 403 });
+      }
+    }
 
     // Check for concurrent edit conflicts
     // Client can send lastUpdated timestamp to detect conflicts

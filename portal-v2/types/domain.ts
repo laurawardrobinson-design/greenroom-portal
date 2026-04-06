@@ -115,6 +115,7 @@ export interface Campaign {
   assetsDeliveryDate: string | null;
   notes: string;
   producerId: string | null;
+  artDirectorId: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

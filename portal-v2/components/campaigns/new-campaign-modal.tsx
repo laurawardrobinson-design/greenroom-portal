@@ -75,7 +75,7 @@ export function NewCampaignModal({ open, onClose, onCreated }: Props) {
 
   // Available users for crew
   const { data: allUsers = [] } = useSWR<AppUser[]>(
-    open ? "/api/users?roles=Admin,Producer,Studio" : null,
+    open ? "/api/users?roles=Admin,Producer,Studio,Art Director" : null,
     fetcher
   );
 

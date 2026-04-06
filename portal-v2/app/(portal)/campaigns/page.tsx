@@ -42,7 +42,7 @@ export default function CampaignsPage() {
 
   // Default to "My Campaigns" — toggle to show all
   const displayedCampaigns = !showAll && user
-    ? campaigns.filter((c) => c.createdBy === user.id || c.producerId === user.id)
+    ? campaigns.filter((c) => c.createdBy === user.id || c.producerId === user.id || c.artDirectorId === user.id)
     : campaigns;
 
   function toggleView(mode: "grid" | "table") {

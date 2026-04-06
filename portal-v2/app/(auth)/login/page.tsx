@@ -9,6 +9,7 @@ const DEV_ROLES = [
   { key: "producer", label: "Producer", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
   { key: "studio", label: "Studio", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
   { key: "vendor", label: "Vendor", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
+  { key: "artdirector", label: "Art Director", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
 ];
 
 interface Vendor {

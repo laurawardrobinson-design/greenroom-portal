@@ -19,6 +19,7 @@ function toCampaign(row: Record<string, unknown>): Campaign {
     assetsDeliveryDate: (row.assets_delivery_date as string) || null,
     notes: row.notes as string,
     producerId: (row.producer_id as string) || null,
+    artDirectorId: (row.art_director_id as string) || null,
     createdBy: (row.created_by as string) || "",
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -301,6 +302,8 @@ export async function updateCampaign(
   if (input.notes !== undefined) updateData.notes = input.notes;
   if ((input as Record<string, unknown>).producerId !== undefined)
     updateData.producer_id = (input as Record<string, unknown>).producerId;
+  if ((input as Record<string, unknown>).artDirectorId !== undefined)
+    updateData.art_director_id = (input as Record<string, unknown>).artDirectorId;
 
   const { data, error } = await db
     .from("campaigns")

@@ -152,6 +152,167 @@ export async function GET(request: Request) {
       });
     }
 
+    if (user.role === "Art Director") {
+      const thirtyDaysOut = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
+      const fourteenDaysOut = new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0];
+
+      // 1a. Active crew bookings for this user, joined with campaigns
+      const { data: bookingRows } = await db
+        .from("crew_bookings")
+        .select("id, campaign_id, role, day_rate, status, campaigns(id, name, wf_number, status, assets_delivery_date)")
+        .eq("user_id", user.id)
+        .not("status", "in", '("Cancelled","Completed")');
+
+      const bookings = bookingRows || [];
+      const bookingIds = bookings.map((b: any) => b.id as string);
+      const bookingCampaignIds = new Set(bookings.map((b: any) => b.campaign_id as string));
+
+      // 1b. Campaigns where this user is assigned as Art Director (even without crew bookings)
+      const { data: adCampaignRows } = await db
+        .from("campaigns")
+        .select("id, name, wf_number, status, assets_delivery_date")
+        .eq("art_director_id", user.id)
+        .neq("status", "Complete")
+        .neq("status", "Cancelled");
+
+      const adCampaigns = (adCampaignRows || []).filter(
+        (c: any) => !bookingCampaignIds.has(c.id as string)
+      );
+
+      const campaignIds = [...new Set([
+        ...bookings.map((b: any) => b.campaign_id as string),
+        ...adCampaigns.map((c: any) => c.id as string),
+      ])];
+
+      // 2. Upcoming shoot dates from those bookings
+      const { data: dateRows } = bookingIds.length > 0
+        ? await db
+            .from("crew_booking_dates")
+            .select("id, booking_id, shoot_date, confirmed")
+            .in("booking_id", bookingIds)
+            .gte("shoot_date", today)
+            .lte("shoot_date", fourteenDaysOut)
+            .order("shoot_date")
+        : { data: [] };
+
+      const upcomingDates = dateRows || [];
+
+      // Build booking → campaign lookup
+      const bookingMap = new Map(bookings.map((b: any) => [b.id, b]));
+
+      const activeBookingsList = [
+        ...bookings.map((b: any) => {
+          const c = b.campaigns as any;
+          return {
+            id: b.id,
+            campaignId: b.campaign_id,
+            campaignName: c?.name || "",
+            wfNumber: c?.wf_number || "",
+            campaignStatus: c?.status || "",
+            role: b.role,
+            dayRate: Number(b.day_rate),
+            status: b.status,
+          };
+        }),
+        ...adCampaigns.map((c: any) => ({
+          id: `ad-${c.id}`,
+          campaignId: c.id,
+          campaignName: c.name || "",
+          wfNumber: c.wf_number || "",
+          campaignStatus: c.status || "",
+          role: "Art Director",
+          dayRate: 0,
+          status: "Assigned",
+        })),
+      ];
+
+      const upcomingShootsList = upcomingDates.map((d: any) => {
+        const booking = bookingMap.get(d.booking_id) as any;
+        const c = booking?.campaigns as any;
+        return {
+          bookingId: d.booking_id,
+          campaignName: c?.name || "",
+          wfNumber: c?.wf_number || "",
+          shootDate: d.shoot_date,
+          confirmed: d.confirmed,
+        };
+      });
+
+      // 3. Count campaigns with assets due in next 30 days
+      const bookingAssetsDue = bookings.filter((b: any) => {
+        const c = b.campaigns as any;
+        return c?.assets_delivery_date && c.assets_delivery_date >= today && c.assets_delivery_date <= thirtyDaysOut;
+      }).length;
+      const adAssetsDue = adCampaigns.filter((c: any) =>
+        c.assets_delivery_date && c.assets_delivery_date >= today && c.assets_delivery_date <= thirtyDaysOut
+      ).length;
+      const assetsDueSoon = bookingAssetsDue + adAssetsDue;
+
+      // 4. Shot progress per active campaign
+      let shotProgress: any[] = [];
+      if (campaignIds.length > 0) {
+        const [{ data: setups }, { data: shots }] = await Promise.all([
+          db.from("shot_list_setups").select("id, campaign_id").in("campaign_id", campaignIds),
+          db.from("shot_list_shots").select("id, campaign_id, status").in("campaign_id", campaignIds),
+        ]);
+
+        const campaignNameMap = new Map(
+          bookings.map((b: any) => [b.campaign_id, (b.campaigns as any)?.name || ""])
+        );
+
+        const setupCounts = new Map<string, number>();
+        (setups || []).forEach((s: any) => setupCounts.set(s.campaign_id, (setupCounts.get(s.campaign_id) || 0) + 1));
+
+        const shotCounts = new Map<string, { total: number; completed: number }>();
+        (shots || []).forEach((s: any) => {
+          const prev = shotCounts.get(s.campaign_id) || { total: 0, completed: 0 };
+          prev.total++;
+          if (s.status === "Complete") prev.completed++;
+          shotCounts.set(s.campaign_id, prev);
+        });
+
+        shotProgress = campaignIds.map((cid) => ({
+          campaignId: cid,
+          campaignName: campaignNameMap.get(cid) || "",
+          totalSetups: setupCounts.get(cid) || 0,
+          totalShots: shotCounts.get(cid)?.total || 0,
+          completedShots: shotCounts.get(cid)?.completed || 0,
+        }));
+      }
+
+      // 5. Growth goal
+      const { data: goalRow } = await db
+        .from("user_goals")
+        .select("id, goal_text")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      let goal = null;
+      if (goalRow) {
+        const { data: milestones } = await db
+          .from("goal_milestones")
+          .select("id, completed")
+          .eq("goal_id", goalRow.id);
+
+        const ms = milestones || [];
+        goal = {
+          goalText: goalRow.goal_text,
+          milestonesCompleted: ms.filter((m: any) => m.completed).length,
+          milestonesTotal: ms.length,
+        };
+      }
+
+      return NextResponse.json({
+        activeBookings: activeBookingsList.length,
+        activeBookingsList,
+        upcomingShoots: upcomingShootsList.length,
+        upcomingShootsList,
+        assetsDueSoon,
+        shotProgress,
+        goal,
+      });
+    }
+
     if (user.role === "Vendor" && user.vendorId) {
       const { data: assignments } = await db
         .from("campaign_vendors")

@@ -535,7 +535,7 @@ function AddCrewInline({
 }) {
   const { toast } = useToast();
   const { data: allUsers = [] } = useSWR<AppUser[]>(
-    "/api/users?roles=Admin,Producer,Studio",
+    "/api/users?roles=Admin,Producer,Studio,Art Director",
     fetcher
   );
   const [role, setRole] = useState(SHOOT_ROLES[0]);

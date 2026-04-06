@@ -37,6 +37,7 @@ export const updateCampaignSchema = z.object({
   assetsDeliveryDate: z.string().nullable().optional(),
   notes: z.string().optional(),
   producerId: z.string().uuid().nullable().optional(),
+  artDirectorId: z.string().uuid().nullable().optional(),
 });
 
 export const campaignStatusSchema = z.enum([
