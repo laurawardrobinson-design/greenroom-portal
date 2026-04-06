@@ -2,12 +2,11 @@
 
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Modal, ModalFooter } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Modal } from "@/components/ui/modal";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { useToast } from "@/components/ui/toast";
 import { PROPS_CATEGORIES } from "@/lib/constants/categories";
+import { X } from "lucide-react";
 
 export function AddPropModal({
   open,
@@ -83,64 +82,90 @@ export function AddPropModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Add Prop" size="md">
+    <Modal open={open} onClose={onClose} size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex justify-center">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-2">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Prop name"
+            className="text-lg font-semibold text-text-primary bg-transparent flex-1 min-w-0 focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1.5 text-text-secondary hover:bg-surface-secondary transition-colors shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Image + Notes side by side */}
+        <div className="flex gap-3 items-start">
           <ImageUpload
             value={imageUrl}
             onFileSelected={(file) => { imageFileRef.current = file; }}
             onRemove={() => { imageFileRef.current = null; setImageUrl(null); }}
           />
+          <div className="flex-1">
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Handling notes, storage location, condition details..."
+              rows={4}
+              className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none"
+            />
+          </div>
         </div>
-        <Input
-          label="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          placeholder="e.g., White Marble Slab"
-        />
-        <Select
-          label="Category"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="Select category..."
-          options={PROPS_CATEGORIES.map((c) => ({ value: c, label: c }))}
-        />
-        <Input
-          label="Brand / Source"
-          value={brand}
-          onChange={(e) => setBrand(e.target.value)}
-          placeholder="Where it came from"
-        />
-        <Input
-          label="Value"
-          type="number"
-          min={0}
-          step="0.01"
-          value={purchasePrice}
-          onChange={(e) => setPurchasePrice(e.target.value)}
-          placeholder="0.00"
-        />
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">
-            Notes
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Handling notes, storage location, condition details..."
-            rows={2}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-          />
+
+        {/* Category */}
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Category</p>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full bg-transparent text-sm text-text-primary focus:outline-none cursor-pointer"
+          >
+            <option value="">Select category...</option>
+            {PROPS_CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
         </div>
-        <ModalFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={saving}>
-            Add Prop
-          </Button>
-        </ModalFooter>
+
+        {/* Brand / Value */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Brand / Source</p>
+            <input
+              type="text"
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="Where it came from"
+              className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Value</p>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+              placeholder="0.00"
+              className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-2 pt-1">
+          <Button type="button" variant="ghost" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button type="submit" loading={saving} className="flex-1">Add Prop</Button>
+        </div>
       </form>
     </Modal>
   );

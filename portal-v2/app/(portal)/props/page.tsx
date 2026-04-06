@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import useSWR from "swr";
+import { useSearchParams } from "next/navigation";
 import type { GearItem, GearStatus, GearCondition } from "@/types/domain";
 import { PROPS_CATEGORIES } from "@/lib/constants/categories";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,9 @@ import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { AddPropModal } from "@/components/props/add-prop-modal";
 import { PropDetailModal } from "@/components/props/prop-detail-modal";
+import { QrScanner } from "@/components/ui/qr-scanner";
+import { BatchCart } from "@/components/inventory/batch-cart";
+import { ActiveCheckouts } from "@/components/inventory/active-checkouts";
 import {
   Plus,
   Search,
@@ -24,6 +28,9 @@ import {
   Calendar,
   LayoutGrid,
   List,
+  ScanLine,
+  QrCode,
+  Package,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -44,6 +51,7 @@ type Tab = "items" | "reservations";
 export default function PropsPage() {
   const { toast } = useToast();
   const { user } = useCurrentUser();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>("items");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -52,6 +60,15 @@ export default function PropsPage() {
   const [detailItem, setDetailItem] = useState<GearItem | null>(null);
   const [checkoutItem, setCheckoutItem] = useState<GearItem | null>(null);
   const [checkinItem, setCheckinItem] = useState<GearItem | null>(null);
+
+  // Scanner state
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannerActive, setScannerActive] = useState(false);
+  const [cartItems, setCartItems] = useState<GearItem[]>([]);
+  const [processing, setProcessing] = useState(false);
+  const [manualCode, setManualCode] = useState("");
+  const cartRef = useRef<GearItem[]>([]);
+  cartRef.current = cartItems;
 
   const params = new URLSearchParams({ section: "Props" });
   if (search) params.set("search", search);
@@ -68,18 +85,112 @@ export default function PropsPage() {
 
   const availableCount = items.filter((i) => i.status === "Available").length;
 
+  // Auto-open scanner when ?scan=true
+  useEffect(() => {
+    if (searchParams.get("scan") === "true") {
+      setShowScanner(true);
+    }
+  }, [searchParams]);
+
+  // Activate scanner when drawer is visible
+  useEffect(() => {
+    setScannerActive(showScanner);
+  }, [showScanner]);
+
+  // Scan handler — stable ref to avoid restarting camera
+  const handleScan = useCallback(async (code: string) => {
+    if (cartRef.current.some((i) => i.qrCode === code)) {
+      toast("info", "Item already scanned");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/gear?qr=${encodeURIComponent(code)}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Item not found");
+      }
+      const item: GearItem = await res.json();
+      setCartItems((prev) => [...prev, item]);
+      toast("success", `Added: ${item.name}`);
+      if (navigator.vibrate) navigator.vibrate(100);
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Scan failed");
+    }
+  }, [toast]);
+
+  async function handleManualEntry() {
+    const code = manualCode.trim();
+    if (!code) return;
+    setManualCode("");
+    await handleScan(code);
+  }
+
+  async function handleBatchCheckout() {
+    const eligible = cartItems.filter(
+      (i) => i.status === "Available" || i.status === "Reserved"
+    );
+    if (eligible.length === 0) return;
+    setProcessing(true);
+    try {
+      const res = await fetch("/api/gear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "batch_checkout",
+          items: eligible.map((i) => ({
+            gearItemId: i.id,
+            condition: i.condition || "Good",
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Checkout failed");
+      toast("success", `Checked out ${eligible.length} item(s)`);
+      setCartItems([]);
+      mutate();
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Checkout failed");
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function handleBatchCheckin() {
+    const eligible = cartItems.filter((i) => i.status === "Checked Out");
+    if (eligible.length === 0) return;
+    setProcessing(true);
+    try {
+      const res = await fetch("/api/gear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "batch_checkin",
+          gearItemIds: eligible.map((i) => i.id),
+          condition: "Good",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Check-in failed");
+      toast("success", `Checked in ${eligible.length} item(s)`);
+      setCartItems([]);
+      mutate();
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Check-in failed");
+    } finally {
+      setProcessing(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
         title="Props"
         actions={
-          canEdit && tab === "items" && (
-            <Button onClick={() => setShowAdd(true)}>
-              <Plus className="h-4 w-4" />
-              Add Prop
-            </Button>
-          )
+          <Button variant="secondary" onClick={() => setShowScanner(true)}>
+            <ScanLine className="h-4 w-4" />
+            Scan Props
+          </Button>
         }
       />
 
@@ -304,6 +415,70 @@ export default function PropsPage() {
           onDone={() => { setCheckinItem(null); mutate(); }}
         />
       )}
+
+      {/* Scanner modal */}
+      <Modal
+        open={showScanner}
+        onClose={() => setShowScanner(false)}
+        title="Check Out / Check In"
+        description="Scan prop QR codes to check items out or in"
+        size="lg"
+      >
+        <div className="space-y-4">
+          {/* Scanner tile */}
+          <div className="rounded-xl border border-border bg-surface overflow-hidden">
+            <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+              <QrCode className="h-4 w-4 shrink-0 text-primary" />
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+                SCAN ITEMS
+              </h3>
+            </div>
+            <div className="p-4">
+              <QrScanner
+                active={scannerActive && showScanner}
+                onScan={handleScan}
+                onError={(err) => toast("error", err)}
+              />
+            </div>
+          </div>
+
+          {/* Manual entry */}
+          <div className="rounded-xl border border-border bg-surface overflow-hidden">
+            <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+              <Package className="h-4 w-4 shrink-0 text-primary" />
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+                MANUAL ENTRY
+              </h3>
+            </div>
+            <div className="flex gap-2 p-3.5">
+              <input
+                type="text"
+                placeholder="Type or paste QR code..."
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleManualEntry(); }}
+                className="h-9 flex-1 rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+              />
+              <Button size="sm" onClick={handleManualEntry}>
+                Add
+              </Button>
+            </div>
+          </div>
+
+          {/* Scanned items cart */}
+          <BatchCart
+            items={cartItems}
+            onRemove={(id) => setCartItems((prev) => prev.filter((i) => i.id !== id))}
+            onCheckOutAll={handleBatchCheckout}
+            onCheckInAll={handleBatchCheckin}
+            onClear={() => setCartItems([])}
+            processing={processing}
+          />
+
+          {/* Active checkouts */}
+          <ActiveCheckouts />
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -2,12 +2,11 @@
 
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Modal, ModalFooter } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Modal } from "@/components/ui/modal";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { useToast } from "@/components/ui/toast";
 import { GEAR_CATEGORIES } from "@/lib/constants/categories";
+import { X } from "lucide-react";
 
 export function AddGearModal({
   open,
@@ -27,6 +26,7 @@ export function AddGearModal({
   const [serialNumber, setSerialNumber] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
+  const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const imageFileRef = useRef<File | null>(null);
 
@@ -77,6 +77,7 @@ export function AddGearModal({
       setSerialNumber("");
       setPurchaseDate("");
       setPurchasePrice("");
+      setDescription("");
       setImageUrl(null);
       imageFileRef.current = null;
       onCreated();
@@ -88,73 +89,125 @@ export function AddGearModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Add Gear Item" size="lg">
+    <Modal open={open} onClose={onClose} size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex justify-center">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-2">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Gear name"
+            className="text-lg font-semibold text-text-primary bg-transparent flex-1 min-w-0 focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1.5 text-text-secondary hover:bg-surface-secondary transition-colors shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Image + Description side by side */}
+        <div className="flex gap-3 items-start">
           <ImageUpload
             value={imageUrl}
             onFileSelected={(file) => { imageFileRef.current = file; }}
             onRemove={() => { imageFileRef.current = null; setImageUrl(null); }}
           />
+          <div className="flex-1">
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Notes about this item..."
+              rows={4}
+              className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none"
+            />
+          </div>
         </div>
-        <Input
-          label="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          placeholder="e.g., Canon R5 Body"
-        />
-        <Select
-          label="Category"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="Select category..."
-          options={GEAR_CATEGORIES.map((c) => ({ value: c, label: c }))}
-        />
+
+        {/* Category */}
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Category</p>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full bg-transparent text-sm text-text-primary focus:outline-none cursor-pointer"
+          >
+            <option value="">Select category...</option>
+            {GEAR_CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Brand / Model */}
         <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="Brand"
-            value={brand}
-            onChange={(e) => setBrand(e.target.value)}
-            placeholder="Canon"
-          />
-          <Input
-            label="Model"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder="EOS R5"
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Brand</p>
+            <input
+              type="text"
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="Canon"
+              className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Model</p>
+            <input
+              type="text"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder="EOS R5"
+              className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Serial Number */}
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Serial Number</p>
+          <input
+            type="text"
+            value={serialNumber}
+            onChange={(e) => setSerialNumber(e.target.value)}
+            placeholder="Optional"
+            className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
           />
         </div>
-        <Input
-          label="Serial Number"
-          value={serialNumber}
-          onChange={(e) => setSerialNumber(e.target.value)}
-        />
+
+        {/* Purchase Date / Price */}
         <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="Purchase Date"
-            type="date"
-            value={purchaseDate}
-            onChange={(e) => setPurchaseDate(e.target.value)}
-          />
-          <Input
-            label="Purchase Price"
-            type="number"
-            min={0}
-            step="0.01"
-            value={purchasePrice}
-            onChange={(e) => setPurchasePrice(e.target.value)}
-            placeholder="0.00"
-          />
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Purchase Date</p>
+            <input
+              type="date"
+              value={purchaseDate}
+              onChange={(e) => setPurchaseDate(e.target.value)}
+              className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Purchase Price</p>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+              placeholder="0.00"
+              className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+            />
+          </div>
         </div>
-        <ModalFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={saving}>
-            Add Item
-          </Button>
-        </ModalFooter>
+
+        {/* Buttons */}
+        <div className="flex gap-2 pt-1">
+          <Button type="button" variant="ghost" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button type="submit" loading={saving} className="flex-1">Add Item</Button>
+        </div>
       </form>
     </Modal>
   );

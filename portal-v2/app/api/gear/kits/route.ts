@@ -6,7 +6,7 @@ import type { GearCondition } from "@/types/domain";
 // GET /api/gear/kits
 export async function GET() {
   try {
-    await requireRole(["Admin", "Producer", "Studio"]);
+    await requireRole(["Admin", "Producer", "Studio", "Art Director"]);
     const kits = await listKits();
     return NextResponse.json(kits);
   } catch (error) {
@@ -17,7 +17,7 @@ export async function GET() {
 // POST /api/gear/kits
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Studio"]);
+    const user = await requireRole(["Admin", "Studio", "Producer", "Art Director"]);
     const body = await request.json();
     // Kit checkout action
     if (body.action === "checkout_kit") {
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
 // PATCH /api/gear/kits?id=xxx
 export async function PATCH(request: Request) {
   try {
-    await requireRole(["Admin", "Studio"]);
+    await requireRole(["Admin", "Studio", "Producer", "Art Director"]);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) {
@@ -78,7 +78,7 @@ export async function PATCH(request: Request) {
 // DELETE /api/gear/kits?id=xxx
 export async function DELETE(request: Request) {
   try {
-    await requireRole(["Admin", "Studio"]);
+    await requireRole(["Admin", "Studio", "Producer", "Art Director"]);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) {

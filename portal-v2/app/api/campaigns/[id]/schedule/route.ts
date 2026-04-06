@@ -30,17 +30,20 @@ export async function GET(
 
     if (shotErr) throw shotErr;
 
-    // Deliverable links + product links
+    // Deliverable links + product links + talent
     const shotIds = (shots || []).map((s) => s.id);
     let links: Record<string, unknown>[] = [];
     let productLinks: Record<string, unknown>[] = [];
+    let talentEntries: Record<string, unknown>[] = [];
     if (shotIds.length > 0) {
-      const [linkRes, prodRes] = await Promise.all([
+      const [linkRes, prodRes, talentRes] = await Promise.all([
         db.from("shot_deliverable_links").select("*").in("shot_id", shotIds),
         db.from("shot_product_links").select("*").in("shot_id", shotIds),
+        db.from("shot_talent").select("*").in("shot_id", shotIds).order("talent_number"),
       ]);
       links = (linkRes.data || []) as Record<string, unknown>[];
       productLinks = (prodRes.data || []) as Record<string, unknown>[];
+      talentEntries = (talentRes.data || []) as Record<string, unknown>[];
     }
 
     // Deliverables + campaign products
@@ -54,6 +57,7 @@ export async function GET(
       shots: shots || [],
       links: links,
       productLinks: productLinks,
+      talent: talentEntries,
       deliverables: delRes.data || [],
       campaignProducts: cpRes.data || [],
     });

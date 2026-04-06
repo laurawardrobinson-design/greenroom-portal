@@ -15,7 +15,7 @@ export default function PreProductionPage() {
   const isLoading = userLoading || campaignsLoading;
 
   const prepCampaigns = campaigns.filter(
-    (c) => c.status === "Planning" || c.status === "In Production"
+    (c) => c.status === "Planning" || c.status === "Upcoming" || c.status === "In Production"
   );
 
   // Prefer campaigns assigned to this producer, fall back to any prep campaign

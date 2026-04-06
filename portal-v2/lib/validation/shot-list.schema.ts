@@ -43,6 +43,7 @@ export const updateShotSchema = z.object({
   lighting: z.string().optional(),
   priority: z.string().optional(),
   retouchingNotes: z.string().optional(),
+  productTags: z.string().optional(),
   sortOrder: z.number().int().min(0).optional(),
 });
 

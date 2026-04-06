@@ -265,7 +265,7 @@ export function ArtDirectorDashboard({ user }: { user: AppUser }) {
                   return (
                     <Link
                       key={sp.campaignId}
-                      href={`/campaigns/${sp.campaignId}/shots`}
+                      href={`/campaigns/${sp.campaignId}/pre-production`}
                       className="block px-3.5 py-3 hover:bg-surface-secondary/50 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-1.5">

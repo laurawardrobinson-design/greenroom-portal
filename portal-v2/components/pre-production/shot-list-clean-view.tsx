@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, Fragment } from "react";
 import { createPortal } from "react-dom";
-import { Download, List, GripVertical, Plus, Trash2, ChevronLeft, X } from "lucide-react";
+import { Download, List, GripVertical, Plus, Trash2, ChevronLeft, X, Upload, UserPlus, User } from "lucide-react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { useToast } from "@/components/ui/toast";
 import { generateShotListPdf } from "@/lib/utils/pdf-generator";
@@ -85,6 +85,7 @@ interface ScheduleData {
   shots: Array<{
     id: string;
     setup_id: string;
+    campaign_id: string;
     name: string;
     description: string;
     angle: string;
@@ -93,18 +94,36 @@ interface ScheduleData {
     notes: string;
     talent: string;
     props: string;
+    wardrobe: string;
     surface: string;
     lighting: string;
     priority: string;
     retouching_notes: string;
+    reference_image_url: string | null;
+    product_tags: string;
     sort_order: number;
     estimated_duration_minutes: number;
     shoot_date_id: string | null;
   }>;
   links: Array<{ shot_id: string; deliverable_id: string }>;
   productLinks: Array<{ shot_id: string; campaign_product_id: string }>;
+  talent: Array<{
+    id: string;
+    shot_id: string;
+    campaign_id: string;
+    talent_number: number;
+    label: string;
+    age_range: string;
+    gender: string;
+    ethnicity: string;
+    skin_tone: string;
+    hair: string;
+    build: string;
+    wardrobe_notes: string;
+    notes: string;
+  }>;
   deliverables: Array<{ id: string; channel: string; format: string; aspect_ratio: string }>;
-  campaignProducts: Array<{ id: string; product: { name: string; item_code: string | null } | null }>;
+  campaignProducts: Array<{ id: string; product_id: string; product: { id: string; name: string; item_code: string | null; department: string | null; description: string | null; shooting_notes: string | null; image_url: string | null } | null }>;
 }
 
 // ─── Editable Cell ───────────────────────────────────────────────────────────
@@ -172,6 +191,823 @@ function Cell({
           {value || placeholder || "—"}
         </div>
       )}
+    </td>
+  );
+}
+
+// ─── Ref image cell (click to upload) ────────────────────────────────────────
+function RefImageCell({
+  shotId,
+  campaignId,
+  url,
+  swrKey,
+}: {
+  shotId: string;
+  campaignId: string;
+  url: string | null;
+  swrKey: string;
+}) {
+  const { toast } = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [lightbox, setLightbox] = useState(false);
+
+  async function handleFile(file: File) {
+    if (!file.type.startsWith("image/")) { toast("error", "Please select an image"); return; }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("campaignId", campaignId);
+      fd.append("category", "Reference");
+      const res = await fetch("/api/files", { method: "POST", body: fd });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      await fetch(`/api/shot-list/shots/${shotId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referenceImageUrl: data.fileUrl }),
+      });
+      globalMutate(swrKey);
+    } catch { toast("error", "Upload failed"); }
+    finally { setUploading(false); }
+  }
+
+  return (
+    <td className="px-1 py-1.5">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+      />
+      {uploading ? (
+        <div className="flex items-center justify-center h-6 w-6">
+          <div className="h-3 w-3 rounded-full border border-primary border-t-transparent animate-spin" />
+        </div>
+      ) : url ? (
+        <div className="relative group">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={url}
+            alt="Ref"
+            onClick={() => setLightbox(true)}
+            className="h-6 w-6 rounded object-cover border border-border cursor-zoom-in hover:opacity-80 transition-opacity"
+          />
+          {/* Replace button on hover */}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
+            className="absolute -top-1 -right-1 hidden group-hover:flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white border border-border shadow-sm text-text-tertiary hover:text-primary transition-colors"
+          >
+            <Upload className="h-2 w-2" />
+          </button>
+          {/* Lightbox */}
+          {lightbox && typeof document !== "undefined" && createPortal(
+            <div
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70"
+              onClick={() => setLightbox(false)}
+            >
+              <div className="relative max-w-[80vw] max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="Reference" className="max-w-full max-h-[80vh] rounded-lg object-contain" />
+                <button
+                  type="button"
+                  onClick={() => setLightbox(false)}
+                  className="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-lg text-text-primary hover:bg-surface-secondary transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setLightbox(false); inputRef.current?.click(); }}
+                  className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-white/90 px-3 py-1.5 text-xs font-medium text-text-primary shadow-lg hover:bg-white transition-colors"
+                >
+                  <Upload className="h-3 w-3" />
+                  Replace
+                </button>
+              </div>
+            </div>,
+            document.body
+          )}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="flex items-center justify-center h-6 w-6 rounded border border-dashed border-border/60 text-text-tertiary/30 hover:border-primary/40 hover:text-primary/50 transition-colors"
+        >
+          <Upload className="h-3 w-3" />
+        </button>
+      )}
+    </td>
+  );
+}
+
+// ─── Product info popover ────────────────────────────────────────────────────
+function ProductPopover({
+  product,
+  onClose,
+  onUnlink,
+}: {
+  product: { cpId: string; name: string; itemCode: string | null; department: string | null; description: string | null; shootingNotes: string | null; imageUrl: string | null };
+  onClose: () => void;
+  onUnlink: () => void;
+}) {
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Position near center of viewport
+    setPos({ top: window.innerHeight / 2 - 120, left: window.innerWidth / 2 - 140 });
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className="fixed z-[9999] w-72 rounded-xl border border-border bg-surface shadow-xl overflow-hidden"
+      style={{ top: pos.top, left: pos.left }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="flex items-start gap-3 px-3.5 py-3 border-b border-border">
+        {product.imageUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={product.imageUrl} alt="" className="h-10 w-10 rounded-lg object-cover border border-border shrink-0" />
+        ) : (
+          <div className="h-10 w-10 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+            <span className="text-amber-600 text-sm font-bold">{product.name.charAt(0)}</span>
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-text-primary leading-tight">{product.name}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            {product.itemCode && <span className="text-[10px] font-mono text-text-tertiary">{product.itemCode}</span>}
+            {product.department && <span className="text-[10px] text-text-tertiary">{product.department}</span>}
+          </div>
+        </div>
+        <button type="button" onClick={onClose} className="shrink-0 text-text-tertiary hover:text-text-primary transition-colors">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Details */}
+      {(product.description || product.shootingNotes) && (
+        <div className="px-3.5 py-2.5 space-y-2 text-xs">
+          {product.description && (
+            <div>
+              <p className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-0.5">Description</p>
+              <p className="text-text-secondary leading-relaxed">{product.description}</p>
+            </div>
+          )}
+          {product.shootingNotes && (
+            <div>
+              <p className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-0.5">Shooting Notes</p>
+              <p className="text-text-secondary leading-relaxed">{product.shootingNotes}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="px-3.5 py-2 border-t border-border">
+        <button
+          type="button"
+          onClick={onUnlink}
+          className="text-[10px] font-medium text-red-500 hover:text-red-600 transition-colors"
+        >
+          Remove from shot
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Product tag cell (search + free-text) ──────────────────────────────────
+interface ProductResult { id: string; name: string; itemCode: string | null; department: string }
+
+function ProductTagCell({
+  shotId,
+  campaignId,
+  linkedProducts,
+  freeTextTags,
+  swrKey,
+}: {
+  shotId: string;
+  campaignId: string;
+  linkedProducts: Array<{ cpId: string; name: string; itemCode: string | null; department: string | null; description: string | null; shootingNotes: string | null; imageUrl: string | null }>;
+  freeTextTags: string[];
+  swrKey: string;
+}) {
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<ProductResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [highlightIdx, setHighlightIdx] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropRef = useRef<HTMLTableCellElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Debounced search
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); return; }
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/products?search=${encodeURIComponent(query.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setResults((data.products || data || []).map((p: Record<string, string | null>) => ({
+            id: p.id, name: p.name, itemCode: p.item_code ?? p.itemCode, department: p.department,
+          })));
+          setHighlightIdx(0);
+        }
+      } catch { /* ignore */ }
+      finally { setLoading(false); }
+    }, 250);
+    return () => clearTimeout(timerRef.current);
+  }, [query]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!editing) return;
+    function handler(e: MouseEvent) {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
+        commitText();
+        setEditing(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [editing, query]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function linkProduct(productId: string) {
+    try {
+      // Step 1: ensure product is linked to campaign
+      const cpRes = await fetch("/api/campaign-products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId, productId }),
+      });
+      const cpData = await cpRes.json();
+      const cpId = cpData.id || cpData.campaignProduct?.id;
+      if (!cpId) throw new Error();
+
+      // Step 2: link campaign product to shot
+      await fetch(`/api/shot-list/shots/${shotId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignProductId: cpId, action: "link" }),
+      });
+      globalMutate(swrKey);
+    } catch {
+      toast("error", "Failed to link product");
+    }
+    setQuery("");
+    setResults([]);
+  }
+
+  async function unlinkProduct(cpId: string) {
+    try {
+      await fetch(`/api/shot-list/shots/${shotId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignProductId: cpId, action: "unlink" }),
+      });
+      globalMutate(swrKey);
+    } catch { toast("error", "Failed to unlink product"); }
+  }
+
+  function commitText() {
+    const text = query.replace(/,+$/, "").trim();
+    if (!text) return;
+    // Check if it matches a result
+    const match = results.find((r) => r.name.toLowerCase() === text.toLowerCase());
+    if (match) {
+      linkProduct(match.id);
+    } else {
+      // Add as free text tag
+      const current = freeTextTags.filter(Boolean);
+      if (!current.includes(text)) {
+        const updated = [...current, text].join(", ");
+        fetch(`/api/shot-list/shots/${shotId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productTags: updated }),
+        }).then(() => globalMutate(swrKey)).catch(() => toast("error", "Failed to save"));
+      }
+    }
+    setQuery("");
+    setResults([]);
+  }
+
+  function removeFreeTag(tag: string) {
+    const updated = freeTextTags.filter((t) => t !== tag).join(", ");
+    fetch(`/api/shot-list/shots/${shotId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productTags: updated }),
+    }).then(() => globalMutate(swrKey)).catch(() => toast("error", "Failed to save"));
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "," || e.key === "Enter") {
+      e.preventDefault();
+      if (results.length > 0 && e.key === "Enter") {
+        linkProduct(results[highlightIdx]?.id || results[0].id);
+      } else {
+        commitText();
+      }
+    } else if (e.key === "Escape") {
+      setQuery("");
+      setResults([]);
+      setEditing(false);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIdx((i) => Math.min(i + 1, results.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIdx((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Backspace" && !query) {
+      // Remove last tag
+      if (freeTextTags.length > 0) {
+        removeFreeTag(freeTextTags[freeTextTags.length - 1]);
+      } else if (linkedProducts.length > 0) {
+        unlinkProduct(linkedProducts[linkedProducts.length - 1].cpId);
+      }
+    }
+  }
+
+  const hasTags = linkedProducts.length > 0 || freeTextTags.length > 0;
+  const [popoverProduct, setPopoverProduct] = useState<typeof linkedProducts[number] | null>(null);
+
+  if (!editing) {
+    return (
+      <td className="px-2 py-1.5 overflow-hidden relative">
+        {hasTags ? (
+          <div className="flex flex-col gap-0.5 overflow-hidden">
+            {linkedProducts.map((p) => (
+              <span
+                key={p.cpId}
+                onClick={(e) => { e.stopPropagation(); setPopoverProduct(popoverProduct?.cpId === p.cpId ? null : p); }}
+                className="inline-flex items-center gap-0.5 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 max-w-full overflow-hidden cursor-pointer hover:border-amber-400 transition-colors"
+              >
+                <span className="truncate min-w-0">{p.name}</span>
+                {p.itemCode && <span className="opacity-60 shrink-0">{p.itemCode}</span>}
+              </span>
+            ))}
+            {freeTextTags.map((tag) => (
+              <span key={tag} className="inline-flex items-center gap-0.5 rounded bg-surface-secondary border border-border px-1.5 py-0.5 text-[10px] font-medium text-text-secondary max-w-full overflow-hidden">
+                <span className="truncate min-w-0">{tag}</span>
+              </span>
+            ))}
+            {/* Click below chips to add more */}
+            <button
+              type="button"
+              onClick={() => { setPopoverProduct(null); setEditing(true); setTimeout(() => inputRef.current?.focus(), 0); }}
+              className="text-[10px] text-text-tertiary/40 hover:text-primary/60 transition-colors text-left mt-0.5"
+            >
+              + add
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => { setEditing(true); setTimeout(() => inputRef.current?.focus(), 0); }}
+            className="text-xs text-text-tertiary/40 hover:text-text-tertiary/60 transition-colors w-full text-left"
+          >
+            Products
+          </button>
+        )}
+
+        {/* Product info popover */}
+        {popoverProduct && typeof document !== "undefined" && createPortal(
+          <>
+            <div className="fixed inset-0 z-[9998]" onClick={() => setPopoverProduct(null)} />
+            <ProductPopover product={popoverProduct} onClose={() => setPopoverProduct(null)} onUnlink={() => { unlinkProduct(popoverProduct.cpId); setPopoverProduct(null); }} />
+          </>,
+          document.body
+        )}
+      </td>
+    );
+  }
+
+  return (
+    <td className="px-0 py-0 relative overflow-hidden" ref={dropRef}>
+      <div className="flex flex-col gap-0.5 px-2 py-1.5 min-h-[32px] ring-2 ring-inset ring-primary bg-white overflow-hidden">
+        {/* Linked product chips */}
+        {linkedProducts.map((p) => (
+          <span key={p.cpId} className="inline-flex items-center gap-0.5 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 max-w-full overflow-hidden">
+            <span className="truncate min-w-0">{p.name}</span>
+            {p.itemCode && <span className="opacity-60 shrink-0">{p.itemCode}</span>}
+            <button type="button" onClick={() => unlinkProduct(p.cpId)} className="ml-0.5 shrink-0 hover:text-red-500 transition-colors">
+              <X className="h-2.5 w-2.5" />
+            </button>
+          </span>
+        ))}
+        {/* Free text chips */}
+        {freeTextTags.map((tag) => (
+          <span key={tag} className="inline-flex items-center gap-0.5 rounded bg-surface-secondary border border-border px-1.5 py-0.5 text-[10px] font-medium text-text-secondary max-w-full overflow-hidden">
+            <span className="truncate min-w-0">{tag}</span>
+            <button type="button" onClick={() => removeFreeTag(tag)} className="ml-0.5 shrink-0 hover:text-red-500 transition-colors">
+              <X className="h-2.5 w-2.5" />
+            </button>
+          </span>
+        ))}
+        {/* Input */}
+        <input
+          ref={inputRef}
+          autoFocus
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={hasTags ? "" : "Search products…"}
+          className="flex-1 min-w-[80px] text-xs bg-transparent outline-none text-text-primary placeholder:text-text-tertiary/40"
+        />
+      </div>
+
+      {/* Dropdown */}
+      {(results.length > 0 || (loading && query)) && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-0.5 rounded-lg border border-border bg-surface shadow-lg max-h-48 overflow-y-auto">
+          {loading && results.length === 0 && (
+            <div className="px-3 py-2 text-xs text-text-tertiary">Searching…</div>
+          )}
+          {results.map((r, i) => (
+            <button
+              key={r.id}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); linkProduct(r.id); }}
+              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${
+                i === highlightIdx ? "bg-primary/5 text-primary" : "text-text-primary hover:bg-surface-secondary"
+              }`}
+            >
+              <span className="font-medium">{r.name}</span>
+              {r.itemCode && <span className="text-text-tertiary">{r.itemCode}</span>}
+              <span className="ml-auto text-[10px] text-text-tertiary">{r.department}</span>
+            </button>
+          ))}
+          {!loading && query.trim() && results.length === 0 && (
+            <div className="px-3 py-2 text-xs text-text-tertiary">
+              No matches — press <kbd className="rounded border border-border px-1 py-0.5 text-[10px]">,</kbd> to add as text
+            </div>
+          )}
+        </div>
+      )}
+    </td>
+  );
+}
+
+// ─── Add Talent Modal ────────────────────────────────────────────────────────
+const AGE_OPTIONS = ["Child (2-6)", "Child (7-12)", "Teen", "20s", "30s", "40s", "50s", "60+", "Open"];
+const GENDER_OPTIONS = ["Female", "Male", "Non-binary", "Open"];
+const SKIN_TONE_OPTIONS = ["Light", "Medium", "Medium-Deep", "Deep", "Open"];
+
+function AddTalentModal({
+  open,
+  onClose,
+  shotId,
+  campaignId,
+  existingTalent,
+  swrKey,
+}: {
+  open: boolean;
+  onClose: () => void;
+  shotId: string;
+  campaignId: string;
+  existingTalent: ScheduleData["talent"];
+  swrKey: string;
+}) {
+  const { toast } = useToast();
+  const [mode, setMode] = useState<"pick" | "create">("pick");
+  const [saving, setSaving] = useState(false);
+
+  // Form state for new talent
+  const [label, setLabel] = useState("");
+  const [ageRange, setAgeRange] = useState("Open");
+  const [gender, setGender] = useState("Open");
+  const [ethnicity, setEthnicity] = useState("");
+  const [skinTone, setSkinTone] = useState("Open");
+  const [hair, setHair] = useState("");
+  const [build, setBuild] = useState("");
+  const [wardrobeNotes, setWardrobeNotes] = useState("");
+  const [notes, setNotes] = useState("");
+
+  // Unique talent across campaign (by talent_number)
+  const campaignTalent = existingTalent.reduce((acc, t) => {
+    if (!acc.find((x) => x.talent_number === t.talent_number)) acc.push(t);
+    return acc;
+  }, [] as typeof existingTalent);
+
+  // Which talent_numbers are already on this shot
+  const shotTalentNumbers = new Set(existingTalent.filter((t) => t.shot_id === shotId).map((t) => t.talent_number));
+  const assignable = campaignTalent.filter((t) => !shotTalentNumbers.has(t.talent_number));
+
+  // Auto-switch to create if no existing talent to assign
+  useEffect(() => {
+    if (open) {
+      setMode(assignable.length > 0 ? "pick" : "create");
+      setLabel(""); setAgeRange("Open"); setGender("Open"); setEthnicity("");
+      setSkinTone("Open"); setHair(""); setBuild(""); setWardrobeNotes(""); setNotes("");
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function assignExisting(talentNumber: number) {
+    const source = campaignTalent.find((t) => t.talent_number === talentNumber);
+    if (!source) return;
+    setSaving(true);
+    try {
+      await fetch("/api/shot-list/talent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shotId, campaignId, talentNumber,
+          label: source.label, ageRange: source.age_range, gender: source.gender,
+          ethnicity: source.ethnicity, skinTone: source.skin_tone, hair: source.hair,
+          build: source.build,
+        }),
+      });
+      globalMutate(swrKey);
+      onClose();
+    } catch { toast("error", "Failed to assign talent"); }
+    finally { setSaving(false); }
+  }
+
+  async function createNew(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await fetch("/api/shot-list/talent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shotId, campaignId,
+          label, ageRange, gender,
+          ethnicity: ethnicity || "Open",
+          skinTone, hair: hair || "Open", build: build || "Open",
+          wardrobeNotes, notes,
+        }),
+      });
+      globalMutate(swrKey);
+      onClose();
+    } catch { toast("error", "Failed to add talent"); }
+    finally { setSaving(false); }
+  }
+
+  if (!open) return null;
+
+  const nextNum = campaignTalent.length > 0
+    ? Math.max(...campaignTalent.map((t) => t.talent_number)) + 1
+    : 1;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
+      <div className="w-full max-w-md rounded-xl border border-border bg-surface shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <UserPlus className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-text-primary">Add Talent</h3>
+          </div>
+          <button type="button" onClick={onClose} className="text-text-tertiary hover:text-text-primary transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Toggle if there are existing talent to assign */}
+        {assignable.length > 0 && (
+          <div className="flex border-b border-border">
+            <button type="button" onClick={() => setMode("pick")}
+              className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${mode === "pick" ? "text-primary bg-primary/5" : "text-text-tertiary hover:text-text-secondary"}`}>
+              Assign Existing
+            </button>
+            <button type="button" onClick={() => setMode("create")}
+              className={`flex-1 px-4 py-2 text-xs font-medium border-l border-border transition-colors ${mode === "create" ? "text-primary bg-primary/5" : "text-text-tertiary hover:text-text-secondary"}`}>
+              New Talent
+            </button>
+          </div>
+        )}
+
+        {mode === "pick" ? (
+          <div className="p-3 space-y-1.5 max-h-64 overflow-y-auto">
+            {assignable.map((t) => (
+              <button key={t.talent_number} type="button" onClick={() => assignExisting(t.talent_number)}
+                disabled={saving}
+                className="flex w-full items-center gap-3 rounded-lg border border-border px-3 py-2.5 text-left hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                  T{t.talent_number}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-text-primary">{t.label || `Talent ${t.talent_number}`}</p>
+                  <p className="text-[10px] text-text-tertiary">
+                    {[t.age_range, t.gender, t.ethnicity].filter((v) => v && v !== "Open").join(" · ") || "Open casting"}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <form onSubmit={createNew} className="p-4 space-y-3">
+            {/* Talent number badge */}
+            <div className="flex items-center gap-2 mb-1">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                T{nextNum}
+              </span>
+              <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Role label — Mom, Chef, Hero…"
+                className="flex-1 text-sm font-medium text-text-primary bg-transparent border-b border-border focus:border-primary outline-none py-1 placeholder:text-text-tertiary/40" />
+            </div>
+
+            {/* Demographics grid */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Age Range</label>
+                <select value={ageRange} onChange={(e) => setAgeRange(e.target.value)}
+                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                  {AGE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Gender</label>
+                <select value={gender} onChange={(e) => setGender(e.target.value)}
+                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                  {GENDER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Ethnicity</label>
+                <input value={ethnicity} onChange={(e) => setEthnicity(e.target.value)} placeholder="Open — or per brief"
+                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none focus:ring-1 focus:ring-primary" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Skin Tone</label>
+                <select value={skinTone} onChange={(e) => setSkinTone(e.target.value)}
+                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                  {SKIN_TONE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Hair</label>
+                <input value={hair} onChange={(e) => setHair(e.target.value)} placeholder="Open"
+                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none focus:ring-1 focus:ring-primary" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Build</label>
+                <input value={build} onChange={(e) => setBuild(e.target.value)} placeholder="Open"
+                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none focus:ring-1 focus:ring-primary" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Wardrobe for this shot</label>
+              <input value={wardrobeNotes} onChange={(e) => setWardrobeNotes(e.target.value)} placeholder="What they're wearing…"
+                className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none focus:ring-1 focus:ring-primary" />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Notes</label>
+              <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Other casting notes…"
+                className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none focus:ring-1 focus:ring-primary" />
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors">Cancel</button>
+              <button type="submit" disabled={saving}
+                className="rounded-lg bg-primary px-4 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50">
+                {saving ? "Adding…" : `Add Talent ${nextNum}`}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ─── Talent cell ─────────────────────────────────────────────────────────────
+function TalentCell({
+  shotId,
+  campaignId,
+  shotTalent,
+  allTalent,
+  swrKey,
+}: {
+  shotId: string;
+  campaignId: string;
+  shotTalent: ScheduleData["talent"];
+  allTalent: ScheduleData["talent"];
+  swrKey: string;
+}) {
+  const { toast } = useToast();
+  const [showModal, setShowModal] = useState(false);
+  const [popover, setPopover] = useState<ScheduleData["talent"][number] | null>(null);
+
+  async function removeTalent(id: string) {
+    try {
+      await fetch(`/api/shot-list/talent?id=${id}`, { method: "DELETE" });
+      globalMutate(swrKey);
+      setPopover(null);
+    } catch { toast("error", "Failed to remove talent"); }
+  }
+
+  return (
+    <td className="px-2 py-1.5 overflow-hidden">
+      <div className="flex flex-col gap-0.5 overflow-hidden">
+        {shotTalent.map((t) => (
+          <span
+            key={t.id}
+            onClick={() => setPopover(popover?.id === t.id ? null : t)}
+            className="inline-flex items-center gap-1 rounded bg-violet-50 border border-violet-200 px-1.5 py-0.5 text-[10px] font-medium text-violet-700 max-w-full overflow-hidden cursor-pointer hover:border-violet-400 transition-colors"
+          >
+            <span className="font-bold shrink-0">T{t.talent_number}</span>
+            <span className="truncate min-w-0">{t.label || `Talent ${t.talent_number}`}</span>
+          </span>
+        ))}
+        <button
+          type="button"
+          onClick={() => setShowModal(true)}
+          className="inline-flex items-center gap-0.5 text-[10px] text-text-tertiary/40 hover:text-primary/60 transition-colors w-fit"
+        >
+          <UserPlus className="h-2.5 w-2.5" />
+          {shotTalent.length === 0 ? "" : ""}
+        </button>
+      </div>
+
+      {/* Talent detail popover */}
+      {popover && typeof document !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setPopover(null)} />
+          <div
+            className="fixed z-[9999] w-64 rounded-xl border border-border bg-surface shadow-xl overflow-hidden"
+            style={{ top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 text-[10px] font-bold text-violet-700">T{popover.talent_number}</span>
+                <span className="text-sm font-semibold text-text-primary">{popover.label || `Talent ${popover.talent_number}`}</span>
+              </div>
+              <button type="button" onClick={() => setPopover(null)} className="text-text-tertiary hover:text-text-primary transition-colors">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="px-3.5 py-2.5 space-y-1.5 text-xs">
+              {[
+                ["Age", popover.age_range],
+                ["Gender", popover.gender],
+                ["Ethnicity", popover.ethnicity],
+                ["Skin Tone", popover.skin_tone],
+                ["Hair", popover.hair],
+                ["Build", popover.build],
+              ].map(([label, value]) => (
+                value && value !== "Open" ? (
+                  <div key={label} className="flex justify-between">
+                    <span className="text-text-tertiary">{label}</span>
+                    <span className="text-text-primary font-medium">{value}</span>
+                  </div>
+                ) : null
+              ))}
+              {popover.wardrobe_notes && (
+                <div className="pt-1 border-t border-border/60">
+                  <span className="text-[10px] text-text-tertiary uppercase tracking-wider">Wardrobe</span>
+                  <p className="text-text-secondary mt-0.5">{popover.wardrobe_notes}</p>
+                </div>
+              )}
+              {popover.notes && (
+                <div className="pt-1 border-t border-border/60">
+                  <span className="text-[10px] text-text-tertiary uppercase tracking-wider">Notes</span>
+                  <p className="text-text-secondary mt-0.5">{popover.notes}</p>
+                </div>
+              )}
+              {/* Show "Open casting" if all fields are Open */}
+              {["age_range", "gender", "ethnicity", "skin_tone", "hair", "build"].every(
+                (k) => !popover[k as keyof typeof popover] || popover[k as keyof typeof popover] === "Open"
+              ) && (
+                <p className="text-text-tertiary italic">Open casting — no specific requirements</p>
+              )}
+            </div>
+            <div className="px-3.5 py-2 border-t border-border">
+              <button type="button" onClick={() => removeTalent(popover.id)}
+                className="text-[10px] font-medium text-red-500 hover:text-red-600 transition-colors">
+                Remove from shot
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+
+      <AddTalentModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        shotId={shotId}
+        campaignId={campaignId}
+        existingTalent={allTalent}
+        swrKey={swrKey}
+      />
     </td>
   );
 }
@@ -525,6 +1361,72 @@ export function ShotListCleanView({
   // Drag state
   const [dragId, setDragId] = useState<string | null>(null);
 
+  // ─── Column resize ──────────────────────────────────────────────────────────
+  const COLUMNS = [
+    { key: "drag", label: "", minW: 28, defaultW: 28 },
+    { key: "#", label: "#", minW: 40, defaultW: 40 },
+    { key: "ref", label: "Ref", minW: 36, defaultW: 36 },
+    { key: "name", label: "File Name", minW: 100, defaultW: 160 },
+    { key: "type", label: "Type", minW: 50, defaultW: 60 },
+    { key: "angle", label: "Angle", minW: 60, defaultW: 80 },
+    { key: "env", label: "Environment", minW: 80, defaultW: 100 },
+    { key: "desc", label: "Description", minW: 100, defaultW: 180 },
+    { key: "surface", label: "Surface", minW: 70, defaultW: 100 },
+    { key: "props", label: "Props", minW: 70, defaultW: 100 },
+    { key: "products", label: "Products", minW: 100, defaultW: 140 },
+    { key: "lighting", label: "Lighting", minW: 70, defaultW: 100 },
+    { key: "talent", label: "Talent", minW: 50, defaultW: 60 },
+    { key: "wardrobe", label: "Wardrobe", minW: 70, defaultW: 100 },
+    { key: "channel", label: "Channel", minW: 80, defaultW: 100 },
+    { key: "notes", label: "Notes", minW: 80, defaultW: 120 },
+    { key: "retouching", label: "Retouching", minW: 80, defaultW: 120 },
+    { key: "delete", label: "", minW: 28, defaultW: 28 },
+  ];
+
+  const storageKey = `shotlist-col-widths-${campaignId}`;
+  const [colWidths, setColWidths] = useState<number[]>(() => {
+    if (typeof window === "undefined") return COLUMNS.map((c) => c.defaultW);
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === COLUMNS.length) return parsed;
+      }
+    } catch { /* ignore */ }
+    return COLUMNS.map((c) => c.defaultW);
+  });
+
+  const resizingRef = useRef<{ colIdx: number; startX: number; startW: number } | null>(null);
+
+  const handleResizeStart = useCallback((colIdx: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    resizingRef.current = { colIdx, startX: e.clientX, startW: colWidths[colIdx] };
+
+    function onMove(ev: MouseEvent) {
+      if (!resizingRef.current) return;
+      const { colIdx: ci, startX, startW } = resizingRef.current;
+      const delta = ev.clientX - startX;
+      const newW = Math.max(COLUMNS[ci].minW, startW + delta);
+      setColWidths((prev) => {
+        const next = [...prev];
+        next[ci] = newW;
+        return next;
+      });
+    }
+    function onUp() {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      resizingRef.current = null;
+      // Persist
+      setColWidths((current) => {
+        try { localStorage.setItem(storageKey, JSON.stringify(current)); } catch { /* ignore */ }
+        return current;
+      });
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [colWidths, storageKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ─── Patch a shot field ────────────────────────────────────────────────────
   const patchShot = useCallback(
     async (shotId: string, field: string, value: string) => {
@@ -769,47 +1671,25 @@ export function ShotListCleanView({
 
               {/* Table */}
               <div className="overflow-x-auto">
-                <table className="w-full text-left">
+                <table className="text-left" style={{ tableLayout: "fixed", width: colWidths.reduce((a, b) => a + b, 0) }}>
                   <thead>
                     <tr className="bg-surface-secondary">
-                      <th className="w-[28px]" />
-                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary w-[40px]">
-                        #
-                      </th>
-                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary min-w-[160px]">
-                        File Name
-                      </th>
-                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary w-[60px]">
-                        Type
-                      </th>
-                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary w-[80px]">
-                        Angle
-                      </th>
-                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary w-[100px]">
-                        Environment
-                      </th>
-                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary min-w-[180px]">
-                        Description
-                      </th>
-                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary min-w-[100px]">
-                        Surface
-                      </th>
-                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary min-w-[100px]">
-                        Lighting
-                      </th>
-                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary min-w-[130px]">
-                        Products
-                      </th>
-                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary w-[60px]">
-                        Talent
-                      </th>
-                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary min-w-[100px]">
-                        Channel
-                      </th>
-                      <th className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary min-w-[120px]">
-                        Notes
-                      </th>
-                      <th className="w-[28px]" />
+                      {COLUMNS.map((col, ci) => (
+                        <th
+                          key={col.key}
+                          style={{ width: colWidths[ci] }}
+                          className={`relative ${col.label ? "px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary" : ""} select-none`}
+                        >
+                          {col.label}
+                          {/* Resize handle (skip for first, last, and tiny columns) */}
+                          {col.label && ci < COLUMNS.length - 1 && (
+                            <div
+                              onMouseDown={(e) => handleResizeStart(ci, e)}
+                              className="absolute top-0 right-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/20 transition-colors"
+                            />
+                          )}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -858,6 +1738,14 @@ export function ShotListCleanView({
                           <td className="px-2.5 py-2 text-xs font-medium text-text-primary">
                             {globalIdx}
                           </td>
+
+                          {/* Ref image (click to upload) */}
+                          <RefImageCell
+                            shotId={shot.id}
+                            campaignId={campaignId}
+                            url={shot.reference_image_url}
+                            swrKey={swrKey}
+                          />
 
                           {/* File Name */}
                           <Cell
@@ -928,6 +1816,30 @@ export function ShotListCleanView({
                             onSave={(v) => patchShot(shot.id, "surface", v)}
                           />
 
+                          {/* Props */}
+                          <Cell
+                            value={shot.props}
+                            placeholder="Props"
+                            onSave={(v) => patchShot(shot.id, "props", v)}
+                          />
+
+                          {/* Products (tag input with search + free text) */}
+                          <ProductTagCell
+                            shotId={shot.id}
+                            campaignId={campaignId}
+                            linkedProducts={
+                              data.productLinks
+                                .filter((pl) => pl.shot_id === shot.id)
+                                .map((pl) => {
+                                  const cp = data.campaignProducts.find((c) => c.id === pl.campaign_product_id);
+                                  return cp ? { cpId: cp.id, name: cp.product?.name || "Product", itemCode: cp.product?.item_code ?? null, department: cp.product?.department ?? null, description: cp.product?.description ?? null, shootingNotes: cp.product?.shooting_notes ?? null, imageUrl: cp.product?.image_url ?? null } : null;
+                                })
+                                .filter((x): x is { cpId: string; name: string; itemCode: string | null; department: string | null; description: string | null; shootingNotes: string | null; imageUrl: string | null } => !!x)
+                            }
+                            freeTextTags={shot.product_tags ? shot.product_tags.split(",").map((t) => t.trim()).filter(Boolean) : []}
+                            swrKey={swrKey}
+                          />
+
                           {/* Lighting */}
                           <Cell
                             value={shot.lighting || ""}
@@ -935,18 +1847,20 @@ export function ShotListCleanView({
                             onSave={(v) => patchShot(shot.id, "lighting", v)}
                           />
 
-                          {/* Products */}
-                          <Cell
-                            value={shot.props}
-                            placeholder="Products"
-                            onSave={(v) => patchShot(shot.id, "props", v)}
+                          {/* Talent */}
+                          <TalentCell
+                            shotId={shot.id}
+                            campaignId={campaignId}
+                            shotTalent={data.talent.filter((t) => t.shot_id === shot.id)}
+                            allTalent={data.talent}
+                            swrKey={swrKey}
                           />
 
-                          {/* Talent */}
+                          {/* Wardrobe */}
                           <Cell
-                            value={shot.talent || "No"}
-                            placeholder="No"
-                            onSave={(v) => patchShot(shot.id, "talent", v)}
+                            value={shot.wardrobe || ""}
+                            placeholder="Wardrobe"
+                            onSave={(v) => patchShot(shot.id, "wardrobe", v)}
                           />
 
                           {/* Channel */}
@@ -959,6 +1873,13 @@ export function ShotListCleanView({
                             value={shot.notes}
                             placeholder="Notes"
                             onSave={(v) => patchShot(shot.id, "notes", v)}
+                          />
+
+                          {/* Retouching */}
+                          <Cell
+                            value={shot.retouching_notes || ""}
+                            placeholder="Retouching"
+                            onSave={(v) => patchShot(shot.id, "retouchingNotes", v)}
                           />
 
                           {/* Delete */}

@@ -11,7 +11,6 @@ import { generateOverlayPng } from "@/lib/utils/overlay-generator";
 import { CHANNEL_TEMPLATES, SPEC_DIMENSIONS } from "@/lib/constants/channels";
 import type { ChannelTemplate } from "@/lib/constants/channels";
 import type { ShotListSetup, ShotListShot, CampaignDeliverable, CampaignStatus, CampaignProduct } from "@/types/domain";
-import { ShotDetailModal } from "@/components/campaigns/shot-detail-modal";
 import { ProductDetailModal } from "@/components/campaigns/product-detail-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -763,7 +762,6 @@ function ShotRow({ shot, deliverables, campaignProducts, campaignId, wfNumber, s
   onDragEnd: () => void;
 }) {
   const { toast } = useToast();
-  const [showDetail, setShowDetail] = useState(false);
   const [viewProductId, setViewProductId] = useState<string | null>(null);
 
   async function patch(u: Record<string, unknown>) {
@@ -791,17 +789,6 @@ function ShotRow({ shot, deliverables, campaignProducts, campaignId, wfNumber, s
           onClose={() => setViewProductId(null)}
         />
       )}
-      {showDetail && (
-        <ShotDetailModal
-          shot={shot}
-          open={showDetail}
-          onClose={() => setShowDetail(false)}
-          onSaved={() => { onMutate(); setShowDetail(false); }}
-          campaignProducts={campaignProducts}
-          wfNumber={wfNumber}
-          shotIndex={shotIndex}
-        />
-      )}
     <tr
       draggable={canEdit}
       onDragStart={canEdit ? onDragStart : undefined}
@@ -821,13 +808,7 @@ function ShotRow({ shot, deliverables, campaignProducts, campaignId, wfNumber, s
         </div>
       </td>
       <td className="border border-border/60 p-0 w-28">
-        <button
-          type="button"
-          onClick={() => setShowDetail(true)}
-          className="w-full text-left px-2 py-1.5 min-h-[32px] text-sm  text-text-primary hover:bg-primary/5 transition-colors"
-        >
-          {shot.name || <span className="text-text-tertiary/40">Shot name…</span>}
-        </button>
+        <Cell value={shot.name} placeholder="Shot name…" onSave={(v) => patch({ name: v })} />
       </td>
       <td className="border border-border/60 p-0 w-52">
         <DeliverableCell shot={shot} deliverables={deliverables} canEdit={canEdit} onMutate={onMutate} />

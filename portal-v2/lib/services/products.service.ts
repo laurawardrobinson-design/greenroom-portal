@@ -176,6 +176,17 @@ export async function linkProductToCampaign(
   sortOrder = 0
 ): Promise<CampaignProduct> {
   const db = createAdminClient();
+
+  // Return existing link if already linked
+  const { data: existing } = await db
+    .from("campaign_products")
+    .select("*, products(*)")
+    .eq("campaign_id", campaignId)
+    .eq("product_id", productId)
+    .maybeSingle();
+
+  if (existing) return toCampaignProduct(existing as Record<string, unknown>);
+
   const { data, error } = await db
     .from("campaign_products")
     .insert({ campaign_id: campaignId, product_id: productId, notes, sort_order: sortOrder })

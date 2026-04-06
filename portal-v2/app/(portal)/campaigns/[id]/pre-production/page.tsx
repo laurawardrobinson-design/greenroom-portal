@@ -390,16 +390,44 @@ function PeopleSection({
   );
 }
 
+interface ShotTalentEntry {
+  id: string;
+  shot_id: string;
+  campaign_id: string;
+  talent_number: number;
+  label: string;
+  age_range: string;
+  gender: string;
+  ethnicity: string;
+  skin_tone: string;
+  hair: string;
+  build: string;
+  wardrobe_notes: string;
+  notes: string;
+}
+
 function PeopleTab({
+  campaignId,
   shoots,
   vendors,
   producerId,
 }: {
+  campaignId: string;
   shoots: Shoot[];
   vendors: CampaignVendor[];
   producerId: string | null;
 }) {
   const { data: allUsers = [] } = useSWR<AppUser[]>("/api/users", fetcher);
+  const { data: talentEntries = [] } = useSWR<ShotTalentEntry[]>(
+    `/api/shot-list/talent?campaignId=${campaignId}`,
+    fetcher
+  );
+
+  // Deduplicate talent by number (same person across shots)
+  const uniqueTalent = talentEntries.reduce((acc, t) => {
+    if (!acc.find((x) => x.talent_number === t.talent_number)) acc.push(t);
+    return acc;
+  }, [] as ShotTalentEntry[]);
 
   // Collect unique internal crew from all shoots
   const crewMap = new Map<string, { user: AppUser; roles: string[] }>();
@@ -493,10 +521,32 @@ function PeopleTab({
 
       {/* Talent */}
       <PeopleSection title="Talent" icon={Star}>
-        {talentVendors.length === 0 ? (
+        {uniqueTalent.length === 0 && talentVendors.length === 0 ? (
           <p className="text-sm text-text-tertiary py-2">No talent assigned yet.</p>
         ) : (
           <div className="space-y-2">
+            {/* Shot talent (structured casting) */}
+            {uniqueTalent.map((t) => {
+              const shotCount = talentEntries.filter((e) => e.talent_number === t.talent_number).length;
+              const details = [t.age_range, t.gender, t.ethnicity].filter((v) => v && v !== "Open");
+              return (
+                <div key={t.talent_number} className="flex items-start gap-3 py-1.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100">
+                    <span className="text-xs font-bold text-violet-700">T{t.talent_number}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-text-primary truncate">
+                      {t.label || `Talent ${t.talent_number}`}
+                    </p>
+                    <p className="text-xs text-text-tertiary truncate">
+                      {details.length > 0 ? details.join(" · ") : "Open casting"}
+                      {" · "}{shotCount} shot{shotCount !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+            {/* Vendor-sourced talent */}
             {talentVendors.map((cv) => (
               <div key={cv.id} className="flex items-start gap-3 py-1.5">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
@@ -530,12 +580,12 @@ function CampaignSwitcher({ currentId, currentName, currentWf }: { currentId: st
 
   // Pre-production campaigns only
   const prepCampaigns = campaigns.filter(
-    (c) => c.status === "Planning" || c.status === "In Production"
+    (c) => c.status === "Planning" || c.status === "Upcoming" || c.status === "In Production"
   );
 
   // Default: only campaigns assigned to this producer
   const mine = prepCampaigns.filter(
-    (c) => c.producerId === user?.id || c.createdBy === user?.id
+    (c) => c.producerId === user?.id || c.createdBy === user?.id || c.artDirectorId === user?.id
   );
   const displayed = showAll || mine.length === 0 ? prepCampaigns : mine;
 
@@ -708,7 +758,7 @@ export default function PreProductionWorkspacePage({
           />
         )}
         {activeTab === "logistics" && <LogisticsTab />}
-        {activeTab === "people"    && <PeopleTab shoots={shoots} vendors={vendors} producerId={campaign.producerId} />}
+        {activeTab === "people"    && <PeopleTab campaignId={id} shoots={shoots} vendors={vendors} producerId={campaign.producerId} />}
         {activeTab === "payments"  && <PaymentsTab />}
         {activeTab === "contracts" && <ContractsTab campaignId={id} shoots={shoots} vendors={vendors} />}
       </div>

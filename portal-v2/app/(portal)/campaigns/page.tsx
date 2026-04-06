@@ -95,6 +95,7 @@ export default function CampaignsPage() {
           >
             <option value="">All statuses</option>
             <option value="Planning">Planning</option>
+            <option value="Upcoming">Upcoming</option>
             <option value="In Production">In Production</option>
             <option value="Post">Post</option>
             <option value="Complete">Complete</option>

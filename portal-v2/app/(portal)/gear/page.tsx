@@ -26,6 +26,8 @@ import { AddGearModal } from "@/components/inventory/add-gear-modal";
 import { BatchAddGearModal } from "@/components/inventory/batch-add-gear-modal";
 import { ReserveGearModal } from "@/components/inventory/reserve-gear-modal";
 import { LogMaintenanceModal } from "@/components/inventory/log-maintenance-modal";
+import { CreateKitModal } from "@/components/inventory/create-kit-modal";
+import { EditKitModal } from "@/components/inventory/edit-kit-modal";
 import { QrScanner } from "@/components/ui/qr-scanner";
 import { BatchCart } from "@/components/inventory/batch-cart";
 import { ActiveCheckouts } from "@/components/inventory/active-checkouts";
@@ -46,6 +48,9 @@ import {
   ScanLine,
   X,
   Wrench,
+  Layers,
+  Star,
+  ChevronDown,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -71,7 +76,7 @@ const CONDITIONS: GearCondition[] = [
   "Damaged",
 ];
 
-type Tab = "items" | "reservations" | "maintenance";
+type Tab = "items" | "kits" | "reservations" | "maintenance";
 
 export default function InventoryPage() {
   const { toast } = useToast();
@@ -135,7 +140,16 @@ export default function InventoryPage() {
   );
   const maintenance: GearMaintenance[] = Array.isArray(rawMaintenance) ? rawMaintenance : [];
 
+  const { data: rawKits, mutate: mutateKits } = useSWR<GearKit[]>(
+    tab === "kits" ? "/api/gear/kits" : null,
+    fetcher
+  );
+  const kits: GearKit[] = Array.isArray(rawKits) ? rawKits : [];
+
   const [showMaintenance, setShowMaintenance] = useState(false);
+  const [showCreateKit, setShowCreateKit] = useState(false);
+  const [editKit, setEditKit] = useState<GearKit | null>(null);
+  const [expandedKit, setExpandedKit] = useState<string | null>(null);
 
   const canEdit = user?.role === "Admin" || user?.role === "Studio" || user?.role === "Producer";
 
@@ -280,41 +294,8 @@ export default function InventoryPage() {
         <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={() => setShowScanner(true)}>
             <ScanLine className="h-4 w-4" />
-            Scan
+            Scan Gear
           </Button>
-          {canEdit && tab === "items" && (
-            <div className="relative">
-              <button
-                onClick={() => setShowAddMenu((v) => !v)}
-                className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white shadow-xs transition-all hover:bg-primary-hover hover:shadow-sm"
-              >
-                <Plus className="h-4 w-4" />
-                Add Item
-                <ChevronRight className={`h-3 w-3 ml-1 transition-transform ${showAddMenu ? "rotate-90" : ""}`} />
-              </button>
-              {showAddMenu && (
-                <>
-                  <div className="fixed inset-0 z-20" onClick={() => setShowAddMenu(false)} />
-                  <div className="absolute right-0 top-full mt-1 z-30 w-40 rounded-lg border border-border bg-surface py-1 shadow-md">
-                    <button
-                      onClick={() => { setShowAdd(true); setShowAddMenu(false); }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-secondary transition-colors"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Single Item
-                    </button>
-                    <button
-                      onClick={() => { setShowBatchAdd(true); setShowAddMenu(false); }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-secondary transition-colors"
-                    >
-                      <List className="h-3.5 w-3.5" />
-                      Batch Add
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
@@ -322,6 +303,7 @@ export default function InventoryPage() {
       <div className="flex gap-1 border-b border-border">
         {([
           { key: "items" as Tab, label: "Items" },
+          { key: "kits" as Tab, label: "Kits" },
           { key: "reservations" as Tab, label: "Reservations" },
           { key: "maintenance" as Tab, label: "Maintenance" },
         ]).map((t) => (
@@ -357,13 +339,36 @@ export default function InventoryPage() {
               </div>
               <div className="ml-auto flex items-center gap-1">
                 {canEdit && (
-                  <button
-                    onClick={() => setShowAdd(true)}
-                    className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
-                    title="Add gear item"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowAddMenu((v) => !v)}
+                      className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+                      title="Add gear item"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                    {showAddMenu && (
+                      <>
+                        <div className="fixed inset-0 z-20" onClick={() => setShowAddMenu(false)} />
+                        <div className="absolute right-0 top-full mt-1 z-30 w-40 rounded-lg border border-border bg-surface py-1 shadow-md">
+                          <button
+                            onClick={() => { setShowAdd(true); setShowAddMenu(false); }}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-secondary transition-colors"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Single Item
+                          </button>
+                          <button
+                            onClick={() => { setShowBatchAdd(true); setShowAddMenu(false); }}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-secondary transition-colors"
+                          >
+                            <List className="h-3.5 w-3.5" />
+                            Batch Add
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
                 <button
                   onClick={() => setViewMode("grid")}
@@ -635,6 +640,78 @@ export default function InventoryPage() {
         </>
       )}
 
+      {/* Kits tab */}
+      {tab === "kits" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-text-secondary">
+              {kits.length} kit{kits.length !== 1 ? "s" : ""}
+            </p>
+            {canEdit && (
+              <Button size="sm" onClick={() => setShowCreateKit(true)}>
+                <Plus className="h-3.5 w-3.5" />
+                Create Kit
+              </Button>
+            )}
+          </div>
+
+          {kits.length === 0 ? (
+            <EmptyState
+              icon={<Layers className="h-5 w-5" />}
+              title="No kits yet"
+              description="Group gear items into reusable kits for quick checkout."
+              action={
+                canEdit ? (
+                  <Button size="sm" onClick={() => setShowCreateKit(true)}>
+                    <Plus className="h-3.5 w-3.5" />
+                    Create Kit
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {kits.map((kit) => {
+                const totalCount = kit.items?.length || 0;
+                const availCount = kit.items?.filter((i) => i.status === "Available").length || 0;
+
+                return (
+                  <Card
+                    key={kit.id}
+                    hover
+                    padding="md"
+                    onClick={() => setEditKit(kit)}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex items-center justify-center h-28 rounded-lg bg-surface-secondary mb-2">
+                      <Layers className="h-8 w-8 text-text-tertiary" />
+                    </div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div>
+                        <h3 className="text-sm font-semibold text-text-primary">{kit.name}</h3>
+                        {kit.description && (
+                          <p className="text-xs text-text-tertiary mt-0.5 line-clamp-1">{kit.description}</p>
+                        )}
+                      </div>
+                      {kit.isFavorite && <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0 mt-0.5" />}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-text-tertiary mt-3 pt-3 border-t border-border-light">
+                      <span className="flex items-center gap-1">
+                        <Package className="h-3 w-3" />
+                        {totalCount} item{totalCount !== 1 ? "s" : ""}
+                      </span>
+                      <Badge variant="custom" className="bg-emerald-50 text-emerald-700">
+                        {availCount} available
+                      </Badge>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Reservations tab */}
       {tab === "reservations" && (
         <div className="space-y-4">
@@ -790,6 +867,20 @@ export default function InventoryPage() {
         onClose={() => setShowMaintenance(false)}
         items={items}
         onCreated={() => { mutateMaintenance(); setShowMaintenance(false); }}
+      />
+      <CreateKitModal
+        open={showCreateKit}
+        onClose={() => setShowCreateKit(false)}
+        items={items}
+        onCreated={() => { mutateKits(); setShowCreateKit(false); }}
+      />
+      <EditKitModal
+        kit={editKit}
+        open={!!editKit}
+        onClose={() => setEditKit(null)}
+        items={items}
+        onUpdated={() => { mutateKits(); setEditKit(null); }}
+        onDeleted={() => { mutateKits(); setEditKit(null); }}
       />
 
       {/* Scanner modal (centered) */}

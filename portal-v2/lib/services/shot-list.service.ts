@@ -241,6 +241,7 @@ export async function updateShot(
   if (input.lighting !== undefined) update.lighting = input.lighting;
   if (input.priority !== undefined) update.priority = input.priority;
   if (input.retouchingNotes !== undefined) update.retouching_notes = input.retouchingNotes;
+  if (input.productTags !== undefined) update.product_tags = input.productTags;
   if (input.sortOrder !== undefined) update.sort_order = input.sortOrder;
   if (input.status !== undefined) {
     update.status = input.status;
@@ -328,5 +329,142 @@ export async function unlinkProduct(shotId: string, campaignProductId: string): 
     .delete()
     .eq("shot_id", shotId)
     .eq("campaign_product_id", campaignProductId);
+  if (error) throw error;
+}
+
+// --- Shot Talent ---
+
+export interface ShotTalent {
+  id: string;
+  shotId: string;
+  campaignId: string;
+  talentNumber: number;
+  label: string;
+  ageRange: string;
+  gender: string;
+  ethnicity: string;
+  skinTone: string;
+  hair: string;
+  build: string;
+  wardrobeNotes: string;
+  notes: string;
+  createdAt: string;
+}
+
+function toTalent(row: Record<string, unknown>): ShotTalent {
+  return {
+    id: row.id as string,
+    shotId: row.shot_id as string,
+    campaignId: row.campaign_id as string,
+    talentNumber: Number(row.talent_number),
+    label: (row.label as string) || "",
+    ageRange: (row.age_range as string) || "Open",
+    gender: (row.gender as string) || "Open",
+    ethnicity: (row.ethnicity as string) || "Open",
+    skinTone: (row.skin_tone as string) || "Open",
+    hair: (row.hair as string) || "Open",
+    build: (row.build as string) || "Open",
+    wardrobeNotes: (row.wardrobe_notes as string) || "",
+    notes: (row.notes as string) || "",
+    createdAt: row.created_at as string,
+  };
+}
+
+export async function listCampaignTalent(campaignId: string): Promise<ShotTalent[]> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("shot_talent")
+    .select("*")
+    .eq("campaign_id", campaignId)
+    .order("talent_number", { ascending: true });
+  if (error) throw error;
+  return (data || []).map((r) => toTalent(r as Record<string, unknown>));
+}
+
+export async function getNextTalentNumber(campaignId: string): Promise<number> {
+  const db = createAdminClient();
+  const { data } = await db
+    .from("shot_talent")
+    .select("talent_number")
+    .eq("campaign_id", campaignId)
+    .order("talent_number", { ascending: false })
+    .limit(1);
+  if (data && data.length > 0) return (data[0].talent_number as number) + 1;
+  return 1;
+}
+
+export async function addTalentToShot(input: {
+  shotId: string;
+  campaignId: string;
+  talentNumber: number;
+  label?: string;
+  ageRange?: string;
+  gender?: string;
+  ethnicity?: string;
+  skinTone?: string;
+  hair?: string;
+  build?: string;
+  wardrobeNotes?: string;
+  notes?: string;
+}): Promise<ShotTalent> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("shot_talent")
+    .insert({
+      shot_id: input.shotId,
+      campaign_id: input.campaignId,
+      talent_number: input.talentNumber,
+      label: input.label || "",
+      age_range: input.ageRange || "Open",
+      gender: input.gender || "Open",
+      ethnicity: input.ethnicity || "Open",
+      skin_tone: input.skinTone || "Open",
+      hair: input.hair || "Open",
+      build: input.build || "Open",
+      wardrobe_notes: input.wardrobeNotes || "",
+      notes: input.notes || "",
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return toTalent(data as Record<string, unknown>);
+}
+
+export async function updateTalent(id: string, input: Partial<{
+  label: string;
+  ageRange: string;
+  gender: string;
+  ethnicity: string;
+  skinTone: string;
+  hair: string;
+  build: string;
+  wardrobeNotes: string;
+  notes: string;
+}>): Promise<ShotTalent> {
+  const db = createAdminClient();
+  const update: Record<string, unknown> = {};
+  if (input.label !== undefined) update.label = input.label;
+  if (input.ageRange !== undefined) update.age_range = input.ageRange;
+  if (input.gender !== undefined) update.gender = input.gender;
+  if (input.ethnicity !== undefined) update.ethnicity = input.ethnicity;
+  if (input.skinTone !== undefined) update.skin_tone = input.skinTone;
+  if (input.hair !== undefined) update.hair = input.hair;
+  if (input.build !== undefined) update.build = input.build;
+  if (input.wardrobeNotes !== undefined) update.wardrobe_notes = input.wardrobeNotes;
+  if (input.notes !== undefined) update.notes = input.notes;
+
+  const { data, error } = await db
+    .from("shot_talent")
+    .update(update)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return toTalent(data as Record<string, unknown>);
+}
+
+export async function removeTalentFromShot(id: string): Promise<void> {
+  const db = createAdminClient();
+  const { error } = await db.from("shot_talent").delete().eq("id", id);
   if (error) throw error;
 }

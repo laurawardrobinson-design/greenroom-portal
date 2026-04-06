@@ -49,7 +49,7 @@ export function ShotListTile({
           size="sm"
           variant="ghost"
           className="text-xs text-text-secondary hover:text-text-primary"
-          onClick={() => router.push(`/campaigns/${campaignId}/shots`)}
+          onClick={() => router.push(`/campaigns/${campaignId}/pre-production`)}
         >
           View Full Shot List
         </Button>
