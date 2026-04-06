@@ -3,6 +3,7 @@ import type { CampaignStatus, CampaignVendorStatus } from "@/types/domain";
 // Campaign status flow
 export const CAMPAIGN_STATUS_ORDER: CampaignStatus[] = [
   "Planning",
+  "Upcoming",
   "In Production",
   "Post",
   "Complete",
@@ -10,6 +11,7 @@ export const CAMPAIGN_STATUS_ORDER: CampaignStatus[] = [
 
 export const CAMPAIGN_STATUS_COLORS: Record<CampaignStatus, string> = {
   Planning: "bg-slate-100 text-slate-700",
+  Upcoming: "bg-amber-50 text-amber-700",
   "In Production": "bg-blue-50 text-blue-700",
   Post: "bg-purple-50 text-purple-700",
   Complete: "bg-emerald-50 text-emerald-700",
