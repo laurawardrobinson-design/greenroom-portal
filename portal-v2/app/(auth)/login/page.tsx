@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 
 const DEV_AUTH = process.env.NEXT_PUBLIC_DEV_AUTH === "true";
+const DEV_MODE = process.env.NODE_ENV === "development";
 
 const DEV_ROLES = [
   { key: "admin", label: "HOP (Admin)", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
@@ -186,58 +187,58 @@ export default function LoginPage() {
                   </button>
                 </>
               ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-2 mb-4">
-                    {DEV_ROLES.map((r) => (
-                      <button
-                        key={r.key}
-                        onClick={() => {
-                          if (r.key === "vendor") {
-                            setSelectedRole("vendor");
-                          } else {
-                            handleDevLogin(r.key);
-                          }
-                        }}
-                        disabled={loading !== null}
-                        className={`rounded-lg border px-3 py-2.5 text-xs font-medium transition-all disabled:opacity-50 ${r.color}`}
-                      >
-                        {loading === r.key ? (
-                          <div className="mx-auto h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                        ) : (
-                          r.label
-                        )}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Reset Gretchen & Laura Preferences */}
-                  <div className="mt-4 pt-4 border-t border-white/10">
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  {DEV_ROLES.map((r) => (
                     <button
-                      onClick={handleResetPreferences}
-                      disabled={resetLoading}
-                      className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-xs font-medium text-white hover:bg-white/10 transition-all disabled:opacity-50"
+                      key={r.key}
+                      onClick={() => {
+                        if (r.key === "vendor") {
+                          setSelectedRole("vendor");
+                        } else {
+                          handleDevLogin(r.key);
+                        }
+                      }}
+                      disabled={loading !== null}
+                      className={`rounded-lg border px-3 py-2.5 text-xs font-medium transition-all disabled:opacity-50 ${r.color}`}
                     >
-                      {resetLoading ? (
+                      {loading === r.key ? (
                         <div className="mx-auto h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                       ) : (
-                        "Reset Users"
+                        r.label
                       )}
                     </button>
-                    {resetMessage && (
-                      <p
-                        className={`mt-2 text-xs text-center ${
-                          resetMessage.type === "success"
-                            ? "text-green-400"
-                            : "text-red-400"
-                        }`}
-                      >
-                        {resetMessage.text}
-                      </p>
-                    )}
-                  </div>
-                </>
+                  ))}
+                </div>
               )}
             </>
+          )}
+
+          {/* Reset test users — available in dev regardless of DEV_AUTH */}
+          {DEV_MODE && (
+            <div className="mt-4 pt-4 border-t border-white/10">
+              <button
+                onClick={handleResetPreferences}
+                disabled={resetLoading}
+                className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-xs font-medium text-white hover:bg-white/10 transition-all disabled:opacity-50"
+              >
+                {resetLoading ? (
+                  <div className="mx-auto h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                ) : (
+                  "Reset Users"
+                )}
+              </button>
+              {resetMessage && (
+                <p
+                  className={`mt-2 text-xs text-center ${
+                    resetMessage.type === "success"
+                      ? "text-green-400"
+                      : "text-red-400"
+                  }`}
+                >
+                  {resetMessage.text}
+                </p>
+              )}
+            </div>
           )}
         </div>
 
