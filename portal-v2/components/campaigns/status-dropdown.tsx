@@ -14,6 +14,7 @@ interface Props {
 
 const PILL_COLORS: Record<CampaignStatus, { bg: string; text: string; dot: string }> = {
   Planning: { bg: "bg-slate-100", text: "text-slate-700", dot: "bg-slate-400" },
+  Upcoming: { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-400" },
   "In Production": { bg: "bg-blue-50", text: "text-blue-700", dot: "bg-blue-500" },
   Post: { bg: "bg-purple-50", text: "text-purple-700", dot: "bg-purple-500" },
   Complete: { bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" },
