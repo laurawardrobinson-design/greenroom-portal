@@ -47,6 +47,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import Link from "next/link";
+import { VendorFinancialsTab } from "@/components/budget/vendor-financials-tab";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -73,16 +74,17 @@ export default function BudgetPage() {
       <div>
         <h2 className="text-2xl font-bold text-text-primary">Budget</h2>
         <p className="text-sm text-text-secondary">
-          Production budget pools, approvals, and spending analysis
+          {isAdmin ? "Production budget pools, approvals, and spending analysis" : "Vendor estimates and invoices"}
         </p>
       </div>
 
-      <BudgetPoolsTab isAdmin={isAdmin} />
+      {isAdmin && <BudgetPoolsTab isAdmin={isAdmin} />}
       {isAdmin && <CampaignBudgetsTab />}
       {isAdmin && <AnalysisTab />}
       {isAdmin && <ApprovalsTab />}
       {isAdmin && <OnboardingTab />}
-      <SpendingTab />
+      <VendorFinancialsTab />
+      {isAdmin && <SpendingTab />}
     </div>
   );
 }

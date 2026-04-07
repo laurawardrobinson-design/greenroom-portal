@@ -64,8 +64,8 @@ export async function GET(request: Request) {
         myCampaignIds.length > 0
           ? db
               .from("campaign_vendors")
-              .select("id, status, campaign_id, campaigns(id, name), vendors(id, name)")
-              .in("status", ["Estimate Submitted", "PO Uploaded"])
+              .select("id, status, campaign_id, campaigns(id, name), vendors(id, company_name)")
+              .in("status", ["Estimate Submitted", "PO Uploaded", "Invoice Submitted"])
               .in("campaign_id", myCampaignIds)
           : Promise.resolve({ data: [] }),
         myCampaignIds.length > 0
@@ -104,10 +104,10 @@ export async function GET(request: Request) {
 
       const pendingTasksList = pendingVendorRows.map((row: any) => ({
         id: row.id as string,
-        type: row.status === "Estimate Submitted" ? "Review Estimate" : "Review PO",
+        type: row.status === "Estimate Submitted" ? "Review Estimate" : row.status === "Invoice Submitted" ? "Review Invoice" : "Review PO",
         campaignId: row.campaign_id as string,
         campaignName: (row.campaigns as any)?.name || "Unknown Campaign",
-        vendorName: (row.vendors as any)?.name || "Unknown Vendor",
+        vendorName: (row.vendors as any)?.company_name || "Unknown Vendor",
       }));
 
       const shootsThisWeekList = weekShootDates.map((row: any) => {

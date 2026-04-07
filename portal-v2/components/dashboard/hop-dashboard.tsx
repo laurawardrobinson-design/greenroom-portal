@@ -37,6 +37,7 @@ import {
   ChevronRight,
   Clock,
   MapPin,
+  ExternalLink,
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
@@ -121,6 +122,29 @@ function StatCard({
         </div>
       </div>
     </Card>
+  );
+}
+
+/** Fetches and renders a clickable invoice document link for a campaign vendor */
+function PendingInvoiceLink({ campaignVendorId }: { campaignVendorId: string }) {
+  const { data } = useSWR<{ invoice: { fileUrl: string; fileName: string } | null }>(
+    `/api/invoices?campaignVendorId=${campaignVendorId}`,
+    fetcher
+  );
+  const invoice = data?.invoice;
+  if (!invoice?.fileUrl) return null;
+
+  return (
+    <a
+      href={invoice.fileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+    >
+      <FileText className="h-3 w-3 shrink-0" />
+      {invoice.fileName}
+      <ExternalLink className="h-3 w-3 shrink-0" />
+    </a>
   );
 }
 
@@ -525,7 +549,7 @@ export function HopDashboard({ user }: Props) {
                           </p>
                         </div>
                       </div>
-                      <div className="flex flex-wrap gap-3 text-xs mb-3">
+                      <div className="flex flex-wrap gap-3 text-xs mb-2">
                         <span className="text-text-tertiary">
                           Estimate: <span className="font-medium text-text-primary">{formatCurrency(inv.estimateTotal)}</span>
                         </span>
@@ -535,6 +559,9 @@ export function HopDashboard({ user }: Props) {
                         {inv.invoiceTotal > inv.estimateTotal && (
                           <Badge variant="error">Over estimate</Badge>
                         )}
+                      </div>
+                      <div className="mb-3">
+                        <PendingInvoiceLink campaignVendorId={inv.id} />
                       </div>
                       <div className="flex gap-2 justify-end">
                         <Button size="sm" onClick={() => handleInvoiceApproval(inv.id)}>

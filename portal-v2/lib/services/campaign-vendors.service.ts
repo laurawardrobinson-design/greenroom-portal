@@ -171,6 +171,10 @@ export async function transitionVendorStatus(
       payload.paymentDate || new Date().toISOString().split("T")[0];
   }
 
+  if (targetStatus === "Rejected" && payload?.notes) {
+    updateData.notes = payload.notes;
+  }
+
   const { data, error } = await db
     .from("campaign_vendors")
     .update(updateData)

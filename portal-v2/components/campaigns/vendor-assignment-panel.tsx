@@ -15,9 +15,54 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatCurrency } from "@/lib/utils/format";
 import { VENDOR_STATUS_COLORS } from "@/lib/constants/statuses";
 import { InvoiceReviewPanel } from "@/components/campaigns/invoice-review-panel";
-import { Plus, Users, Trash2, Upload, FileSearch, FileText, PenLine, CheckCircle2, Clock } from "lucide-react";
+import { Plus, Users, Trash2, Upload, FileSearch, FileText, PenLine, CheckCircle2, Clock, ExternalLink, Loader2 } from "lucide-react";
+import type { VendorInvoice } from "@/types/domain";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+/** Read-only invoice status shown to vendors after they've submitted */
+function VendorInvoiceView({ campaignVendorId }: { campaignVendorId: string }) {
+  const { data } = useSWR<{ invoice: VendorInvoice | null }>(
+    `/api/invoices?campaignVendorId=${campaignVendorId}`,
+    fetcher
+  );
+  const invoice = data?.invoice;
+  if (!invoice) return null;
+
+  const isParsing = invoice.parseStatus === "pending" || invoice.parseStatus === "processing";
+  const isProducerApproved = !!invoice.producerApprovedAt;
+  const isHopApproved = !!invoice.hopApprovedAt;
+
+  const statusLabel = isHopApproved
+    ? "Fully approved"
+    : isProducerApproved
+    ? "Producer approved — awaiting HOP"
+    : "Under review";
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border space-y-2">
+      <div className="flex items-center gap-2">
+        <FileText className="h-3.5 w-3.5 text-text-tertiary shrink-0" />
+        <a
+          href={invoice.fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
+        >
+          {invoice.fileName}
+          <ExternalLink className="h-3 w-3" />
+        </a>
+        {isParsing && (
+          <span className="flex items-center gap-1 text-xs text-amber-600">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Parsing...
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-text-tertiary">{statusLabel}</p>
+    </div>
+  );
+}
 
 interface Props {
   campaignId: string;
@@ -263,6 +308,11 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                   </div>
                 )}
 
+                {/* Vendor: read-only invoice view after submission */}
+                {isVendor && ["Invoice Submitted", "Invoice Pre-Approved", "Invoice Approved", "Paid"].includes(cv.status) && (
+                  <VendorInvoiceView campaignVendorId={cv.id} />
+                )}
+
                 {/* ===== PRODUCER/ADMIN actions ===== */}
                 {!isVendor && (
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -319,8 +369,7 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                         Upload Invoice
                       </Button>
                     )}
-                    {(cv.status === "Invoice Submitted" ||
-                      cv.status === "Invoice Pre-Approved") && (
+                    {["Invoice Submitted", "Invoice Pre-Approved", "Invoice Approved", "Paid"].includes(cv.status) && (
                       <Button
                         size="sm"
                         variant="secondary"
@@ -331,7 +380,7 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                         }
                       >
                         <FileSearch className="h-3.5 w-3.5" />
-                        Review Invoice
+                        {["Invoice Approved", "Paid"].includes(cv.status) ? "View Invoice" : "Review Invoice"}
                       </Button>
                     )}
                   </div>
@@ -371,7 +420,6 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                 {expandedInvoice === cv.id && (
                   <InvoiceReviewPanel
                     campaignVendorId={cv.id}
-                    estimateItems={[]}
                     onStatusChange={() => mutate()}
                   />
                 )}

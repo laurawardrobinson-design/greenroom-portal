@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   ExternalLink,
   Loader2,
+  CornerDownLeft,
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -28,23 +29,37 @@ const SEVERITY_BADGE: Record<string, string> = {
 
 interface Props {
   campaignVendorId: string;
-  estimateItems: VendorEstimateItem[];
   onStatusChange: () => void;
+}
+
+function invoiceHref(invoice: VendorInvoice, campaignVendorId: string): string {
+  // If stored in private storage bucket, use the signed URL; otherwise use our generated page
+  if (invoice.storagePath && invoice.fileUrl && !invoice.fileUrl.startsWith("internal")) {
+    return invoice.fileUrl;
+  }
+  return `/invoices/${campaignVendorId}`;
 }
 
 export function InvoiceReviewPanel({
   campaignVendorId,
-  estimateItems,
   onStatusChange,
 }: Props) {
   const { user } = useCurrentUser();
   const { toast } = useToast();
   const [approving, setApproving] = useState(false);
+  const [sendingBack, setSendingBack] = useState(false);
+  const [reason, setReason] = useState("");
 
   const { data, mutate } = useSWR<{
     invoice: VendorInvoice | null;
     items: VendorInvoiceItem[];
   }>(`/api/invoices?campaignVendorId=${campaignVendorId}`, fetcher);
+
+  const { data: cvData } = useSWR<{ estimateItems: VendorEstimateItem[] }>(
+    `/api/campaign-vendors/${campaignVendorId}`,
+    fetcher
+  );
+  const estimateItems: VendorEstimateItem[] = cvData?.estimateItems || [];
 
   const invoice = data?.invoice;
   const invoiceItems = data?.items || [];
@@ -69,6 +84,31 @@ export function InvoiceReviewPanel({
   const isProducerApproved = !!invoice.producerApprovedAt;
   const isHopApproved = !!invoice.hopApprovedAt;
 
+  async function handleSendBack() {
+    if (!reason.trim()) return;
+    setApproving(true);
+    try {
+      const res = await fetch(`/api/campaign-vendors/${campaignVendorId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "transition",
+          targetStatus: "Rejected",
+          payload: { notes: reason.trim() },
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast("success", "Invoice sent back to vendor");
+      onStatusChange();
+    } catch {
+      toast("error", "Failed to send back invoice");
+    } finally {
+      setApproving(false);
+      setSendingBack(false);
+      setReason("");
+    }
+  }
+
   async function handleApprove(type: "producer" | "hop") {
     setApproving(true);
     try {
@@ -82,7 +122,7 @@ export function InvoiceReviewPanel({
         }),
       });
       if (!res.ok) throw new Error("Failed");
-      toast("success", type === "producer" ? "Invoice pre-approved" : "Invoice approved");
+      toast("success", "Invoice approved");
       mutate();
       onStatusChange();
     } catch {
@@ -94,12 +134,12 @@ export function InvoiceReviewPanel({
 
   return (
     <div className="space-y-4 mt-4">
-      {/* Invoice header */}
+      {/* Invoice header + approve action */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-text-tertiary" />
           <a
-            href={invoice.fileUrl}
+            href={invoiceHref(invoice, campaignVendorId)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
@@ -107,19 +147,97 @@ export function InvoiceReviewPanel({
             {invoice.fileName}
             <ExternalLink className="h-3 w-3" />
           </a>
+          {isParsing && (
+            <Badge variant="custom" className="bg-amber-50 text-amber-700">
+              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              Parsing...
+            </Badge>
+          )}
+          {hasFailed && (
+            <Badge variant="custom" className="bg-red-50 text-red-700">
+              Parse failed
+            </Badge>
+          )}
         </div>
-        {isParsing && (
-          <Badge variant="custom" className="bg-amber-50 text-amber-700">
-            <Loader2 className="h-3 w-3 animate-spin mr-1" />
-            Parsing...
-          </Badge>
-        )}
-        {hasFailed && (
-          <Badge variant="custom" className="bg-red-50 text-red-700">
-            Parse failed
-          </Badge>
-        )}
+
+        {/* Approval actions — right side of header */}
+        <div className="flex items-center gap-2 shrink-0">
+          {isProducerApproved && (
+            <div className="flex items-center gap-1 text-xs text-emerald-600">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Approved
+            </div>
+          )}
+          {isHopApproved && (
+            <div className="flex items-center gap-1 text-xs text-emerald-600">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Approved
+            </div>
+          )}
+          {!isProducerApproved && !sendingBack && (user?.role === "Producer" || user?.role === "Admin") && (
+            <>
+              <button
+                onClick={() => setSendingBack(true)}
+                disabled={approving}
+                className="text-xs text-text-tertiary hover:text-destructive font-medium disabled:opacity-50"
+              >
+                Send Back
+              </button>
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={approving}
+                onClick={() => handleApprove("producer")}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Approve
+              </Button>
+            </>
+          )}
+          {isProducerApproved && !isHopApproved && user?.role === "Admin" && (
+            <Button
+              size="sm"
+              loading={approving}
+              onClick={() => handleApprove("hop")}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Approve
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Send Back textarea */}
+      {sendingBack && (
+        <div className="space-y-2">
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Explain what needs to change…"
+            className="w-full text-xs rounded-md border border-border bg-surface-secondary px-3 py-2 text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            rows={3}
+            autoFocus
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleSendBack}
+              disabled={!reason.trim() || approving}
+              loading={approving}
+            >
+              <CornerDownLeft className="h-3 w-3" />
+              Send Back
+            </Button>
+            <button
+              onClick={() => { setSendingBack(false); setReason(""); }}
+              className="text-xs text-text-tertiary hover:text-text-secondary"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Flags */}
       {invoice.autoFlags && invoice.autoFlags.length > 0 && (
@@ -237,46 +355,6 @@ export function InvoiceReviewPanel({
         </div>
       )}
 
-      {/* Approval actions */}
-      <div className="flex items-center gap-3 pt-2">
-        {isProducerApproved && (
-          <div className="flex items-center gap-1.5 text-xs text-emerald-600">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Producer pre-approved
-          </div>
-        )}
-        {isHopApproved && (
-          <div className="flex items-center gap-1.5 text-xs text-emerald-600">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            HOP approved
-          </div>
-        )}
-
-        {/* Producer pre-approve */}
-        {!isProducerApproved && user?.role === "Producer" && (
-          <Button
-            size="sm"
-            variant="secondary"
-            loading={approving}
-            onClick={() => handleApprove("producer")}
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Pre-Approve Invoice
-          </Button>
-        )}
-
-        {/* HOP final approve (only after producer pre-approved) */}
-        {isProducerApproved && !isHopApproved && user?.role === "Admin" && (
-          <Button
-            size="sm"
-            loading={approving}
-            onClick={() => handleApprove("hop")}
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Approve Invoice
-          </Button>
-        )}
-      </div>
     </div>
   );
 }
