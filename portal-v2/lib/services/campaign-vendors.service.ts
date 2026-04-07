@@ -161,8 +161,9 @@ export async function transitionVendorStatus(
     updateData.signature_timestamp = new Date().toISOString();
   }
 
-  if (targetStatus === "PO Uploaded" && payload?.poFileUrl) {
-    updateData.po_file_url = payload.poFileUrl;
+  if (targetStatus === "PO Uploaded" && payload) {
+    if (payload.poFileUrl) updateData.po_file_url = payload.poFileUrl;
+    if (payload.poNumber) updateData.po_number = payload.poNumber;
   }
 
   if (targetStatus === "Paid" && payload) {

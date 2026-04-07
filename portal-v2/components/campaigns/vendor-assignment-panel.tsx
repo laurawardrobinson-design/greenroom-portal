@@ -403,7 +403,36 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
 
                 {/* PO Signature (expanded inline) */}
                 {showPoSignature === cv.id && (
-                  <div className="mt-4 border-t border-border pt-4">
+                  <div className="mt-4 border-t border-border pt-4 space-y-4">
+                    {/* PO document preview above signature */}
+                    {cv.poFileUrl && (
+                      <div className="border border-border rounded-lg overflow-hidden">
+                        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-surface-secondary border-b border-border">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3.5 w-3.5 text-text-tertiary" />
+                            <span className="text-xs font-medium text-text-primary">Purchase Order</span>
+                          </div>
+                          <a
+                            href={cv.poFileUrl.startsWith("/") && typeof window !== "undefined"
+                              ? `${window.location.origin}${cv.poFileUrl}`
+                              : cv.poFileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-text-tertiary hover:text-primary transition-colors"
+                          >
+                            Open in new tab ↗
+                          </a>
+                        </div>
+                        <iframe
+                          src={cv.poFileUrl.startsWith("/") && typeof window !== "undefined"
+                            ? `${window.location.origin}${cv.poFileUrl}`
+                            : cv.poFileUrl}
+                          title="Purchase Order"
+                          className="w-full border-0"
+                          style={{ height: "400px" }}
+                        />
+                      </div>
+                    )}
                     <PoSignature
                       campaignVendorId={cv.id}
                       poFileUrl={cv.poFileUrl}

@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
         },
         {
           key: "X-Frame-Options",
-          value: "DENY",
+          value: "SAMEORIGIN",
         },
         {
           key: "X-Content-Type-Options",
@@ -44,7 +44,7 @@ const nextConfig: NextConfig = {
             "img-src 'self' data: blob: https://*.supabase.co https://images.publixcdn.com",
             "font-src 'self' data:",
             "connect-src 'self' https://*.supabase.co",
-            "frame-ancestors 'none'",
+            "frame-ancestors 'self'",
           ].join("; "),
         },
       ],
