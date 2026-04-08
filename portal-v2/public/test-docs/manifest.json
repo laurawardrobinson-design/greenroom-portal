@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-04-08",
+  "campaign": {
+    "campaign": "Spring Produce Hero Shoot",
+    "wf": "WF-24017"
+  },
+  "vendor": {
+    "name": "Northlight Culinary Studio",
+    "contact": "Maya Patel",
+    "email": "maya@northlightculinary.com",
+    "phone": "(555) 014-7712"
+  },
+  "docs": [
+    {
+      "file": "estimate-approved-northlight.pdf",
+      "use": "Upload as estimate file; set estimate total to 18450.",
+      "total": 18450
+    },
+    {
+      "file": "po-issued-northlight.pdf",
+      "use": "Upload/send as PO document after estimate approval.",
+      "total": 18450
+    },
+    {
+      "file": "po-signed-northlight.pdf",
+      "use": "Reference signed PO artifact.",
+      "total": 18450
+    },
+    {
+      "file": "invoice-under-cap-northlight.pdf",
+      "use": "Upload as valid invoice (below approved PO total).",
+      "total": 18100
+    },
+    {
+      "file": "invoice-over-cap-northlight.pdf",
+      "use": "Upload to test over-budget flagging (above approved PO total).",
+      "total": 20250
+    }
+  ]
+}

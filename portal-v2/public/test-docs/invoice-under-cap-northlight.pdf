@@ -1,0 +1,483 @@
+%PDF-1.3
+%ºß¬à
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 2722
+>>
+stream
+0.200025 w
+0 G
+BT
+/F2 17 Tf
+19.5499999999999972 TL
+0 g
+42. 744. Td
+(INVOICE) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 726. Td
+(WF-24017  |  Spring Produce Hero Shoot) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 712. Td
+(Generated for local workflow testing on 2026-04-08) Tj
+ET
+0.82 G
+42. 700. m
+570. 700. l
+S
+BT
+/F2 10 Tf
+11.5 TL
+0 g
+42. 678. Td
+(Vendor) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 664. Td
+(Northlight Culinary Studio) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 650. Td
+(Maya Patel) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 636. Td
+(maya@northlightculinary.com) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 622. Td
+(\(555\) 014-7712) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0 g
+330. 678. Td
+(Invoice #:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+330. 664. Td
+(INV-WF-24017-014) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0 g
+330. 644. Td
+(Invoice Date:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+330. 630. Td
+(2026-04-16) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0 g
+330. 610. Td
+(PO Ref:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+330. 596. Td
+(PO-WF-24017-001) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0 g
+42. 582. Td
+(Description) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0 g
+470. 582. Td
+(Amount) Tj
+ET
+0.82 G
+42. 573. m
+570. 573. l
+S
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 557. Td
+(Food styling lead day rate) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+470. 557. Td
+($4400.00) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 539. Td
+(Assistant food stylist) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+470. 539. Td
+($2100.00) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 521. Td
+(Prop purchases + rentals) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+470. 521. Td
+($1650.00) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 503. Td
+(Studio kitchen rental) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+470. 503. Td
+($4800.00) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 485. Td
+(Post-production color + retouch) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+470. 485. Td
+($2500.00) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 467. Td
+(Travel + parking) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+470. 467. Td
+($400.00) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 449. Td
+(Catering for crew) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+470. 449. Td
+($1250.00) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 431. Td
+(Production expendables) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+470. 431. Td
+($1000.00) Tj
+ET
+0.82 G
+42. 411. m
+570. 411. l
+S
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0 g
+390. 393. Td
+(Total Amount Due: $18100.00) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0 g
+42. 371. Td
+(Test intent: should pass invoice <= approved estimate/PO total guardrail.) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R ]
+/Count 1
+>>
+endobj
+5 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+6 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+7 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 5 0 R
+/F2 6 0 R
+/F3 7 0 R
+/F4 8 0 R
+/F5 9 0 R
+/F6 10 0 R
+/F7 11 0 R
+/F8 12 0 R
+/F9 13 0 R
+/F10 14 0 R
+/F11 15 0 R
+/F12 16 0 R
+/F13 17 0 R
+/F14 18 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+19 0 obj
+<<
+/Producer (jsPDF 4.2.1)
+/CreationDate (D:20260408141151-04'00')
+>>
+endobj
+20 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 21
+0000000000 65535 f 
+0000002894 00000 n 
+0000004711 00000 n 
+0000000015 00000 n 
+0000000120 00000 n 
+0000002951 00000 n 
+0000003076 00000 n 
+0000003206 00000 n 
+0000003339 00000 n 
+0000003476 00000 n 
+0000003599 00000 n 
+0000003728 00000 n 
+0000003860 00000 n 
+0000003996 00000 n 
+0000004124 00000 n 
+0000004251 00000 n 
+0000004380 00000 n 
+0000004513 00000 n 
+0000004615 00000 n 
+0000004959 00000 n 
+0000005045 00000 n 
+trailer
+<<
+/Size 21
+/Root 20 0 R
+/Info 19 0 R
+/ID [ <DA1A6E5A99A2D4CA2745E8B5A85268C8> <DA1A6E5A99A2D4CA2745E8B5A85268C8> ]
+>>
+startxref
+5149
+%%EOF
