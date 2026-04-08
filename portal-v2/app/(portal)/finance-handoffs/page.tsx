@@ -55,8 +55,17 @@ type WorkflowHealthSnapshot = {
   generatedAt: string;
   scope: WorkflowHealthScope;
   pilotCampaignIds: string[];
+  pilotCampaignSource: "environment" | "request";
   pilotScopeActive: boolean;
   lookbackHours: number;
+  operations: {
+    operatorPlaybookPath: string;
+    operatorPlaybookReviewedAt: string | null;
+    rollbackDrillCompletedAt: string | null;
+    rollbackDrillAgeHours: number | null;
+    rollbackDrillFresh: boolean;
+    rollbackDrillMaxAgeHours: number;
+  };
   summary: {
     activeAssignments: number;
     pendingProducerApprovals: number;
@@ -75,6 +84,7 @@ type FinanceHandoffResponse = {
   scope?: WorkflowHealthScope;
   pilotScopeActive?: boolean;
   pilotCampaignIds?: string[];
+  pilotCampaignSource?: "environment" | "request";
 };
 
 const fetcher = async (url: string): Promise<FinanceHandoffResponse> => {
@@ -146,22 +156,40 @@ export default function FinanceHandoffsPage() {
     "all" | FinanceHandoffItem["status"]
   >("all");
   const [healthScope, setHealthScope] = useState<WorkflowHealthScope>("all");
+  const [pilotCampaignFilter, setPilotCampaignFilter] = useState("");
   const [retryingId, setRetryingId] = useState<string | null>(null);
+
+  const normalizedPilotCampaignFilter = pilotCampaignFilter
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+    .join(",");
 
   const queryParams = new URLSearchParams();
   if (statusFilter !== "all") queryParams.set("status", statusFilter);
   if (healthScope === "pilot") queryParams.set("scope", "pilot");
+  if (healthScope === "pilot" && normalizedPilotCampaignFilter) {
+    queryParams.set("campaignIds", normalizedPilotCampaignFilter);
+  }
   const query = queryParams.toString();
   const { data, error, isLoading, mutate } = useSWR(
     `/api/finance-handoffs${query ? `?${query}` : ""}`,
     fetcher
   );
+
+  const healthQueryParams = new URLSearchParams({
+    scope: healthScope,
+  });
+  if (healthScope === "pilot" && normalizedPilotCampaignFilter) {
+    healthQueryParams.set("campaignIds", normalizedPilotCampaignFilter);
+  }
+  const healthQuery = healthQueryParams.toString();
   const {
     data: health,
     error: healthError,
     isLoading: healthLoading,
     mutate: mutateHealth,
-  } = useSWR(`/api/admin/workflow-health?scope=${healthScope}`, healthFetcher, {
+  } = useSWR(`/api/admin/workflow-health?${healthQuery}`, healthFetcher, {
     refreshInterval: 60_000,
   });
 
@@ -173,6 +201,7 @@ export default function FinanceHandoffsPage() {
   const handoffPilotScopeInactive =
     healthScope === "pilot" && data?.pilotScopeActive === false;
   const handoffPilotCampaignCount = data?.pilotCampaignIds?.length || 0;
+  const healthPilotCampaignSource = health?.pilotCampaignSource;
   const summary = health?.summary;
   const cutoverReadiness = health?.cutoverReadiness;
   const regressionSignals = summary
@@ -216,6 +245,14 @@ export default function FinanceHandoffsPage() {
               <option value="all">Health: All campaigns</option>
               <option value="pilot">Health: Pilot only</option>
             </select>
+            {healthScope === "pilot" && (
+              <input
+                value={pilotCampaignFilter}
+                onChange={(event) => setPilotCampaignFilter(event.target.value)}
+                placeholder="Campaign IDs (comma separated)"
+                className="h-9 w-64 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            )}
             <select
               value={statusFilter}
               onChange={(event) =>
@@ -265,13 +302,21 @@ export default function FinanceHandoffsPage() {
                 {health.pilotScopeActive
                   ? `Pilot scope active (${health.pilotCampaignIds.length} campaign${
                       health.pilotCampaignIds.length === 1 ? "" : "s"
-                    } configured)`
+                    } ${
+                      healthPilotCampaignSource === "request"
+                        ? "selected in this dashboard"
+                        : "from environment configuration"
+                    })`
                   : "Pilot scope selected with no configured campaigns"}
               </p>
               <p className="mt-1 text-xs text-text-secondary">
                 {health.pilotScopeActive
-                  ? `Metrics and handoff list are filtered to pilot campaigns (${handoffPilotCampaignCount} configured for handoff queries).`
-                  : "Set WORKFLOW_PILOT_CAMPAIGN_IDS in environment settings to enable pilot-filtered monitoring."}
+                  ? healthPilotCampaignSource === "request"
+                    ? `Metrics and handoff list are filtered to the selected campaign IDs (${handoffPilotCampaignCount} campaign${handoffPilotCampaignCount === 1 ? "" : "s"} currently matching handoff queries).`
+                    : `Metrics and handoff list are filtered by WORKFLOW_PILOT_CAMPAIGN_IDS (${handoffPilotCampaignCount} campaign${handoffPilotCampaignCount === 1 ? "" : "s"} currently matching handoff queries).`
+                  : pilotCampaignFilter.trim()
+                    ? "No valid campaign IDs matched. Check the ID list and try again."
+                    : "Set WORKFLOW_PILOT_CAMPAIGN_IDS or enter campaign IDs above to enable pilot-filtered monitoring."}
               </p>
               {handoffPilotScopeInactive && (
                 <p className="mt-1 text-xs text-amber-700">
@@ -280,6 +325,33 @@ export default function FinanceHandoffsPage() {
               )}
             </Card>
           )}
+
+          <Card>
+            <p className="text-sm font-medium text-text-primary">
+              Rollout Operations
+            </p>
+            <p className="mt-1 text-xs text-text-secondary">
+              Playbook: <span className="font-mono">{health.operations.operatorPlaybookPath}</span>
+            </p>
+            <p className="mt-1 text-xs text-text-secondary">
+              Playbook reviewed:{" "}
+              {formatDateTime(health.operations.operatorPlaybookReviewedAt)}
+            </p>
+            <p className="mt-1 text-xs text-text-secondary">
+              Rollback drill: {formatDateTime(health.operations.rollbackDrillCompletedAt)}{" "}
+              {health.operations.rollbackDrillAgeHours !== null
+                ? `(${health.operations.rollbackDrillAgeHours}h ago)`
+                : ""}
+            </p>
+            <Badge
+              variant={health.operations.rollbackDrillFresh ? "success" : "warning"}
+              className="mt-2"
+            >
+              {health.operations.rollbackDrillFresh
+                ? "Rollback drill current"
+                : `Rollback drill stale/missing (max ${health.operations.rollbackDrillMaxAgeHours}h)`}
+            </Badge>
+          </Card>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
             <Card>

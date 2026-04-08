@@ -37,6 +37,16 @@ function buildInput(
     stalledAssignments: overrides?.stalledAssignments || [],
     pilotCampaignIds: overrides?.pilotCampaignIds || ["camp-1"],
     pilotScopeActive: overrides?.pilotScopeActive ?? true,
+    rolloutSignals: {
+      operatorPlaybookPath:
+        "docs/runbooks/estimate-po-invoice-v2-operator-playbook.md",
+      operatorPlaybookReviewedAt: "2026-04-07T10:00:00.000Z",
+      rollbackDrillCompletedAt: "2026-04-07T12:00:00.000Z",
+      rollbackDrillAgeHours: 12,
+      rollbackDrillFresh: true,
+      rollbackDrillMaxAgeHours: 336,
+      ...(overrides?.rolloutSignals || {}),
+    },
   };
 }
 
@@ -85,5 +95,25 @@ describe("buildWorkflowCutoverReadiness", () => {
       (check) => check.id === "approval-backlog"
     );
     expect(backlogCheck?.passed).toBe(false);
+  });
+
+  it("fails readiness when rollback drill and playbook markers are missing", () => {
+    const readiness = buildWorkflowCutoverReadiness(
+      buildInput({
+        rolloutSignals: {
+          operatorPlaybookPath:
+            "docs/runbooks/estimate-po-invoice-v2-operator-playbook.md",
+          operatorPlaybookReviewedAt: null,
+          rollbackDrillCompletedAt: null,
+          rollbackDrillAgeHours: null,
+          rollbackDrillFresh: false,
+          rollbackDrillMaxAgeHours: 336,
+        },
+      })
+    );
+
+    expect(readiness.ready).toBe(false);
+    expect(readiness.blockers).toContain("Operator playbook review is recorded");
+    expect(readiness.blockers).toContain("Rollback drill is current");
   });
 });

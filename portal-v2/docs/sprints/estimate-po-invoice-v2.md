@@ -77,12 +77,16 @@ Ship a safer and smoother Vendor -> Producer -> HOP workflow for estimates, POs,
 ## Sprint 6: Cutover + Stabilization
 ### Stories
 - [x] Add pilot-campaign scoped workflow health views (`scope=pilot`) for rollout monitoring.
+- [x] Add selected-campaign pilot execution override (`campaignIds`) for rollout operations.
 - Run pilot rollout by selected campaigns.
 - [x] Track key health metrics and regression alerts.
+- [x] Add operator playbook + rollback drill readiness checks to workflow cutover gating.
 - Remove legacy code paths after stability window.
 
 ### Acceptance
 - [x] Pilot monitoring can be scoped with `WORKFLOW_PILOT_CAMPAIGN_IDS` and `scope=pilot`.
+- [x] Pilot monitoring can be overridden to selected campaigns per request via `campaignIds`.
+- [x] Cutover readiness surfaces operator playbook review and rollback drill recency checks.
 - Pilot group completes end-to-end workflow without blocker defects.
 - Rollback drill validated (feature flag off + previous deployment).
 - v1 path removal only after agreed stability criteria are met.

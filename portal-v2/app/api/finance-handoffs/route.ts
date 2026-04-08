@@ -6,7 +6,8 @@ import {
   type FinanceHandoffStatus,
 } from "@/lib/services/finance-handoffs.service";
 import {
-  getWorkflowPilotCampaignIds,
+  parseWorkflowCampaignIdsFromSearchParams,
+  resolveWorkflowPilotCampaignSelection,
   resolveWorkflowPilotScope,
 } from "@/lib/services/workflow-pilot.service";
 
@@ -34,7 +35,10 @@ export async function GET(request: Request) {
         ? (statusRaw as FinanceHandoffStatus)
         : undefined;
 
-    const pilotCampaignIds = getWorkflowPilotCampaignIds();
+    const requestedCampaignIds =
+      parseWorkflowCampaignIdsFromSearchParams(searchParams);
+    const { campaignIds: pilotCampaignIds, source: pilotCampaignSource } =
+      resolveWorkflowPilotCampaignSelection(requestedCampaignIds);
     const pilotScopeActive = scope === "pilot" && pilotCampaignIds.length > 0;
 
     if (scope === "pilot" && !pilotScopeActive) {
@@ -43,6 +47,7 @@ export async function GET(request: Request) {
         scope,
         pilotScopeActive: false,
         pilotCampaignIds,
+        pilotCampaignSource,
       });
     }
 
@@ -55,6 +60,7 @@ export async function GET(request: Request) {
       scope,
       pilotScopeActive,
       pilotCampaignIds,
+      pilotCampaignSource,
     });
   } catch (error) {
     return authErrorResponse(error);

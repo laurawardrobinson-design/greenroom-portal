@@ -20,7 +20,42 @@ import {
   type WorkflowAuditAction,
 } from "@/lib/services/workflow-audit.service";
 import { submitEstimateSchema } from "@/lib/validation/estimates.schema";
+import { VENDOR_STATUS_TRANSITIONS } from "@/lib/constants/statuses";
 import type { CampaignVendorStatus } from "@/types/domain";
+
+const VALID_CAMPAIGN_VENDOR_STATUSES = new Set<CampaignVendorStatus>(
+  Object.keys(VENDOR_STATUS_TRANSITIONS) as CampaignVendorStatus[]
+);
+
+function isCampaignVendorStatus(value: unknown): value is CampaignVendorStatus {
+  return (
+    typeof value === "string" &&
+    VALID_CAMPAIGN_VENDOR_STATUSES.has(value as CampaignVendorStatus)
+  );
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function mapWorkflowTransitionError(message: string): string | null {
+  if (message.startsWith("Cannot transition from")) {
+    return "This status change is not allowed from the current workflow state.";
+  }
+  if (message === "Signature and printed name are required") {
+    return "Signature URL and printed signer name are required to mark PO as signed.";
+  }
+  if (message === "Cannot sign PO without an uploaded PO document") {
+    return "Upload a PO document before moving this assignment to PO Signed.";
+  }
+  if (message === "PO file URL is required for PO Uploaded") {
+    return "PO upload is missing a document URL.";
+  }
+  if (message === "Revision feedback is required when requesting estimate changes") {
+    return "Provide revision feedback before requesting estimate changes.";
+  }
+  return null;
+}
 
 // GET /api/campaign-vendors/[id] — get assignment with estimate items
 export async function GET(
@@ -63,10 +98,17 @@ export async function PATCH(
   try {
     const user = await getAuthUser();
     const { id } = await params;
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
+    const authzHardeningEnabled = await isWorkflowFeatureEnabled(
+      "workflow_authz_hardening_v2"
+    );
     const poSignatureWorkflowEnabled = await isWorkflowFeatureEnabled(
       "workflow_estimate_po_signature_v2"
     );
+
+    if (authzHardeningEnabled) {
+      await requireCampaignVendorAccess(user, id);
+    }
 
     // Submit estimate (vendor action)
     if (body.action === "submit_estimate") {
@@ -104,7 +146,13 @@ export async function PATCH(
 
     // Status transition
     if (body.action === "transition") {
-      const targetStatus = body.targetStatus as CampaignVendorStatus;
+      if (!isCampaignVendorStatus(body.targetStatus)) {
+        return NextResponse.json(
+          { error: "targetStatus is invalid or unsupported" },
+          { status: 400 }
+        );
+      }
+      const targetStatus = body.targetStatus;
 
       // Check permissions based on target status
       const vendorActions: CampaignVendorStatus[] = [
@@ -125,21 +173,38 @@ export async function PATCH(
         "Paid",
       ];
 
+      let hasTransitionPermission = false;
       if (vendorActions.includes(targetStatus)) {
+        hasTransitionPermission = true;
         if (user.role === "Vendor") {
           await requireVendorOwnership(user, id);
         } else {
           await requireRole(["Admin", "Producer"]);
         }
       } else if (producerActions.includes(targetStatus)) {
+        hasTransitionPermission = true;
         await requireRole(["Admin", "Producer"]);
       } else if (hopActions.includes(targetStatus)) {
+        hasTransitionPermission = true;
         await requireRole(["Admin"]);
+      }
+      if (!hasTransitionPermission) {
+        return NextResponse.json(
+          { error: "No transition policy exists for this status" },
+          { status: 400 }
+        );
+      }
+
+      if (body.payload !== undefined && !isPlainObject(body.payload)) {
+        return NextResponse.json(
+          { error: "payload must be a JSON object when provided" },
+          { status: 400 }
+        );
       }
 
       const transitionPayload: Record<string, unknown> =
-        body.payload && typeof body.payload === "object"
-          ? { ...(body.payload as Record<string, unknown>) }
+        isPlainObject(body.payload)
+          ? { ...body.payload }
           : {};
 
       // Security: signer IP must be captured from the server request, never trusted from client payload.
@@ -186,11 +251,9 @@ export async function PATCH(
       if (error.message === "Assignment not found") {
         return NextResponse.json({ error: error.message }, { status: 404 });
       }
-      if (
-        error.message.startsWith("Cannot transition from") ||
-        error.message.includes("required")
-      ) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
+      const mappedMessage = mapWorkflowTransitionError(error.message);
+      if (mappedMessage) {
+        return NextResponse.json({ error: mappedMessage }, { status: 409 });
       }
     }
     return authErrorResponse(error);

@@ -4,9 +4,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { CampaignVendorStatus } from "@/types/domain";
 import { getWorkflowFeatureFlagSnapshot } from "./feature-flags.service";
 import {
-  getWorkflowPilotCampaignIds,
+  resolveWorkflowPilotCampaignSelection,
+  type WorkflowPilotCampaignSource,
   type WorkflowPilotScope,
 } from "./workflow-pilot.service";
+import {
+  getWorkflowRolloutSignals,
+  type WorkflowRolloutSignals,
+} from "./workflow-rollout.service";
 
 const HOUR_MS = 60 * 60 * 1000;
 const ALERT_LOOKBACK_HOURS = 24;
@@ -116,14 +121,17 @@ export type WorkflowCutoverReadinessInput = {
   stalledAssignments: WorkflowHealthStalledAssignment[];
   pilotCampaignIds: string[];
   pilotScopeActive: boolean;
+  rolloutSignals: WorkflowRolloutSignals;
 };
 
 export type WorkflowHealthSnapshot = {
   generatedAt: string;
   scope: WorkflowPilotScope;
   pilotCampaignIds: string[];
+  pilotCampaignSource: WorkflowPilotCampaignSource;
   pilotScopeActive: boolean;
   lookbackHours: number;
+  operations: WorkflowRolloutSignals;
   flags: Record<WorkflowFeatureFlagKey, boolean>;
   summary: WorkflowHealthSummary;
   statusBreakdown: WorkflowStatusBreakdownItem[];
@@ -140,6 +148,7 @@ export type WorkflowRegressionAlertInput = {
 
 export type WorkflowHealthSnapshotOptions = {
   scope?: WorkflowPilotScope;
+  campaignIds?: string[];
 };
 
 function getSingleRelationRow(value: RelationValue): RelationRow | null {
@@ -372,8 +381,14 @@ export function buildWorkflowRegressionAlerts(
 export function buildWorkflowCutoverReadiness(
   input: WorkflowCutoverReadinessInput
 ): WorkflowCutoverReadiness {
-  const { flags, summary, stalledAssignments, pilotCampaignIds, pilotScopeActive } =
-    input;
+  const {
+    flags,
+    summary,
+    stalledAssignments,
+    pilotCampaignIds,
+    pilotScopeActive,
+    rolloutSignals,
+  } = input;
 
   const producerBacklogHealthy =
     summary.pendingProducerApprovals === 0 ||
@@ -446,8 +461,28 @@ export function buildWorkflowCutoverReadiness(
       passed: flags.workflow_finance_handoff_v2,
       required: true,
       detail: flags.workflow_finance_handoff_v2
-        ? "workflow_finance_handoff_v2 is enabled."
-        : "Enable workflow_finance_handoff_v2.",
+          ? "workflow_finance_handoff_v2 is enabled."
+          : "Enable workflow_finance_handoff_v2.",
+    },
+    {
+      id: "operator-playbook-reviewed",
+      label: "Operator playbook review is recorded",
+      passed: Boolean(rolloutSignals.operatorPlaybookReviewedAt),
+      required: true,
+      detail: rolloutSignals.operatorPlaybookReviewedAt
+        ? `Playbook review timestamp recorded at ${rolloutSignals.operatorPlaybookReviewedAt}.`
+        : `Set WORKFLOW_OPERATOR_PLAYBOOK_REVIEWED_AT after reviewing ${rolloutSignals.operatorPlaybookPath}.`,
+    },
+    {
+      id: "rollback-drill-ready",
+      label: "Rollback drill is current",
+      passed: rolloutSignals.rollbackDrillFresh,
+      required: true,
+      detail: rolloutSignals.rollbackDrillFresh
+        ? `Rollback drill recorded at ${rolloutSignals.rollbackDrillCompletedAt} (${rolloutSignals.rollbackDrillAgeHours}h ago).`
+        : rolloutSignals.rollbackDrillCompletedAt
+          ? `Rollback drill is stale (${rolloutSignals.rollbackDrillAgeHours}h old). Re-run drill every ${rolloutSignals.rollbackDrillMaxAgeHours}h.`
+          : "Set WORKFLOW_ROLLBACK_DRILL_COMPLETED_AT after validating feature-flag rollback and deployment rollback.",
     },
     {
       id: "invoice-cap-mode",
@@ -523,8 +558,10 @@ export async function getWorkflowHealthSnapshot(
   const nowMs = Date.parse(generatedAt);
   const lookbackIso = new Date(nowMs - ALERT_LOOKBACK_HOURS * HOUR_MS).toISOString();
   const scope = options?.scope || "all";
-  const pilotCampaignIds = getWorkflowPilotCampaignIds();
+  const { campaignIds: pilotCampaignIds, source: pilotCampaignSource } =
+    resolveWorkflowPilotCampaignSelection(options?.campaignIds);
   const pilotScopeActive = scope === "pilot" && pilotCampaignIds.length > 0;
+  const rolloutSignals = getWorkflowRolloutSignals(new Date(generatedAt));
 
   const flags = await getWorkflowFeatureFlagSnapshot();
 
@@ -536,13 +573,16 @@ export async function getWorkflowHealthSnapshot(
       stalledAssignments: [],
       pilotCampaignIds,
       pilotScopeActive: false,
+      rolloutSignals,
     });
     return {
       generatedAt,
       scope,
       pilotCampaignIds,
+      pilotCampaignSource,
       pilotScopeActive: false,
       lookbackHours: ALERT_LOOKBACK_HOURS,
+      operations: rolloutSignals,
       flags,
       summary,
       statusBreakdown: summarizeStatusBreakdown([]),
@@ -651,14 +691,17 @@ export async function getWorkflowHealthSnapshot(
     stalledAssignments,
     pilotCampaignIds,
     pilotScopeActive,
+    rolloutSignals,
   });
 
   return {
     generatedAt,
     scope,
     pilotCampaignIds,
+    pilotCampaignSource,
     pilotScopeActive,
     lookbackHours: ALERT_LOOKBACK_HOURS,
+    operations: rolloutSignals,
     flags,
     summary,
     statusBreakdown: summarizeStatusBreakdown(assignmentRows),

@@ -337,6 +337,9 @@ describe("PATCH /api/invoices auth hardening", () => {
   it("falls back to legacy status transition when approval unification is disabled", async () => {
     mocks.getAuthUser.mockResolvedValue(makeUser("Admin"));
     mocks.isWorkflowFeatureEnabled.mockResolvedValue(false);
+    setAdminClientRows({
+      invoiceRow: { id: "inv-1", campaign_vendor_id: "cv-1" },
+    });
 
     const request = new Request("http://localhost/api/invoices", {
       method: "PATCH",
@@ -359,6 +362,28 @@ describe("PATCH /api/invoices auth hardening", () => {
       "cv-1",
       "Invoice Approved"
     );
+    expect(mocks.approveInvoice).not.toHaveBeenCalled();
+  });
+
+  it("returns not found when invoice does not exist in legacy mode", async () => {
+    mocks.getAuthUser.mockResolvedValue(makeUser("Admin"));
+    mocks.isWorkflowFeatureEnabled.mockResolvedValue(false);
+    setAdminClientRows({ invoiceRow: null });
+
+    const request = new Request("http://localhost/api/invoices", {
+      method: "PATCH",
+      body: JSON.stringify({
+        invoiceId: "inv-missing",
+        campaignVendorId: "cv-1",
+        approverType: "hop",
+      }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const response = await PATCH(request);
+
+    expect(response.status).toBe(404);
+    expect(mocks.transitionVendorStatus).not.toHaveBeenCalled();
     expect(mocks.approveInvoice).not.toHaveBeenCalled();
   });
 });

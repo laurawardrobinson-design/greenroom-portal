@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   getWorkflowPilotCampaignIds,
+  parseWorkflowCampaignIdsFromSearchParams,
   parseWorkflowPilotCampaignIds,
+  resolveWorkflowPilotCampaignSelection,
   resolveWorkflowPilotScope,
 } from "@/lib/services/workflow-pilot.service";
 
@@ -33,5 +35,30 @@ describe("workflow-pilot.service", () => {
     expect(resolveWorkflowPilotScope("all")).toBe("all");
     expect(resolveWorkflowPilotScope("anything-else")).toBe("all");
     expect(resolveWorkflowPilotScope(null)).toBe("all");
+  });
+
+  it("parses selected campaign IDs from query params", () => {
+    const params = new URLSearchParams(
+      "scope=pilot&campaignIds=camp-1,camp-2&campaignId=camp-3&campaignId=camp-2"
+    );
+    expect(parseWorkflowCampaignIdsFromSearchParams(params)).toEqual([
+      "camp-1",
+      "camp-2",
+      "camp-3",
+    ]);
+  });
+
+  it("prefers request campaign IDs over environment defaults", () => {
+    process.env.WORKFLOW_PILOT_CAMPAIGN_IDS = "env-1,env-2";
+    expect(
+      resolveWorkflowPilotCampaignSelection(["request-1", "request-2"])
+    ).toEqual({
+      campaignIds: ["request-1", "request-2"],
+      source: "request",
+    });
+    expect(resolveWorkflowPilotCampaignSelection()).toEqual({
+      campaignIds: ["env-1", "env-2"],
+      source: "environment",
+    });
   });
 });

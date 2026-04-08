@@ -19,6 +19,11 @@ import {
 
 type ApproverType = "producer" | "hop";
 type InvoiceSubmissionStatus = "Shoot Complete" | "Invoice Submitted";
+type InvoiceApprovalRow = {
+  id: string;
+  campaign_vendor_id: string;
+  parse_status: string;
+};
 
 const INVOICE_UPLOAD_ALLOWED_TYPES = new Set([
   "application/pdf",
@@ -31,6 +36,27 @@ const INVOICE_READY_FOR_SUBMISSION: InvoiceSubmissionStatus = "Shoot Complete";
 
 function isValidApproverType(value: unknown): value is ApproverType {
   return value === "producer" || value === "hop";
+}
+
+async function loadInvoiceApprovalRow(
+  invoiceId: string
+): Promise<InvoiceApprovalRow | null> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("vendor_invoices")
+    .select("id, campaign_vendor_id, parse_status")
+    .eq("id", invoiceId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return data as InvoiceApprovalRow;
 }
 
 // GET /api/invoices?campaignVendorId=xxx
@@ -202,8 +228,13 @@ export async function PATCH(request: Request) {
   try {
     const user = await getAuthUser();
     const body = await request.json();
-    const invoiceId = body.invoiceId as string | undefined;
-    const campaignVendorId = body.campaignVendorId as string | undefined;
+    const invoiceId =
+      typeof body.invoiceId === "string" ? body.invoiceId.trim() : "";
+    const campaignVendorId =
+      typeof body.campaignVendorId === "string" &&
+      body.campaignVendorId.trim().length > 0
+        ? body.campaignVendorId.trim()
+        : undefined;
     const approverType = body.approverType;
     const authzHardeningEnabled = await isWorkflowFeatureEnabled(
       "workflow_authz_hardening_v2"
@@ -246,34 +277,11 @@ export async function PATCH(request: Request) {
       approverType === "producer" &&
       (invoiceCapEnforcementEnabled || invoiceCapShadowEnabled);
 
-    let resolvedCampaignVendorId = campaignVendorId ?? null;
-    let invoiceRow:
-      | { id: string; campaign_vendor_id: string; parse_status: string }
-      | null = null;
-
-    if (approvalUnificationEnabled && (authzHardeningEnabled || evaluateInvoiceCap)) {
-      const db = createAdminClient();
-      const { data: invoice, error: invoiceError } = await db
-        .from("vendor_invoices")
-        .select("id, campaign_vendor_id, parse_status")
-        .eq("id", invoiceId)
-        .maybeSingle();
-
-      if (invoiceError) {
-        throw invoiceError;
-      }
-
-      if (!invoice) {
-        return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
-      }
-
-      invoiceRow = invoice as {
-        id: string;
-        campaign_vendor_id: string;
-        parse_status: string;
-      };
-      resolvedCampaignVendorId = resolvedCampaignVendorId || invoice.campaign_vendor_id;
+    const invoiceRow = await loadInvoiceApprovalRow(invoiceId);
+    if (!invoiceRow) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
+    const resolvedCampaignVendorId = campaignVendorId || invoiceRow.campaign_vendor_id;
 
     if (approvalUnificationEnabled && authzHardeningEnabled) {
       if (!campaignVendorId) {
@@ -282,13 +290,13 @@ export async function PATCH(request: Request) {
           { status: 400 }
         );
       }
+    }
 
-      if (invoiceRow && invoiceRow.campaign_vendor_id !== campaignVendorId) {
-        return NextResponse.json(
-          { error: "invoiceId does not match campaignVendorId" },
-          { status: 400 }
-        );
-      }
+    if (campaignVendorId && invoiceRow.campaign_vendor_id !== campaignVendorId) {
+      return NextResponse.json(
+        { error: "invoiceId does not match campaignVendorId" },
+        { status: 400 }
+      );
     }
 
     if (evaluateInvoiceCap) {
@@ -299,7 +307,7 @@ export async function PATCH(request: Request) {
         );
       }
 
-      const parseReady = Boolean(invoiceRow && invoiceRow.parse_status === "completed");
+      const parseReady = invoiceRow.parse_status === "completed";
       let estimateTotal = 0;
       let invoiceTotal = 0;
       let overCap = false;
@@ -339,7 +347,7 @@ export async function PATCH(request: Request) {
             campaignVendorId: resolvedCampaignVendorId,
             enforced: invoiceCapEnforcementEnabled,
             shadow: invoiceCapShadowEnabled,
-            parseStatus: invoiceRow?.parse_status || "unknown",
+            parseStatus: invoiceRow.parse_status || "unknown",
           },
         });
       }
@@ -385,7 +393,7 @@ export async function PATCH(request: Request) {
     if (!approvalUnificationEnabled) {
       if (!resolvedCampaignVendorId) {
         return NextResponse.json(
-          { error: "campaignVendorId required when legacy approval mode is active" },
+          { error: "Invoice is not linked to a campaign vendor assignment" },
           { status: 400 }
         );
       }
