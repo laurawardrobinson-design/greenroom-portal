@@ -1,19 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { GatorSvg, ZookeeperSvg } from "@/components/menagerie/creatures";
 import { useMenagerieContext } from "@/components/menagerie/menagerie-provider";
 
-const CREDIT_TEXTS: React.ReactNode[] = [
-  "Laura's menagerie",
-  "Critters got loose!",
-];
+const CREDIT_TEXT = "Critters got loose!";
 
 export function GatorEasterEgg() {
   const [chomping, setChomping] = useState(false);
   const [zookeeperWalking, setZookeeperWalking] = useState(false);
-  const [creditPhase, setCreditPhase] = useState(0);
-  const [creditVisible, setCreditVisible] = useState(true);
+  const [creditVisible, setCreditVisible] = useState(false);
   const {
     discoverCreature,
     activateMenagerie,
@@ -31,7 +27,6 @@ export function GatorEasterEgg() {
   function triggerChomp() {
     if (chomping || zookeeperWalking) return;
     setChomping(true);
-    setCreditPhase(0);
     setCreditVisible(false);
     activateMenagerie();
     if (gatorCurrentlyLoose) {
@@ -42,26 +37,19 @@ export function GatorEasterEgg() {
 
   useEffect(() => {
     if (!chomping) {
-      setCreditPhase(0);
       setCreditVisible(false);
       return;
     }
 
-    // Fixed schedule across the 8s animation — texts start at 1500ms to give gator space
-    // FADE = 350ms transition. Timeline:
-    //   1800ms   → fade in text 0 "Unfortunately..."
-    //   4100ms   → fade out text 0  (2300ms visible)
-    //   4450ms   → fade in text 1 "Critters got loose!"
-    //   7900ms   → fade out text 1  (3450ms visible)
-    //   8000ms   → chomping ends
-    const FADE = 350;
+    // FADE = 350ms. Timeline:
+    //   1800ms → fade in "Critters got loose!"
+    //   7900ms → fade out
+    //   8000ms → chomping ends
     const timers: ReturnType<typeof setTimeout>[] = [];
     const at = (fn: () => void, ms: number) => { timers.push(setTimeout(fn, ms)); };
 
-    at(() => { setCreditPhase(0); setCreditVisible(true); }, 1800);
-    at(() => setCreditVisible(false), 4100);
-    at(() => { setCreditPhase(1); setCreditVisible(true); }, 4100 + FADE);
-    at(() => setCreditVisible(false), 7900);
+    at(() => setCreditVisible(true), 1800);
+    at(() => setCreditVisible(false), 4000);
 
     return () => timers.forEach(clearTimeout);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,7 +125,7 @@ export function GatorEasterEgg() {
               className="text-[11px] font-medium text-primary/70 tracking-wider text-center leading-tight"
               style={{ opacity: creditVisible ? 1 : 0, transition: 'opacity 350ms ease-in-out' }}
             >
-              {CREDIT_TEXTS[creditPhase]}
+              {CREDIT_TEXT}
             </span>
           </div>
         )}
