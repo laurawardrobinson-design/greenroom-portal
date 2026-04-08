@@ -117,7 +117,9 @@ describe("PATCH /api/invoices auth hardening", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getAuthUser.mockResolvedValue(makeUser("Producer"));
-    mocks.isWorkflowFeatureEnabled.mockImplementation(async () => false);
+    mocks.isWorkflowFeatureEnabled.mockImplementation(
+      async (flag: string) => flag === "workflow_approval_unification_v2"
+    );
     mocks.requireRole.mockResolvedValue(undefined);
     mocks.approveInvoice.mockResolvedValue(undefined);
     mocks.transitionVendorStatus.mockResolvedValue(undefined);
@@ -147,7 +149,10 @@ describe("PATCH /api/invoices auth hardening", () => {
 
   it("requires campaignVendorId when hardening flag is enabled", async () => {
     mocks.isWorkflowFeatureEnabled.mockImplementation(async (flag: string) => {
-      return flag === "workflow_authz_hardening_v2";
+      return (
+        flag === "workflow_authz_hardening_v2" ||
+        flag === "workflow_approval_unification_v2"
+      );
     });
     setAdminClientRows({
       invoiceRow: { id: "inv-1", campaign_vendor_id: "cv-1" },
@@ -169,7 +174,10 @@ describe("PATCH /api/invoices auth hardening", () => {
 
   it("blocks approval when invoiceId does not match campaignVendorId", async () => {
     mocks.isWorkflowFeatureEnabled.mockImplementation(async (flag: string) => {
-      return flag === "workflow_authz_hardening_v2";
+      return (
+        flag === "workflow_authz_hardening_v2" ||
+        flag === "workflow_approval_unification_v2"
+      );
     });
     setAdminClientRows({ invoiceRow: { id: "inv-1", campaign_vendor_id: "cv-other" } });
 
@@ -192,7 +200,10 @@ describe("PATCH /api/invoices auth hardening", () => {
 
   it("approves and transitions when validation passes", async () => {
     mocks.isWorkflowFeatureEnabled.mockImplementation(async (flag: string) => {
-      return flag === "workflow_authz_hardening_v2";
+      return (
+        flag === "workflow_authz_hardening_v2" ||
+        flag === "workflow_approval_unification_v2"
+      );
     });
     mocks.getAuthUser.mockResolvedValue(makeUser("Admin"));
     setAdminClientRows({ invoiceRow: { id: "inv-1", campaign_vendor_id: "cv-1" } });
@@ -226,7 +237,10 @@ describe("PATCH /api/invoices auth hardening", () => {
 
   it("blocks producer approval until invoice parsing is completed", async () => {
     mocks.isWorkflowFeatureEnabled.mockImplementation(async (flag: string) => {
-      return flag === "workflow_invoice_cap_enforcement_v2";
+      return (
+        flag === "workflow_invoice_cap_enforcement_v2" ||
+        flag === "workflow_approval_unification_v2"
+      );
     });
     setAdminClientRows({
       invoiceRow: {
@@ -253,7 +267,10 @@ describe("PATCH /api/invoices auth hardening", () => {
 
   it("blocks producer approval when invoice total exceeds estimate total", async () => {
     mocks.isWorkflowFeatureEnabled.mockImplementation(async (flag: string) => {
-      return flag === "workflow_invoice_cap_enforcement_v2";
+      return (
+        flag === "workflow_invoice_cap_enforcement_v2" ||
+        flag === "workflow_approval_unification_v2"
+      );
     });
     setAdminClientRows({
       invoiceRow: {
@@ -284,7 +301,10 @@ describe("PATCH /api/invoices auth hardening", () => {
 
   it("logs parse-not-ready in shadow mode without blocking approval", async () => {
     mocks.isWorkflowFeatureEnabled.mockImplementation(async (flag: string) => {
-      return flag === "workflow_invoice_cap_shadow_v2";
+      return (
+        flag === "workflow_invoice_cap_shadow_v2" ||
+        flag === "workflow_approval_unification_v2"
+      );
     });
     setAdminClientRows({
       invoiceRow: {
@@ -312,5 +332,33 @@ describe("PATCH /api/invoices auth hardening", () => {
       })
     );
     expect(mocks.approveInvoice).toHaveBeenCalled();
+  });
+
+  it("falls back to legacy status transition when approval unification is disabled", async () => {
+    mocks.getAuthUser.mockResolvedValue(makeUser("Admin"));
+    mocks.isWorkflowFeatureEnabled.mockResolvedValue(false);
+
+    const request = new Request("http://localhost/api/invoices", {
+      method: "PATCH",
+      body: JSON.stringify({
+        invoiceId: "inv-1",
+        campaignVendorId: "cv-1",
+        approverType: "hop",
+      }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const response = await PATCH(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.legacyMode).toBe(true);
+    expect(mocks.requireRole).toHaveBeenCalledWith(["Admin"]);
+    expect(mocks.transitionVendorStatus).toHaveBeenCalledWith(
+      "cv-1",
+      "Invoice Approved"
+    );
+    expect(mocks.approveInvoice).not.toHaveBeenCalled();
   });
 });

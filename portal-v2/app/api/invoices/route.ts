@@ -18,6 +18,16 @@ import {
 } from "@/lib/services/finance-handoffs.service";
 
 type ApproverType = "producer" | "hop";
+type InvoiceSubmissionStatus = "Shoot Complete" | "Invoice Submitted";
+
+const INVOICE_UPLOAD_ALLOWED_TYPES = new Set([
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+]);
+const MAX_INVOICE_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
+const INVOICE_READY_FOR_SUBMISSION: InvoiceSubmissionStatus = "Shoot Complete";
 
 function isValidApproverType(value: unknown): value is ApproverType {
   return value === "producer" || value === "hop";
@@ -48,9 +58,6 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const campaignVendorId = formData.get("campaignVendorId") as string;
-    const authzHardeningEnabled = await isWorkflowFeatureEnabled(
-      "workflow_authz_hardening_v2"
-    );
 
     if (!file || !campaignVendorId) {
       return NextResponse.json(
@@ -59,16 +66,55 @@ export async function POST(request: Request) {
       );
     }
 
-    if (authzHardeningEnabled) {
-      if (user.role === "Vendor") {
-        await requireVendorOwnership(user, campaignVendorId);
-      } else {
-        await requireRole(["Admin", "Producer"]);
-      }
+    if (user.role === "Vendor") {
+      await requireVendorOwnership(user, campaignVendorId);
+    } else {
+      await requireRole(["Admin", "Producer"]);
+    }
+
+    if (!INVOICE_UPLOAD_ALLOWED_TYPES.has(file.type)) {
+      return NextResponse.json(
+        { error: "Invoice must be a PDF or image file." },
+        { status: 400 }
+      );
+    }
+
+    if (file.size > MAX_INVOICE_UPLOAD_BYTES) {
+      return NextResponse.json(
+        { error: "Invoice file exceeds the 50MB upload limit." },
+        { status: 400 }
+      );
     }
 
     // Upload to PRIVATE invoices bucket (not public)
     const db = createAdminClient();
+    const { data: assignment, error: assignmentError } = await db
+      .from("campaign_vendors")
+      .select("id, status")
+      .eq("id", campaignVendorId)
+      .maybeSingle();
+
+    if (assignmentError) {
+      throw assignmentError;
+    }
+
+    if (!assignment) {
+      return NextResponse.json(
+        { error: "Campaign vendor assignment not found" },
+        { status: 404 }
+      );
+    }
+
+    if (assignment.status !== INVOICE_READY_FOR_SUBMISSION) {
+      return NextResponse.json(
+        {
+          error:
+            "Invoice can only be submitted after the assignment is marked Shoot Complete.",
+        },
+        { status: 409 }
+      );
+    }
+
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const storagePath = `${campaignVendorId}/${Date.now()}_${safeName}`;
 
@@ -93,8 +139,25 @@ export async function POST(request: Request) {
       storagePath, // Private path for generating future signed URLs
     });
 
-    // Transition vendor status to "Invoice Submitted"
-    await transitionVendorStatus(campaignVendorId, "Invoice Submitted");
+    // Transition vendor status to "Invoice Submitted".
+    // If this fails, roll back the new invoice row and uploaded file.
+    try {
+      await transitionVendorStatus(campaignVendorId, "Invoice Submitted");
+    } catch (transitionError) {
+      await Promise.allSettled([
+        db.from("vendor_invoices").delete().eq("id", invoice.id),
+        db.storage.from("invoices").remove([storagePath]),
+      ]);
+
+      const safeMessage =
+        transitionError instanceof Error &&
+        transitionError.message.startsWith("Cannot transition from")
+          ? "Invoice can only be submitted after the assignment is marked Shoot Complete."
+          : "Unable to submit invoice for this workflow step.";
+
+      return NextResponse.json({ error: safeMessage }, { status: 409 });
+    }
+
     await recordWorkflowAuditEvent({
       userId: user.id,
       action: "invoice_submitted",
@@ -151,6 +214,9 @@ export async function PATCH(request: Request) {
     const invoiceCapShadowEnabled = await isWorkflowFeatureEnabled(
       "workflow_invoice_cap_shadow_v2"
     );
+    const approvalUnificationEnabled = await isWorkflowFeatureEnabled(
+      "workflow_approval_unification_v2"
+    );
     const financeHandoffEnabled = await isWorkflowFeatureEnabled(
       "workflow_finance_handoff_v2"
     );
@@ -169,25 +235,23 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const evaluateInvoiceCap =
-      invoiceCapEnforcementEnabled || invoiceCapShadowEnabled;
-
-    const enforceApprovalValidation = authzHardeningEnabled || evaluateInvoiceCap;
-
-    if (enforceApprovalValidation) {
-      if (approverType === "producer") {
-        await requireRole(["Admin", "Producer"]);
-      } else {
-        await requireRole(["Admin"]);
-      }
+    if (approverType === "producer") {
+      await requireRole(["Admin", "Producer"]);
+    } else {
+      await requireRole(["Admin"]);
     }
+
+    const evaluateInvoiceCap =
+      approvalUnificationEnabled &&
+      approverType === "producer" &&
+      (invoiceCapEnforcementEnabled || invoiceCapShadowEnabled);
 
     let resolvedCampaignVendorId = campaignVendorId ?? null;
     let invoiceRow:
       | { id: string; campaign_vendor_id: string; parse_status: string }
       | null = null;
 
-    if (authzHardeningEnabled || evaluateInvoiceCap) {
+    if (approvalUnificationEnabled && (authzHardeningEnabled || evaluateInvoiceCap)) {
       const db = createAdminClient();
       const { data: invoice, error: invoiceError } = await db
         .from("vendor_invoices")
@@ -211,7 +275,7 @@ export async function PATCH(request: Request) {
       resolvedCampaignVendorId = resolvedCampaignVendorId || invoice.campaign_vendor_id;
     }
 
-    if (authzHardeningEnabled) {
+    if (approvalUnificationEnabled && authzHardeningEnabled) {
       if (!campaignVendorId) {
         return NextResponse.json(
           { error: "campaignVendorId required" },
@@ -227,7 +291,7 @@ export async function PATCH(request: Request) {
       }
     }
 
-    if (evaluateInvoiceCap && approverType === "producer") {
+    if (evaluateInvoiceCap) {
       if (!resolvedCampaignVendorId) {
         return NextResponse.json(
           { error: "campaignVendorId required" },
@@ -316,6 +380,44 @@ export async function PATCH(request: Request) {
           { status: 400 }
         );
       }
+    }
+
+    if (!approvalUnificationEnabled) {
+      if (!resolvedCampaignVendorId) {
+        return NextResponse.json(
+          { error: "campaignVendorId required when legacy approval mode is active" },
+          { status: 400 }
+        );
+      }
+
+      const legacyStatus =
+        approverType === "producer" ? "Invoice Pre-Approved" : "Invoice Approved";
+      await transitionVendorStatus(
+        resolvedCampaignVendorId,
+        legacyStatus
+      );
+      await recordWorkflowAuditEvent({
+        userId: user.id,
+        action:
+          approverType === "producer"
+            ? "invoice_pre_approved"
+            : "invoice_approved",
+        resourceType: "vendor_invoice",
+        resourceId: invoiceId,
+        ipAddress: getRequestIpAddress(request),
+        metadata: {
+          campaignVendorId: resolvedCampaignVendorId,
+          legacyMode: true,
+          targetStatus: legacyStatus,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        legacyMode: true,
+        financeHandoff: null,
+        financeHandoffError: null,
+      });
     }
 
     // Approve
@@ -416,6 +518,15 @@ export async function PATCH(request: Request) {
       financeHandoffError,
     });
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith("Cannot transition from")
+    ) {
+      return NextResponse.json(
+        { error: "Invoice is not in a state that can be approved." },
+        { status: 409 }
+      );
+    }
     return authErrorResponse(error);
   }
 }

@@ -96,6 +96,28 @@ export type WorkflowStatusBreakdownItem = {
   count: number;
 };
 
+export type WorkflowCutoverReadinessCheck = {
+  id: string;
+  label: string;
+  passed: boolean;
+  required: boolean;
+  detail: string;
+};
+
+export type WorkflowCutoverReadiness = {
+  ready: boolean;
+  blockers: string[];
+  checks: WorkflowCutoverReadinessCheck[];
+};
+
+export type WorkflowCutoverReadinessInput = {
+  flags: Record<WorkflowFeatureFlagKey, boolean>;
+  summary: WorkflowHealthSummary;
+  stalledAssignments: WorkflowHealthStalledAssignment[];
+  pilotCampaignIds: string[];
+  pilotScopeActive: boolean;
+};
+
 export type WorkflowHealthSnapshot = {
   generatedAt: string;
   scope: WorkflowPilotScope;
@@ -107,6 +129,7 @@ export type WorkflowHealthSnapshot = {
   statusBreakdown: WorkflowStatusBreakdownItem[];
   alerts: WorkflowHealthAlert[];
   stalledAssignments: WorkflowHealthStalledAssignment[];
+  cutoverReadiness: WorkflowCutoverReadiness;
 };
 
 export type WorkflowRegressionAlertInput = {
@@ -346,6 +369,152 @@ export function buildWorkflowRegressionAlerts(
   return alerts;
 }
 
+export function buildWorkflowCutoverReadiness(
+  input: WorkflowCutoverReadinessInput
+): WorkflowCutoverReadiness {
+  const { flags, summary, stalledAssignments, pilotCampaignIds, pilotScopeActive } =
+    input;
+
+  const producerBacklogHealthy =
+    summary.pendingProducerApprovals === 0 ||
+    (summary.oldestPendingProducerApprovalHours !== null &&
+      summary.oldestPendingProducerApprovalHours < 48);
+  const hopBacklogHealthy =
+    summary.pendingHopApprovals === 0 ||
+    (summary.oldestPendingHopApprovalHours !== null &&
+      summary.oldestPendingHopApprovalHours < 24);
+
+  const checks: WorkflowCutoverReadinessCheck[] = [
+    {
+      id: "pilot-configured",
+      label: "Pilot campaign scope configured",
+      passed: pilotCampaignIds.length > 0,
+      required: true,
+      detail:
+        pilotCampaignIds.length > 0
+          ? `${pilotCampaignIds.length} pilot campaign(s) configured.`
+          : "Set WORKFLOW_PILOT_CAMPAIGN_IDS before cutover.",
+    },
+    {
+      id: "pilot-scope-active",
+      label: "Pilot scope can be monitored",
+      passed: pilotScopeActive || pilotCampaignIds.length > 0,
+      required: true,
+      detail: pilotScopeActive
+        ? "Pilot scope filtering is active."
+        : "Pilot scope request returned inactive.",
+    },
+    {
+      id: "authz-flag",
+      label: "Auth hardening enabled",
+      passed: flags.workflow_authz_hardening_v2,
+      required: true,
+      detail: flags.workflow_authz_hardening_v2
+        ? "workflow_authz_hardening_v2 is enabled."
+        : "Enable workflow_authz_hardening_v2.",
+    },
+    {
+      id: "documents-flag",
+      label: "Document center enabled",
+      passed: flags.workflow_documents_center_v2,
+      required: true,
+      detail: flags.workflow_documents_center_v2
+        ? "workflow_documents_center_v2 is enabled."
+        : "Enable workflow_documents_center_v2.",
+    },
+    {
+      id: "signature-flag",
+      label: "PO signature hardening enabled",
+      passed: flags.workflow_estimate_po_signature_v2,
+      required: true,
+      detail: flags.workflow_estimate_po_signature_v2
+        ? "workflow_estimate_po_signature_v2 is enabled."
+        : "Enable workflow_estimate_po_signature_v2.",
+    },
+    {
+      id: "approval-unification-flag",
+      label: "Unified invoice approvals enabled",
+      passed: flags.workflow_approval_unification_v2,
+      required: true,
+      detail: flags.workflow_approval_unification_v2
+        ? "workflow_approval_unification_v2 is enabled."
+        : "Enable workflow_approval_unification_v2.",
+    },
+    {
+      id: "finance-handoff-flag",
+      label: "Finance handoff automation enabled",
+      passed: flags.workflow_finance_handoff_v2,
+      required: true,
+      detail: flags.workflow_finance_handoff_v2
+        ? "workflow_finance_handoff_v2 is enabled."
+        : "Enable workflow_finance_handoff_v2.",
+    },
+    {
+      id: "invoice-cap-mode",
+      label: "Invoice cap safety mode enabled",
+      passed:
+        flags.workflow_invoice_cap_enforcement_v2 ||
+        flags.workflow_invoice_cap_shadow_v2,
+      required: true,
+      detail: flags.workflow_invoice_cap_enforcement_v2
+        ? "Hard enforcement is enabled."
+        : flags.workflow_invoice_cap_shadow_v2
+          ? "Shadow monitoring is enabled."
+          : "Enable shadow or enforcement mode for invoice caps.",
+    },
+    {
+      id: "handoff-failures",
+      label: "No finance handoff failures in last 24h",
+      passed: summary.financeHandoffFailedLast24h === 0,
+      required: true,
+      detail:
+        summary.financeHandoffFailedLast24h === 0
+          ? "No handoff failures detected."
+          : `${summary.financeHandoffFailedLast24h} failure(s) detected.`,
+    },
+    {
+      id: "parse-latency",
+      label: "No parse-not-ready approvals in last 24h",
+      passed: summary.parseNotReadyAttemptsLast24h === 0,
+      required: true,
+      detail:
+        summary.parseNotReadyAttemptsLast24h === 0
+          ? "No parse-latency approval attempts detected."
+          : `${summary.parseNotReadyAttemptsLast24h} parse-not-ready attempt(s) detected.`,
+    },
+    {
+      id: "stalled-assignments",
+      label: "No stalled workflow assignments",
+      passed: stalledAssignments.length === 0,
+      required: true,
+      detail:
+        stalledAssignments.length === 0
+          ? "No stage SLA violations detected."
+          : `${stalledAssignments.length} stalled assignment(s) detected.`,
+    },
+    {
+      id: "approval-backlog",
+      label: "Approval queues within SLA",
+      passed: producerBacklogHealthy && hopBacklogHealthy,
+      required: true,
+      detail:
+        producerBacklogHealthy && hopBacklogHealthy
+          ? "Producer and final approval queues are within SLA."
+          : `Oldest approvals: producer=${summary.oldestPendingProducerApprovalHours ?? 0}h, final=${summary.oldestPendingHopApprovalHours ?? 0}h.`,
+    },
+  ];
+
+  const blockers = checks
+    .filter((check) => check.required && !check.passed)
+    .map((check) => check.label);
+
+  return {
+    ready: blockers.length === 0,
+    blockers,
+    checks,
+  };
+}
+
 export async function getWorkflowHealthSnapshot(
   options?: WorkflowHealthSnapshotOptions
 ): Promise<WorkflowHealthSnapshot> {
@@ -361,6 +530,13 @@ export async function getWorkflowHealthSnapshot(
 
   if (scope === "pilot" && !pilotScopeActive) {
     const summary = createEmptySummary();
+    const cutoverReadiness = buildWorkflowCutoverReadiness({
+      flags,
+      summary,
+      stalledAssignments: [],
+      pilotCampaignIds,
+      pilotScopeActive: false,
+    });
     return {
       generatedAt,
       scope,
@@ -381,6 +557,7 @@ export async function getWorkflowHealthSnapshot(
         },
       ],
       stalledAssignments: [],
+      cutoverReadiness,
     };
   }
 
@@ -468,6 +645,13 @@ export async function getWorkflowHealthSnapshot(
     summary,
     stalledAssignments,
   });
+  const cutoverReadiness = buildWorkflowCutoverReadiness({
+    flags,
+    summary,
+    stalledAssignments,
+    pilotCampaignIds,
+    pilotScopeActive,
+  });
 
   return {
     generatedAt,
@@ -480,5 +664,6 @@ export async function getWorkflowHealthSnapshot(
     statusBreakdown: summarizeStatusBreakdown(assignmentRows),
     alerts,
     stalledAssignments,
+    cutoverReadiness,
   };
 }

@@ -35,6 +35,20 @@ type WorkflowHealthAlert = {
   metric: number | null;
 };
 
+type WorkflowCutoverReadinessCheck = {
+  id: string;
+  label: string;
+  passed: boolean;
+  required: boolean;
+  detail: string;
+};
+
+type WorkflowCutoverReadiness = {
+  ready: boolean;
+  blockers: string[];
+  checks: WorkflowCutoverReadinessCheck[];
+};
+
 type WorkflowHealthScope = "all" | "pilot";
 
 type WorkflowHealthSnapshot = {
@@ -53,6 +67,7 @@ type WorkflowHealthSnapshot = {
     parseNotReadyAttemptsLast24h: number;
   };
   alerts: WorkflowHealthAlert[];
+  cutoverReadiness: WorkflowCutoverReadiness;
 };
 
 type FinanceHandoffResponse = {
@@ -159,6 +174,7 @@ export default function FinanceHandoffsPage() {
     healthScope === "pilot" && data?.pilotScopeActive === false;
   const handoffPilotCampaignCount = data?.pilotCampaignIds?.length || 0;
   const summary = health?.summary;
+  const cutoverReadiness = health?.cutoverReadiness;
   const regressionSignals = summary
     ? summary.invoiceCapViolationsLast24h +
       summary.parseNotReadyAttemptsLast24h +
@@ -341,6 +357,49 @@ export default function FinanceHandoffsPage() {
               ))}
             </div>
           </Card>
+
+          {cutoverReadiness && (
+            <Card>
+              <CardHeader className="mb-2">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-sm">Cutover Readiness</CardTitle>
+                  <Badge variant={cutoverReadiness.ready ? "success" : "warning"}>
+                    {cutoverReadiness.ready ? "Ready" : "Blocked"}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs text-text-tertiary">
+                  Gate checklist for pilot rollout and v1 cutover.
+                </p>
+              </CardHeader>
+              <div className="space-y-2">
+                {!cutoverReadiness.ready && cutoverReadiness.blockers.length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                    <p className="text-xs font-medium text-amber-800">
+                      Blockers: {cutoverReadiness.blockers.join("; ")}
+                    </p>
+                  </div>
+                )}
+                {cutoverReadiness.checks.map((check) => (
+                  <div
+                    key={check.id}
+                    className={`rounded-lg border px-3 py-2 ${
+                      check.passed
+                        ? "border-emerald-200 bg-emerald-50/50"
+                        : "border-amber-200 bg-amber-50/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-text-primary">{check.label}</p>
+                      <Badge variant={check.passed ? "success" : "warning"}>
+                        {check.passed ? "Pass" : "Needs action"}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-xs text-text-secondary">{check.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
       ) : null}
 

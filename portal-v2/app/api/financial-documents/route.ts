@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authErrorResponse, getAuthUser } from "@/lib/auth/guards";
+import { isWorkflowFeatureEnabled } from "@/lib/services/feature-flags.service";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CampaignVendorStatus, InvoiceParseStatus } from "@/types/domain";
 
@@ -51,6 +52,11 @@ type InvoiceRow = {
 // Role-scoped financial packet list (estimate, PO, invoice) for Admin, Producer, Vendor.
 export async function GET() {
   try {
+    const enabled = await isWorkflowFeatureEnabled("workflow_documents_center_v2");
+    if (!enabled) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     const user = await getAuthUser();
     const db = createAdminClient();
 

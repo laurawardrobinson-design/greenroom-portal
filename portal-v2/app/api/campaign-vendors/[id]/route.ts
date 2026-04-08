@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { AuthError, getAuthUser, requireRole, requireVendorOwnership, authErrorResponse } from "@/lib/auth/guards";
+import {
+  getAuthUser,
+  requireCampaignVendorAccess,
+  requireRole,
+  requireVendorOwnership,
+  authErrorResponse,
+} from "@/lib/auth/guards";
 import {
   getCampaignVendor,
   transitionVendorStatus,
@@ -24,8 +30,13 @@ export async function GET(
   try {
     const user = await getAuthUser();
     const { id } = await params;
+    const authzHardeningEnabled = await isWorkflowFeatureEnabled(
+      "workflow_authz_hardening_v2"
+    );
 
-    if (user.role === "Vendor") {
+    if (authzHardeningEnabled) {
+      await requireCampaignVendorAccess(user, id);
+    } else if (user.role === "Vendor") {
       await requireVendorOwnership(user, id);
     }
 
@@ -40,12 +51,6 @@ export async function GET(
 
     return NextResponse.json({ ...cv, estimateItems });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return authErrorResponse(error);
-    }
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
     return authErrorResponse(error);
   }
 }
@@ -59,11 +64,9 @@ export async function PATCH(
     const user = await getAuthUser();
     const { id } = await params;
     const body = await request.json();
-    const [authzHardeningEnabled, poSignatureWorkflowEnabled] =
-      await Promise.all([
-        isWorkflowFeatureEnabled("workflow_authz_hardening_v2"),
-        isWorkflowFeatureEnabled("workflow_estimate_po_signature_v2"),
-      ]);
+    const poSignatureWorkflowEnabled = await isWorkflowFeatureEnabled(
+      "workflow_estimate_po_signature_v2"
+    );
 
     // Submit estimate (vendor action)
     if (body.action === "submit_estimate") {
@@ -125,7 +128,7 @@ export async function PATCH(
       if (vendorActions.includes(targetStatus)) {
         if (user.role === "Vendor") {
           await requireVendorOwnership(user, id);
-        } else if (authzHardeningEnabled) {
+        } else {
           await requireRole(["Admin", "Producer"]);
         }
       } else if (producerActions.includes(targetStatus)) {
@@ -179,6 +182,17 @@ export async function PATCH(
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "Assignment not found") {
+        return NextResponse.json({ error: error.message }, { status: 404 });
+      }
+      if (
+        error.message.startsWith("Cannot transition from") ||
+        error.message.includes("required")
+      ) {
+        return NextResponse.json({ error: error.message }, { status: 409 });
+      }
+    }
     return authErrorResponse(error);
   }
 }
