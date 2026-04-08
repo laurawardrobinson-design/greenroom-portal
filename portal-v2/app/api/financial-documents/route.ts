@@ -18,13 +18,21 @@ type CampaignVendorRow = {
   po_signed_file_url: string | null;
   po_signed_at: string | null;
   signature_name: string | null;
-  vendors: { company_name: string | null } | null;
+  vendors:
+    | { company_name: string | null }
+    | Array<{ company_name: string | null }>
+    | null;
   campaigns: {
     id: string;
-    name: string;
-    wf_number: string;
+    name: string | null;
+    wf_number: string | null;
     producer_id: string | null;
-  } | null;
+  } | Array<{
+    id: string;
+    name: string | null;
+    wf_number: string | null;
+    producer_id: string | null;
+  }> | null;
 };
 
 type InvoiceRow = {
@@ -76,6 +84,11 @@ export async function GET() {
       return NextResponse.json({ items: [] });
     }
 
+    function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+      if (!value) return null;
+      return Array.isArray(value) ? (value[0] ?? null) : value;
+    }
+
     const assignmentIds = rows.map((row) => row.id);
 
     const { data: invoiceRows, error: invoiceError } = await db
@@ -109,13 +122,15 @@ export async function GET() {
       rows.map(async (row) => {
         const latestInvoice = latestInvoiceByAssignment.get(row.id);
         const invoiceFileUrl = await buildInvoiceUrl(latestInvoice);
+        const campaign = firstRelation(row.campaigns);
+        const vendor = firstRelation(row.vendors);
 
         return {
           id: row.id,
           campaignId: row.campaign_id,
-          campaignName: row.campaigns?.name || "Unknown Campaign",
-          wfNumber: row.campaigns?.wf_number || "",
-          vendorName: row.vendors?.company_name || "Unknown Vendor",
+          campaignName: campaign?.name || "Unknown Campaign",
+          wfNumber: campaign?.wf_number || "",
+          vendorName: vendor?.company_name || "Unknown Vendor",
           status: row.status,
           estimateTotal: Number(row.estimate_total || 0),
           invoiceTotal:

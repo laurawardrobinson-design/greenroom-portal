@@ -11,8 +11,14 @@ type InvoiceApprovalRow = {
   invoice_total: number | string | null;
   status: string;
   updated_at: string;
-  vendors: { company_name: string | null } | null;
-  campaigns: { name: string | null; wf_number: string | null } | null;
+  vendors:
+    | { company_name: string | null }
+    | Array<{ company_name: string | null }>
+    | null;
+  campaigns:
+    | { name: string | null; wf_number: string | null }
+    | Array<{ name: string | null; wf_number: string | null }>
+    | null;
 };
 
 type CrewBookingApprovalRow = {
@@ -22,9 +28,15 @@ type CrewBookingApprovalRow = {
   day_rate: number | string | null;
   classification: string | null;
   created_at: string;
-  vendors: { company_name: string | null; contact_name: string | null } | null;
-  crew_person: { name: string | null } | null;
-  campaigns: { name: string | null; wf_number: string | null } | null;
+  vendors:
+    | { company_name: string | null; contact_name: string | null }
+    | Array<{ company_name: string | null; contact_name: string | null }>
+    | null;
+  crew_person: { name: string | null } | Array<{ name: string | null }> | null;
+  campaigns:
+    | { name: string | null; wf_number: string | null }
+    | Array<{ name: string | null; wf_number: string | null }>
+    | null;
   crew_booking_dates: Array<{ id: string }> | null;
 };
 
@@ -90,13 +102,20 @@ export async function GET() {
     const completedInvoices = completedInvoicesResult.data || [];
     const pendingCrewBookings = pendingCrewBookingsResult.data || [];
 
+    function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+      if (!value) return null;
+      return Array.isArray(value) ? (value[0] ?? null) : value;
+    }
+
     function mapInvoice(row: InvoiceApprovalRow) {
+      const vendor = firstRelation(row.vendors);
+      const campaign = firstRelation(row.campaigns);
       return {
         id: row.id,
         campaignId: row.campaign_id,
-        vendorName: row.vendors?.company_name || "Unknown",
-        campaignName: row.campaigns?.name || "Unknown",
-        wfNumber: row.campaigns?.wf_number || "",
+        vendorName: vendor?.company_name || "Unknown",
+        campaignName: campaign?.name || "Unknown",
+        wfNumber: campaign?.wf_number || "",
         estimateTotal: Number(row.estimate_total),
         invoiceTotal: Number(row.invoice_total),
         status: row.status,
@@ -105,15 +124,18 @@ export async function GET() {
     }
 
     function mapCrewBooking(row: CrewBookingApprovalRow) {
-      const personName = row.vendors
-        ? row.vendors.contact_name || row.vendors.company_name
-        : row.crew_person?.name || "Unknown";
+      const vendor = firstRelation(row.vendors);
+      const campaign = firstRelation(row.campaigns);
+      const crewPerson = firstRelation(row.crew_person);
+      const personName = vendor
+        ? vendor.contact_name || vendor.company_name
+        : crewPerson?.name || "Unknown";
       return {
         id: row.id,
         campaignId: row.campaign_id,
         personName,
-        campaignName: row.campaigns?.name || "Unknown",
-        wfNumber: row.campaigns?.wf_number || "",
+        campaignName: campaign?.name || "Unknown",
+        wfNumber: campaign?.wf_number || "",
         role: row.role,
         dayRate: Number(row.day_rate),
         classification: row.classification,

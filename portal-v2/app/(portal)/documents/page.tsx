@@ -162,7 +162,9 @@ export default function DocumentsPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={index} className="h-44 animate-pulse bg-surface-secondary" />
+            <Card key={index} className="h-44 animate-pulse bg-surface-secondary">
+              <div className="h-full rounded-lg bg-surface-secondary" />
+            </Card>
           ))}
         </div>
       ) : error ? (
