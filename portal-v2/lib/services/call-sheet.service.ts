@@ -62,16 +62,31 @@ export async function generateCallSheet(
     .eq("campaign_id", campaignId)
     .not("status", "eq", "Rejected");
 
-  const vendors = (vendorAssignments || []).map((v) => {
-    const vendor = (v as Record<string, unknown>).vendors as Record<string, unknown>;
-    return {
-      company: (vendor?.company_name as string) || "",
-      contact: (vendor?.contact_name as string) || "",
-      phone: (vendor?.phone as string) || "",
-      email: (vendor?.email as string) || "",
-      role: (vendor?.category as string) || "",
-    };
-  });
+  const targetDateId = (targetDate?.id as string | undefined) || null;
+  const vendors = (vendorAssignments || [])
+    .filter((assignment) => {
+      const scopedIds = (assignment as Record<string, unknown>)
+        .assigned_shoot_date_ids as string[] | null | undefined;
+
+      // Legacy/default: NULL means all shoot dates.
+      if (!scopedIds) return true;
+      // Explicitly empty means post-only (exclude from on-set call sheet).
+      if (scopedIds.length === 0) return false;
+      // If we're rendering a specific date, include only explicitly assigned vendors.
+      if (targetDateId) return scopedIds.includes(targetDateId);
+      // No date selected: keep date-scoped vendors visible.
+      return true;
+    })
+    .map((v) => {
+      const vendor = (v as Record<string, unknown>).vendors as Record<string, unknown>;
+      return {
+        company: (vendor?.company_name as string) || "",
+        contact: (vendor?.contact_name as string) || "",
+        phone: (vendor?.phone as string) || "",
+        email: (vendor?.email as string) || "",
+        role: (vendor?.category as string) || "",
+      };
+    });
 
   // Fetch deliverables
   const { data: deliverables } = await db

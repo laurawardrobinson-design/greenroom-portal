@@ -6,6 +6,12 @@ export async function proxy(request: NextRequest) {
   const { user, response } = await updateSession(request);
   const pathname = request.nextUrl.pathname;
 
+  // Never run auth gating on Next.js internals (HMR/assets/flight/etc.)
+  // In dev, intercepting these can cause reconnect loops and memory churn.
+  if (pathname.startsWith("/_next")) {
+    return response;
+  }
+
   // Rate-limit API routes before any further processing
   if (pathname.startsWith("/api")) {
     const blocked = checkRateLimit(request, response);
@@ -33,11 +39,10 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
+     * - _next/* (all Next internals, including dev HMR)
      * - favicon.ico
      * - Static assets (images, fonts, manifests, etc.)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|json|webmanifest|pdf)$).*)",
+    "/((?!_next/|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|json|webmanifest|pdf)$).*)",
   ],
 };

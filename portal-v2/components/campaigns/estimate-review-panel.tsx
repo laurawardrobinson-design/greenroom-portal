@@ -63,12 +63,12 @@ export function EstimateReviewPanel({ campaignVendorId, status, onStatusChange }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "transition",
-          targetStatus: "Rejected",
-          payload: { notes: reason.trim() },
+          targetStatus: "Estimate Revision Requested",
+          payload: { feedback: reason.trim() },
         }),
       });
       if (!res.ok) throw new Error("Failed");
-      toast("success", "Estimate sent back to vendor");
+      toast("success", "Revision request sent to vendor");
       onStatusChange();
     } catch {
       toast("error", "Failed to send back estimate");

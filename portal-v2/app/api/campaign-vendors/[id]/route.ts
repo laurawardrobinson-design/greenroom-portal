@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthUser, requireRole, requireVendorOwnership, authErrorResponse } from "@/lib/auth/guards";
+import { AuthError, getAuthUser, requireRole, requireVendorOwnership, authErrorResponse } from "@/lib/auth/guards";
 import {
   getCampaignVendor,
   transitionVendorStatus,
@@ -7,6 +7,12 @@ import {
   getEstimateItems,
   removeVendorFromCampaign,
 } from "@/lib/services/campaign-vendors.service";
+import { isWorkflowFeatureEnabled } from "@/lib/services/feature-flags.service";
+import {
+  getRequestIpAddress,
+  recordWorkflowAuditEvent,
+  type WorkflowAuditAction,
+} from "@/lib/services/workflow-audit.service";
 import { submitEstimateSchema } from "@/lib/validation/estimates.schema";
 import type { CampaignVendorStatus } from "@/types/domain";
 
@@ -34,6 +40,12 @@ export async function GET(
 
     return NextResponse.json({ ...cv, estimateItems });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return authErrorResponse(error);
+    }
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return authErrorResponse(error);
   }
 }
@@ -47,6 +59,11 @@ export async function PATCH(
     const user = await getAuthUser();
     const { id } = await params;
     const body = await request.json();
+    const [authzHardeningEnabled, poSignatureWorkflowEnabled] =
+      await Promise.all([
+        isWorkflowFeatureEnabled("workflow_authz_hardening_v2"),
+        isWorkflowFeatureEnabled("workflow_estimate_po_signature_v2"),
+      ]);
 
     // Submit estimate (vendor action)
     if (body.action === "submit_estimate") {
@@ -58,10 +75,27 @@ export async function PATCH(
 
       const parsed = submitEstimateSchema.parse({
         campaignVendorId: id,
+        estimateFileUrl: body.estimateFileUrl ?? null,
+        estimateFileName: body.estimateFileName ?? null,
         items: body.items,
       });
-      await submitEstimate(id, parsed.items);
+      await submitEstimate(id, parsed.items, {
+        estimateFileUrl: parsed.estimateFileUrl ?? null,
+        estimateFileName: parsed.estimateFileName ?? null,
+      });
       const cv = await getCampaignVendor(id);
+      await recordWorkflowAuditEvent({
+        userId: user.id,
+        action: "estimate_submitted",
+        resourceType: "campaign_vendor",
+        resourceId: id,
+        ipAddress: getRequestIpAddress(request),
+        metadata: {
+          estimateFileName: parsed.estimateFileName ?? null,
+          estimateFileUrl: parsed.estimateFileUrl ?? null,
+          itemCount: parsed.items.length,
+        },
+      });
       return NextResponse.json(cv);
     }
 
@@ -77,6 +111,7 @@ export async function PATCH(
       ];
       const producerActions: CampaignVendorStatus[] = [
         "Estimate Approved",
+        "Estimate Revision Requested",
         "PO Uploaded",
         "Shoot Complete",
         "Invoice Pre-Approved",
@@ -90,6 +125,8 @@ export async function PATCH(
       if (vendorActions.includes(targetStatus)) {
         if (user.role === "Vendor") {
           await requireVendorOwnership(user, id);
+        } else if (authzHardeningEnabled) {
+          await requireRole(["Admin", "Producer"]);
         }
       } else if (producerActions.includes(targetStatus)) {
         await requireRole(["Admin", "Producer"]);
@@ -97,15 +134,51 @@ export async function PATCH(
         await requireRole(["Admin"]);
       }
 
-      const cv = await transitionVendorStatus(id, targetStatus, body.payload);
+      const transitionPayload: Record<string, unknown> =
+        body.payload && typeof body.payload === "object"
+          ? { ...(body.payload as Record<string, unknown>) }
+          : {};
+
+      // Security: signer IP must be captured from the server request, never trusted from client payload.
+      if (targetStatus === "PO Signed") {
+        transitionPayload.signedIp = getRequestIpAddress(request);
+        transitionPayload.enforcePoSnapshot = poSignatureWorkflowEnabled;
+      }
+
+      if (targetStatus === "PO Uploaded") {
+        transitionPayload.generatePoSnapshot = poSignatureWorkflowEnabled;
+      }
+
+      const cv = await transitionVendorStatus(id, targetStatus, transitionPayload);
+
+      const auditActionByStatus: Partial<
+        Record<CampaignVendorStatus, WorkflowAuditAction>
+      > = {
+        "Estimate Approved": "estimate_approved",
+        "Estimate Revision Requested": "estimate_revision_requested",
+        "PO Uploaded": "po_uploaded",
+        "PO Signed": "po_signed",
+      };
+      const auditAction = auditActionByStatus[targetStatus];
+      if (auditAction) {
+        await recordWorkflowAuditEvent({
+          userId: user.id,
+          action: auditAction,
+          resourceType: "campaign_vendor",
+          resourceId: id,
+          ipAddress: getRequestIpAddress(request),
+          metadata: {
+            targetStatus,
+            payloadKeys: Object.keys(transitionPayload),
+          },
+        });
+      }
+
       return NextResponse.json(cv);
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
     return authErrorResponse(error);
   }
 }

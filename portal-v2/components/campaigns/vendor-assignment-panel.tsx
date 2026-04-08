@@ -137,10 +137,15 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
           body: formData,
         });
         if (!uploadRes.ok) throw new Error("Upload failed");
-        const uploadData = await uploadRes.json();
+        const uploadData = (await uploadRes.json()) as {
+          fileUrl?: string;
+          url?: string;
+        };
+        const poFileUrl = uploadData.fileUrl || uploadData.url;
+        if (!poFileUrl) throw new Error("Upload response missing file URL");
 
         await handleTransition(cvId, "PO Uploaded", {
-          poFileUrl: uploadData.url,
+          poFileUrl,
         });
       } catch {
         toast("error", "Failed to upload PO document");
@@ -248,7 +253,23 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                 </div>
 
                 {/* Status timeline */}
-                <VendorStatusTimeline currentStatus={cv.status} />
+                <VendorStatusTimeline
+                  currentStatus={cv.status}
+                  estimateFeedback={cv.estimateFeedback}
+                />
+
+                {isVendor &&
+                  cv.status === "Estimate Revision Requested" &&
+                  cv.estimateFeedback && (
+                    <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      <p className="font-semibold uppercase tracking-wide">
+                        Producer Feedback
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap">
+                        {cv.estimateFeedback}
+                      </p>
+                    </div>
+                  )}
 
                 {/* Financial summary */}
                 {cv.estimateTotal > 0 && (
@@ -273,13 +294,16 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                 {/* ===== VENDOR actions ===== */}
                 {isVendor && (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {cv.status === "Invited" && (
+                    {(cv.status === "Invited" ||
+                      cv.status === "Estimate Revision Requested") && (
                       <Button
                         size="sm"
                         onClick={() => setShowEstimateForm(cv.id)}
                       >
                         <FileText className="h-3.5 w-3.5" />
-                        Submit Estimate
+                        {cv.status === "Estimate Revision Requested"
+                          ? "Revise Estimate"
+                          : "Submit Estimate"}
                       </Button>
                     )}
                     {cv.status === "PO Uploaded" && (
@@ -493,7 +517,7 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                 <ul className="space-y-2 text-sm text-text-secondary">
                   <li className="flex items-start gap-2">
                     <FileSearch className="h-4 w-4 mt-0.5 shrink-0 text-blue-600" />
-                    <span>We'll parse line items from your invoice automatically</span>
+                    <span>We&apos;ll parse line items from your invoice automatically</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Users className="h-4 w-4 mt-0.5 shrink-0 text-blue-600" />

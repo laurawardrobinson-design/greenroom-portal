@@ -6,6 +6,7 @@ import { Check, Info } from "lucide-react";
 
 const STEP_LABELS: Record<string, string> = {
   Invited: "Submit Your Estimate",
+  "Estimate Revision Requested": "Revise and Resubmit",
   "Estimate Submitted": "Waiting for Review",
   "Estimate Approved": "Waiting for PO",
   "PO Uploaded": "Sign the PO",
@@ -20,6 +21,8 @@ const STEP_LABELS: Record<string, string> = {
 
 const STATUS_CONTEXT: Record<string, string> = {
   Invited: "You've been invited to this campaign. Submit an estimate to get started.",
+  "Estimate Revision Requested":
+    "The Producer requested estimate updates. Revise and resubmit your estimate.",
   "Estimate Submitted": "The Producer is reviewing your estimate. You'll hear back soon.",
   "Estimate Approved": "Your estimate was approved. The Producer will upload a PO for you to sign.",
   "PO Uploaded": "A Purchase Order is ready for your signature. Review and sign to confirm.",
@@ -34,15 +37,22 @@ const STATUS_CONTEXT: Record<string, string> = {
 
 interface Props {
   currentStatus: CampaignVendorStatus;
+  estimateFeedback?: string | null;
 }
 
-export function VendorStatusTimeline({ currentStatus }: Props) {
+export function VendorStatusTimeline({
+  currentStatus,
+  estimateFeedback,
+}: Props) {
   const currentIndex = VENDOR_STATUS_ORDER.indexOf(currentStatus);
   const isRejected = currentStatus === "Rejected";
   const total = VENDOR_STATUS_ORDER.length;
   const stepNum = isRejected ? 0 : currentIndex + 1;
   const label = STEP_LABELS[currentStatus] || currentStatus;
-  const context = STATUS_CONTEXT[currentStatus] || "";
+  const context =
+    currentStatus === "Estimate Revision Requested" && estimateFeedback?.trim()
+      ? `Revision requested: ${estimateFeedback.trim()}`
+      : STATUS_CONTEXT[currentStatus] || "";
   const progressPct = isRejected ? 0 : ((currentIndex + 1) / total) * 100;
 
   return (

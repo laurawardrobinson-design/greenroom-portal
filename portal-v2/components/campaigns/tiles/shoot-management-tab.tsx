@@ -128,7 +128,14 @@ export function ShootManagementTab({
               <span>{vendors.length} {vendors.length !== 1 ? "vendors" : "vendor"}</span>
               {(() => {
                 const actionVendors = vendors.filter(v =>
-                  ["Invited", "Estimate Submitted", "PO Uploaded", "Invoice Submitted", "Invoice Pre-Approved"].includes(v.status)
+                  [
+                    "Invited",
+                    "Estimate Submitted",
+                    "Estimate Revision Requested",
+                    "PO Uploaded",
+                    "Invoice Submitted",
+                    "Invoice Pre-Approved",
+                  ].includes(v.status)
                 );
                 return actionVendors.length > 0 ? (
                   <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">

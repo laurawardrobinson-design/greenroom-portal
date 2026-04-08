@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { authErrorResponse, getAuthUser } from "@/lib/auth/guards";
+import {
+  authErrorResponse,
+  getAuthUser,
+  requireCampaignVendorAccess,
+} from "@/lib/auth/guards";
+import { isWorkflowFeatureEnabled } from "@/lib/services/feature-flags.service";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // GET /api/estimates/view/[id] — estimate view data for a campaign_vendor_id
@@ -8,8 +13,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await getAuthUser();
+    const user = await getAuthUser();
     const { id } = await params;
+    const authzHardeningEnabled = await isWorkflowFeatureEnabled(
+      "workflow_authz_hardening_v2"
+    );
+
+    if (authzHardeningEnabled) {
+      await requireCampaignVendorAccess(user, id);
+    }
+
     const db = createAdminClient();
 
     const { data: cv, error: cvError } = await db

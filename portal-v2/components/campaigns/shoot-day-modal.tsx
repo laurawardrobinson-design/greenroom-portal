@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
-import type { Shoot, ShootCrew, AppUser } from "@/types/domain";
+import type { Shoot, ShootCrew, AppUser, Vendor } from "@/types/domain";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
@@ -22,6 +22,10 @@ const SHOOT_ROLES = [
   "PA",
   "Studio Manager",
   "Coordinator",
+  "Vendor",
+  "Studio",
+  "Admin",
+  "Crew",
   "Other",
 ];
 
@@ -36,6 +40,10 @@ const ROLE_COLORS: Record<string, string> = {
   PA: "bg-slate-100 text-slate-600",
   "Studio Manager": "bg-emerald-50 text-emerald-700",
   Coordinator: "bg-indigo-50 text-indigo-700",
+  Vendor: "bg-teal-50 text-teal-700",
+  Studio: "bg-cyan-50 text-cyan-700",
+  Admin: "bg-amber-50 text-amber-700",
+  Crew: "bg-slate-100 text-slate-600",
 };
 
 export function getShootDayName(
@@ -475,6 +483,7 @@ function CrewChip({
 
   const roleColor =
     ROLE_COLORS[crew.roleOnShoot] || "bg-surface-tertiary text-text-secondary";
+  const roleLabel = crew.roleOnShoot || "Crew";
 
   return (
     <div className="inline-flex items-center gap-2 rounded-lg bg-surface-secondary px-2.5 py-1.5 border border-border/40">
@@ -486,7 +495,7 @@ function CrewChip({
         {editingRole && canEdit ? (
           <select
             autoFocus
-            value={crew.roleOnShoot}
+            value={crew.roleOnShoot || "Crew"}
             onChange={(e) => handleRoleChange(e.target.value)}
             onBlur={() => setEditingRole(false)}
             className="text-[10px] bg-transparent border-b border-primary focus:outline-none text-text-primary"
@@ -504,7 +513,7 @@ function CrewChip({
             }`}
             onClick={() => canEdit && setEditingRole(true)}
           >
-            {crew.roleOnShoot}
+            {roleLabel}
           </span>
         )}
       </div>
@@ -535,29 +544,49 @@ function AddCrewInline({
 }) {
   const { toast } = useToast();
   const { data: allUsers = [] } = useSWR<AppUser[]>(
-    "/api/users?roles=Admin,Producer,Studio,Art Director",
+    "/api/users?roles=Admin,Producer,Studio,Art Director,Vendor",
     fetcher
   );
-  const [role, setRole] = useState(SHOOT_ROLES[0]);
+  const { data: allVendors = [] } = useSWR<Vendor[]>(
+    "/api/vendors",
+    fetcher
+  );
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
+  const vendorById = useMemo(
+    () => new Map(allVendors.map((vendor) => [vendor.id, vendor])),
+    [allVendors]
+  );
 
   const available = allUsers.filter((u) => !existingUserIds.includes(u.id));
-  const filtered = search
-    ? available.filter((u) =>
-        u.name.toLowerCase().includes(search.toLowerCase())
-      )
-    : available;
-  const showDropdown = focused && search.length > 0 && filtered.length > 0;
+  const normalizedSearch = search.trim().toLowerCase();
+  const filtered = available.filter((user) => {
+    if (!normalizedSearch) return true;
+    const vendor = user.vendorId ? vendorById.get(user.vendorId) : undefined;
+    const vendorMatches = vendor
+      ? vendor.companyName.toLowerCase().includes(normalizedSearch) ||
+        vendor.contactName.toLowerCase().includes(normalizedSearch) ||
+        vendor.email.toLowerCase().includes(normalizedSearch) ||
+        vendor.phone.toLowerCase().includes(normalizedSearch)
+      : false;
+    return (
+      user.name.toLowerCase().includes(normalizedSearch) ||
+      user.email.toLowerCase().includes(normalizedSearch) ||
+      user.role.toLowerCase().includes(normalizedSearch) ||
+      vendorMatches
+    );
+  });
+  const showDropdown = focused && filtered.length > 0;
 
-  async function handleAdd(userId: string) {
-    setAdding(userId);
+  async function handleAdd(user: AppUser) {
+    setAdding(user.id);
+    const defaultRole = user.role === "Vendor" ? "Vendor" : user.role;
     try {
       await fetch(`/api/shoots/${shootId}/crew`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, roleOnShoot: role, shootDateId }),
+        body: JSON.stringify({ userId: user.id, roleOnShoot: defaultRole, shootDateId }),
       });
       setSearch("");
       onAdded();
@@ -569,25 +598,14 @@ function AddCrewInline({
   }
 
   return (
-    <div className="flex items-center gap-2 mt-2">
-      <select
-        value={role}
-        onChange={(e) => setRole(e.target.value)}
-        className="text-[11px] border border-border rounded-md px-2 py-1.5 bg-surface text-text-primary focus:outline-none focus:ring-1 focus:ring-primary shrink-0"
-      >
-        {SHOOT_ROLES.map((r) => (
-          <option key={r} value={r}>
-            {r}
-          </option>
-        ))}
-      </select>
+    <div className="mt-2">
       <div className="relative flex-1">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
-          placeholder="Search crew..."
+          placeholder="Type a name, email, or vendor company..."
           className="w-full text-xs border border-border rounded-md px-2.5 py-1.5 bg-surface text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
         />
         {showDropdown && (
@@ -597,12 +615,19 @@ function AddCrewInline({
                 key={u.id}
                 type="button"
                 disabled={adding === u.id}
-                onMouseDown={() => handleAdd(u.id)}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  void handleAdd(u);
+                }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-surface-secondary transition-colors disabled:opacity-50"
               >
                 <UserAvatar name={u.name} favoriteProduct={u.favoritePublixProduct} size="xs" />
                 <span className="font-medium text-text-primary">{u.name}</span>
-                <span className="text-text-tertiary ml-auto">{u.role}</span>
+                <span className="text-text-tertiary ml-auto">
+                  {u.vendorId && vendorById.get(u.vendorId)
+                    ? `Vendor · ${vendorById.get(u.vendorId)?.companyName}`
+                    : u.role}
+                </span>
               </button>
             ))}
           </div>

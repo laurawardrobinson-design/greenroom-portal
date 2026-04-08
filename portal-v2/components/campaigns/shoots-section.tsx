@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
-import type { Shoot, ShootCrew, AppUser } from "@/types/domain";
+import type { Shoot, ShootCrew, AppUser, Vendor } from "@/types/domain";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -46,6 +46,10 @@ const SHOOT_ROLES = [
   "PA",
   "Studio Manager",
   "Coordinator",
+  "Vendor",
+  "Studio",
+  "Admin",
+  "Crew",
   "Other",
 ];
 
@@ -60,6 +64,10 @@ const ROLE_COLORS: Record<string, string> = {
   PA: "bg-slate-100 text-slate-600",
   "Studio Manager": "bg-emerald-50 text-emerald-700",
   Coordinator: "bg-indigo-50 text-indigo-700",
+  Vendor: "bg-teal-50 text-teal-700",
+  Studio: "bg-cyan-50 text-cyan-700",
+  Admin: "bg-amber-50 text-amber-700",
+  Crew: "bg-slate-100 text-slate-600",
 };
 
 interface Props {
@@ -804,6 +812,7 @@ function CrewChip({ crew, canEdit, onRemove, shootId, onMutate }: {
   }
 
   const roleColor = ROLE_COLORS[crew.roleOnShoot] || "bg-surface-tertiary text-text-secondary";
+  const roleLabel = crew.roleOnShoot || "Crew";
 
   return (
     <div className="inline-flex items-center gap-2 rounded-lg bg-surface-secondary px-2.5 py-1.5 border border-border/40">
@@ -815,7 +824,7 @@ function CrewChip({ crew, canEdit, onRemove, shootId, onMutate }: {
         {editingRole && canEdit ? (
           <select
             autoFocus
-            value={crew.roleOnShoot}
+            value={crew.roleOnShoot || "Crew"}
             onChange={(e) => handleRoleChange(e.target.value)}
             onBlur={() => setEditingRole(false)}
             className="text-[10px] bg-transparent border-b border-primary focus:outline-none text-text-primary"
@@ -829,7 +838,7 @@ function CrewChip({ crew, canEdit, onRemove, shootId, onMutate }: {
             className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded mt-0.5 ${roleColor} ${canEdit ? "cursor-pointer hover:ring-1 hover:ring-primary/30" : ""}`}
             onClick={() => canEdit && setEditingRole(true)}
           >
-            {crew.roleOnShoot}
+            {roleLabel}
           </span>
         )}
       </div>
@@ -856,30 +865,50 @@ function AddCrewInline({
 }) {
   const { toast } = useToast();
   const { data: allUsers = [] } = useSWR<AppUser[]>(
-    "/api/users?roles=Admin,Producer,Studio",
+    "/api/users?roles=Admin,Producer,Studio,Art Director,Vendor",
     fetcher
   );
-  const [role, setRole] = useState(SHOOT_ROLES[0]);
+  const { data: allVendors = [] } = useSWR<Vendor[]>(
+    "/api/vendors",
+    fetcher
+  );
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
-  const inputRef = useState<HTMLInputElement | null>(null);
+  const vendorById = useMemo(
+    () => new Map(allVendors.map((vendor) => [vendor.id, vendor])),
+    [allVendors]
+  );
 
   const available = allUsers.filter((u) => !existingUserIds.includes(u.id));
-  const filtered = search
-    ? available.filter((u) =>
-        u.name.toLowerCase().includes(search.toLowerCase())
-      )
-    : available;
-  const showDropdown = focused && search.length > 0 && filtered.length > 0;
+  const normalizedSearch = search.trim().toLowerCase();
+  const filtered = available.filter((user) => {
+    if (!normalizedSearch) return true;
+    const vendor = user.vendorId ? vendorById.get(user.vendorId) : undefined;
+    return (
+      user.name.toLowerCase().includes(normalizedSearch) ||
+      user.email.toLowerCase().includes(normalizedSearch) ||
+      user.role.toLowerCase().includes(normalizedSearch) ||
+      !!vendor?.companyName?.toLowerCase().includes(normalizedSearch) ||
+      !!vendor?.contactName?.toLowerCase().includes(normalizedSearch) ||
+      !!vendor?.email?.toLowerCase().includes(normalizedSearch) ||
+      !!vendor?.phone?.toLowerCase().includes(normalizedSearch)
+    );
+  });
+  const showDropdown = focused && filtered.length > 0;
 
-  async function handleAdd(userId: string) {
-    setAdding(userId);
+  async function handleAdd(user: AppUser) {
+    setAdding(user.id);
+    const defaultRole = user.role === "Vendor" ? "Vendor" : user.role;
     try {
       const res = await fetch(`/api/shoots/${shootId}/crew`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, roleOnShoot: role, shootDateId }),
+        body: JSON.stringify({
+          userId: user.id,
+          roleOnShoot: defaultRole,
+          shootDateId,
+        }),
       });
       if (!res.ok) throw new Error("Failed");
       setSearch("");
@@ -893,54 +922,43 @@ function AddCrewInline({
 
   return (
     <div className="space-y-1.5">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setTimeout(() => setFocused(false), 150)}
-            placeholder="Type a name..."
-            className="w-full h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          {showDropdown && (
-            <div className="absolute top-full left-0 right-0 z-10 mt-1 max-h-36 overflow-y-auto rounded-lg border border-border bg-surface shadow-lg">
-              {filtered.map((u) => (
-                <button
-                  key={u.id}
-                  type="button"
-                  disabled={adding !== null}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => handleAdd(u.id)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-secondary transition-colors disabled:opacity-50"
-                >
-                  <UserAvatar name={u.name} favoriteProduct={u.favoritePublixProduct} size="xs" />
-                  <span className="text-xs font-medium text-text-primary">
-                    {u.name}
-                  </span>
-                  <span className="text-[10px] text-text-tertiary ml-auto">
-                    {u.role}
-                  </span>
-                  {adding === u.id && (
-                    <span className="text-[10px] text-primary">Adding...</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className="h-8 rounded-lg border border-border bg-surface px-2 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
-        >
-          {SHOOT_ROLES.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
+      <div className="relative flex-1">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 150)}
+          placeholder="Type a name, email, or vendor company..."
+          className="w-full h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        {showDropdown && (
+          <div className="absolute top-full left-0 right-0 z-10 mt-1 max-h-36 overflow-y-auto rounded-lg border border-border bg-surface shadow-lg">
+            {filtered.slice(0, 10).map((u) => (
+              <button
+                key={u.id}
+                type="button"
+                disabled={adding !== null}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => handleAdd(u)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-secondary transition-colors disabled:opacity-50"
+              >
+                <UserAvatar name={u.name} favoriteProduct={u.favoritePublixProduct} size="xs" />
+                <span className="text-xs font-medium text-text-primary">
+                  {u.name}
+                </span>
+                <span className="text-[10px] text-text-tertiary ml-auto">
+                  {u.vendorId && vendorById.get(u.vendorId)
+                    ? `Vendor · ${vendorById.get(u.vendorId)?.companyName}`
+                    : u.role}
+                </span>
+                {adding === u.id && (
+                  <span className="text-[10px] text-primary">Adding...</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       {available.length === 0 && (
         <p className="text-[10px] text-text-tertiary">All team members assigned</p>

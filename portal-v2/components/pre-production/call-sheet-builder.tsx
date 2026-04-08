@@ -16,6 +16,7 @@ interface Props {
   shoots: Shoot[];
   vendors: Array<{
     id: string;
+    assignedShootDateIds?: string[] | null;
     vendor?: {
       companyName: string;
       contactName: string;
@@ -98,6 +99,17 @@ export function CallSheetBuilder({
   // Crew list (pre-populated from shoot crew)
   const [crewList, setCrewList] = useState<CrewEntry[]>([]);
   const [talentList, setTalentList] = useState<TalentEntry[]>([]);
+  const [quickAddNames, setQuickAddNames] = useState("");
+
+  function isVendorAssignedToDate(
+    assignment: { assignedShootDateIds?: string[] | null },
+    shootDateId: string
+  ): boolean {
+    const scopedIds = assignment.assignedShootDateIds;
+    if (scopedIds == null) return true; // Legacy/default: all dates
+    if (scopedIds.length === 0) return false; // Explicit post-only
+    return scopedIds.includes(shootDateId);
+  }
 
   // Pre-populate when selected date changes
   // Only re-run when the selected date ID changes (not on every render)
@@ -147,13 +159,17 @@ export function CallSheetBuilder({
       }
     }
 
+    const dateScopedVendors = vendors.filter((cv) =>
+      isVendorAssignedToDate(cv, curDate.id)
+    );
+
     // Add non-talent vendors as crew
-    for (const cv of vendors) {
+    for (const cv of dateScopedVendors) {
       if (cv.vendor && cv.vendor.category?.toLowerCase() !== "talent") {
         entries.push({
           id: `vendor-${cv.id}`,
           name: cv.vendor.contactName || cv.vendor.companyName,
-          role: cv.vendor.category || cv.vendor.companyName,
+          role: cv.vendor.category || "Vendor",
           phone: cv.vendor.phone || "",
           email: cv.vendor.email || "",
           callTime: curDate.callTime || "",
@@ -165,7 +181,7 @@ export function CallSheetBuilder({
     setCrewList(entries);
 
     // Add talent vendors
-    const talentEntries: TalentEntry[] = vendors
+    const talentEntries: TalentEntry[] = dateScopedVendors
       .filter((cv) => cv.vendor?.category?.toLowerCase() === "talent")
       .map((cv) => ({
         id: `talent-${cv.id}`,
@@ -203,6 +219,28 @@ export function CallSheetBuilder({
     ]);
   };
 
+  const addCrewFromDraft = () => {
+    const names = quickAddNames
+      .split(/[,\n;]+/)
+      .map((name) => name.trim())
+      .filter(Boolean);
+    if (names.length === 0) return;
+
+    setCrewList((prev) => [
+      ...prev,
+      ...names.map((name, index) => ({
+        id: `draft-${Date.now()}-${index}`,
+        name,
+        role: "",
+        phone: "",
+        email: "",
+        callTime: generalCallTime,
+        contactVisibility: "full" as const,
+      })),
+    ]);
+    setQuickAddNames("");
+  };
+
   const removeCrew = (id: string) => {
     setCrewList((prev) => prev.filter((c) => c.id !== id));
   };
@@ -236,6 +274,10 @@ export function CallSheetBuilder({
   const handleDownload = () => {
     const dayIdx = allDates.findIndex((d) => d.id === selectedDateId);
 
+    const dateScopedVendors = selectedDateId
+      ? vendors.filter((cv) => isVendorAssignedToDate(cv, selectedDateId))
+      : vendors;
+
     const doc = generateCallSheetPdf({
       campaignName,
       wfNumber,
@@ -252,7 +294,7 @@ export function CallSheetBuilder({
           callTime: c.callTime || null,
         })),
       vendors: [
-        ...vendors
+        ...dateScopedVendors
           .filter((cv) => cv.vendor?.category?.toLowerCase() !== "talent")
           .map((cv) => ({
             company: cv.vendor?.companyName || "",
@@ -380,18 +422,44 @@ export function CallSheetBuilder({
           {/* Crew Contacts */}
           <FormSection title="Crew Contacts">
             <div className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <input
+                  value={quickAddNames}
+                  onChange={(e) => setQuickAddNames(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addCrewFromDraft();
+                    }
+                  }}
+                  placeholder="Type names (comma separated) and press Enter"
+                  className="flex-1 rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <button
+                  type="button"
+                  onClick={addCrewFromDraft}
+                  className="inline-flex items-center gap-1 rounded border border-border px-2 py-1.5 text-xs text-text-secondary hover:bg-surface-secondary transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add
+                </button>
+              </div>
+              <p className="text-[11px] text-text-tertiary">
+                No category required. Add names first, then optional details.
+              </p>
+
               {crewList.map((c) => (
-                <div key={c.id} className="grid grid-cols-[100px_1fr_120px_80px_28px] gap-1.5 items-start">
-                  <input
-                    value={c.role}
-                    onChange={(e) => updateCrew(c.id, "role", e.target.value)}
-                    placeholder="Title"
-                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
+                <div key={c.id} className="grid grid-cols-[1fr_110px_120px_80px_28px] gap-1.5 items-start">
                   <input
                     value={c.name}
                     onChange={(e) => updateCrew(c.id, "name", e.target.value)}
                     placeholder="Name"
+                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <input
+                    value={c.role}
+                    onChange={(e) => updateCrew(c.id, "role", e.target.value)}
+                    placeholder="Role (optional)"
                     className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                   <input
@@ -420,7 +488,7 @@ export function CallSheetBuilder({
                 onClick={addCrew}
                 className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
               >
-                <Plus className="h-3 w-3" /> Add crew member
+                <Plus className="h-3 w-3" /> Add manual row
               </button>
             </div>
           </FormSection>

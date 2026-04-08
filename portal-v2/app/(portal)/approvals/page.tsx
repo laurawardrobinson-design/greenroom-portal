@@ -163,15 +163,41 @@ export default function ApprovalsPage() {
 
   async function handleInvoiceApproval(cvId: string) {
     try {
-      await fetch(`/api/campaign-vendors/${cvId}`, {
+      const invoiceRes = await fetch(`/api/invoices?campaignVendorId=${cvId}`);
+      if (!invoiceRes.ok) throw new Error("Failed to load invoice");
+      const invoiceData = await invoiceRes.json();
+      const invoiceId = invoiceData?.invoice?.id as string | undefined;
+      if (!invoiceId) {
+        throw new Error("No submitted invoice found");
+      }
+
+      const res = await fetch("/api/invoices", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "transition", targetStatus: "Invoice Approved" }),
+        body: JSON.stringify({
+          invoiceId,
+          campaignVendorId: cvId,
+          approverType: "hop",
+        }),
       });
-      toast("success", "Invoice approved");
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to approve invoice");
+      }
+      const result = (await res.json()) as {
+        financeHandoffError?: string | null;
+      };
+      if (result.financeHandoffError) {
+        toast(
+          "warning",
+          `Invoice approved, but finance handoff failed: ${result.financeHandoffError}`
+        );
+      } else {
+        toast("success", "Invoice approved");
+      }
       mutate();
-    } catch {
-      toast("error", "Failed to approve invoice");
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Failed to approve invoice");
     }
   }
 

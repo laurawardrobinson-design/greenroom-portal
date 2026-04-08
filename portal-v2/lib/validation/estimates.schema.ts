@@ -22,6 +22,8 @@ export const estimateItemSchema = z.object({
 
 export const submitEstimateSchema = z.object({
   campaignVendorId: z.string().uuid(),
+  estimateFileUrl: z.string().min(1).nullable().optional(),
+  estimateFileName: z.string().min(1).nullable().optional(),
   items: z.array(estimateItemSchema).min(1, "At least one line item is required"),
 });
 

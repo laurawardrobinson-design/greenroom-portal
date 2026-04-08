@@ -39,7 +39,14 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await requireRole(["Admin", "Producer"]);
-    const { campaignId, vendorId } = await request.json();
+    const body = await request.json();
+    const campaignId = body.campaignId as string | undefined;
+    const vendorId = body.vendorId as string | undefined;
+    const assignedShootDateIds = Array.isArray(body.assignedShootDateIds)
+      ? body.assignedShootDateIds.filter(
+          (id: unknown): id is string => typeof id === "string" && id.length > 0
+        )
+      : undefined;
 
     if (!campaignId || !vendorId) {
       return NextResponse.json(
@@ -48,7 +55,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const cv = await assignVendorToCampaign(campaignId, vendorId);
+    const cv = await assignVendorToCampaign(
+      campaignId,
+      vendorId,
+      assignedShootDateIds
+    );
     return NextResponse.json(cv, { status: 201 });
   } catch (error) {
     if (error instanceof Error) {

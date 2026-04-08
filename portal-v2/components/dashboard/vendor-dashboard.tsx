@@ -6,7 +6,6 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { HighlightsCard } from "@/components/dashboard/highlights-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { formatCurrency } from "@/lib/utils/format";
 import { VENDOR_STATUS_COLORS } from "@/lib/constants/statuses";
@@ -19,9 +18,21 @@ interface Props {
   user: AppUser;
 }
 
+function getCampaignDisplayName(
+  assignment: CampaignVendor,
+  campaignMap: Map<string, Campaign>
+): string {
+  const mappedCampaign = campaignMap.get(assignment.campaignId);
+  if (mappedCampaign?.name) return mappedCampaign.name;
+  if (assignment.campaignName) return assignment.campaignName;
+  if (assignment.campaignWfNumber) return assignment.campaignWfNumber;
+  return "Campaign";
+}
+
 /** What the vendor needs to do next for each status */
 const NEXT_ACTION: Record<string, { label: string; icon: React.ElementType; urgent: boolean } | null> = {
   Invited: { label: "Submit Estimate", icon: FileText, urgent: true },
+  "Estimate Revision Requested": { label: "Revise Estimate", icon: FileText, urgent: true },
   "Estimate Submitted": null, // waiting on Producer
   "Estimate Approved": null, // waiting on PO upload
   "PO Uploaded": { label: "Sign PO", icon: PenLine, urgent: true },
@@ -35,6 +46,7 @@ const NEXT_ACTION: Record<string, { label: string; icon: React.ElementType; urge
 
 /** Human-readable waiting message per status */
 const WAITING_MESSAGE: Record<string, string> = {
+  "Estimate Revision Requested": "Producer requested estimate revisions",
   "Estimate Submitted": "Waiting for estimate review",
   "Estimate Approved": "Waiting for PO document",
   "PO Signed": "Waiting for shoot day",
@@ -134,14 +146,13 @@ export function VendorDashboard({ user }: Props) {
           </CardHeader>
           <div className="space-y-2">
             {needsAction.map((a) => {
-              const campaign = campaignMap.get(a.campaignId);
               const action = NEXT_ACTION[a.status];
               if (!action) return null;
               const Icon = action.icon;
               return (
                 <Link
                   key={a.id}
-                  href={`/campaigns/${a.campaignId}`}
+                  href={`/vendor-workflow?assignment=${a.id}`}
                   className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-surface-secondary transition-colors"
                 >
                   <div className="flex items-center gap-3">
@@ -150,7 +161,7 @@ export function VendorDashboard({ user }: Props) {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-text-primary">
-                        {campaign?.name || "Campaign"}
+                        {getCampaignDisplayName(a, campaignMap)}
                       </p>
                       <p className="text-xs text-text-tertiary">{action.label}</p>
                     </div>
@@ -184,18 +195,17 @@ export function VendorDashboard({ user }: Props) {
         ) : (
           <div className="space-y-2">
             {active.map((a) => {
-              const campaign = campaignMap.get(a.campaignId);
               const action = NEXT_ACTION[a.status];
               const waiting = WAITING_MESSAGE[a.status];
               return (
                 <Link
                   key={a.id}
-                  href={`/campaigns/${a.campaignId}`}
+                  href={`/vendor-workflow?assignment=${a.id}`}
                   className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-surface-secondary transition-colors"
                 >
                   <div>
                     <p className="text-sm font-medium text-text-primary">
-                      {campaign?.name || "Campaign"}
+                      {getCampaignDisplayName(a, campaignMap)}
                     </p>
                     <p className="text-xs text-text-tertiary">
                       {action ? action.label : waiting || a.status}
@@ -213,16 +223,15 @@ export function VendorDashboard({ user }: Props) {
               );
             })}
             {completed.map((a) => {
-              const campaign = campaignMap.get(a.campaignId);
               return (
                 <Link
                   key={a.id}
-                  href={`/campaigns/${a.campaignId}`}
+                  href={`/vendor-workflow?assignment=${a.id}`}
                   className="flex items-center justify-between rounded-lg border border-border p-3 opacity-60 hover:opacity-100 transition-opacity"
                 >
                   <div>
                     <p className="text-sm font-medium text-text-primary">
-                      {campaign?.name || "Campaign"}
+                      {getCampaignDisplayName(a, campaignMap)}
                     </p>
                     <p className="text-xs text-text-tertiary">
                       Paid: {formatCurrency(a.paymentAmount)}

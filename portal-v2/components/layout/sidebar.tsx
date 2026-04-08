@@ -18,6 +18,8 @@ import {
   Compass,
   List,
   ClipboardCheck,
+  FileText,
+  Mail,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -51,6 +53,24 @@ const NAV_ITEMS: NavItem[] = [
     href: "/campaigns",
     icon: Film,
     roles: ["Admin", "Producer", "Studio", "Vendor", "Art Director"],
+  },
+  {
+    label: "Workflow",
+    href: "/vendor-workflow",
+    icon: ClipboardList,
+    roles: ["Vendor"],
+  },
+  {
+    label: "Documents",
+    href: "/documents",
+    icon: FileText,
+    roles: ["Admin", "Producer", "Vendor"],
+  },
+  {
+    label: "Finance Handoffs",
+    href: "/finance-handoffs",
+    icon: Mail,
+    roles: ["Admin", "Producer"],
   },
   {
     label: "Pre Production",

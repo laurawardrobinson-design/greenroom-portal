@@ -54,6 +54,7 @@ interface CampaignGroup {
 
 const STATUS_LABEL: Record<string, string> = {
   "Estimate Submitted": "Pending Estimate",
+  "Estimate Revision Requested": "Revision Requested",
   "Estimate Approved": "Estimate Approved",
   "PO Uploaded": "PO Sent",
   "PO Signed": "PO Signed",
@@ -66,6 +67,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_COLOR: Record<string, string> = {
   "Estimate Submitted": "bg-amber-50 text-amber-700",
+  "Estimate Revision Requested": "bg-red-50 text-red-700",
   "Estimate Approved": "bg-blue-50 text-blue-700",
   "PO Uploaded": "bg-blue-50 text-blue-700",
   "PO Signed": "bg-blue-50 text-blue-700",
@@ -78,7 +80,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 // Status ordering for "at or past" checks
 const STATUS_ORDER = [
-  "Invited", "Estimate Submitted", "Estimate Approved",
+  "Invited", "Estimate Submitted", "Estimate Revision Requested", "Estimate Approved",
   "PO Uploaded", "PO Signed", "Shoot Complete",
   "Invoice Submitted", "Invoice Pre-Approved", "Invoice Approved", "Paid",
 ];

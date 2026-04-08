@@ -19,6 +19,72 @@ const TEST_USERS: Record<
 
 const TEST_PASSWORD = "testpass123456";
 
+const DEV_NORTHLIGHT_VENDOR = {
+  company_name: "Northlight Culinary Studio",
+  contact_name: "Maya Patel",
+  email: "maya@northlightculinary.com",
+  phone: "(555) 014-7712",
+  category: "Food Styling",
+  specialty: "Food Styling",
+  active: true,
+} as const;
+
+async function ensureDevNorthlightVendorId(admin: ReturnType<typeof createAdminClient>): Promise<string> {
+  const { data: existing, error: existingError } = await admin
+    .from("vendors")
+    .select("id, active, company_name, contact_name, phone, category, specialty")
+    .eq("email", DEV_NORTHLIGHT_VENDOR.email)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  if (existing?.id) {
+    const needsUpdate =
+      !existing.active ||
+      existing.company_name !== DEV_NORTHLIGHT_VENDOR.company_name ||
+      existing.contact_name !== DEV_NORTHLIGHT_VENDOR.contact_name ||
+      existing.phone !== DEV_NORTHLIGHT_VENDOR.phone ||
+      existing.category !== DEV_NORTHLIGHT_VENDOR.category ||
+      existing.specialty !== DEV_NORTHLIGHT_VENDOR.specialty;
+
+    if (needsUpdate) {
+      const { error: updateError } = await admin
+        .from("vendors")
+        .update({
+          company_name: DEV_NORTHLIGHT_VENDOR.company_name,
+          contact_name: DEV_NORTHLIGHT_VENDOR.contact_name,
+          phone: DEV_NORTHLIGHT_VENDOR.phone,
+          category: DEV_NORTHLIGHT_VENDOR.category,
+          specialty: DEV_NORTHLIGHT_VENDOR.specialty,
+          active: true,
+        })
+        .eq("id", existing.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+    }
+
+    return existing.id;
+  }
+
+  const { data: inserted, error: insertError } = await admin
+    .from("vendors")
+    .insert(DEV_NORTHLIGHT_VENDOR)
+    .select("id")
+    .single();
+
+  if (insertError || !inserted?.id) {
+    throw insertError || new Error("Failed to create Northlight vendor");
+  }
+
+  return inserted.id;
+}
+
 export async function POST(request: Request) {
   // Guard: only works when DEV_AUTH is explicitly enabled.
   // Remove the NEXT_PUBLIC_DEV_AUTH env var on Vercel to disable.
@@ -27,25 +93,35 @@ export async function POST(request: Request) {
   }
 
   const { role, vendor_id } = await request.json();
-  let testUser = TEST_USERS[role as string];
+  const testUser = TEST_USERS[role as string];
   if (!testUser) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
 
-  // Vendor role requires vendor_id selection
-  if (testUser.role === "Vendor" && !vendor_id) {
+  const admin = createAdminClient();
+  let resolvedVendorId = vendor_id as string | undefined;
+
+  // Vendor role defaults to Northlight vendor in dev mode when none is selected.
+  if (testUser.role === "Vendor" && !resolvedVendorId) {
+    try {
+      resolvedVendorId = await ensureDevNorthlightVendorId(admin);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to prepare vendor";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  }
+
+  if (testUser.role === "Vendor" && !resolvedVendorId) {
     return NextResponse.json({ error: "Vendor login requires vendor_id" }, { status: 400 });
   }
 
-  const admin = createAdminClient();
-
   // For vendors, fetch their actual contact name from database
   let vendorContactName = testUser.name;
-  if (testUser.role === "Vendor" && vendor_id) {
+  if (testUser.role === "Vendor" && resolvedVendorId) {
     const { data: vendor } = await admin
       .from("vendors")
       .select("contact_name")
-      .eq("id", vendor_id)
+      .eq("id", resolvedVendorId)
       .single();
 
     if (vendor?.contact_name) {
@@ -72,12 +148,16 @@ export async function POST(request: Request) {
           name: vendorContactName,
           role: testUser.role,
           active: true,
-          vendor_id: vendor_id || null,
+          vendor_id: resolvedVendorId || null,
         },
         { onConflict: "id" }
       );
     }
-    return NextResponse.json({ success: true, role: testUser.role, vendor_id });
+    return NextResponse.json({
+      success: true,
+      role: testUser.role,
+      vendor_id: resolvedVendorId || null,
+    });
   }
 
   // Sign-in failed — user probably doesn't exist, create them
@@ -102,7 +182,7 @@ export async function POST(request: Request) {
         name: vendorContactName,
         role: testUser.role,
         active: true,
-        vendor_id: vendor_id || null,
+        vendor_id: resolvedVendorId || null,
       },
       { onConflict: "id" }
     );
@@ -118,5 +198,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: signInErr2.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, role: testUser.role, vendor_id });
+  return NextResponse.json({
+    success: true,
+    role: testUser.role,
+    vendor_id: resolvedVendorId || null,
+  });
 }

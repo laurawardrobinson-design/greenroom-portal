@@ -116,7 +116,9 @@ export function SendPoModal({
 
       const uploadRes = await fetch("/api/files", { method: "POST", body: formData });
       if (!uploadRes.ok) throw new Error("Upload failed");
-      const uploadData = await uploadRes.json();
+      const uploadData = (await uploadRes.json()) as { fileUrl?: string; url?: string };
+      const poFileUrl = uploadData.fileUrl || uploadData.url;
+      if (!poFileUrl) throw new Error("Upload response missing file URL");
 
       const targetStatus = status === "Estimate Approved" ? "PO Uploaded" : status;
       const res = await fetch(`/api/campaign-vendors/${campaignVendorId}`, {
@@ -125,7 +127,7 @@ export function SendPoModal({
         body: JSON.stringify({
           action: "transition",
           targetStatus,
-          payload: { poFileUrl: uploadData.url },
+          payload: { poFileUrl },
         }),
       });
       if (!res.ok) throw new Error("Status update failed");
@@ -204,7 +206,7 @@ export function SendPoModal({
                   {displayPoNumber} — awaiting vendor signature
                 </p>
                 <p className="text-[10px] text-amber-600">
-                  The vendor will see a "Sign PO" prompt when they log in
+                  The vendor will see a &quot;Sign PO&quot; prompt when they log in
                 </p>
               </div>
             </div>

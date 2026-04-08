@@ -1,20 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
-import { Users, UserCircle, Plus, Check, X, Palette } from "lucide-react";
+import { Users, UserCircle, Plus, Check, X, Palette, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { VENDOR_STATUS_COLORS } from "@/lib/constants/statuses";
-import type { AppUser, CampaignVendor, Vendor } from "@/types/domain";
+import type { AppUser, CampaignVendor, Shoot, Vendor } from "@/types/domain";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface Props {
   campaignId: string;
+  shoots: Shoot[];
   canEdit: boolean;
   isVendor: boolean;
   currentAd: AppUser | null;
@@ -28,6 +29,7 @@ interface Props {
 
 export function PeopleTile({
   campaignId,
+  shoots,
   canEdit,
   isVendor,
   currentAd,
@@ -38,47 +40,22 @@ export function PeopleTile({
   isArtDirector,
   onAssign,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<"internal" | "vendors">("internal");
-
   if (isVendor) return null;
 
   return (
     <Card padding="none">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
+      <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 shrink-0 text-primary" />
           <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">People</span>
         </div>
-        {/* Tab pills */}
-        <div className="flex items-center gap-1 bg-surface-secondary rounded-md p-0.5">
-          <button
-            type="button"
-            onClick={() => setActiveTab("internal")}
-            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
-              activeTab === "internal"
-                ? "bg-surface text-text-primary shadow-sm"
-                : "text-text-tertiary hover:text-text-secondary"
-            }`}
-          >
-            Internal
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("vendors")}
-            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
-              activeTab === "vendors"
-                ? "bg-surface text-text-primary shadow-sm"
-                : "text-text-tertiary hover:text-text-secondary"
-            }`}
-          >
-            Vendors
-          </button>
-        </div>
       </div>
 
-      <div className="px-3.5 py-3">
-        {activeTab === "internal" ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-3.5 py-3">
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+            Internal
+          </p>
           <InternalTab
             currentAd={currentAd}
             adUsers={adUsers}
@@ -89,9 +66,14 @@ export function PeopleTile({
             campaignAdId={campaignAdId}
             onAssign={onAssign}
           />
-        ) : (
-          <VendorsTab campaignId={campaignId} canEdit={canEdit} />
-        )}
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+            Vendors
+          </p>
+          <VendorsTab campaignId={campaignId} shoots={shoots} canEdit={canEdit} />
+        </div>
       </div>
     </Card>
   );
@@ -226,14 +208,53 @@ function InternalTab({
 
 // ─── Vendors Tab ──────────────────────────────────────────────────────────────
 
-function VendorsTab({ campaignId, canEdit }: { campaignId: string; canEdit: boolean }) {
+function VendorsTab({
+  campaignId,
+  shoots,
+  canEdit,
+}: {
+  campaignId: string;
+  shoots: Shoot[];
+  canEdit: boolean;
+}) {
   const { toast } = useToast();
   const [showAssign, setShowAssign] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const { data: rawData, mutate } = useSWR<CampaignVendor[]>(
     `/api/campaign-vendors?campaignId=${campaignId}`,
     fetcher
   );
   const vendors = Array.isArray(rawData) ? rawData : [];
+
+  async function handleRemove(cv: CampaignVendor) {
+    const vendorName = cv.vendor?.companyName || "this vendor";
+    const ok = confirm(
+      `Remove ${vendorName} from this campaign?\n\nThis removes their current estimate/PO/invoice workflow from this campaign.`
+    );
+    if (!ok) return;
+
+    setRemovingId(cv.id);
+    try {
+      const res = await fetch(`/api/campaign-vendors/${cv.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(data?.error || "Failed to remove vendor");
+      }
+      toast("success", "Vendor removed from campaign");
+      mutate();
+    } catch (error) {
+      toast(
+        "error",
+        error instanceof Error ? error.message : "Failed to remove vendor"
+      );
+    } finally {
+      setRemovingId(null);
+    }
+  }
 
   return (
     <div className="space-y-2">
@@ -255,6 +276,17 @@ function VendorsTab({ campaignId, canEdit }: { campaignId: string; canEdit: bool
                   <p className="text-[10px] text-text-tertiary">{cv.vendor.category}</p>
                 )}
               </div>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => handleRemove(cv)}
+                  disabled={removingId !== null}
+                  className="shrink-0 rounded p-1 text-text-tertiary hover:bg-surface-secondary hover:text-error transition-colors disabled:opacity-50"
+                  title="Remove vendor from campaign"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
               <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColor}`}>
                 {cv.status}
               </span>
@@ -278,6 +310,7 @@ function VendorsTab({ campaignId, canEdit }: { campaignId: string; canEdit: bool
         open={showAssign}
         onClose={() => setShowAssign(false)}
         campaignId={campaignId}
+        shoots={shoots}
         existingVendorIds={vendors.map((cv) => cv.vendorId)}
         onAssigned={() => { mutate(); setShowAssign(false); }}
       />
@@ -291,28 +324,115 @@ function AssignVendorModal({
   open,
   onClose,
   campaignId,
+  shoots,
   existingVendorIds,
   onAssigned,
 }: {
   open: boolean;
   onClose: () => void;
   campaignId: string;
+  shoots: Shoot[];
   existingVendorIds: string[];
   onAssigned: () => void;
 }) {
   const { toast } = useToast();
   const { data: allVendors = [] } = useSWR<Vendor[]>(open ? "/api/vendors" : null, fetcher);
   const [assigning, setAssigning] = useState<string | null>(null);
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const shootDateOptions = useMemo(
+    () =>
+      shoots
+        .flatMap((shoot) =>
+          shoot.dates.map((date) => ({
+            id: date.id,
+            shootName: shoot.name,
+            shootType: shoot.shootType,
+            shootDate: date.shootDate,
+            dateLabel: new Date(`${date.shootDate}T00:00:00`).toLocaleDateString(
+              "en-US",
+              {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              }
+            ),
+          }))
+        )
+        .sort((a, b) => a.shootDate.localeCompare(b.shootDate)),
+    [shoots]
+  );
+  const shootDateIds = useMemo(
+    () => shootDateOptions.map((option) => option.id),
+    [shootDateOptions]
+  );
+  const [selectedShootDateIds, setSelectedShootDateIds] = useState<Set<string>>(
+    () => new Set(shootDateIds)
+  );
 
-  const available = allVendors.filter((v) => !existingVendorIds.includes(v.id));
+  useEffect(() => {
+    if (!open) return;
+    setAssigning(null);
+    setSelectedVendorId(null);
+    setSearch("");
+    setSelectedShootDateIds(new Set(shootDateIds));
+  }, [open, shootDateIds]);
 
-  async function handleAssign(vendorId: string) {
-    setAssigning(vendorId);
+  const available = allVendors
+    .filter((v) => !existingVendorIds.includes(v.id))
+    .filter((vendor) => {
+      const q = search.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        vendor.companyName.toLowerCase().includes(q) ||
+        vendor.contactName.toLowerCase().includes(q) ||
+        vendor.email.toLowerCase().includes(q) ||
+        vendor.phone.toLowerCase().includes(q)
+      );
+    });
+  const selectedVendor =
+    available.find((vendor) => vendor.id === selectedVendorId) ?? null;
+
+  function toggleShootDate(shootDateId: string) {
+    setSelectedShootDateIds((current) => {
+      const next = new Set(current);
+      if (next.has(shootDateId)) {
+        next.delete(shootDateId);
+      } else {
+        next.add(shootDateId);
+      }
+      return next;
+    });
+  }
+
+  async function handleAssign() {
+    if (!selectedVendor) return;
+    setAssigning(selectedVendor.id);
     try {
+      const payload: {
+        campaignId: string;
+        vendorId: string;
+        assignedShootDateIds?: string[];
+      } = {
+        campaignId,
+        vendorId: selectedVendor.id,
+      };
+
+      if (shootDateIds.length > 0) {
+        const selectedIds = shootDateIds.filter((id) =>
+          selectedShootDateIds.has(id)
+        );
+        // Omit when all days are selected so new future shoot dates remain included.
+        if (selectedIds.length !== shootDateIds.length) {
+          payload.assignedShootDateIds = selectedIds;
+        }
+      }
+
       const res = await fetch("/api/campaign-vendors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaignId, vendorId }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -339,30 +459,120 @@ function AssignVendorModal({
           }
         />
       ) : (
-        <div className="max-h-80 space-y-2 overflow-y-auto">
-          {available.map((vendor) => (
-            <div
-              key={vendor.id}
-              className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-surface-secondary transition-colors"
-            >
-              <div>
-                <p className="text-sm font-medium text-text-primary">{vendor.companyName}</p>
-                <p className="text-xs text-text-tertiary">
-                  {vendor.contactName}
-                  {vendor.category && ` — ${vendor.category}`}
+        <div className="space-y-4">
+          <input
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by company, contact, email, or phone..."
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <div className="max-h-56 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+            {available.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-text-tertiary">
+                No vendors match that search.
+              </p>
+            ) : (
+              available.map((vendor) => (
+                <button
+                  key={vendor.id}
+                  type="button"
+                  onClick={() => setSelectedVendorId(vendor.id)}
+                  className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors ${
+                    selectedVendorId === vendor.id
+                      ? "bg-primary/5"
+                      : "hover:bg-surface-secondary"
+                  }`}
+                >
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">
+                      {vendor.companyName}
+                    </p>
+                    <p className="text-xs text-text-tertiary">
+                      {vendor.contactName}
+                      {vendor.category && ` — ${vendor.category}`}
+                    </p>
+                  </div>
+                  {selectedVendorId === vendor.id && (
+                    <Check className="h-4 w-4 shrink-0 text-primary" />
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+
+          {shootDateOptions.length > 0 && (
+            <div className="space-y-2 rounded-lg border border-border bg-surface-secondary p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-medium uppercase tracking-wider text-text-secondary">
+                  Call Sheet Shoot Days (Optional)
                 </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedShootDateIds(new Set(shootDateIds))}
+                    className="rounded px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
+                  >
+                    All Days
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedShootDateIds(new Set())}
+                    className="rounded px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
+                  >
+                    Post-Only
+                  </button>
+                </div>
               </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                loading={assigning === vendor.id}
-                disabled={assigning !== null}
-                onClick={() => handleAssign(vendor.id)}
-              >
-                Assign
-              </Button>
+              <p className="text-xs text-text-tertiary">
+                Keep all days selected for on-set coverage. Clear all for vendors
+                that only work in post.
+              </p>
+              <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-border bg-surface p-2">
+                {shootDateOptions.map((option) => (
+                  <label
+                    key={option.id}
+                    className="flex items-center gap-2 rounded px-2 py-1.5 cursor-pointer hover:bg-surface-secondary transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedShootDateIds.has(option.id)}
+                      onChange={() => toggleShootDate(option.id)}
+                      className="h-4 w-4 rounded border-border accent-primary"
+                    />
+                    <span className="text-xs text-text-primary">
+                      {option.dateLabel}
+                    </span>
+                    <span className="text-[11px] text-text-tertiary ml-auto">
+                      {option.shootName} · {option.shootType}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-text-tertiary">
+                {selectedShootDateIds.size === 0
+                  ? "Post-only: this vendor will not be added to shoot call sheets."
+                  : selectedShootDateIds.size === shootDateIds.length
+                  ? "All shoot days selected."
+                  : `${selectedShootDateIds.size} shoot day${
+                      selectedShootDateIds.size === 1 ? "" : "s"
+                    } selected.`}
+              </p>
             </div>
-          ))}
+          )}
+
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="ghost" onClick={onClose} disabled={assigning !== null}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAssign}
+              loading={assigning === selectedVendor?.id}
+              disabled={!selectedVendor || assigning !== null}
+            >
+              Assign Vendor
+            </Button>
+          </div>
         </div>
       )}
     </Modal>

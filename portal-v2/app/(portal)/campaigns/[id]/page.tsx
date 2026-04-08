@@ -490,6 +490,7 @@ export default function CampaignDetailPage({
         <div className="lg:col-span-2">
           <PeopleTile
             campaignId={id}
+            shoots={shoots}
             canEdit={canEdit}
             isVendor={isVendor}
             currentAd={artDirector ?? null}
@@ -718,4 +719,3 @@ export default function CampaignDetailPage({
     </div>
   );
 }
-

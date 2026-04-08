@@ -15,6 +15,7 @@ interface Props {
 
 export function DocumentsTile({ campaignId, isVendor, canEdit, uploading, onUpload, hideAdminDocs }: Props) {
   const showAdminSection = !isVendor && !hideAdminDocs;
+  const canUploadCreativeDocs = !isVendor && (canEdit || !!hideAdminDocs);
   return (
     <Card padding="none" className="h-full flex flex-col">
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
@@ -23,6 +24,11 @@ export function DocumentsTile({ campaignId, isVendor, canEdit, uploading, onUplo
       </div>
 
       <div className="flex-1 overflow-y-auto px-3.5 py-3">
+        {isVendor && (
+          <div className="mb-3 rounded-lg border border-border bg-surface-secondary px-3 py-2 text-xs text-text-secondary">
+            Campaign documents are read-only here. Use <span className="font-semibold text-text-primary">Workflow</span> to submit estimates, sign POs, and upload invoices.
+          </div>
+        )}
         <div className={showAdminSection ? "grid grid-cols-1 md:grid-cols-2 gap-6" : ""}>
           <FileSection
             title={isVendor ? "Campaign Documents" : "Creative"}
@@ -31,7 +37,7 @@ export function DocumentsTile({ campaignId, isVendor, canEdit, uploading, onUplo
             categories={isVendor ? ["Deliverable"] : ["Shot List", "Concept Deck", "Reference", "Product Info"]}
             onUpload={onUpload}
             uploading={uploading}
-            canUpload={isVendor || canEdit || !!hideAdminDocs}
+            canUpload={canUploadCreativeDocs}
           />
           {showAdminSection && (
             <FileSection

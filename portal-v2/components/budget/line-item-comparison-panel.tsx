@@ -108,7 +108,17 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
         }),
       });
       if (!res.ok) throw new Error("Failed");
-      toast("success", "Invoice approved");
+      const result = (await res.json()) as {
+        financeHandoffError?: string | null;
+      };
+      if (result.financeHandoffError) {
+        toast(
+          "warning",
+          `Invoice approved, but finance handoff failed: ${result.financeHandoffError}`
+        );
+      } else {
+        toast("success", "Invoice approved");
+      }
       mutateInvoice();
       onStatusChange();
     } catch {
@@ -120,6 +130,7 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
 
   async function handleSendBack() {
     if (!reason.trim()) return;
+    const isEstimateSendBack = status === "Estimate Submitted";
     setActing(true);
     try {
       const res = await fetch(`/api/campaign-vendors/${campaignVendorId}`, {
@@ -127,12 +138,21 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "transition",
-          targetStatus: "Rejected",
-          payload: { notes: reason.trim() },
+          targetStatus: isEstimateSendBack
+            ? "Estimate Revision Requested"
+            : "Rejected",
+          payload: isEstimateSendBack
+            ? { feedback: reason.trim() }
+            : { notes: reason.trim() },
         }),
       });
       if (!res.ok) throw new Error("Failed");
-      toast("success", "Sent back to vendor");
+      toast(
+        "success",
+        isEstimateSendBack
+          ? "Revision request sent to vendor"
+          : "Invoice sent back to vendor"
+      );
       onStatusChange();
     } catch {
       toast("error", "Failed to send back");
@@ -221,7 +241,11 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Explain what needs to change…"
+            placeholder={
+              canApproveEstimate
+                ? "Explain what to revise in the estimate…"
+                : "Explain what needs to change…"
+            }
             className="w-full text-xs rounded-md border border-border bg-surface-secondary px-3 py-2 text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
             rows={2}
             autoFocus

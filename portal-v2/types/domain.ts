@@ -219,6 +219,7 @@ export interface Vendor {
 export type CampaignVendorStatus =
   | "Invited"
   | "Estimate Submitted"
+  | "Estimate Revision Requested"
   | "Estimate Approved"
   | "PO Uploaded"
   | "PO Signed"
@@ -233,10 +234,13 @@ export interface CampaignVendor {
   id: string;
   campaignId: string;
   vendorId: string;
+  campaignName: string;
+  campaignWfNumber: string;
   status: CampaignVendorStatus;
   invitedAt: string;
   estimateTotal: number;
   poFileUrl: string | null;
+  poSignedFileUrl: string | null;
   poSignedAt: string | null;
   signatureUrl: string | null;
   signedIp: string | null;
@@ -245,6 +249,9 @@ export interface CampaignVendor {
   paymentAmount: number;
   paymentDate: string | null;
   notes: string;
+  estimateFeedback: string;
+  estimateFeedbackAt: string | null;
+  assignedShootDateIds: string[] | null;
   createdAt: string;
   updatedAt: string;
   vendor?: Vendor;

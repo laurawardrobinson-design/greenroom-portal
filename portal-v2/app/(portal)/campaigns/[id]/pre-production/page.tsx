@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useRef, useEffect } from "react";
+import { use, useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useCampaign, useCampaigns } from "@/hooks/use-campaigns";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -21,9 +21,11 @@ import {
   Star,
   UserCircle,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { ScheduleTab } from "@/components/pre-production/schedule-tab";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
@@ -587,12 +589,14 @@ function AddInternalModal({
 // ─── Add Vendor modal ────────────────────────────────────────────────────────
 function AddVendorModal({
   campaignId,
+  shoots,
   assignedVendorIds,
   talentOnly,
   onClose,
   onSuccess,
 }: {
   campaignId: string;
+  shoots: Shoot[];
   assignedVendorIds: Set<string>;
   talentOnly: boolean;
   onClose: () => void;
@@ -606,23 +610,89 @@ function AddVendorModal({
   const [selected, setSelected] = useState<Vendor | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const shootDateOptions = useMemo(
+    () =>
+      shoots
+        .flatMap((shoot) =>
+          shoot.dates.map((date) => ({
+            id: date.id,
+            shootName: shoot.name,
+            shootType: shoot.shootType,
+            shootDate: date.shootDate,
+            dateLabel: new Date(`${date.shootDate}T00:00:00`).toLocaleDateString(
+              "en-US",
+              {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              }
+            ),
+          }))
+        )
+        .sort((a, b) => a.shootDate.localeCompare(b.shootDate)),
+    [shoots]
+  );
+  const shootDateIds = useMemo(
+    () => shootDateOptions.map((option) => option.id),
+    [shootDateOptions]
+  );
+  const [selectedShootDateIds, setSelectedShootDateIds] = useState<Set<string>>(
+    () => new Set(shootDateIds)
+  );
+
+  useEffect(() => {
+    setSelectedShootDateIds(new Set(shootDateIds));
+  }, [shootDateIds]);
 
   const filtered = allVendors
     .filter((v) => !assignedVendorIds.has(v.id))
     .filter((v) =>
       v.companyName.toLowerCase().includes(search.toLowerCase()) ||
-      v.contactName.toLowerCase().includes(search.toLowerCase())
+      v.contactName.toLowerCase().includes(search.toLowerCase()) ||
+      v.email.toLowerCase().includes(search.toLowerCase()) ||
+      v.phone.toLowerCase().includes(search.toLowerCase())
     );
+
+  function toggleShootDate(shootDateId: string) {
+    setSelectedShootDateIds((current) => {
+      const next = new Set(current);
+      if (next.has(shootDateId)) {
+        next.delete(shootDateId);
+      } else {
+        next.add(shootDateId);
+      }
+      return next;
+    });
+  }
 
   async function handleSave() {
     if (!selected) return;
     setSaving(true);
     setError("");
     try {
+      const payload: {
+        campaignId: string;
+        vendorId: string;
+        assignedShootDateIds?: string[];
+      } = {
+        campaignId,
+        vendorId: selected.id,
+      };
+      if (shootDateIds.length > 0) {
+        const selectedIds = shootDateIds.filter((id) =>
+          selectedShootDateIds.has(id)
+        );
+        // Omit when all selected, so future dates remain included automatically.
+        if (selectedIds.length !== shootDateIds.length) {
+          payload.assignedShootDateIds = selectedIds;
+        }
+      }
+
       const res = await fetch("/api/campaign-vendors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaignId, vendorId: selected.id }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -677,6 +747,62 @@ function AddVendorModal({
             )}
           </div>
         </div>
+        {shootDateOptions.length > 0 && (
+          <div className="space-y-2 rounded-lg border border-border bg-surface-secondary p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Call Sheet Shoot Days (Optional)
+              </label>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setSelectedShootDateIds(new Set(shootDateIds))}
+                  className="rounded px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
+                >
+                  All Days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedShootDateIds(new Set())}
+                  className="rounded px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
+                >
+                  Post-Only
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-text-tertiary">
+              Keep all days selected for on-set work. Clear all if this vendor is post-only.
+            </p>
+            <div className="max-h-40 overflow-y-auto rounded-md border border-border bg-surface divide-y divide-border">
+              {shootDateOptions.map((option) => (
+                <label
+                  key={option.id}
+                  className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-surface-secondary transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedShootDateIds.has(option.id)}
+                    onChange={() => toggleShootDate(option.id)}
+                    className="h-4 w-4 rounded border-border accent-primary"
+                  />
+                  <span className="text-sm text-text-primary">{option.dateLabel}</span>
+                  <span className="text-xs text-text-tertiary ml-auto">
+                    {option.shootName} · {option.shootType}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-text-tertiary">
+              {selectedShootDateIds.size === 0
+                ? "Post-only: this vendor will not appear on call sheets."
+                : selectedShootDateIds.size === shootDateIds.length
+                ? "All shoot days selected."
+                : `${selectedShootDateIds.size} shoot day${
+                    selectedShootDateIds.size === 1 ? "" : "s"
+                  } selected.`}
+            </p>
+          </div>
+        )}
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
       <ModalFooter>
@@ -705,6 +831,7 @@ function PeopleTab({
   canManage: boolean;
   onRefresh: () => void;
 }) {
+  const { toast } = useToast();
   const { data: allUsers = [] } = useSWR<AppUser[]>("/api/users", fetcher);
   const { data: talentEntries = [] } = useSWR<ShotTalentEntry[]>(
     `/api/shot-list/talent?campaignId=${campaignId}`,
@@ -713,6 +840,7 @@ function PeopleTab({
   const [addInternalOpen, setAddInternalOpen] = useState(false);
   const [addVendorOpen, setAddVendorOpen] = useState(false);
   const [addTalentOpen, setAddTalentOpen] = useState(false);
+  const [removingVendorId, setRemovingVendorId] = useState<string | null>(null);
 
   // Deduplicate talent by number (same person across shots)
   const uniqueTalent = talentEntries.reduce((acc, t) => {
@@ -768,6 +896,36 @@ function PeopleTab({
       + Add
     </button>
   );
+
+  async function handleRemoveVendor(assignment: CampaignVendor) {
+    const vendorName = assignment.vendor?.companyName || "this vendor";
+    const ok = confirm(
+      `Remove ${vendorName} from this campaign?\n\nThis removes their current estimate/PO/invoice workflow from this campaign.`
+    );
+    if (!ok) return;
+
+    setRemovingVendorId(assignment.id);
+    try {
+      const res = await fetch(`/api/campaign-vendors/${assignment.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(data?.error || "Failed to remove vendor");
+      }
+      toast("success", "Vendor removed from campaign");
+      onRefresh();
+    } catch (error) {
+      toast(
+        "error",
+        error instanceof Error ? error.message : "Failed to remove vendor"
+      );
+    } finally {
+      setRemovingVendorId(null);
+    }
+  }
 
   return (
     <>
@@ -825,6 +983,17 @@ function PeopleTab({
                       <p className="text-xs text-text-tertiary truncate">{cv.vendor.category}</p>
                     )}
                   </div>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveVendor(cv)}
+                      disabled={removingVendorId !== null}
+                      className="shrink-0 rounded p-1 text-text-tertiary hover:bg-surface-secondary hover:text-error transition-colors disabled:opacity-50"
+                      title="Remove vendor from campaign"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -876,6 +1045,17 @@ function PeopleTab({
                       <p className="text-xs text-text-tertiary truncate">{cv.vendor.contactName}</p>
                     )}
                   </div>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveVendor(cv)}
+                      disabled={removingVendorId !== null}
+                      className="shrink-0 rounded p-1 text-text-tertiary hover:bg-surface-secondary hover:text-error transition-colors disabled:opacity-50"
+                      title="Remove vendor from campaign"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -897,6 +1077,7 @@ function PeopleTab({
       {addVendorOpen && (
         <AddVendorModal
           campaignId={campaignId}
+          shoots={shoots}
           assignedVendorIds={assignedVendorIds}
           talentOnly={false}
           onClose={() => setAddVendorOpen(false)}
@@ -906,6 +1087,7 @@ function PeopleTab({
       {addTalentOpen && (
         <AddVendorModal
           campaignId={campaignId}
+          shoots={shoots}
           assignedVendorIds={assignedVendorIds}
           talentOnly={true}
           onClose={() => setAddTalentOpen(false)}

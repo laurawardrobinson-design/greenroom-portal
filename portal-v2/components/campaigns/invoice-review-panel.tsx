@@ -122,7 +122,17 @@ export function InvoiceReviewPanel({
         }),
       });
       if (!res.ok) throw new Error("Failed");
-      toast("success", "Invoice approved");
+      const result = (await res.json()) as {
+        financeHandoffError?: string | null;
+      };
+      if (result.financeHandoffError) {
+        toast(
+          "warning",
+          `Invoice approved, but finance handoff failed: ${result.financeHandoffError}`
+        );
+      } else {
+        toast("success", "Invoice approved");
+      }
       mutate();
       onStatusChange();
     } catch {

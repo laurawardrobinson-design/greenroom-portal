@@ -24,7 +24,12 @@ export const VENDOR_STATUS_TRANSITIONS: Record<
   CampaignVendorStatus[]
 > = {
   Invited: ["Estimate Submitted", "Rejected"],
-  "Estimate Submitted": ["Estimate Approved", "Rejected"],
+  "Estimate Submitted": [
+    "Estimate Approved",
+    "Estimate Revision Requested",
+    "Rejected",
+  ],
+  "Estimate Revision Requested": ["Estimate Submitted", "Rejected"],
   "Estimate Approved": ["PO Uploaded", "Rejected"],
   "PO Uploaded": ["PO Signed", "Rejected"],
   "PO Signed": ["Shoot Complete", "Rejected"],
@@ -39,6 +44,7 @@ export const VENDOR_STATUS_TRANSITIONS: Record<
 export const VENDOR_STATUS_ORDER: CampaignVendorStatus[] = [
   "Invited",
   "Estimate Submitted",
+  "Estimate Revision Requested",
   "Estimate Approved",
   "PO Uploaded",
   "PO Signed",
@@ -52,6 +58,7 @@ export const VENDOR_STATUS_ORDER: CampaignVendorStatus[] = [
 export const VENDOR_STATUS_COLORS: Record<CampaignVendorStatus, string> = {
   Invited: "bg-slate-100 text-slate-600",
   "Estimate Submitted": "bg-amber-50 text-amber-700",
+  "Estimate Revision Requested": "bg-red-50 text-red-700",
   "Estimate Approved": "bg-emerald-50 text-emerald-700",
   "PO Uploaded": "bg-blue-50 text-blue-700",
   "PO Signed": "bg-blue-100 text-blue-800",

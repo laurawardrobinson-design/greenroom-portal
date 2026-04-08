@@ -141,6 +141,55 @@ export async function requireVendorOwnership(
   }
 }
 
+export type CampaignVendorAccessRecord = {
+  id: string;
+  campaign_id: string;
+  vendor_id: string;
+};
+
+// Verify a user can access a specific campaign_vendors assignment.
+// Vendors must own the assignment. Other roles must have campaign access.
+export async function requireCampaignVendorAccess(
+  user: AppUser,
+  campaignVendorId: string
+): Promise<CampaignVendorAccessRecord> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("campaign_vendors")
+    .select("id, campaign_id, vendor_id")
+    .eq("id", campaignVendorId)
+    .maybeSingle();
+
+  if (error) {
+    throw new AuthError("Internal server error", 500);
+  }
+
+  if (!data) {
+    throw new AuthError("Not found", 404);
+  }
+
+  const assignment = data as CampaignVendorAccessRecord;
+
+  if (user.role === "Vendor") {
+    if (!user.vendorId || assignment.vendor_id !== user.vendorId) {
+      throw new AuthError("Not your assignment", 403);
+    }
+    return assignment;
+  }
+
+  if (
+    user.role === "Admin" ||
+    user.role === "Producer" ||
+    user.role === "Art Director" ||
+    user.role === "Studio"
+  ) {
+    await requireCampaignAccess(user, assignment.campaign_id);
+    return assignment;
+  }
+
+  throw new AuthError("Insufficient permissions", 403);
+}
+
 // Helper to return a JSON error response.
 // Sanitizes all non-AuthError responses to prevent leaking DB details,
 // column names, constraint names, or stack traces to clients.

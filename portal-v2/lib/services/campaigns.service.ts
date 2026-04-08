@@ -53,7 +53,7 @@ export async function listCampaigns(filters?: {
   const db = createAdminClient();
 
   // Use enriched RPC for extra fields, but let the database do the filtering
-  let query = db.rpc("get_campaigns_enriched");
+  const query = db.rpc("get_campaigns_enriched");
 
   // Note: The RPC function returns all campaigns. To truly optimize, we'd need to
   // modify the RPC to accept filter parameters. For now, we apply filters client-side,
@@ -87,8 +87,7 @@ export async function listCampaigns(filters?: {
     const { data: assignedIds } = await db
       .from("campaign_vendors")
       .select("campaign_id")
-      .eq("vendor_id", filters.vendorId)
-      .eq("deleted_at", null);
+      .eq("vendor_id", filters.vendorId);
     const ids = new Set((assignedIds || []).map((r) => r.campaign_id));
     results = results.filter((r) => ids.has(r.id as string));
   }
@@ -516,4 +515,3 @@ export async function getCampaignFinancials(
     remaining: budget - totalCommitted,
   };
 }
-
