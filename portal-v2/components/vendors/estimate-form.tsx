@@ -22,6 +22,45 @@ interface Props {
   onCancel: () => void;
 }
 
+type UploadResponse = {
+  fileUrl?: string;
+  url?: string;
+  parsedEstimateTotal?: number | null;
+};
+
+const COST_CATEGORIES = [
+  "Talent",
+  "Styling",
+  "Equipment Rental",
+  "Studio Space",
+  "Post-Production",
+  "Travel",
+  "Catering",
+  "Props",
+  "Wardrobe",
+  "Set Design",
+  "Other",
+] as const;
+
+type CostCategory = (typeof COST_CATEGORIES)[number];
+
+function normalizeCostCategory(input: string): CostCategory {
+  const normalized = input.trim().toLowerCase();
+  const match = COST_CATEGORIES.find((category) => category.toLowerCase() === normalized);
+  return match ?? "Other";
+}
+
+function mapWorkflowErrorMessage(message: string): string {
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes("not your assignment") ||
+    normalized.includes("no access to this campaign")
+  ) {
+    return "This workflow item belongs to a different vendor login. Refresh and switch to the assigned vendor account.";
+  }
+  return message;
+}
+
 const emptyItem = (): EstimateItem => ({
   category: "",
   description: "",
@@ -68,15 +107,36 @@ export function EstimateForm({ campaignVendorId, campaignId, onSubmitted, onCanc
       const formData = new FormData();
       formData.append("file", file);
       formData.append("campaignId", campaignId);
+      formData.append("campaignVendorId", campaignVendorId);
       formData.append("category", "Estimate");
 
       const res = await fetch("/api/files", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json();
-      setUploadedFile({ name: file.name, url: data.url });
-      toast("success", `${file.name} uploaded`);
-    } catch {
-      toast("error", "Failed to upload file");
+      if (!res.ok) {
+        let message = "Upload failed";
+        try {
+          const data = await res.json();
+          if (data?.error) message = data.error as string;
+        } catch {
+          // no-op
+        }
+        throw new Error(mapWorkflowErrorMessage(message));
+      }
+      const data = (await res.json()) as UploadResponse;
+      const fileUrl = data.fileUrl || data.url;
+      if (!fileUrl) throw new Error("Upload response missing file URL");
+
+      setUploadedFile({ name: file.name, url: fileUrl });
+      if (typeof data.parsedEstimateTotal === "number" && data.parsedEstimateTotal > 0) {
+        setEstimateTotal(data.parsedEstimateTotal.toFixed(2));
+        toast(
+          "success",
+          `${file.name} uploaded. Detected total ${formatCurrencyFull(data.parsedEstimateTotal)} — please confirm.`
+        );
+      } else {
+        toast("success", `${file.name} uploaded`);
+      }
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Failed to upload file");
     } finally {
       setUploading(false);
     }
@@ -100,13 +160,15 @@ export function EstimateForm({ campaignVendorId, campaignId, onSubmitted, onCanc
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "submit_estimate",
-          items: [{ category: "Estimate", description: `Per attached: ${uploadedFile.name}`, quantity: 1, unitPrice: total, amount: total }],
+          estimateFileUrl: uploadedFile.url,
+          estimateFileName: uploadedFile.name,
+          items: [{ category: "Other", description: `Per attached: ${uploadedFile.name}`, quantity: 1, unitPrice: total, amount: total }],
         }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to submit estimate");
+        throw new Error(mapWorkflowErrorMessage(data.error || "Failed to submit estimate"));
       }
 
       toast("success", "Estimate submitted");
@@ -126,6 +188,10 @@ export function EstimateForm({ campaignVendorId, campaignId, onSubmitted, onCanc
       toast("error", "Add at least one line item with a description and amount");
       return;
     }
+    const normalizedItems = validItems.map((item) => ({
+      ...item,
+      category: normalizeCostCategory(item.category),
+    }));
 
     setSaving(true);
     try {
@@ -134,13 +200,15 @@ export function EstimateForm({ campaignVendorId, campaignId, onSubmitted, onCanc
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "submit_estimate",
-          items: validItems,
+          estimateFileUrl: null,
+          estimateFileName: null,
+          items: normalizedItems,
         }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to submit estimate");
+        throw new Error(mapWorkflowErrorMessage(data.error || "Failed to submit estimate"));
       }
 
       toast("success", "Estimate submitted");
