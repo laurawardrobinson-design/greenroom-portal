@@ -1,13 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { GatorSvg, ZookeeperSvg } from "@/components/menagerie/creatures";
 import { useMenagerieContext } from "@/components/menagerie/menagerie-provider";
 
+const CREDIT_TEXTS: React.ReactNode[] = [
+  "Laura's menagerie",
+  "Critters got loose!",
+];
+
 export function GatorEasterEgg() {
   const [chomping, setChomping] = useState(false);
-  const [showCritterLine, setShowCritterLine] = useState(false);
   const [zookeeperWalking, setZookeeperWalking] = useState(false);
+  const [creditPhase, setCreditPhase] = useState(0);
+  const [creditVisible, setCreditVisible] = useState(true);
   const {
     discoverCreature,
     activateMenagerie,
@@ -25,13 +31,41 @@ export function GatorEasterEgg() {
   function triggerChomp() {
     if (chomping || zookeeperWalking) return;
     setChomping(true);
+    setCreditPhase(0);
+    setCreditVisible(false);
     activateMenagerie();
     if (gatorCurrentlyLoose) {
       discoverCreature("gator");
     }
-    setTimeout(() => { setChomping(false); setShowCritterLine(false); }, 8000);
-    setTimeout(() => setShowCritterLine(true), 5600);
+    setTimeout(() => setChomping(false), 8000);
   }
+
+  useEffect(() => {
+    if (!chomping) {
+      setCreditPhase(0);
+      setCreditVisible(false);
+      return;
+    }
+
+    // Fixed schedule across the 8s animation — texts start at 1500ms to give gator space
+    // FADE = 350ms transition. Timeline:
+    //   1800ms   → fade in text 0 "Unfortunately..."
+    //   4100ms   → fade out text 0  (2300ms visible)
+    //   4450ms   → fade in text 1 "Critters got loose!"
+    //   7900ms   → fade out text 1  (3450ms visible)
+    //   8000ms   → chomping ends
+    const FADE = 350;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const at = (fn: () => void, ms: number) => { timers.push(setTimeout(fn, ms)); };
+
+    at(() => { setCreditPhase(0); setCreditVisible(true); }, 1800);
+    at(() => setCreditVisible(false), 4100);
+    at(() => { setCreditPhase(1); setCreditVisible(true); }, 4100 + FADE);
+    at(() => setCreditVisible(false), 7900);
+
+    return () => timers.forEach(clearTimeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chomping]);
 
   function triggerZookeeper() {
     if (zookeeperWalking || chomping) return false;
@@ -75,7 +109,7 @@ export function GatorEasterEgg() {
   }, [chomping, zookeeperWalking, zookeeperRequest]);
 
   return (
-    <div className="relative mx-4 my-2">
+    <div className="relative ml-4 mr-1 my-2 overflow-hidden">
       {/* The secret trigger box + animation container */}
       <div className="relative h-8 overflow-visible">
         {/* Zookeeper scene — walks left to right */}
@@ -96,21 +130,15 @@ export function GatorEasterEgg() {
           </>
         )}
 
-        {/* Gator credit text */}
+        {/* Gator credit text — cycles through 3 lines, each fading in and out */}
         {chomping && !zookeeperWalking && (
           <div className="absolute inset-0 flex items-center justify-center">
-            {!showCritterLine && (
-              <span className="gator-credit text-[11px] font-medium text-primary/70 tracking-wider text-center leading-tight">
-                from the giant mutant brain
-                <br />
-                of Laura Robinson
-              </span>
-            )}
-            {showCritterLine && (
-              <span className="critter-line text-[11px] font-medium text-primary/70 tracking-wider text-center leading-tight">
-                Critters got loose!
-              </span>
-            )}
+            <span
+              className="text-[11px] font-medium text-primary/70 tracking-wider text-center leading-tight"
+              style={{ opacity: creditVisible ? 1 : 0, transition: 'opacity 350ms ease-in-out' }}
+            >
+              {CREDIT_TEXTS[creditPhase]}
+            </span>
           </div>
         )}
 

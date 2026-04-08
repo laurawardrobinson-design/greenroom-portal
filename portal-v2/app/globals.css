@@ -163,7 +163,8 @@ textarea {
 
 @keyframes gatorWalk {
   0%   { right: 0; opacity: 1; }
-  80%  { opacity: 1; }
+  62%  { opacity: 1; }
+  78%  { opacity: 0; }
   100% { right: calc(100% + 40px); opacity: 0; }
 }
 .gator-walk {
@@ -385,9 +386,8 @@ textarea {
 
 /* --- Zookeeper --- */
 @keyframes zookeeperWalk {
-  0%   { left: -20px; opacity: 1; }
-  90%  { opacity: 1; }
-  100% { left: calc(100% + 40px); opacity: 0; }
+  0%   { left: -40px; }
+  100% { left: calc(100% + 40px); }
 }
 .zookeeper-walk {
   animation: zookeeperWalk 3.5s linear forwards;

@@ -207,7 +207,7 @@ export function HopDashboard({ user }: Props) {
           href="/approvals"
         />
         <StatCard
-          label="Shoots This Week"
+          label="Upcoming Shoots"
           value={stats ? String(stats.shootsThisWeek) : "—"}
           icon={Calendar}
           accent="bg-purple-50 text-purple-600"

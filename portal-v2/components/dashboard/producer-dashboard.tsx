@@ -543,10 +543,10 @@ export function ProducerDashboard({ user }: Props) {
           ))}
         </InfoCard>
 
-        {/* Shoots This Week */}
+        {/* Upcoming Shoots */}
         <InfoCard
           icon={<Calendar className="h-4 w-4" />}
-          label="Shoots This Week"
+          label="Upcoming Shoots"
           count={stats?.shootsThisWeek}
           accentBorder="border-l-purple-500"
           colorText="text-purple-600"
@@ -575,36 +575,6 @@ export function ProducerDashboard({ user }: Props) {
           ))}
         </InfoCard>
       </div>
-
-      {/* Calendars filter — only in Team view */}
-      {scope === "all" && producers.length > 0 && (
-        <Card padding="none" className="overflow-hidden">
-          <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
-            <Calendar className="h-4 w-4 shrink-0 text-primary" />
-            <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Calendars</span>
-          </div>
-          <div className="flex flex-wrap gap-0 divide-x divide-border-light">
-            {producers.map(({ id, name, color }) => {
-              const visible = !hiddenProducers.has(id);
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => toggleProducer(id)}
-                  className="flex items-center gap-2 px-3.5 py-2.5 text-left transition-colors hover:bg-surface-secondary"
-                >
-                  <span
-                    className={`h-3 w-3 shrink-0 rounded-sm transition-opacity ${color.swatch} ${visible ? "opacity-100" : "opacity-25"}`}
-                  />
-                  <span className={`truncate text-sm ${visible ? "text-text-primary" : "text-text-tertiary"}`}>
-                    {name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </Card>
-      )}
     </div>
   );
 }
