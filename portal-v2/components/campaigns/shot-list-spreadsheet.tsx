@@ -457,12 +457,16 @@ function DeliverableCell({ shot, deliverables, canEdit, onMutate }: {
 
   async function unlink(id: string) {
     try {
-      await fetch(`/api/shot-list/shots/${shot.id}`, {
+      const res = await fetch(`/api/shot-list/shots/${shot.id}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deliverableId: id, action: "unlink" }),
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Failed (${res.status})`);
+      }
       onMutate();
-    } catch { toast("error", "Failed to unlink"); }
+    } catch (err) { toast("error", err instanceof Error ? err.message : "Failed to remove channel"); }
   }
 
   async function toggleSel(sel: DraftDeliverableSel) {
@@ -486,15 +490,22 @@ function DeliverableCell({ shot, deliverables, canEdit, onMutate }: {
             width: dims.width, height: dims.height, aspectRatio: sel.spec, quantity: 1,
           }),
         });
-        if (!r.ok) throw new Error();
+        if (!r.ok) {
+          const errData = await r.json().catch(() => ({}));
+          throw new Error(errData.error || `Failed (${r.status})`);
+        }
         delId = (await r.json()).id;
       }
-      await fetch(`/api/shot-list/shots/${shot.id}`, {
+      const linkRes = await fetch(`/api/shot-list/shots/${shot.id}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deliverableId: delId }),
       });
+      if (!linkRes.ok) {
+        const errData = await linkRes.json().catch(() => ({}));
+        throw new Error(errData.error || `Link failed (${linkRes.status})`);
+      }
       onMutate();
-    } catch { toast("error", "Failed to add channel"); }
+    } catch (err) { toast("error", err instanceof Error ? err.message : "Failed to add channel"); }
     close();
   }
 

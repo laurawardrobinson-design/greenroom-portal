@@ -21,6 +21,7 @@ export default function CampaignsPage() {
   const [showImport, setShowImport] = useState(false);
   const [showNewCampaign, setShowNewCampaign] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [showAllInitialized, setShowAllInitialized] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "table">(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("campaigns-view") as "grid" | "table") || "table";
@@ -32,6 +33,14 @@ export default function CampaignsPage() {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  // Default Admins to "show all" since they aren't assigned to individual campaigns
+  useEffect(() => {
+    if (user && !showAllInitialized) {
+      setShowAllInitialized(true);
+      if (user.role === "Admin") setShowAll(true);
+    }
+  }, [user, showAllInitialized]);
 
   const { campaigns, isLoading, mutate } = useCampaigns({
     status: statusFilter || undefined,
@@ -186,18 +195,18 @@ export default function CampaignsPage() {
           <div className="rounded-2xl overflow-hidden bg-surface border border-border shadow-xs">
             <div className="flex items-center gap-4 px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border">
               <div className="w-2.5 shrink-0" />
-              <div className="w-24 shrink-0">WF#</div>
+              <div className="w-20 shrink-0">WF#</div>
               <div className="flex-1">Campaign</div>
-              <div className="w-24 shrink-0 hidden lg:block">Producer</div>
-              <div className="w-24 shrink-0 hidden lg:block">Art Director</div>
-              <div className="w-28 shrink-0">Status</div>
-              <div className="w-24 shrink-0 text-right">Next Shoot</div>
-              <div className="w-24 shrink-0 text-right hidden lg:block">Assets Due</div>
+              <div className="w-28 shrink-0 hidden lg:block">Producer</div>
+              <div className="w-28 shrink-0 hidden lg:block">Art Director</div>
+              <div className="w-24 shrink-0">Status</div>
+              <div className="w-20 shrink-0 text-right">Next Shoot</div>
+              <div className="w-20 shrink-0 text-right hidden lg:block">Assets Due</div>
               <div className="w-20 shrink-0 text-right">Budget</div>
-              <div className="w-24 shrink-0 text-right hidden lg:block">Add&apos;l Funds</div>
+              <div className="w-28 shrink-0 text-right hidden lg:block">Add&apos;l Funds</div>
             </div>
             {displayedCampaigns.map((campaign) => (
-              <CampaignRow key={campaign.id} campaign={campaign} />
+              <CampaignRow key={campaign.id} campaign={campaign} onMutate={mutate} />
             ))}
           </div>
         )}

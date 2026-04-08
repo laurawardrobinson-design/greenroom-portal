@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { Crosshair, Trash2, Plus, X, ShoppingBasket, Camera, Upload } from "lucide-react";
 import { ShotProductPicker } from "@/components/campaigns/shot-product-picker";
+import { ShotPropsPicker } from "@/components/campaigns/shot-props-picker";
 import type { ShotListShot, CampaignProduct } from "@/types/domain";
 
 const MEDIA_TYPE_OPTIONS = ["Still", "Video", "Stop Motion"];
@@ -333,8 +334,32 @@ export function ShotDetailModal({
           {/* Inline text fields — ordered how an AD thinks through a shot */}
           <div className="rounded-lg border border-border overflow-hidden">
             <InlineField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Shot concept and composition…" />
-            <InlineField label="Surface" value={surface} onChange={(e) => setSurface(e.target.value)} placeholder="Marble, wood, colored paper…" />
-            <InlineField label="Props" value={props} onChange={(e) => setProps(e.target.value)} placeholder="Styling elements in frame…" />
+
+            {/* Surface — searchable from props library (Surfaces & Backgrounds category) */}
+            <div className="flex gap-2 items-start border-b border-border/60 py-1.5 px-0">
+              <label className="text-[11px] font-semibold text-text-secondary pt-px shrink-0 w-24 pl-0">Surface</label>
+              <div className="flex-1 min-w-0">
+                <ShotPropsPicker
+                  mode="surface"
+                  value={surface}
+                  onChange={setSurface}
+                  placeholder="Marble, wood, paper…"
+                />
+              </div>
+            </div>
+
+            {/* Props — searchable from props library */}
+            <div className="flex gap-2 items-start border-b border-border/60 py-1.5 px-0">
+              <label className="text-[11px] font-semibold text-text-secondary pt-px shrink-0 w-24 pl-0">Props</label>
+              <div className="flex-1 min-w-0">
+                <ShotPropsPicker
+                  mode="props"
+                  value={props}
+                  onChange={setProps}
+                  placeholder="Styling elements…"
+                />
+              </div>
+            </div>
             <InlineField label="Lighting" value={lighting} onChange={(e) => setLighting(e.target.value)} placeholder="Natural, studio strobe, moody…" />
             <InlineField label="Talent" value={talent} onChange={(e) => setTalent(e.target.value)} placeholder="Who's in this shot…" />
             <InlineField label="Wardrobe" value={wardrobe} onChange={(e) => setWardrobe(e.target.value)} placeholder="What they're wearing…" />

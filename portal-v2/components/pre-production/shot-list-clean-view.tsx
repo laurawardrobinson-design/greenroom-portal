@@ -1202,7 +1202,7 @@ function ChannelChip({ sel, tmpl, onRemove }: {
   return (
     <span className="relative inline-block">
       <button ref={anchorRef} type="button" onClick={toggle}
-        className="group inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary hover:bg-primary/20 transition-colors">
+        className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary hover:bg-primary/20 transition-colors whitespace-nowrap">
         {tmpl?.abbr ?? sel.channel} <span className="font-normal opacity-70">{sel.spec}</span>
       </button>
       {open && typeof document !== "undefined" && createPortal(
@@ -1210,8 +1210,20 @@ function ChannelChip({ sel, tmpl, onRemove }: {
           <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={close} />
           <div ref={panelRef} style={{ ...panelStyle, width: 240 }}
             className="rounded-xl border border-border bg-surface shadow-lg overflow-hidden">
-            <div className="px-3 pt-2.5 pb-1">
-              <p className="text-[11px] font-semibold text-text-primary">{tmpl?.name ?? sel.channel}</p>
+            <div className="relative px-3 pt-2.5 pb-1">
+              <div className="absolute top-2 right-2 flex items-center gap-1">
+                <button type="button" onClick={() => { onRemove(); close(); }}
+                  className="flex h-6 w-6 items-center justify-center rounded-md text-text-tertiary hover:text-red-500 hover:bg-red-50 transition-colors"
+                  title="Remove channel">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+                <button type="button" onClick={close}
+                  className="flex h-6 w-6 items-center justify-center rounded-md text-text-tertiary hover:text-text-primary hover:bg-surface-secondary transition-colors"
+                  title="Close">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <p className="text-[11px] font-semibold text-text-primary pr-16">{tmpl?.name ?? sel.channel}</p>
               <p className="text-[11px] text-text-tertiary mt-0.5">{sel.spec}</p>
             </div>
             <div className="px-3 pt-1 pb-1">
@@ -1241,10 +1253,12 @@ function ChannelChip({ sel, tmpl, onRemove }: {
 // ─── Channel cell ────────────────────────────────────────────────────────────
 function ChannelCell({
   shotId,
+  campaignId,
   data,
   swrKey,
 }: {
   shotId: string;
+  campaignId: string;
   data: ScheduleData;
   swrKey: string;
 }) {
@@ -1294,15 +1308,28 @@ function ChannelCell({
       return;
     }
     try {
-      const delId = existing?.id;
-      if (delId) {
-        await fetch(`/api/shot-list/shots/${shotId}`, {
+      let delId: string;
+      if (existing) {
+        delId = existing.id;
+      } else {
+        const dims = SPEC_DIMENSIONS[sel.spec] ?? { width: 1080, height: 1080 };
+        const r = await fetch("/api/deliverables", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ deliverableId: delId }),
+          body: JSON.stringify({
+            campaignId, channel: sel.channel, format: sel.spec,
+            width: dims.width, height: dims.height, aspectRatio: sel.spec, quantity: 1,
+          }),
         });
-        globalMutate(swrKey);
+        if (!r.ok) throw new Error(`Failed (${r.status})`);
+        delId = (await r.json()).id;
       }
+      await fetch(`/api/shot-list/shots/${shotId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deliverableId: delId }),
+      });
+      globalMutate(swrKey);
     } catch {
       toast("error", "Failed to add channel");
     }
@@ -1364,26 +1391,26 @@ export function ShotListCleanView({
   // ─── Column resize ──────────────────────────────────────────────────────────
   const COLUMNS = [
     { key: "drag", label: "", minW: 28, defaultW: 28 },
-    { key: "#", label: "#", minW: 40, defaultW: 40 },
+    { key: "#", label: "#", minW: 36, defaultW: 36 },
     { key: "ref", label: "Ref", minW: 36, defaultW: 36 },
-    { key: "name", label: "File Name", minW: 100, defaultW: 160 },
-    { key: "type", label: "Type", minW: 50, defaultW: 60 },
-    { key: "angle", label: "Angle", minW: 60, defaultW: 80 },
-    { key: "env", label: "Environment", minW: 80, defaultW: 100 },
-    { key: "desc", label: "Description", minW: 100, defaultW: 180 },
-    { key: "surface", label: "Surface", minW: 70, defaultW: 100 },
-    { key: "props", label: "Props", minW: 70, defaultW: 100 },
-    { key: "products", label: "Products", minW: 100, defaultW: 140 },
-    { key: "lighting", label: "Lighting", minW: 70, defaultW: 100 },
-    { key: "talent", label: "Talent", minW: 50, defaultW: 60 },
-    { key: "wardrobe", label: "Wardrobe", minW: 70, defaultW: 100 },
-    { key: "channel", label: "Channel", minW: 80, defaultW: 100 },
-    { key: "notes", label: "Notes", minW: 80, defaultW: 120 },
-    { key: "retouching", label: "Retouching", minW: 80, defaultW: 120 },
+    { key: "name", label: "Shot Name", minW: 80, defaultW: 130 },
+    { key: "type", label: "Type", minW: 36, defaultW: 44 },
+    { key: "angle", label: "Angle", minW: 40, defaultW: 52 },
+    { key: "env", label: "Env", minW: 52, defaultW: 68 },
+    { key: "channel", label: "Channel", minW: 64, defaultW: 84 },
+    { key: "desc", label: "Description", minW: 100, defaultW: 160 },
+    { key: "surface", label: "Surface", minW: 60, defaultW: 84 },
+    { key: "props", label: "Props", minW: 60, defaultW: 84 },
+    { key: "products", label: "Products", minW: 80, defaultW: 110 },
+    { key: "lighting", label: "Lighting", minW: 60, defaultW: 84 },
+    { key: "talent", label: "Talent", minW: 44, defaultW: 56 },
+    { key: "wardrobe", label: "Wardrobe", minW: 60, defaultW: 84 },
+    { key: "notes", label: "Notes", minW: 64, defaultW: 100 },
+    { key: "retouching", label: "Retouching", minW: 64, defaultW: 100 },
     { key: "delete", label: "", minW: 28, defaultW: 28 },
   ];
 
-  const storageKey = `shotlist-col-widths-${campaignId}`;
+  const storageKey = `shotlist-col-widths-v4-${campaignId}`;
   const [colWidths, setColWidths] = useState<number[]>(() => {
     if (typeof window === "undefined") return COLUMNS.map((c) => c.defaultW);
     try {
@@ -1800,6 +1827,11 @@ export function ShotListCleanView({
                             </select>
                           </td>
 
+                          {/* Channel */}
+                          <td className="relative">
+                            {data && <ChannelCell shotId={shot.id} campaignId={campaignId} data={data} swrKey={swrKey} />}
+                          </td>
+
                           {/* Description */}
                           <Cell
                             value={shot.description}
@@ -1862,11 +1894,6 @@ export function ShotListCleanView({
                             placeholder="Wardrobe"
                             onSave={(v) => patchShot(shot.id, "wardrobe", v)}
                           />
-
-                          {/* Channel */}
-                          <td className="relative">
-                            {data && <ChannelCell shotId={shot.id} data={data} swrKey={swrKey} />}
-                          </td>
 
                           {/* Notes */}
                           <Cell

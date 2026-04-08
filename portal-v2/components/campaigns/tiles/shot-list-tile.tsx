@@ -55,8 +55,9 @@ export function ShotListTile({
         </Button>
       </div>
 
-      {/* Spreadsheet */}
-      <ShotListSpreadsheet
+      {/* Spreadsheet — capped height on campaign overview, full view via pre-production */}
+      <div className="relative max-h-[360px] overflow-hidden">
+        <ShotListSpreadsheet
         setups={setups}
         deliverables={deliverables}
         campaignProducts={campaignProducts}
@@ -68,7 +69,10 @@ export function ShotListTile({
         campaignStatus={campaignStatus}
         onAddSetup={onAddSetup}
         onMutate={onMutate}
-      />
+        />
+        {/* Fade-out at bottom to indicate there's more */}
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-surface to-transparent" />
+      </div>
     </Card>
   );
 }

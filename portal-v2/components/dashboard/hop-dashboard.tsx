@@ -22,51 +22,23 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { HighlightsCard } from "@/components/dashboard/highlights-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
 import {
   DollarSign,
   AlertTriangle,
   Calendar,
   TrendingUp,
-  Check,
   X,
-  FileText,
   ChevronLeft,
   ChevronRight,
   Clock,
   MapPin,
-  ExternalLink,
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
 
 interface Props {
   user: AppUser;
-}
-
-interface ApprovalData {
-  budgetRequests: Array<{
-    id: string;
-    campaignId: string;
-    amount: number;
-    rationale: string;
-    status: string;
-    createdAt: string;
-    campaign?: { name: string; wfNumber: string };
-    requester?: { name: string };
-  }>;
-  pendingInvoices: Array<{
-    id: string;
-    campaignId: string;
-    vendorName: string;
-    campaignName: string;
-    wfNumber: string;
-    estimateTotal: number;
-    invoiceTotal: number;
-    updatedAt: string;
-  }>;
 }
 
 interface ShootEvent {
@@ -106,52 +78,33 @@ const PRODUCER_COLORS = [
 ];
 
 function StatCard({
-  label, value, icon: Icon, accent,
+  label, value, icon: Icon, accent, href,
 }: {
-  label: string; value: string; icon: React.ElementType; accent: string;
+  label: string; value: string; icon: React.ElementType; accent: string; href?: string;
 }) {
-  return (
-    <Card>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">{label}</p>
-          <p className="mt-1.5 text-2xl font-semibold tracking-tight text-text-primary">{value}</p>
-        </div>
-        <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${accent}`}>
-          <Icon className="h-4.5 w-4.5" />
-        </div>
+  const inner = (
+    <div className="flex items-start justify-between min-h-[4.5rem]">
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">{label}</p>
+        <p className="mt-1.5 text-2xl font-semibold tracking-tight text-text-primary">{value}</p>
       </div>
-    </Card>
+      <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${accent}`}>
+        <Icon className="h-4.5 w-4.5" />
+      </div>
+    </div>
   );
-}
-
-/** Fetches and renders a clickable invoice document link for a campaign vendor */
-function PendingInvoiceLink({ campaignVendorId }: { campaignVendorId: string }) {
-  const { data } = useSWR<{ invoice: { fileUrl: string; fileName: string } | null }>(
-    `/api/invoices?campaignVendorId=${campaignVendorId}`,
-    fetcher
-  );
-  const invoice = data?.invoice;
-  if (!invoice?.fileUrl) return null;
-
-  return (
-    <a
-      href={invoice.fileUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-    >
-      <FileText className="h-3 w-3 shrink-0" />
-      {invoice.fileName}
-      <ExternalLink className="h-3 w-3 shrink-0" />
-    </a>
-  );
+  if (href) {
+    return (
+      <Link href={href} className="block">
+        <Card className="hover:border-primary/40 transition-colors cursor-pointer">{inner}</Card>
+      </Link>
+    );
+  }
+  return <Card>{inner}</Card>;
 }
 
 export function HopDashboard({ user }: Props) {
-  const { toast } = useToast();
-  const { data: stats, mutate: mutateStats } = useSWR("/api/dashboard", fetcher);
-  const { data: approvals, mutate: mutateApprovals } = useSWR<ApprovalData>("/api/approvals", fetcher);
+  const { data: stats } = useSWR("/api/dashboard", fetcher);
 
   // Calendar state
   const [calMonth, setCalMonth] = useState(() => new Date());
@@ -221,39 +174,6 @@ export function HopDashboard({ user }: Props) {
   let calCur = calStart;
   while (calCur <= calEnd) { calDays.push(calCur); calCur = addDays(calCur, 1); }
 
-  const budgetRequests = approvals?.budgetRequests || [];
-  const pendingInvoices = approvals?.pendingInvoices || [];
-  const totalPending = budgetRequests.length + pendingInvoices.length;
-
-  async function handleBudgetDecision(id: string, approved: boolean) {
-    try {
-      await fetch(`/api/budget/requests/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approved, notes: "" }),
-      });
-      toast("success", approved ? "Budget request approved" : "Budget request declined");
-      mutateApprovals();
-      mutateStats();
-    } catch {
-      toast("error", "Failed to process request");
-    }
-  }
-
-  async function handleInvoiceApproval(cvId: string) {
-    try {
-      await fetch(`/api/campaign-vendors/${cvId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "transition", targetStatus: "Invoice Approved" }),
-      });
-      toast("success", "Invoice approved");
-      mutateApprovals();
-      mutateStats();
-    } catch {
-      toast("error", "Failed to approve invoice");
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -284,6 +204,7 @@ export function HopDashboard({ user }: Props) {
           value={stats ? String(stats.pendingApprovals) : "—"}
           icon={AlertTriangle}
           accent="bg-amber-50 text-amber-600"
+          href="/approvals"
         />
         <StatCard
           label="Shoots This Week"
@@ -293,8 +214,9 @@ export function HopDashboard({ user }: Props) {
         />
       </div>
 
-      {/* Production Calendar */}
-      <Card padding="none">
+      {/* Production Calendar + Highlights side by side */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-10">
+      <Card padding="none" className="lg:col-span-7">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
           <div className="flex items-center gap-2">
@@ -374,6 +296,10 @@ export function HopDashboard({ user }: Props) {
         </div>
 
       </Card>
+      <div className="lg:col-span-3">
+        <HighlightsCard />
+      </div>
+      </div>
 
       {/* Day detail popup overlay */}
       {selectedDay && (
@@ -456,127 +382,8 @@ export function HopDashboard({ user }: Props) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-10">
-      <div className="lg:col-span-7 space-y-6">
-        {/* Pending Approvals — inline actionable cards */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Pending Approvals
-              {totalPending > 0 && (
-                <Badge variant="warning">{totalPending}</Badge>
-              )}
-            </CardTitle>
-            <Link href="/approvals">
-              <Button variant="ghost" size="sm">View all</Button>
-            </Link>
-          </CardHeader>
-
-          {totalPending === 0 ? (
-            <EmptyState
-              title="No pending approvals"
-              description="Budget requests, overages, and invoices that need your review will appear here."
-            />
-          ) : (
-            <div className="space-y-4">
-              {/* Budget Requests */}
-              {budgetRequests.length > 0 && (
-                <div className="space-y-2">
-                  <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-text-tertiary">
-                    <DollarSign className="h-3.5 w-3.5" />
-                    Budget Requests
-                  </p>
-                  {budgetRequests.map((req) => (
-                    <div key={req.id} className="rounded-lg border border-border p-3.5">
-                      <div className="flex items-start justify-between gap-3 mb-1.5">
-                        <div className="min-w-0">
-                          <Link
-                            href={`/campaigns/${req.campaignId}`}
-                            className="text-sm font-semibold text-text-primary hover:text-primary transition-colors"
-                          >
-                            {req.campaign?.name || "Unknown Campaign"}
-                          </Link>
-                          <p className="text-xs text-text-tertiary">
-                            {req.campaign?.wfNumber} — requested by {req.requester?.name || "Unknown"}
-                          </p>
-                        </div>
-                        <span className="shrink-0 text-lg font-semibold text-text-primary">
-                          {formatCurrency(req.amount)}
-                        </span>
-                      </div>
-                      <p className="text-sm text-text-secondary mb-3 line-clamp-2">{req.rationale}</p>
-                      <div className="flex gap-2 justify-end">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleBudgetDecision(req.id, false)}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                          Decline
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleBudgetDecision(req.id, true)}
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                          Approve
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Invoice Approvals */}
-              {pendingInvoices.length > 0 && (
-                <div className="space-y-2">
-                  <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-text-tertiary">
-                    <FileText className="h-3.5 w-3.5" />
-                    Invoice Approvals
-                  </p>
-                  {pendingInvoices.map((inv) => (
-                    <div key={inv.id} className="rounded-lg border border-border p-3.5">
-                      <div className="flex items-start justify-between gap-3 mb-1.5">
-                        <div className="min-w-0">
-                          <Link
-                            href={`/campaigns/${inv.campaignId}`}
-                            className="text-sm font-semibold text-text-primary hover:text-primary transition-colors"
-                          >
-                            {inv.campaignName}
-                          </Link>
-                          <p className="text-xs text-text-tertiary">
-                            {inv.wfNumber} — {inv.vendorName}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-3 text-xs mb-2">
-                        <span className="text-text-tertiary">
-                          Estimate: <span className="font-medium text-text-primary">{formatCurrency(inv.estimateTotal)}</span>
-                        </span>
-                        <span className="text-text-tertiary">
-                          Invoice: <span className="font-medium text-text-primary">{formatCurrency(inv.invoiceTotal)}</span>
-                        </span>
-                        {inv.invoiceTotal > inv.estimateTotal && (
-                          <Badge variant="error">Over estimate</Badge>
-                        )}
-                      </div>
-                      <div className="mb-3">
-                        <PendingInvoiceLink campaignVendorId={inv.id} />
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <Button size="sm" onClick={() => handleInvoiceApproval(inv.id)}>
-                          <Check className="h-3.5 w-3.5" />
-                          Final Approve
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </Card>
-
+      <div className="space-y-6">
+      <div>
         <Card>
           <CardHeader>
             <CardTitle>Upcoming Productions</CardTitle>
@@ -619,9 +426,6 @@ export function HopDashboard({ user }: Props) {
             </div>
           )}
         </Card>
-      </div>
-      <div className="lg:col-span-3">
-        <HighlightsCard />
       </div>
       </div>
     </div>

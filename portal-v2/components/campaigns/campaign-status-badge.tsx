@@ -5,7 +5,7 @@ import type { CampaignStatus } from "@/types/domain";
 export function CampaignStatusBadge({ status }: { status: CampaignStatus }) {
   return (
     <Badge variant="custom" className={CAMPAIGN_STATUS_COLORS[status]}>
-      {status}
+      {status === "In Production" ? "Production" : status}
     </Badge>
   );
 }

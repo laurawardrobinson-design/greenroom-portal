@@ -29,17 +29,6 @@ export function BudgetSidebarTile({ financials, canEdit, onRequestOverage }: Pro
     ? "text-amber-500"
     : "text-primary";
 
-  const budget = financials.budget;
-  const spent = financials.spent;
-  const committed = financials.committed;
-  const vendorCommitted = financials.vendorCommitted ?? 0;
-  const crewCommitted = financials.crewCommitted ?? 0;
-
-  const spentPct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
-  const committedOnlyPct =
-    budget > 0 ? Math.max(0, Math.min(((committed - spent) / budget) * 100, 100 - spentPct)) : 0;
-  const overPct = budget > 0 && committed > budget ? ((committed - budget) / budget) * 100 : 0;
-
   const stats: { label: string; value: number; valueClass: string }[] = [
     { label: "Total Budget", value: financials.budget, valueClass: "text-text-primary" },
     { label: "Remaining", value: financials.remaining, valueClass: remainingColor },
@@ -63,71 +52,6 @@ export function BudgetSidebarTile({ financials, canEdit, onRequestOverage }: Pro
           </div>
         ))}
       </div>
-
-      {/* Progress bar */}
-      {budget > 0 && (
-        <div>
-          <div className="relative h-2 rounded-full bg-surface-tertiary overflow-visible">
-            <div className="absolute inset-0 rounded-full overflow-hidden flex">
-              <div
-                className="h-full bg-primary transition-all duration-500 shrink-0"
-                style={{ width: `${spentPct}%` }}
-              />
-              <div
-                className="h-full bg-blue-400 transition-all duration-500 shrink-0"
-                style={{ width: `${committedOnlyPct}%` }}
-              />
-            </div>
-            {overPct > 0 && (
-              <div
-                className="absolute top-0 right-0 h-full bg-red-500 rounded-r-full transition-all duration-500"
-                style={{ width: `${Math.min(overPct, 30)}%`, transform: "translateX(100%)" }}
-              />
-            )}
-          </div>
-          <div className="flex items-center gap-3 mt-1.5">
-            <span className="flex items-center gap-1 text-[10px] text-text-tertiary">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-              Spent
-            </span>
-            <span className="flex items-center gap-1 text-[10px] text-text-tertiary">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
-              Committed
-            </span>
-            {overPct > 0 && (
-              <span className="flex items-center gap-1 text-[10px] text-red-500">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-                Over budget
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Committed breakdown — vendor vs crew */}
-      {committed > 0 && (vendorCommitted > 0 || crewCommitted > 0) && (
-        <div className="rounded-lg bg-surface-secondary px-3 py-2.5 space-y-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1">
-            Committed Breakdown
-          </p>
-          {vendorCommitted > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-text-tertiary">Vendors</span>
-              <span className="text-xs font-medium text-text-primary tabular-nums">
-                {formatCurrency(vendorCommitted)}
-              </span>
-            </div>
-          )}
-          {crewCommitted > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-text-tertiary">Crew Labor</span>
-              <span className="text-xs font-medium text-text-primary tabular-nums">
-                {formatCurrency(crewCommitted)}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
 
       {canEdit && (
         <div className="flex justify-center pt-0.5">

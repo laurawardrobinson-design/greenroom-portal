@@ -17,6 +17,7 @@ import {
   ClipboardList,
   Compass,
   List,
+  ClipboardCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -38,6 +39,12 @@ const NAV_ITEMS: NavItem[] = [
     href: "/dashboard",
     icon: LayoutDashboard,
     roles: ["Admin", "Producer", "Studio", "Vendor", "Art Director"],
+  },
+  {
+    label: "Approvals",
+    href: "/approvals",
+    icon: ClipboardCheck,
+    roles: ["Admin"],
   },
   {
     label: "Campaigns",

@@ -95,6 +95,47 @@ const DOC_COLOR_CLASSES: Record<DocColor, string> = {
   green: "text-emerald-500 hover:text-emerald-600",
 };
 
+// Estimate process progress bar shown per vendor
+const PROGRESS_STAGES = [
+  { label: "Estimate", reachedAt: "Estimate Submitted" },
+  { label: "Approved", reachedAt: "Estimate Approved" },
+  { label: "PO", reachedAt: "PO Signed" },
+  { label: "Invoiced", reachedAt: "Invoice Submitted" },
+  { label: "Paid", reachedAt: "Paid" },
+];
+
+function VendorProgressBar({ status }: { status: string }) {
+  const currentIdx = STATUS_ORDER.indexOf(status);
+  return (
+    <div className="flex items-center gap-0 px-1 pb-1.5 pt-0.5">
+      {PROGRESS_STAGES.map((stage, i) => {
+        const stageIdx = STATUS_ORDER.indexOf(stage.reachedAt);
+        const reached = currentIdx >= stageIdx;
+        const isLast = i === PROGRESS_STAGES.length - 1;
+        return (
+          <div key={stage.label} className="flex items-center flex-1 min-w-0">
+            <div className="flex flex-col items-center gap-0.5 shrink-0">
+              <div className={`h-2 w-2 rounded-full transition-colors ${reached ? "bg-primary" : "bg-surface-tertiary border border-border"}`} />
+              <span className={`text-[9px] leading-tight ${reached ? "text-primary font-medium" : "text-text-tertiary"}`}>
+                {stage.label}
+              </span>
+            </div>
+            {!isLast && (
+              <div className={`flex-1 h-px mx-0.5 transition-colors ${
+                currentIdx >= STATUS_ORDER.indexOf(PROGRESS_STAGES[i + 1].reachedAt)
+                  ? "bg-primary"
+                  : reached
+                  ? "bg-primary/40"
+                  : "bg-surface-tertiary"
+              }`} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // Regular doc icon (for estimate PDF, PO signed, invoice PDF)
 function DocIcon({
   url,
@@ -448,6 +489,9 @@ export function VendorFinancialsTab() {
                               onOpen={openPdf}
                             />
                           </div>
+
+                          {/* Status progress track */}
+                          <VendorProgressBar status={v.status} />
 
                           {/* Line item comparison panel */}
                           {isOpen && (

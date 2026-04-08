@@ -252,34 +252,23 @@ export default function ApprovalsPage() {
         {budgetRequests.length === 0 ? (
           <EmptyState title="No pending requests" description="Budget and overage requests will appear here." />
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {budgetRequests.map((req) => (
-              <div key={req.id} className="rounded-lg border border-border p-4">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <Link
-                      href={`/campaigns/${req.campaignId}`}
-                      className="text-sm font-semibold text-text-primary hover:text-primary"
-                    >
-                      {req.campaign?.name || "Unknown Campaign"}
-                    </Link>
-                    <p className="text-xs text-text-tertiary">
-                      {req.campaign?.wfNumber} — requested by {req.requester?.name || "Unknown"}
-                    </p>
-                  </div>
-                  <span className="text-lg font-semibold text-text-primary">
-                    {formatCurrency(req.amount)}
-                  </span>
+              <div key={req.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
+                <div className="min-w-0 w-48 shrink-0">
+                  <Link href={`/campaigns/${req.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
+                    {req.campaign?.name || "Unknown Campaign"}
+                  </Link>
+                  <p className="text-xs text-text-tertiary truncate">{req.campaign?.wfNumber} — {req.requester?.name || "Unknown"}</p>
                 </div>
-                <p className="text-sm text-text-secondary mb-3">{req.rationale}</p>
-                <div className="flex gap-2 justify-end">
+                <p className="text-xs text-text-secondary truncate flex-1">{req.rationale}</p>
+                <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(req.amount)}</span>
+                <div className="flex gap-2 shrink-0">
                   <Button size="sm" variant="ghost" onClick={() => handleBudgetDecision(req.id, false)}>
-                    <X className="h-3.5 w-3.5" />
-                    Decline
+                    <X className="h-3.5 w-3.5" />Decline
                   </Button>
                   <Button size="sm" onClick={() => handleBudgetDecision(req.id, true)}>
-                    <Check className="h-3.5 w-3.5" />
-                    Approve
+                    <Check className="h-3.5 w-3.5" />Approve
                   </Button>
                 </div>
               </div>
@@ -303,37 +292,23 @@ export default function ApprovalsPage() {
         {pendingInvoices.length === 0 ? (
           <EmptyState title="No pending invoices" description="Pre-approved invoices awaiting your final sign-off will appear here." />
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {pendingInvoices.map((inv) => (
-              <div key={inv.id} className="rounded-lg border border-border p-4">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <Link
-                      href={`/campaigns/${inv.campaignId}`}
-                      className="text-sm font-semibold text-text-primary hover:text-primary"
-                    >
-                      {inv.campaignName}
-                    </Link>
-                    <p className="text-xs text-text-tertiary">
-                      {inv.wfNumber} — {inv.vendorName}
-                    </p>
-                  </div>
+              <div key={inv.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
+                <div className="min-w-0 w-48 shrink-0">
+                  <Link href={`/campaigns/${inv.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
+                    {inv.campaignName}
+                  </Link>
+                  <p className="text-xs text-text-tertiary truncate">{inv.wfNumber} — {inv.vendorName}</p>
                 </div>
-                <div className="flex gap-4 text-xs mb-3">
-                  <span className="text-text-tertiary">
-                    Estimate: <span className="font-medium text-text-primary">{formatCurrency(inv.estimateTotal)}</span>
-                  </span>
-                  <span className="text-text-tertiary">
-                    Invoice: <span className="font-medium text-text-primary">{formatCurrency(inv.invoiceTotal)}</span>
-                  </span>
-                  {inv.invoiceTotal > inv.estimateTotal && (
-                    <Badge variant="error">Over estimate</Badge>
-                  )}
+                <div className="flex gap-4 text-xs flex-1">
+                  <span className="text-text-tertiary">Est: <span className="font-medium text-text-primary">{formatCurrency(inv.estimateTotal)}</span></span>
+                  <span className="text-text-tertiary">Inv: <span className="font-medium text-text-primary">{formatCurrency(inv.invoiceTotal)}</span></span>
+                  {inv.invoiceTotal > inv.estimateTotal && <Badge variant="error">Over estimate</Badge>}
                 </div>
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-2 shrink-0">
                   <Button size="sm" onClick={() => handleInvoiceApproval(inv.id)}>
-                    <Check className="h-3.5 w-3.5" />
-                    Final Approve
+                    <Check className="h-3.5 w-3.5" />Final Approve
                   </Button>
                 </div>
               </div>
@@ -360,37 +335,23 @@ export default function ApprovalsPage() {
             description="When a Producer submits confirmed days for payment, they appear here for your approval."
           />
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {pendingCrewPayments.map((payment) => (
-              <div key={payment.id} className="rounded-lg border border-border p-4">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <Link
-                      href={`/campaigns/${payment.campaignId}`}
-                      className="text-sm font-semibold text-text-primary hover:text-primary"
-                    >
-                      {payment.campaignName}
-                    </Link>
-                    <p className="text-xs text-text-tertiary">
-                      {payment.wfNumber} — {payment.personName}
-                    </p>
-                  </div>
-                  <span className="text-lg font-semibold text-text-primary">
-                    {formatCurrency(payment.totalAmount)}
-                  </span>
+              <div key={payment.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
+                <div className="min-w-0 w-48 shrink-0">
+                  <Link href={`/campaigns/${payment.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
+                    {payment.campaignName}
+                  </Link>
+                  <p className="text-xs text-text-tertiary truncate">{payment.wfNumber} — {payment.personName}</p>
                 </div>
-                <div className="flex gap-4 text-xs mb-3">
-                  <span className="text-text-tertiary">
-                    Role: <span className="font-medium text-text-primary">{payment.role}</span>
-                  </span>
-                  <span className="text-text-tertiary">
-                    Days worked: <span className="font-medium text-text-primary">{payment.totalDays}</span>
-                  </span>
+                <div className="flex gap-4 text-xs flex-1">
+                  <span className="text-text-tertiary">Role: <span className="font-medium text-text-primary">{payment.role}</span></span>
+                  <span className="text-text-tertiary">Days: <span className="font-medium text-text-primary">{payment.totalDays}</span></span>
                 </div>
-                <div className="flex gap-2 justify-end">
+                <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(payment.totalAmount)}</span>
+                <div className="flex gap-2 shrink-0">
                   <Button size="sm" onClick={() => handleCrewPaymentApproval(payment.id)}>
-                    <Check className="h-3.5 w-3.5" />
-                    Approve for Paymaster
+                    <Check className="h-3.5 w-3.5" />Approve for Paymaster
                   </Button>
                 </div>
               </div>
@@ -550,51 +511,27 @@ export default function ApprovalsPage() {
         {pendingCrewBookings.length === 0 ? (
           <EmptyState title="No pending rate approvals" description="Crew bookings that exceed the standard rate card will appear here for approval." />
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {pendingCrewBookings.map((booking) => (
-              <div key={booking.id} className="rounded-lg border border-border p-4">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <Link
-                      href={`/campaigns/${booking.campaignId}`}
-                      className="text-sm font-semibold text-text-primary hover:text-primary"
-                    >
-                      {booking.campaignName}
-                    </Link>
-                    <p className="text-xs text-text-tertiary">
-                      {booking.wfNumber} — {booking.personName}
-                    </p>
-                  </div>
-                  <span className="text-lg font-semibold text-text-primary">
-                    {formatCurrency(booking.totalAmount)}
-                  </span>
+              <div key={booking.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
+                <div className="min-w-0 w-48 shrink-0">
+                  <Link href={`/campaigns/${booking.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
+                    {booking.campaignName}
+                  </Link>
+                  <p className="text-xs text-text-tertiary truncate">{booking.wfNumber} — {booking.personName}</p>
                 </div>
-                <div className="flex gap-4 text-xs mb-3">
-                  <span className="text-text-tertiary">
-                    Role: <span className="font-medium text-text-primary">{booking.role}</span>
-                  </span>
-                  <span className="text-text-tertiary">
-                    Rate: <span className="font-medium text-text-primary">{formatCurrency(booking.dayRate)}/day</span>
-                  </span>
-                  <span className="text-text-tertiary">
-                    Days: <span className="font-medium text-text-primary">{booking.plannedDays}</span>
-                  </span>
+                <div className="flex gap-4 text-xs flex-1">
+                  <span className="text-text-tertiary">Role: <span className="font-medium text-text-primary">{booking.role}</span></span>
+                  <span className="text-text-tertiary">Rate: <span className="font-medium text-text-primary">{formatCurrency(booking.dayRate)}/day</span></span>
+                  <span className="text-text-tertiary">Days: <span className="font-medium text-text-primary">{booking.plannedDays}</span></span>
                 </div>
-                <div className="flex gap-2 justify-end">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleCrewBookingApproval(booking.id, false)}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    Decline
+                <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(booking.totalAmount)}</span>
+                <div className="flex gap-2 shrink-0">
+                  <Button size="sm" variant="ghost" onClick={() => handleCrewBookingApproval(booking.id, false)}>
+                    <X className="h-3.5 w-3.5" />Decline
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleCrewBookingApproval(booking.id, true)}
-                  >
-                    <Check className="h-3.5 w-3.5" />
-                    Approve
+                  <Button size="sm" onClick={() => handleCrewBookingApproval(booking.id, true)}>
+                    <Check className="h-3.5 w-3.5" />Approve
                   </Button>
                 </div>
               </div>

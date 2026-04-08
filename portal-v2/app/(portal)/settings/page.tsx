@@ -139,12 +139,6 @@ function MyCard({ user }: { user: AppUser }) {
 
       {/* Preferences */}
       <div className="border-t border-border pt-3 space-y-1.5 text-sm">
-        {user.favoritePublixProduct && (
-          <div className="flex items-center gap-2 text-text-secondary">
-            {productIconSrc && <img src={productIconSrc} alt={user.favoritePublixProduct} className="h-4 w-4 shrink-0" />}
-            <span>{user.favoritePublixProduct}</span>
-          </div>
-        )}
         {snacks.length > 0 && (
           <div className="flex items-start gap-2 text-text-secondary">
             <span className="shrink-0 mt-0.5">🍿</span>
@@ -469,118 +463,47 @@ export default function SettingsPage() {
     <div className="space-y-5">
       <h2 className="text-2xl font-bold text-text-primary">Settings</h2>
 
-      {/* Top row: My Card + Account side by side */}
+      {/* My Card */}
       {user && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* My Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <Contact className="h-4 w-4" />
-                My Card
-              </CardTitle>
-            </CardHeader>
-            <MyCard user={user} />
-          </Card>
-
-          {/* Account + Preferences */}
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  <User className="h-4 w-4" />
-                  Account
-                </CardTitle>
-              </CardHeader>
-              <dl className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-text-tertiary">Name</dt>
-                  <dd className="font-medium text-text-primary">{user.name}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-text-tertiary">Email</dt>
-                  <dd className="text-text-primary">{user.email}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-text-tertiary">Role</dt>
-                  <dd>
-                    <Badge variant="custom" className={ROLE_COLORS[user.role] || ""}>
-                      {user.role}
-                    </Badge>
-                  </dd>
-                </div>
-                {user.title && (
-                  <div className="flex justify-between">
-                    <dt className="text-text-tertiary">Title</dt>
-                    <dd className="text-text-primary">{user.title}</dd>
-                  </div>
-                )}
-              </dl>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  <Settings className="h-4 w-4" />
-                  My Preferences
-                </CardTitle>
-                {!editingPrefs && (
-                  <button
-                    onClick={() => setEditingPrefs(true)}
-                    className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit
-                  </button>
-                )}
-                {editingPrefs && (
-                  <button
-                    onClick={() => setEditingPrefs(false)}
-                    className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    Cancel
-                  </button>
-                )}
-              </CardHeader>
-              {editingPrefs ? (
-                <PreferencesForm
-                  user={user}
-                  onSaved={() => {
-                    mutate();
-                    setEditingPrefs(false);
-                  }}
-                />
-              ) : (
-                <div className="space-y-2 text-sm text-text-secondary">
-                  {user.favoritePublixProduct ? (
-                    <ProductRowItem productName={user.favoritePublixProduct} />
-                  ) : (
-                    <p className="text-text-tertiary italic">No preferences set yet — click Edit to get started.</p>
-                  )}
-                </div>
-              )}
-            </Card>
-          </div>
-        </div>
-      )}
-
-      {/* Dev mode indicator */}
-      {process.env.NEXT_PUBLIC_DEV_AUTH === "true" && (
         <Card>
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-              <Settings className="h-4.5 w-4.5" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-text-primary">Development Mode</p>
-              <p className="text-xs text-text-tertiary">
-                Dev authentication is enabled — use the login page to switch between roles.
-              </p>
-            </div>
-          </div>
+          <CardHeader>
+            <CardTitle>
+              <Contact className="h-4 w-4" />
+              My Card
+            </CardTitle>
+            {!editingPrefs && (
+              <button
+                onClick={() => setEditingPrefs(true)}
+                className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit preferences
+              </button>
+            )}
+            {editingPrefs && (
+              <button
+                onClick={() => setEditingPrefs(false)}
+                className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+                Cancel
+              </button>
+            )}
+          </CardHeader>
+          {editingPrefs ? (
+            <PreferencesForm
+              user={user}
+              onSaved={() => {
+                mutate();
+                setEditingPrefs(false);
+              }}
+            />
+          ) : (
+            <MyCard user={user} />
+          )}
         </Card>
       )}
+
 
       {/* User management (Admin only) */}
       {isAdmin && (

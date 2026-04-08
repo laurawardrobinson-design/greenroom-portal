@@ -402,27 +402,37 @@ export function ProducerDashboard({ user }: Props) {
             })}
           </div>
 
-          {/* Selected day detail panel */}
-          {selectedDay && (
-            <div className="border-t border-border px-5 py-4">
-              <div className="mb-3 flex items-start justify-between">
-                <div>
-                  <h4 className="text-sm font-semibold text-text-primary">
-                    {format(selectedDay, "EEEE, MMMM d")}
-                  </h4>
-                  <p className="mt-0.5 text-xs text-text-tertiary">
-                    {selectedDayAllEvents.length}{" "}
-                    {selectedDayAllEvents.length === 1 ? "shoot" : "shoots"}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setSelectedDay(null)}
-                  className="rounded-md p-1 text-text-tertiary transition-colors hover:bg-surface-secondary"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
+        </Card>
 
+      {/* Day detail popup overlay */}
+      {selectedDay && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedDay(null)}
+        >
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
+          <div
+            className="relative w-full max-w-lg rounded-xl border border-border bg-surface shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between border-b border-border px-4 py-3">
+              <div>
+                <h4 className="text-sm font-semibold text-text-primary">
+                  {format(selectedDay, "EEEE, MMMM d")}
+                </h4>
+                <p className="mt-0.5 text-xs text-text-tertiary">
+                  {selectedDayAllEvents.length}{" "}
+                  {selectedDayAllEvents.length === 1 ? "shoot" : "shoots"}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedDay(null)}
+                className="rounded-md p-1 text-text-tertiary transition-colors hover:bg-surface-secondary"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto p-3">
               {selectedDayAllEvents.length > 0 ? (
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {selectedDayAllEvents.map((e) => {
@@ -433,6 +443,7 @@ export function ProducerDashboard({ user }: Props) {
                       <Link
                         key={e.id}
                         href={e.campaign ? `/campaigns/${e.campaign.id}` : "#"}
+                        onClick={() => setSelectedDay(null)}
                         className="flex items-start gap-2.5 rounded-lg border border-border p-3 transition-colors hover:bg-surface-secondary"
                       >
                         <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotClass}`} />
@@ -440,6 +451,9 @@ export function ProducerDashboard({ user }: Props) {
                           <p className="truncate text-sm font-medium text-text-primary">
                             {e.campaign?.name || "Unknown Campaign"}
                           </p>
+                          {e.campaign?.wfNumber && (
+                            <p className="text-xs text-text-tertiary">{e.campaign.wfNumber}</p>
+                          )}
                           {e.campaign?.producerName && (
                             <p className="truncate text-xs text-text-secondary">{e.campaign.producerName}</p>
                           )}
@@ -465,11 +479,12 @@ export function ProducerDashboard({ user }: Props) {
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-text-tertiary">No shoots scheduled for this day.</p>
+                <p className="py-2 text-sm text-text-tertiary">No shoots scheduled for this day.</p>
               )}
             </div>
-          )}
-        </Card>
+          </div>
+        </div>
+      )}
 
         {/* ── Highlights ── */}
         <div className="lg:col-span-3">
