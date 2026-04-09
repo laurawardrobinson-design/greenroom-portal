@@ -37,10 +37,10 @@ export function DocumentsTile({ campaignId, isVendor, canEdit, uploading, onUplo
         )}
         <div className={showAdminSection ? "grid grid-cols-1 md:grid-cols-2 gap-6" : ""}>
           <FileSection
-            title={isVendor ? "Campaign Documents" : "Creative"}
+            title="Creative"
             campaignId={campaignId}
             type="fun"
-            categories={isVendor ? ["Deliverable"] : ["Shot List", "Concept Deck", "Reference", "Product Info"]}
+            categories={["Shot List", "Concept Deck", "Reference", "Product Info"]}
             onUpload={onUpload}
             uploading={uploading}
             canUpload={!isVendor && (canEdit || !!hideAdminDocs)}

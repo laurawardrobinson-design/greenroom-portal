@@ -50,7 +50,7 @@ export function DocumentsTabTile({ campaignId, isVendor, canEdit, uploading, onU
             title=""
             campaignId={campaignId}
             type="fun"
-            categories={isVendor ? ["Deliverable"] : ["Shot List", "Concept Deck", "Reference", "Product Info"]}
+            categories={["Shot List", "Concept Deck", "Reference", "Product Info"]}
             onUpload={onUpload}
             uploading={uploading}
             canUpload={!isVendor && (canEdit || !!hideAdminDocs)}

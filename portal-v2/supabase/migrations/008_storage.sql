@@ -5,7 +5,7 @@
 -- Campaign assets (concept decks, shot lists, contracts, invoices, deliverables)
 INSERT INTO storage.buckets (id, name, public, file_size_limit)
 VALUES ('campaign-assets', 'campaign-assets', true, 52428800)  -- 50MB limit
-ON CONFLICT (id) DO UPDATE SET file_size_limit = 52428800;
+ON CONFLICT (id) DO UPDATE SET file_size_limit = 52428800, public = true;
 
 -- PO signatures (private — vendor drawn signatures)
 INSERT INTO storage.buckets (id, name, public, file_size_limit)
