@@ -139,6 +139,7 @@ export function FileSection({
 }) {
   const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const swrKey = `/api/files?campaignId=${campaignId}&type=${type}`;
   const { data: assets = [], mutate } = useSWR(
@@ -157,9 +158,16 @@ export function FileSection({
     [onUpload, categories, mutate]
   );
 
+  async function handleDelete(id: string) {
+    setDeleting(id);
+    await fetch(`/api/files?id=${id}`, { method: "DELETE" });
+    await mutate();
+    setDeleting(null);
+  }
+
   return (
     <div>
-      <p className="text-sm font-semibold uppercase tracking-wider text-text-tertiary mb-3">{title}</p>
+      <p className="text-sm font-semibold uppercase tracking-wider text-text-tertiary mb-2">{title}</p>
       {canUpload && (
         <label
           className="block"
@@ -169,14 +177,14 @@ export function FileSection({
           onDrop={handleDrop}
         >
           <div
-            className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-6 cursor-pointer transition-colors ${
+            className={`flex items-center justify-center gap-2 rounded-lg border border-dashed py-3 cursor-pointer transition-colors ${
               isDragOver
                 ? "border-primary bg-primary/5 text-primary"
                 : "border-border bg-surface-secondary text-text-secondary hover:bg-surface-tertiary hover:border-text-tertiary"
             }`}
           >
-            <Upload className={`h-5 w-5 ${isDragOver ? "text-primary" : "text-text-tertiary"}`} />
-            <span className="text-sm font-medium">
+            <Upload className={`h-3.5 w-3.5 ${isDragOver ? "text-primary" : "text-text-tertiary"}`} />
+            <span className="text-sm">
               {uploading ? "Uploading..." : isDragOver ? "Drop to upload" : "Drop files or click to browse"}
             </span>
           </div>
@@ -193,18 +201,29 @@ export function FileSection({
         </label>
       )}
       {assets.length > 0 && (
-        <div className="space-y-1.5 mt-3">
+        <div className="space-y-1 mt-2 max-h-[130px] overflow-y-auto">
           {assets.map((asset: Asset) => (
-            <button
+            <div
               key={asset.id}
-              onClick={() => setPreviewAsset(asset)}
-              className="w-full flex items-center gap-3 rounded-lg bg-surface-secondary p-2.5 hover:bg-surface-tertiary transition-colors text-left"
+              className="group flex items-center gap-2 rounded-md bg-surface-secondary px-2 py-1.5 hover:bg-surface-tertiary transition-colors"
             >
-              <FileText className="h-4 w-4 text-primary/60 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-primary/70 truncate">{asset.fileName}</p>
-              </div>
-            </button>
+              <button
+                onClick={() => setPreviewAsset(asset)}
+                className="flex items-center gap-2 flex-1 min-w-0 text-left"
+              >
+                <FileText className="h-3.5 w-3.5 text-primary/60 shrink-0" />
+                <p className="text-sm text-primary/70 truncate">{asset.fileName}</p>
+              </button>
+              {canUpload && (
+                <button
+                  onClick={() => handleDelete(asset.id)}
+                  disabled={deleting === asset.id}
+                  className="opacity-0 group-hover:opacity-100 shrink-0 p-0.5 rounded hover:bg-surface-secondary transition-opacity text-text-tertiary hover:text-text-primary disabled:opacity-50"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}

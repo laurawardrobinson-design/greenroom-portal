@@ -18,6 +18,7 @@ function toCampaign(row: Record<string, unknown>): Campaign {
     budgetPoolId: (row.budget_pool_id as string) || null,
     assetsDeliveryDate: (row.assets_delivery_date as string) || null,
     notes: row.notes as string,
+    producerIds: [],
     producerId: (row.producer_id as string) || null,
     artDirectorId: (row.art_director_id as string) || null,
     createdBy: (row.created_by as string) || "",
@@ -155,10 +156,28 @@ export async function listCampaigns(filters?: {
       committedByCampaign.set(cid, (committedByCampaign.get(cid) || 0) + (Number(v.estimate_total) || 0));
     }
 
+    // Fetch campaign_producers (multi-producer junction table)
+    const { data: cpRows } = await db
+      .from("campaign_producers")
+      .select("campaign_id, user_id")
+      .in("campaign_id", campaignIds)
+      .order("created_at", { ascending: true });
+
+    const producerIdsByCampaign = new Map<string, string[]>();
+    for (const row of cpRows || []) {
+      if (!producerIdsByCampaign.has(row.campaign_id)) producerIdsByCampaign.set(row.campaign_id, []);
+      producerIdsByCampaign.get(row.campaign_id)!.push(row.user_id);
+    }
+
+    for (const item of items) {
+      item.producerIds = producerIdsByCampaign.get(item.id) || [];
+      item.producerId = item.producerIds[0] ?? null;
+    }
+
     // Fetch producer + art director names in one query
-    const producerIds = items.map((c) => c.producerId).filter(Boolean) as string[];
+    const allProducerIds = [...new Set((cpRows || []).map((r) => r.user_id))];
     const adIds = items.map((c) => c.artDirectorId).filter(Boolean) as string[];
-    const userIds = [...new Set([...producerIds, ...adIds])];
+    const userIds = [...new Set([...allProducerIds, ...adIds])];
     const userNameMap = new Map<string, string>();
     if (userIds.length > 0) {
       const { data: users } = await db
@@ -194,7 +213,9 @@ export async function listCampaigns(filters?: {
     for (const item of items) {
       item.shootsSummary = shootsByCampaign.get(item.id) || [];
       item.committed = committedByCampaign.get(item.id) || 0;
-      item.producerName = userNameMap.get(item.producerId || "") || null;
+      item.producerName = item.producerIds.length > 1
+        ? `${userNameMap.get(item.producerIds[0] || "") || ""} +${item.producerIds.length - 1}`
+        : userNameMap.get(item.producerIds[0] || "") || null;
       item.artDirectorName = userNameMap.get(item.artDirectorId || "") || null;
       const funds = additionalFundsByCampaign.get(item.id);
       item.additionalFundsRequested = funds?.requested || 0;
@@ -208,14 +229,16 @@ export async function listCampaigns(filters?: {
 // --- Get single campaign ---
 export async function getCampaign(id: string): Promise<Campaign | null> {
   const db = createAdminClient();
-  const { data, error } = await db
-    .from("campaigns")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const [{ data, error }, { data: producerRows }] = await Promise.all([
+    db.from("campaigns").select("*").eq("id", id).single(),
+    db.from("campaign_producers").select("user_id").eq("campaign_id", id).order("created_at", { ascending: true }),
+  ]);
 
   if (error) return null;
-  return toCampaign(data);
+  const campaign = toCampaign(data);
+  campaign.producerIds = (producerRows || []).map((r) => r.user_id);
+  campaign.producerId = campaign.producerIds[0] ?? null;
+  return campaign;
 }
 
 // --- Get deliverables for a campaign ---

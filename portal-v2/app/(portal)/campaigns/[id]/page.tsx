@@ -14,7 +14,8 @@ import { ShootDayListTile } from "@/components/campaigns/tiles/shoot-day-list-ti
 import { ShootDayModal } from "@/components/campaigns/shoot-day-modal";
 import { formatCurrency } from "@/lib/utils/format";
 import { ShotListTile } from "@/components/campaigns/tiles/shot-list-tile";
-import { DocumentsTile } from "@/components/campaigns/tiles/documents-tile";
+import { DocumentsTabTile } from "@/components/campaigns/tiles/documents-tab-tile";
+import { InventoryTile } from "@/components/campaigns/tiles/inventory-tile";
 import { AddSetupDrawer } from "@/components/campaigns/add-setup-drawer";
 import { LinkProductDrawer } from "@/components/campaigns/link-product-drawer";
 import { LinkGearDrawer } from "@/components/campaigns/link-gear-drawer";
@@ -81,6 +82,7 @@ export default function CampaignDetailPage({
   const [submittingOverage, setSubmittingOverage] = useState(false);
   const [showAddSetup, setShowAddSetup] = useState(false);
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showAddProps, setShowAddProps] = useState(false);
   const [showAddGear, setShowAddGear] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -204,9 +206,7 @@ export default function CampaignDetailPage({
     );
   }
 
-  const producer = campaign.producerId
-    ? allUsers.find((u) => u.id === campaign.producerId)
-    : null;
+  const producers = allUsers.filter((u) => (campaign.producerIds ?? []).includes(u.id));
 
   const artDirector = campaign.artDirectorId
     ? allUsers.find((u) => u.id === campaign.artDirectorId)
@@ -296,7 +296,7 @@ export default function CampaignDetailPage({
 
         {/* Logline — no box, aligned under title */}
         {(campaign.notes || canEdit) && (
-          <div className="pl-11 max-w-xl">
+          <div className="pl-11 max-w-5xl">
             {editingNotes ? (
               <textarea
                 autoFocus
@@ -379,12 +379,12 @@ export default function CampaignDetailPage({
         </div>
       </div>
 
-      {/* === ROW 1: Calendar + Shoot Days | Activity + Budget === */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+      {/* === ROW 1: Calendar + Shoot Days | Documents | Budget === */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-stretch">
 
         {/* Calendar + Shoot Days */}
-        <div className="lg:col-span-2">
-          <div className="flex gap-4 items-stretch">
+        <div className="lg:col-span-2 flex flex-col">
+          <div className="flex gap-4 flex-1">
             <div className="shrink-0">
               <ProductionCalendarTile
                 shoots={shoots}
@@ -407,55 +407,25 @@ export default function CampaignDetailPage({
           </div>
         </div>
 
-        {/* Activity + Budget sidebar */}
-        <div className="space-y-3">
+        {/* Documents (tabbed) */}
+        <DocumentsTabTile
+          campaignId={id}
+          isVendor={isVendor}
+          canEdit={canEdit}
+          uploading={uploading}
+          onUpload={handleFileUpload}
+          hideAdminDocs={isArtDirector}
+        />
 
-          {/* Activity — always visible */}
-          <div className="border border-border rounded-lg bg-surface">
-            <div className="flex items-center px-3.5 py-2.5 border-b border-border">
-              <div className="flex items-center gap-2">
-                <Bell className="h-4 w-4 shrink-0 text-primary" />
-                <span className="text-sm font-semibold text-text-primary tracking-wider uppercase">Activity</span>
-              </div>
-            </div>
-            <div className="px-3.5 py-3">
-              {visibleAttentionItems.length > 0 ? (
-                <div className="space-y-1.5">
-                  {visibleAttentionItems.map((item, i) => {
-                    const key = item.label + (item.context ?? "");
-                    return (
-                      <div key={i} className="group flex items-start gap-2 pl-2.5 py-1.5 rounded-r-md border-l-2 border-primary bg-primary/5">
-                        <AlertCircle className="h-3 w-3 text-primary shrink-0 mt-0.5" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-medium text-text-primary leading-tight">{item.label}</p>
-                          {item.context && (
-                            <p className="text-[13px] text-text-secondary mt-0.5">{item.context}</p>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => dismissNotif(key)}
-                          className="opacity-0 group-hover:opacity-100 shrink-0 p-0.5 rounded hover:bg-surface-secondary transition-opacity"
-                        >
-                          <X className="h-3 w-3 text-text-tertiary" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-text-tertiary">No activity</p>
-              )}
-            </div>
-          </div>
-
-          {/* Budget */}
+        {/* Budget */}
+        <div className="h-full">
           {showFinancials && (
             <CollapsibleSection
               id={`campaign-${id}-budget-sidebar`}
               title="Budget"
               icon={DollarSign}
               defaultExpanded={true}
+              className="h-full"
             >
               <BudgetSidebarTile
                 campaignId={id}
@@ -466,11 +436,10 @@ export default function CampaignDetailPage({
               />
             </CollapsibleSection>
           )}
-
         </div>
       </div>
 
-      {/* === ROW 2: One-Liner (full width) === */}
+      {/* === ONE-LINER (full width, just below Row 1) === */}
       <ShotListTile
         campaignId={id}
         setups={setups}
@@ -486,115 +455,40 @@ export default function CampaignDetailPage({
         onMutate={mutate}
       />
 
-      {/* === ROW 3: People | Documents === */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        <div className="lg:col-span-2">
+      {/* === ROW 2: People | Inventory === */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+        <div>
           <PeopleTile
             campaignId={id}
             canEdit={canEdit}
             isVendor={isVendor}
             currentAd={artDirector ?? null}
-            adUsers={artDirectorUsers}
-            producer={producer ?? null}
-            currentUserId={user?.id ?? ""}
-            campaignAdId={campaign.artDirectorId}
-            isArtDirector={isArtDirector}
-            onAssign={async (userId: string | null) => {
-              await handleUpdate("artDirectorId", userId);
+            producers={producers}
+            allUsers={allUsers}
+            onAddProducer={async (userId) => {
+              await fetch(`/api/campaigns/${id}/producers`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId }),
+              });
+              await refreshCampaign();
             }}
+            onRemoveProducer={async (userId) => {
+              await fetch(`/api/campaigns/${id}/producers/${userId}`, { method: "DELETE" });
+              await refreshCampaign();
+            }}
+            onAssignAD={async (userId) => { await handleUpdate("artDirectorId", userId); }}
           />
         </div>
-        <div>
-          <DocumentsTile
-            campaignId={id}
-            isVendor={isVendor}
-            canEdit={canEdit}
-            uploading={uploading}
-            onUpload={handleFileUpload}
-            hideAdminDocs={isArtDirector}
-          />
-        </div>
+        <InventoryTile
+          campaignProducts={campaignProducts}
+          campaignGear={campaignGear}
+          canEdit={canEdit}
+          onAddProduct={() => setShowAddProduct(true)}
+          onAddProps={() => setShowAddProps(true)}
+          onAddGear={() => setShowAddGear(true)}
+        />
       </div>
-
-      {/* === ROW 4: Products + Gear === */}
-      {((campaignProducts.length > 0 || canEdit) || (!isVendor && !isArtDirector && (campaignGear.length > 0 || canEdit))) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-
-          {/* Products */}
-          {(campaignProducts.length > 0 || canEdit) && (
-            <CollapsibleSection
-              id={`campaign-${id}-products-sidebar`}
-              title="Products"
-              icon={ShoppingBasket}
-              defaultExpanded={true}
-              badge={campaignProducts.length > 0 ? `${campaignProducts.length} product${campaignProducts.length !== 1 ? "s" : ""}` : undefined}
-            >
-              {campaignProducts.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 py-4 px-5">
-                  {canEdit && (
-                    <button type="button" onClick={() => setShowAddProduct(true)}
-                      className="inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-sm font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors">
-                      <Plus className="h-3 w-3" />
-                      Add Product
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-80 overflow-y-auto">
-                  {campaignProducts.map((cp) => (
-                    <div key={cp.id} className="flex items-start gap-3 rounded-lg bg-surface-secondary p-3">
-                      <ShoppingBasket className="h-4 w-4 text-text-tertiary shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-base font-medium text-text-primary truncate">{cp.product?.name || "Unknown product"}</p>
-                        <p className="text-sm text-text-tertiary">{cp.product?.department}</p>
-                        {cp.notes && (
-                          <p className="text-sm text-text-secondary mt-1 leading-relaxed">{cp.notes}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CollapsibleSection>
-          )}
-
-          {/* Gear / Props */}
-          {(campaignGear.length > 0 || canEdit) && (
-            <CollapsibleSection
-              id={`campaign-${id}-gear-sidebar`}
-              title="Gear"
-              icon={Wrench}
-              defaultExpanded={true}
-              badge={campaignGear.length > 0 ? `${campaignGear.length} item${campaignGear.length !== 1 ? "s" : ""}` : undefined}
-            >
-              {campaignGear.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 py-4 px-5">
-                  {canEdit && (
-                    <button type="button" onClick={() => setShowAddGear(true)}
-                      className="inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-sm font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors">
-                      <Plus className="h-3 w-3" />
-                      Add Gear
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-80 overflow-y-auto">
-                  {campaignGear.map((cg) => (
-                    <div key={cg.id} className="flex items-center gap-3 rounded-lg bg-surface-secondary p-3">
-                      <Wrench className="h-4 w-4 text-text-tertiary shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-base font-medium text-text-primary truncate">{cg.gearItem?.name || "Unknown gear"}</p>
-                        <p className="text-sm text-text-tertiary">{cg.gearItem?.category} · {cg.gearItem?.brand} {cg.gearItem?.model}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CollapsibleSection>
-          )}
-
-        </div>
-      )}
 
       {/* Shoot Day Modal */}
       <ShootDayModal
@@ -622,6 +516,13 @@ export default function CampaignDetailPage({
         onLinked={() => { setShowAddProduct(false); mutate(); }}
       />
 
+      <LinkGearDrawer
+        open={showAddProps}
+        onClose={() => setShowAddProps(false)}
+        campaignId={id}
+        section="Props"
+        onLinked={() => { setShowAddProps(false); mutate(); }}
+      />
       <LinkGearDrawer
         open={showAddGear}
         onClose={() => setShowAddGear(false)}

@@ -689,14 +689,14 @@ function PeopleTab({
   campaignId,
   shoots,
   vendors,
-  producerId,
+  producerIds,
   canManage,
   onRefresh,
 }: {
   campaignId: string;
   shoots: Shoot[];
   vendors: CampaignVendor[];
-  producerId: string | null;
+  producerIds: string[];
   canManage: boolean;
   onRefresh: () => void;
 }) {
@@ -736,11 +736,11 @@ function PeopleTab({
     }
   }
 
-  // Ensure producer is included
-  if (producerId && !crewMap.has(producerId)) {
-    const producer = allUsers.find((u) => u.id === producerId);
-    if (producer) {
-      crewMap.set(producerId, { user: producer, roles: ["Producer"] });
+  // Ensure all producers are included
+  for (const pid of producerIds) {
+    if (!crewMap.has(pid)) {
+      const producer = allUsers.find((u) => u.id === pid);
+      if (producer) crewMap.set(pid, { user: producer, roles: ["Producer"] });
     }
   }
 
@@ -825,11 +825,7 @@ function PeopleTab({
     <>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Internal */}
-        <PeopleSection
-          title="Internal"
-          icon={Users}
-          actions={canManage ? addBtn(() => setAddInternalOpen(true)) : undefined}
-        >
+        <PeopleSection title="Internal" icon={Users}>
           {internalPeople.length === 0 ? (
             <p className="text-sm text-text-tertiary py-2">No crew assigned to any shoots yet.</p>
           ) : (
@@ -849,14 +845,42 @@ function PeopleTab({
               ))}
             </div>
           )}
+          {canManage && (
+            <div className="mt-3 border-t border-border pt-2.5">
+              <input
+                type="text"
+                placeholder="Add person..."
+                value={internalQuery}
+                onChange={e => setInternalQuery(e.target.value)}
+                onKeyDown={e => e.key === "Escape" && setInternalQuery("")}
+                className="w-full rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary/40"
+              />
+              {internalQuery && (
+                <div className="mt-1 rounded-md border border-border divide-y divide-border bg-surface">
+                  {shoots.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-amber-600">Add shoot dates first.</p>
+                  ) : filteredInternal.length === 0 ? (
+                    <p className="px-3 py-2 text-sm text-text-tertiary">No matches.</p>
+                  ) : filteredInternal.map(u => (
+                    <button key={u.id} type="button" onClick={() => handleAddInternal(u)}
+                      disabled={saving === u.id}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-surface-secondary transition-colors disabled:opacity-50"
+                    >
+                      <UserCircle className="h-4 w-4 text-primary shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-text-primary truncate">{u.name}</p>
+                        <p className="text-xs text-text-tertiary">{u.role}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </PeopleSection>
 
         {/* Vendors */}
-        <PeopleSection
-          title="Vendors"
-          icon={Building2}
-          actions={canManage ? addBtn(() => setAddVendorOpen(true)) : undefined}
-        >
+        <PeopleSection title="Vendors" icon={Building2}>
           {companyVendors.length === 0 ? (
             <p className="text-sm text-text-tertiary py-2">No vendors assigned yet.</p>
           ) : (
@@ -881,19 +905,44 @@ function PeopleTab({
               ))}
             </div>
           )}
+          {canManage && (
+            <div className="mt-3 border-t border-border pt-2.5">
+              <input
+                type="text"
+                placeholder="Add vendor..."
+                value={vendorQuery}
+                onChange={e => setVendorQuery(e.target.value)}
+                onKeyDown={e => e.key === "Escape" && setVendorQuery("")}
+                className="w-full rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary/40"
+              />
+              {vendorQuery && (
+                <div className="mt-1 rounded-md border border-border divide-y divide-border bg-surface">
+                  {filteredVendors.length === 0 ? (
+                    <p className="px-3 py-2 text-sm text-text-tertiary">No matches.</p>
+                  ) : filteredVendors.map(v => (
+                    <button key={v.id} type="button" onClick={() => handleAddVendor(v)}
+                      disabled={saving === v.id}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-surface-secondary transition-colors disabled:opacity-50"
+                    >
+                      <Building2 className="h-4 w-4 text-text-tertiary shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-text-primary truncate">{v.companyName}</p>
+                        <p className="text-xs text-text-tertiary truncate">{v.contactName}{v.category ? ` · ${v.category}` : ""}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </PeopleSection>
 
         {/* Talent */}
-        <PeopleSection
-          title="Talent"
-          icon={Star}
-          actions={canManage ? addBtn(() => setAddTalentOpen(true)) : undefined}
-        >
+        <PeopleSection title="Talent" icon={Star}>
           {uniqueTalent.length === 0 && talentVendors.length === 0 ? (
             <p className="text-sm text-text-tertiary py-2">No talent assigned yet.</p>
           ) : (
             <div className="space-y-2">
-              {/* Shot talent (structured casting) */}
               {uniqueTalent.map((t) => {
                 const shotCount = talentEntries.filter((e) => e.talent_number === t.talent_number).length;
                 const details = [t.age_range, t.gender, t.ethnicity].filter((v) => v && v !== "Open");
@@ -914,7 +963,6 @@ function PeopleTab({
                   </div>
                 );
               })}
-              {/* Vendor-sourced talent */}
               {talentVendors.map((cv) => (
                 <div key={cv.id} className="flex items-start gap-3 py-1.5">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
@@ -932,38 +980,38 @@ function PeopleTab({
               ))}
             </div>
           )}
+          {canManage && (
+            <div className="mt-3 border-t border-border pt-2.5">
+              <input
+                type="text"
+                placeholder="Add talent agency..."
+                value={talentQuery}
+                onChange={e => setTalentQuery(e.target.value)}
+                onKeyDown={e => e.key === "Escape" && setTalentQuery("")}
+                className="w-full rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary/40"
+              />
+              {talentQuery && (
+                <div className="mt-1 rounded-md border border-border divide-y divide-border bg-surface">
+                  {filteredTalent.length === 0 ? (
+                    <p className="px-3 py-2 text-sm text-text-tertiary">No matches.</p>
+                  ) : filteredTalent.map(v => (
+                    <button key={v.id} type="button" onClick={() => handleAddTalent(v)}
+                      disabled={saving === v.id + "-t"}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-surface-secondary transition-colors disabled:opacity-50"
+                    >
+                      <Star className="h-4 w-4 text-text-tertiary shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-text-primary truncate">{v.companyName}</p>
+                        <p className="text-xs text-text-tertiary truncate">{v.contactName}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </PeopleSection>
       </div>
-
-      {/* Modals */}
-      {addInternalOpen && (
-        <AddInternalModal
-          allUsers={allUsers}
-          shoots={shoots}
-          assignedUserIds={assignedUserIds}
-          campaignId={campaignId}
-          onClose={() => setAddInternalOpen(false)}
-          onSuccess={onRefresh}
-        />
-      )}
-      {addVendorOpen && (
-        <AddVendorModal
-          campaignId={campaignId}
-          assignedVendorIds={assignedVendorIds}
-          talentOnly={false}
-          onClose={() => setAddVendorOpen(false)}
-          onSuccess={onRefresh}
-        />
-      )}
-      {addTalentOpen && (
-        <AddVendorModal
-          campaignId={campaignId}
-          assignedVendorIds={assignedVendorIds}
-          talentOnly={true}
-          onClose={() => setAddTalentOpen(false)}
-          onSuccess={onRefresh}
-        />
-      )}
     </>
   );
 }
@@ -994,7 +1042,7 @@ function CampaignSwitcher({
 
   // Default: only campaigns assigned to this producer
   const mine = prepCampaigns.filter(
-    (c) => c.producerId === user?.id || c.createdBy === user?.id || c.artDirectorId === user?.id
+    (c) => c.producerIds.includes(user?.id ?? "") || c.createdBy === user?.id || c.artDirectorId === user?.id
   );
   const displayed = showAll || mine.length === 0 ? prepCampaigns : mine;
 
@@ -1192,7 +1240,7 @@ export default function PreProductionWorkspacePage({
           />
         )}
         {resolvedActiveTab === "logistics" && <LogisticsTab />}
-        {resolvedActiveTab === "people"    && <PeopleTab campaignId={id} shoots={shoots} vendors={vendors} producerId={campaign.producerId} canManage={canManagePeople} onRefresh={refreshCampaign} />}
+        {resolvedActiveTab === "people"    && <PeopleTab campaignId={id} shoots={shoots} vendors={vendors} producerIds={campaign.producerIds} canManage={canManagePeople} onRefresh={refreshCampaign} />}
         {resolvedActiveTab === "contracts" && <ContractsTab campaignId={id} shoots={shoots} vendors={vendors} />}
       </div>
     </div>

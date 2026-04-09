@@ -115,7 +115,8 @@ export interface Campaign {
   budgetPoolId: string | null;
   assetsDeliveryDate: string | null;
   notes: string;
-  producerId: string | null;
+  producerIds: string[];
+  producerId: string | null; // = producerIds[0] ?? null — kept for backward compat
   artDirectorId: string | null;
   createdBy: string;
   createdAt: string;
@@ -386,6 +387,7 @@ export type GearCategory =
 export interface GearItem {
   id: string;
   name: string;
+  section: "Gear" | "Props";
   category: GearCategory;
   brand: string;
   model: string;

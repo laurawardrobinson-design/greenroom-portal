@@ -4,7 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Drawer } from "@/components/ui/drawer";
+import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { ShoppingBasket, Plus } from "lucide-react";
 
@@ -48,14 +48,14 @@ export function LinkProductDrawer({
   }
 
   return (
-    <Drawer open={open} onClose={onClose} title="Link Product">
+    <Modal open={open} onClose={onClose} title="Link Product" size="lg">
       <div className="space-y-4">
         <Input
           placeholder="Search products..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+        <div className="space-y-2 h-72 overflow-y-auto">
           {products.map((p: { id: string; name: string; department: string; shootingNotes: string }) => (
             <button
               key={p.id}
@@ -78,6 +78,6 @@ export function LinkProductDrawer({
           )}
         </div>
       </div>
-    </Drawer>
+    </Modal>
   );
 }

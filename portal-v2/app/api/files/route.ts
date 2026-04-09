@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthUser, requireCampaignAccess, authErrorResponse } from "@/lib/auth/guards";
-import { listCampaignAssets, uploadCampaignAsset } from "@/lib/services/files.service";
+import { listCampaignAssets, uploadCampaignAsset, deleteAsset } from "@/lib/services/files.service";
 import type { AssetCategory } from "@/types/domain";
 
 // GET /api/files?campaignId=xxx&type=fun|boring
@@ -98,6 +98,25 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(asset, { status: 201 });
+  } catch (error) {
+    return authErrorResponse(error);
+  }
+}
+
+// DELETE /api/files?id=xxx
+export async function DELETE(request: Request) {
+  try {
+    const user = await getAuthUser();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "id required" }, { status: 400 });
+    }
+    if (user.role === "Vendor") {
+      return NextResponse.json({ error: "Vendors cannot delete files" }, { status: 403 });
+    }
+    await deleteAsset(id);
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     return authErrorResponse(error);
   }

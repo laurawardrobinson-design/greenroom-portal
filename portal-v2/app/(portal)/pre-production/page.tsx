@@ -22,7 +22,7 @@ export default function PreProductionPage() {
 
   // Prefer campaigns assigned to this producer, fall back to any prep campaign
   const mine = prepCampaigns.filter(
-    (c) => c.producerId === user?.id || c.createdBy === user?.id
+    (c) => c.producerIds.includes(user?.id ?? "") || c.createdBy === user?.id
   );
   const target = mine[0] ?? prepCampaigns[0];
 

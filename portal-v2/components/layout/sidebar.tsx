@@ -204,9 +204,6 @@ export function Sidebar({
                 }`}
               />
               {(userRole === "Admin" && item.adminLabel) ? item.adminLabel : item.label}
-              {item.href === "/estimates-invoices" && showPendingBadge && !isActive && (
-                <SidebarPendingBadge />
-              )}
               {isActive && (
                 <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
               )}
