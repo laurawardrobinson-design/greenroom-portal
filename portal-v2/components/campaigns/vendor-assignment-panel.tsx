@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { PdfPreviewModal } from "@/components/budget/pdf-preview-modal";
 import { VendorStatusTimeline } from "@/components/vendors/vendor-status-timeline";
 import { EstimateForm } from "@/components/vendors/estimate-form";
 import { PoSignature } from "@/components/vendors/po-signature";
@@ -79,6 +80,7 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
     const [showPoSignature, setShowPoSignature] = useState<string | null>(null);
     const [uploadingPo, setUploadingPo] = useState<string | null>(null);
     const [invoiceConfirmation, setInvoiceConfirmation] = useState<{ fileName: string; fileSize: number } | null>(null);
+    const [docPreview, setDocPreview] = useState<{ url: string; fileName: string } | null>(null);
 
     useImperativeHandle(ref, () => ({
       openAssign: () => setShowAssign(true),
@@ -181,6 +183,39 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
         if (file) onFile(file);
       };
       input.click();
+    }
+
+    function openDocumentPreview(url: string | null | undefined, fileName: string) {
+      if (!url) {
+        toast("error", "No document found to preview");
+        return;
+      }
+      setDocPreview({ url, fileName });
+    }
+
+    function handleOpenEstimate(cv: CampaignVendor) {
+      setExpandedEstimate(cv.id);
+      openDocumentPreview(
+        cv.estimateFileUrl || `/estimates/${cv.id}`,
+        cv.estimateFileName || `${cv.vendor?.companyName || "Vendor"} Estimate`
+      );
+    }
+
+    function handleOpenInvoice(campaignVendorId: string) {
+      setExpandedInvoice(campaignVendorId);
+      fetch(`/api/invoices?campaignVendorId=${campaignVendorId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          const invoice = data?.invoice;
+          if (!invoice?.fileUrl) {
+            toast("error", "No invoice file found to preview");
+            return;
+          }
+          setDocPreview({ url: invoice.fileUrl, fileName: invoice.fileName || "Invoice" });
+        })
+        .catch(() => {
+          toast("error", "Failed to load invoice preview");
+        });
     }
 
     return (
@@ -315,14 +350,30 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() =>
-                          setExpandedEstimate(
-                            expandedEstimate === cv.id ? null : cv.id
-                          )
-                        }
+                        onClick={() => handleOpenEstimate(cv)}
                       >
                         <FileSearch className="h-3.5 w-3.5" />
-                        {expandedEstimate === cv.id ? "Hide Estimate" : "Review Estimate"}
+                        Review Estimate
+                      </Button>
+                    )}
+                    {cv.poFileUrl && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => openDocumentPreview(cv.poFileUrl, `${cv.vendor?.companyName || "Vendor"} PO`)}
+                      >
+                        <FileSearch className="h-3.5 w-3.5" />
+                        View PO
+                      </Button>
+                    )}
+                    {cv.poSignedFileUrl && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => openDocumentPreview(cv.poSignedFileUrl, `${cv.vendor?.companyName || "Vendor"} Signed PO`)}
+                      >
+                        <FileSearch className="h-3.5 w-3.5" />
+                        View Signed PO
                       </Button>
                     )}
                     {cv.status === "Estimate Approved" && (
@@ -371,11 +422,7 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() =>
-                          setExpandedInvoice(
-                            expandedInvoice === cv.id ? null : cv.id
-                          )
-                        }
+                        onClick={() => handleOpenInvoice(cv.id)}
                       >
                         <FileSearch className="h-3.5 w-3.5" />
                         {["Invoice Approved", "Paid"].includes(cv.status) ? "View Invoice" : "Review Invoice"}
@@ -525,6 +572,13 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
             <Button onClick={() => setInvoiceConfirmation(null)}>Got It</Button>
           </ModalFooter>
         </Modal>
+
+        <PdfPreviewModal
+          open={docPreview !== null}
+          onClose={() => setDocPreview(null)}
+          url={docPreview?.url ?? null}
+          fileName={docPreview?.fileName ?? null}
+        />
       </>
     );
   }

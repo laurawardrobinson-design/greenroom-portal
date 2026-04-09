@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrencyFull } from "@/lib/utils/format";
-import { Plus, Trash2, Upload, FileText, PenLine } from "lucide-react";
+import { Plus, Trash2, Upload, FileText } from "lucide-react";
 
 interface EstimateItem {
   category: string;
@@ -32,7 +32,7 @@ const emptyItem = (): EstimateItem => ({
 
 export function EstimateForm({ campaignVendorId, campaignId, onSubmitted, onCancel }: Props) {
   const { toast } = useToast();
-  const [mode, setMode] = useState<"choose" | "upload" | "manual">("choose");
+  const [mode, setMode] = useState<"upload" | "manual">("upload");
   const [items, setItems] = useState<EstimateItem[]>([emptyItem()]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -154,64 +154,16 @@ export function EstimateForm({ campaignVendorId, campaignId, onSubmitted, onCanc
     }
   }
 
-  // --- Choose mode ---
-  if (mode === "choose") {
-    return (
-      <div className="space-y-4">
-        <p className="text-sm text-text-secondary">
-          How would you like to submit your estimate?
-        </p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={() => setMode("upload")}
-            className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border bg-surface p-6 text-center hover:border-primary hover:bg-primary/5 transition-all"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Upload className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-text-primary">Upload Estimate</p>
-              <p className="text-xs text-text-tertiary mt-1">
-                Upload a PDF or document with your estimate
-              </p>
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("manual")}
-            className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border bg-surface p-6 text-center hover:border-primary hover:bg-primary/5 transition-all"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <PenLine className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-text-primary">Enter Manually</p>
-              <p className="text-xs text-text-tertiary mt-1">
-                Type in your line items and amounts
-              </p>
-            </div>
-          </button>
-        </div>
-        <div className="flex justify-end">
-          <Button type="button" variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   // --- Upload mode ---
   if (mode === "upload") {
     return (
       <div className="space-y-4">
         <button
           type="button"
-          onClick={() => setMode("choose")}
+          onClick={() => setMode("manual")}
           className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
         >
-          &larr; Back
+          Enter manually instead
         </button>
 
         {/* File upload area */}
@@ -313,10 +265,10 @@ export function EstimateForm({ campaignVendorId, campaignId, onSubmitted, onCanc
     <form onSubmit={handleSubmitManual} className="space-y-4">
       <button
         type="button"
-        onClick={() => setMode("choose")}
+        onClick={() => setMode("upload")}
         className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
       >
-        &larr; Back
+        &larr; Back to upload
       </button>
 
       <div className="space-y-3">
