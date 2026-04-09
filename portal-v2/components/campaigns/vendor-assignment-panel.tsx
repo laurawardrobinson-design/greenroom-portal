@@ -20,6 +20,85 @@ import type { VendorInvoice } from "@/types/domain";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+type WorkflowGuidanceTone = "action" | "wait" | "done";
+
+function getWorkflowGuidance(
+  status: CampaignVendor["status"],
+  role: "Vendor" | "Producer" | "Admin" | "Other"
+): { tone: WorkflowGuidanceTone; message: string } {
+  if (role === "Vendor") {
+    switch (status) {
+      case "Invited":
+        return { tone: "action", message: "Action needed: submit your estimate to start approvals." };
+      case "Estimate Revision Requested":
+        return { tone: "action", message: "Action needed: revise estimate based on producer feedback." };
+      case "Estimate Submitted":
+        return { tone: "wait", message: "Waiting on Producer: estimate review and approval." };
+      case "Estimate Approved":
+        return { tone: "wait", message: "Waiting on Producer: upload PO and send for signature." };
+      case "PO Uploaded":
+        return { tone: "action", message: "Action needed: review and sign the PO." };
+      case "PO Signed":
+        return { tone: "wait", message: "Waiting on Producer: mark shoot complete before invoice upload is available." };
+      case "Shoot Complete":
+        return { tone: "action", message: "Action needed: upload invoice for producer review." };
+      case "Invoice Submitted":
+        return { tone: "wait", message: "Waiting on Producer: invoice review and pre-approval." };
+      case "Invoice Pre-Approved":
+        return { tone: "wait", message: "Waiting on HOP: final invoice approval." };
+      case "Invoice Approved":
+        return { tone: "done", message: "Invoice fully approved. Finance handoff is in progress." };
+      case "Paid":
+        return { tone: "done", message: "Payment has been completed." };
+      case "Rejected":
+        return { tone: "wait", message: "This workflow was rejected. Check notes and coordinate next steps with Producer." };
+      default:
+        return { tone: "wait", message: "Waiting on workflow updates." };
+    }
+  }
+
+  switch (status) {
+    case "Invited":
+      return { tone: "wait", message: "Waiting on Vendor: estimate submission." };
+    case "Estimate Submitted":
+      return { tone: "action", message: "Action needed: review estimate and approve or request revision." };
+    case "Estimate Revision Requested":
+      return { tone: "wait", message: "Waiting on Vendor: revised estimate submission." };
+    case "Estimate Approved":
+      return { tone: "action", message: "Action needed: upload PO and send for vendor signature." };
+    case "PO Uploaded":
+      return { tone: "wait", message: "Waiting on Vendor: PO signature." };
+    case "PO Signed":
+      return { tone: "action", message: "Action needed: mark shoot complete." };
+    case "Shoot Complete":
+      return { tone: "action", message: "Action needed: vendor invoice submission (or upload invoice on their behalf)." };
+    case "Invoice Submitted":
+      return { tone: "action", message: "Action needed: review and pre-approve invoice." };
+    case "Invoice Pre-Approved":
+      return role === "Admin"
+        ? { tone: "action", message: "Action needed: final HOP approval." }
+        : { tone: "wait", message: "Waiting on HOP: final invoice approval." };
+    case "Invoice Approved":
+      return { tone: "done", message: "Invoice fully approved. Finance handoff is in progress." };
+    case "Paid":
+      return { tone: "done", message: "Payment has been completed." };
+    case "Rejected":
+      return { tone: "wait", message: "Workflow rejected. Coordinate reset/retry path as needed." };
+    default:
+      return { tone: "wait", message: "Waiting on workflow updates." };
+  }
+}
+
+function getWorkflowGuidanceStyle(tone: WorkflowGuidanceTone): string {
+  if (tone === "action") {
+    return "border-amber-200 bg-amber-50 text-amber-800";
+  }
+  if (tone === "done") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  }
+  return "border-blue-200 bg-blue-50 text-blue-800";
+}
+
 /** Read-only invoice status shown to vendors after they've submitted */
 function VendorInvoiceView({ campaignVendorId }: { campaignVendorId: string }) {
   const { data } = useSWR<{ invoice: VendorInvoice | null }>(
@@ -216,6 +295,28 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                 key={cv.id}
                 className="rounded-lg border border-border bg-surface-secondary p-4"
               >
+                {(() => {
+                  const role =
+                    user?.role === "Vendor"
+                      ? "Vendor"
+                      : user?.role === "Admin"
+                        ? "Admin"
+                        : user?.role === "Producer"
+                          ? "Producer"
+                          : "Other";
+                  const guidance = getWorkflowGuidance(cv.status, role);
+                  return (
+                    <div
+                      className={`mb-3 rounded-md border px-3 py-2 text-xs ${getWorkflowGuidanceStyle(
+                        guidance.tone
+                      )}`}
+                    >
+                      <span className="font-semibold uppercase tracking-wide">Next Step:</span>{" "}
+                      {guidance.message}
+                    </div>
+                  );
+                })()}
+
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div>
                     <h4 className="text-sm font-semibold text-text-primary">
@@ -364,7 +465,7 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                         }
                       >
                         <Upload className="h-3.5 w-3.5" />
-                        Upload PO
+                        Upload PO & Send for Signature
                       </Button>
                     )}
                     {cv.status === "PO Signed" && (
@@ -404,7 +505,13 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                         }
                       >
                         <FileSearch className="h-3.5 w-3.5" />
-                        {["Invoice Approved", "Paid"].includes(cv.status) ? "View Invoice" : "Review Invoice"}
+                        {cv.status === "Invoice Submitted"
+                          ? "Review & Pre-Approve Invoice"
+                          : cv.status === "Invoice Pre-Approved" && user?.role === "Admin"
+                            ? "Final Review & Approve"
+                            : ["Invoice Approved", "Paid"].includes(cv.status)
+                              ? "View Invoice"
+                              : "Review Invoice"}
                       </Button>
                     )}
                   </div>

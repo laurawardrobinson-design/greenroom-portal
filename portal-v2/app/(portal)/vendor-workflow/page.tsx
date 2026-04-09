@@ -54,6 +54,47 @@ const ACTION_STATUSES = new Set<CampaignVendorStatus>([
   "Shoot Complete",
 ]);
 
+type WorkflowGuidanceTone = "action" | "wait" | "done";
+
+function getVendorWorkflowGuidance(
+  status: CampaignVendorStatus
+): { tone: WorkflowGuidanceTone; message: string } {
+  switch (status) {
+    case "Invited":
+      return { tone: "action", message: "Action needed: submit estimate to start approvals." };
+    case "Estimate Revision Requested":
+      return { tone: "action", message: "Action needed: revise estimate based on producer feedback." };
+    case "Estimate Submitted":
+      return { tone: "wait", message: "Waiting on Producer: estimate review." };
+    case "Estimate Approved":
+      return { tone: "wait", message: "Waiting on Producer: upload PO and send for signature." };
+    case "PO Uploaded":
+      return { tone: "action", message: "Action needed: review and sign PO." };
+    case "PO Signed":
+      return { tone: "wait", message: "Waiting on Producer: mark shoot complete before invoice submission is enabled." };
+    case "Shoot Complete":
+      return { tone: "action", message: "Action needed: submit invoice." };
+    case "Invoice Submitted":
+      return { tone: "wait", message: "Waiting on Producer: invoice review and pre-approval." };
+    case "Invoice Pre-Approved":
+      return { tone: "wait", message: "Waiting on HOP: final invoice approval." };
+    case "Invoice Approved":
+      return { tone: "done", message: "Invoice approved. Finance handoff is in progress." };
+    case "Paid":
+      return { tone: "done", message: "Payment has been completed." };
+    case "Rejected":
+      return { tone: "wait", message: "This workflow was rejected. Coordinate next steps with Producer." };
+    default:
+      return { tone: "wait", message: "Waiting on workflow updates." };
+  }
+}
+
+function workflowGuidanceStyle(tone: WorkflowGuidanceTone): string {
+  if (tone === "action") return "border-amber-200 bg-amber-50 text-amber-800";
+  if (tone === "done") return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  return "border-blue-200 bg-blue-50 text-blue-800";
+}
+
 function getPoPreviewUrl(url: string): string {
   if (!url.startsWith("/")) return url;
   if (typeof window === "undefined") return url;
@@ -360,6 +401,20 @@ export default function VendorWorkflowPage() {
                   currentStatus={assignment.status}
                   estimateFeedback={assignment.estimateFeedback}
                 />
+
+                {(() => {
+                  const guidance = getVendorWorkflowGuidance(assignment.status);
+                  return (
+                    <div
+                      className={`rounded-md border px-3 py-2 text-xs ${workflowGuidanceStyle(
+                        guidance.tone
+                      )}`}
+                    >
+                      <span className="font-semibold uppercase tracking-wide">Next Step:</span>{" "}
+                      {guidance.message}
+                    </div>
+                  );
+                })()}
 
                 <PaymentTracker status={assignment.status} />
 
