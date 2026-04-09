@@ -120,7 +120,7 @@ export async function PATCH(request: Request) {
         .select("campaign_id, campaigns(name, wf_number)")
         .eq("id", campaignVendorId)
         .single();
-      const campaign = cv?.campaigns as { name: string; wf_number: string } | null;
+      const campaign = (Array.isArray(cv?.campaigns) ? cv.campaigns[0] : cv?.campaigns) as { name: string; wf_number: string } | null;
       notifyAdmins({
         type: "invoice_submitted",
         level: "urgent",

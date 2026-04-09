@@ -97,7 +97,7 @@ export async function notifyCampaignProducers(
 
   if (!cv) return;
   const campaignId = cv.campaign_id;
-  const campaign = cv.campaigns as { id: string; name: string; wf_number: string; producer_id: string | null } | null;
+  const campaign = (Array.isArray(cv.campaigns) ? cv.campaigns[0] : cv.campaigns) as { id: string; name: string; wf_number: string; producer_id: string | null } | null;
 
   // Gather producer user IDs
   const producerIds = new Set<string>();

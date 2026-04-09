@@ -484,11 +484,11 @@ export default function CampaignDetailPage({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ userId }),
               });
-              await refreshCampaign();
+              mutate();
             }}
             onRemoveProducer={async (userId) => {
               await fetch(`/api/campaigns/${id}/producers/${userId}`, { method: "DELETE" });
-              await refreshCampaign();
+              mutate();
             }}
             onAssignAD={async (userId) => { await handleUpdate("artDirectorId", userId); }}
           />

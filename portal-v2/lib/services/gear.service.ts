@@ -14,6 +14,7 @@ function toGearItem(row: Record<string, unknown>): GearItem {
   return {
     id: row.id as string,
     name: row.name as string,
+    section: (row.section as "Gear" | "Props") || "Gear",
     category: row.category as GearCategory,
     brand: row.brand as string,
     model: row.model as string,

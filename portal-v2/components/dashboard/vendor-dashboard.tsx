@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { formatCurrency } from "@/lib/utils/format";
 import { VENDOR_STATUS_COLORS } from "@/lib/constants/statuses";
+import type { CampaignVendorStatus } from "@/types/domain";
 import { Briefcase, FileText, PenLine, Upload, Clock, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
@@ -143,7 +144,7 @@ export function VendorDashboard({ user }: Props) {
                       </p>
                     </div>
                   </div>
-                  <Badge variant="custom" className={VENDOR_STATUS_COLORS[a.status]}>
+                  <Badge variant="custom" className={VENDOR_STATUS_COLORS[a.status as CampaignVendorStatus]}>
                     {a.status}
                   </Badge>
                 </Link>
@@ -194,7 +195,7 @@ export function VendorDashboard({ user }: Props) {
                       </p>
                     )}
                   </div>
-                  <Badge variant="custom" className={VENDOR_STATUS_COLORS[a.status]}>
+                  <Badge variant="custom" className={VENDOR_STATUS_COLORS[a.status as CampaignVendorStatus]}>
                     {a.status}
                   </Badge>
                 </Link>
