@@ -15,7 +15,7 @@ interface PdfPreviewModalProps {
 export function PdfPreviewModal({ open, onClose, url, fileName, onRefresh }: PdfPreviewModalProps) {
   const [loadError, setLoadError] = useState(false);
 
-  // Reset error state when URL changes
+  // Reset state when URL changes
   useEffect(() => {
     setLoadError(false);
   }, [url]);
@@ -26,6 +26,10 @@ export function PdfPreviewModal({ open, onClose, url, fileName, onRefresh }: Pdf
     url && url.startsWith("/") && typeof window !== "undefined"
       ? `${window.location.origin}${url}`
       : url;
+  const proxiedUrl =
+    resolvedUrl && typeof window !== "undefined" && !resolvedUrl.startsWith(window.location.origin)
+      ? `/api/document-proxy?url=${encodeURIComponent(resolvedUrl)}`
+      : resolvedUrl;
 
   // Escape key closes modal
   useEffect(() => {
@@ -92,6 +96,14 @@ export function PdfPreviewModal({ open, onClose, url, fileName, onRefresh }: Pdf
               <p className="text-sm text-text-secondary">
                 The document link has expired or could not be loaded.
               </p>
+              <a
+                href={resolvedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                Open in new tab
+              </a>
               {onRefresh && (
                 <Button
                   size="sm"
@@ -108,7 +120,7 @@ export function PdfPreviewModal({ open, onClose, url, fileName, onRefresh }: Pdf
             </div>
           ) : (
             <iframe
-              src={resolvedUrl}
+              src={proxiedUrl || resolvedUrl}
               title={displayName}
               className="w-full h-full border-0 rounded-b-xl"
               style={{ minHeight: "70vh" }}

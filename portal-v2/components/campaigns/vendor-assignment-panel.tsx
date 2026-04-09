@@ -207,14 +207,21 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           const invoice = data?.invoice;
-          if (!invoice?.fileUrl) {
-            toast("error", "No invoice file found to preview");
+          if (invoice?.fileUrl) {
+            setDocPreview({ url: invoice.fileUrl, fileName: invoice.fileName || "Invoice" });
             return;
           }
-          setDocPreview({ url: invoice.fileUrl, fileName: invoice.fileName || "Invoice" });
+          // Always provide a viewable fallback doc immediately.
+          setDocPreview({
+            url: `/invoices/${campaignVendorId}`,
+            fileName: `${data?.vendorName || "Vendor"} Invoice`,
+          });
         })
         .catch(() => {
-          toast("error", "Failed to load invoice preview");
+          setDocPreview({
+            url: `/invoices/${campaignVendorId}`,
+            fileName: "Invoice",
+          });
         });
     }
 
