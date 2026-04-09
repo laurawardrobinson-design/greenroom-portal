@@ -206,7 +206,7 @@ export default function CampaignsPage() {
               {user?.role !== "Vendor" && <div className="w-28 shrink-0 text-right hidden lg:block">Add&apos;l Funds</div>}
             </div>
             {displayedCampaigns.map((campaign) => (
-              <CampaignRow key={campaign.id} campaign={campaign} onMutate={mutate} hideFinancials={user?.role === "Vendor"} />
+              <CampaignRow key={campaign.id} campaign={campaign} onMutate={mutate} hideFinancials={user?.role === "Vendor"} readOnly={user?.role === "Vendor"} />
             ))}
           </div>
         )}

@@ -14,9 +14,10 @@ interface Props {
   campaign: CampaignListItem;
   onMutate?: () => void;
   hideFinancials?: boolean;
+  readOnly?: boolean;
 }
 
-export function CampaignRow({ campaign, onMutate, hideFinancials }: Props) {
+export function CampaignRow({ campaign, onMutate, hideFinancials, readOnly }: Props) {
   const router = useRouter();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -135,7 +136,7 @@ export function CampaignRow({ campaign, onMutate, hideFinancials }: Props) {
       {/* Producer */}
       <div
         className="w-28 shrink-0 hidden lg:block"
-        onClick={(e) => { e.stopPropagation(); setEditingProducer(true); setEditingAD(false); }}
+        onClick={readOnly ? undefined : (e) => { e.stopPropagation(); setEditingProducer(true); setEditingAD(false); }}
       >
         {editingProducer ? (
           <select
@@ -160,7 +161,7 @@ export function CampaignRow({ campaign, onMutate, hideFinancials }: Props) {
       {/* Art Director */}
       <div
         className="w-28 shrink-0 hidden lg:block"
-        onClick={(e) => { e.stopPropagation(); setEditingAD(true); setEditingProducer(false); }}
+        onClick={readOnly ? undefined : (e) => { e.stopPropagation(); setEditingAD(true); setEditingProducer(false); }}
       >
         {editingAD ? (
           <select
