@@ -83,7 +83,10 @@ function SectionTabs({ active, onChange }: {
 function DocRow({ row, onOpen }: { row: PendingRow; onOpen: () => void }) {
   const label = STATUS_LABEL[row.status] ?? "";
   const style = STATUS_STYLE[row.status] ?? "bg-surface-secondary text-text-secondary border-border";
-  const isOver = row.invoiceTotal > 0 && row.estimateTotal > 0 && row.invoiceTotal > row.estimateTotal;
+  const hasBoth = row.invoiceTotal > 0 && row.estimateTotal > 0;
+  const diff = hasBoth ? row.invoiceTotal - row.estimateTotal : 0;
+  const isOver = diff > 0;
+  const isUnder = diff < 0;
 
   return (
     <div className="px-3.5 py-2.5 flex items-center gap-4">
@@ -103,12 +106,15 @@ function DocRow({ row, onOpen }: { row: PendingRow; onOpen: () => void }) {
           <span className="text-text-tertiary">Est: <span className="font-medium text-text-primary">{formatCurrency(row.estimateTotal)}</span></span>
         )}
         {row.invoiceTotal > 0 && (
-          <span className="text-text-tertiary">
+          <span className="text-text-tertiary flex items-center gap-1">
             Inv:{" "}
-            <span className={`font-medium ${isOver ? "text-amber-600" : "text-text-primary"}`}>
-              {formatCurrency(row.invoiceTotal)}
-            </span>
-            {isOver && <span className="ml-1 text-[10px] text-amber-600 font-semibold">↑ over</span>}
+            <span className="font-medium text-text-primary">{formatCurrency(row.invoiceTotal)}</span>
+            {isOver && (
+              <span className="text-[10px] font-semibold text-amber-600">+{formatCurrency(diff)}</span>
+            )}
+            {isUnder && (
+              <span className="text-[10px] font-semibold text-emerald-600">{formatCurrency(diff)}</span>
+            )}
           </span>
         )}
         {row.paymentAmount > 0 && (
@@ -170,7 +176,9 @@ export default function EstimatesInvoicesPage() {
     Promise.all([mutatePending(), mutateRecent()]).then(([updatedPending]) => {
       if (managingRow && Array.isArray(updatedPending)) {
         const fresh = updatedPending.find((r) => r.id === managingRow.id);
-        setManagingRow(fresh || null);
+        // Only update if found — don't close the modal when the row
+        // moves to a different status bucket (e.g. Estimate Approved → PO step)
+        if (fresh) setManagingRow(fresh);
       }
     });
   }

@@ -27,6 +27,12 @@ function toCampaignVendor(row: Record<string, unknown>): CampaignVendor {
     signatureName: (row.signature_name as string) || null,
     signedIp: (row.signed_ip as string) || null,
     signatureTimestamp: (row.signature_timestamp as string) || null,
+    signatureFieldX: row.signature_field_x != null ? Number(row.signature_field_x) : 10,
+    signatureFieldY: row.signature_field_y != null ? Number(row.signature_field_y) : 76,
+    poNumberFieldX: row.po_number_field_x != null ? Number(row.po_number_field_x) : 62,
+    poNumberFieldY: row.po_number_field_y != null ? Number(row.po_number_field_y) : 8,
+    poAuthorizedBy: (row.po_authorized_by as string) || null,
+    poAuthorizedAt: (row.po_authorized_at as string) || null,
     invoiceTotal: Number(row.invoice_total) || 0,
     paymentAmount: Number(row.payment_amount) || 0,
     paymentDate: (row.payment_date as string) || null,
@@ -173,6 +179,12 @@ export async function transitionVendorStatus(
   if (targetStatus === "PO Uploaded" && payload) {
     if (payload.poFileUrl) updateData.po_file_url = payload.poFileUrl;
     if (payload.poNumber) updateData.po_number = payload.poNumber;
+    if (payload.signatureFieldX != null) updateData.signature_field_x = payload.signatureFieldX;
+    if (payload.signatureFieldY != null) updateData.signature_field_y = payload.signatureFieldY;
+    if (payload.poNumberFieldX != null) updateData.po_number_field_x = payload.poNumberFieldX;
+    if (payload.poNumberFieldY != null) updateData.po_number_field_y = payload.poNumberFieldY;
+    if (payload.poAuthorizedBy) updateData.po_authorized_by = payload.poAuthorizedBy;
+    if (payload.poAuthorizedAt) updateData.po_authorized_at = payload.poAuthorizedAt;
   }
 
   if (targetStatus === "Paid" && payload) {

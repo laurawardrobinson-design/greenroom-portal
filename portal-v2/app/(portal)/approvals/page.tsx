@@ -728,7 +728,7 @@ export default function ApprovalsPage() {
           campaignVendor={reviewModal.cv}
           campaignId={reviewModal.cv.campaignId}
           wfNumber={reviewModal.wfNumber}
-          onStatusChange={() => { mutate(); setReviewModal(null); }}
+          onStatusChange={() => { mutate(); }}
         />
       )}
     </div>

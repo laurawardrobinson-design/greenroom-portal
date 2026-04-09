@@ -250,6 +250,12 @@ export interface CampaignVendor {
   signatureName: string | null;
   signedIp: string | null;
   signatureTimestamp: string | null;
+  signatureFieldX: number;
+  signatureFieldY: number;
+  poNumberFieldX: number;
+  poNumberFieldY: number;
+  poAuthorizedBy: string | null;
+  poAuthorizedAt: string | null;
   invoiceTotal: number;
   paymentAmount: number;
   paymentDate: string | null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import useSWR from "swr";
 import type { CampaignVendor, CampaignVendorStatus, VendorEstimateItem, VendorInvoice, VendorInvoiceItem, InvoiceFlag } from "@/types/domain";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,11 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatCurrency } from "@/lib/utils/format";
 import { EstimateForm } from "@/components/vendors/estimate-form";
 import { PoSignature } from "@/components/vendors/po-signature";
+import { PO_DOC_REF_HEIGHT } from "@/components/budget/po-field-placer";
 import {
   X, FileText, Check, CheckCircle2, Lock, Upload, AlertTriangle,
-  CornerDownLeft, ExternalLink, PenLine, Download,
+  CornerDownLeft, ExternalLink, PenLine, Download, GripVertical,
+  Pencil, Plus, Trash2,
 } from "lucide-react";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -210,33 +212,65 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
   const isProducer = user?.role === "Producer" || user?.role === "Admin";
   const isHop = user?.role === "Admin";
 
+  // Local status so the modal stays open and advances steps after transitions
+  const [localStatus, setLocalStatus] = useState<CampaignVendorStatus>(cv.status);
+
   const [selectedStep, setSelectedStep] = useState(() => getDefaultStep(cv.status));
+  const [viewingDoc, setViewingDoc] = useState<"estimate" | "po" | "invoice">(() =>
+    getDefaultStep(cv.status) === 2 ? "invoice" : getDefaultStep(cv.status) === 1 ? "po" : "estimate"
+  );
   const [showEstimateForm, setShowEstimateForm] = useState(false);
   const [showPoSignature, setShowPoSignature] = useState(false);
   const [acting, setActing] = useState(false);
   const [sendingBack, setSendingBack] = useState(false);
   const [sendBackReason, setSendBackReason] = useState("");
-  const [uploadingPo, setUploadingPo] = useState(false);
   const [uploadingInvoice, setUploadingInvoice] = useState(false);
-  const [confirmShootComplete, setConfirmShootComplete] = useState(false);
-  const [poNumberInput, setPoNumberInput] = useState(cv.poNumber || `PO-${wfNumber}`);
-  const poFileInputRef = useRef<HTMLInputElement>(null);
+  const [editingItems, setEditingItems] = useState(false);
+  const [draftItems, setDraftItems] = useState<{ id: string; description: string; quantity: number; unitPrice: number; amount: number; category: string }[]>([]);
+  const [savingItems, setSavingItems] = useState(false);
   const invoiceFileInputRef = useRef<HTMLInputElement>(null);
+  const placementRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const [dragOff, setDragOff] = useState({ x: 0, y: 0 });
+  const [sigPos, setSigPos] = useState({ x: cv.signatureFieldX ?? 10, y: cv.signatureFieldY ?? 76 });
 
-  // Sync selected step when status changes
+  // Sync local status when parent prop changes (e.g. external refresh)
+  useEffect(() => { setLocalStatus(cv.status); }, [cv.status]);
+
+  // Advance step when local status changes
   useEffect(() => {
-    setSelectedStep(getDefaultStep(cv.status));
+    const step = getDefaultStep(localStatus);
+    setSelectedStep(step);
+    setViewingDoc(step === 2 ? "invoice" : step === 1 ? "po" : "estimate");
     setShowEstimateForm(false);
     setShowPoSignature(false);
     setSendingBack(false);
     setSendBackReason("");
-    setConfirmShootComplete(false);
-  }, [cv.status]);
+  }, [localStatus]);
 
-  // Keep PO number input in sync with actual value (after PO uploaded)
+  // Drag handler for signature field placement
+  const startDrag = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setDragOff({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setDragging(true);
+  }, []);
+
   useEffect(() => {
-    if (cv.poNumber) setPoNumberInput(cv.poNumber);
-  }, [cv.poNumber]);
+    if (!dragging) return;
+    function onMove(e: MouseEvent) {
+      if (!placementRef.current) return;
+      const rect = placementRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(95, ((e.clientX - rect.left - dragOff.x) / rect.width) * 100));
+      const y = Math.max(0, Math.min(95, ((e.clientY - rect.top - dragOff.y) / PO_DOC_REF_HEIGHT) * 100));
+      setSigPos({ x, y });
+    }
+    function onUp() { setDragging(false); }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, [dragging, dragOff]);
+
 
   // Escape key + body scroll lock
   useEffect(() => {
@@ -268,13 +302,15 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
   const invoice = invoiceData?.invoice;
   const invoiceItems = invoiceData?.items || [];
 
-  const [s0, s1, s2] = getStepStates(cv.status);
+  const [s0, s1, s2] = getStepStates(localStatus);
 
   // Document URL per step
   const estimateDocUrl = cvData?.estimateFileUrl || (estimateItems.length > 0 ? `/estimates/${cv.id}` : null);
   const estimateDocName = cvData?.estimateFileName || `${cv.vendor?.companyName || "Vendor"} Estimate`;
-  const poDocUrl = cv.poSignedFileUrl || cv.poFileUrl;
-  const poDocName = `${cv.vendor?.companyName || "Vendor"} PO${cv.poNumber ? ` — ${cv.poNumber}` : ""}`;
+  // Show the generated PO — always use /po/[id] so it renders with live signature data
+  const isSigned = !!cv.poSignedAt;
+  const poDocUrl = `/po/${cv.id}`;
+  const poDocName = `${cv.vendor?.companyName || "Vendor"} ${isSigned ? "Signed PO" : "PO"}${cv.poNumber ? ` — ${cv.poNumber}` : ""}`;
   const invoiceDocUrl = invoice
     ? (invoice.storagePath && invoice.fileUrl && !invoice.fileUrl.startsWith("internal")
         ? invoice.fileUrl
@@ -305,6 +341,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
         const d = await res.json();
         throw new Error(d.error || "Failed");
       }
+      setLocalStatus(targetStatus);
       mutateCv();
       onStatusChange();
     } catch (err) {
@@ -318,6 +355,16 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
     await transition("Estimate Approved");
     toast("success", "Estimate approved");
     setSendingBack(false);
+  }
+
+  async function handleSendPO() {
+    await transition("PO Uploaded", {
+      signatureFieldX: sigPos.x,
+      signatureFieldY: sigPos.y,
+      poAuthorizedBy: user?.name || "Producer",
+      poAuthorizedAt: new Date().toISOString(),
+    });
+    toast("success", "PO sent for signature");
   }
 
   async function handleSendBack() {
@@ -338,31 +385,6 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
       toast("error", "Failed to send back");
     } finally {
       setActing(false);
-    }
-  }
-
-  async function handlePoUpload(file: File) {
-    setUploadingPo(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("campaignId", campaignId);
-      formData.append("category", "Contract");
-      const uploadRes = await fetch("/api/files", { method: "POST", body: formData });
-      if (!uploadRes.ok) throw new Error("Upload failed");
-      const { url } = await uploadRes.json();
-      await fetch(`/api/campaign-vendors/${cv.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "transition", targetStatus: "PO Uploaded", payload: { poFileUrl: url, poNumber: poNumberInput.trim() || undefined } }),
-      });
-      toast("success", "PO uploaded");
-      setSelectedStep(1);
-      onStatusChange();
-    } catch {
-      toast("error", "Failed to upload PO");
-    } finally {
-      setUploadingPo(false);
     }
   }
 
@@ -404,7 +426,68 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
     }
   }
 
+  function startEditItems() {
+    setDraftItems(estimateItems.map((i) => ({
+      id: i.id,
+      description: i.description,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      amount: i.amount,
+      category: i.category || "",
+    })));
+    setEditingItems(true);
+  }
+
+  function updateDraftItem(idx: number, field: "description" | "quantity" | "unitPrice" | "category", value: string) {
+    setDraftItems((prev) => prev.map((item, i) => {
+      if (i !== idx) return item;
+      const updated = { ...item, [field]: field === "description" || field === "category" ? value : Number(value) || 0 };
+      if (field === "quantity" || field === "unitPrice") {
+        updated.amount = Math.round(updated.quantity * updated.unitPrice * 100) / 100;
+      }
+      return updated;
+    }));
+  }
+
+  function addDraftRow() {
+    setDraftItems((prev) => [...prev, { id: `new-${Date.now()}`, description: "", quantity: 1, unitPrice: 0, amount: 0, category: "" }]);
+  }
+
+  function removeDraftRow(idx: number) {
+    setDraftItems((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function saveEstimateItems() {
+    setSavingItems(true);
+    try {
+      const res = await fetch(`/api/campaign-vendors/${cv.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_estimate_items",
+          items: draftItems.map((d) => ({
+            description: d.description,
+            quantity: d.quantity,
+            unitPrice: d.unitPrice,
+            amount: d.amount,
+            category: d.category || null,
+          })),
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      await mutateCv();
+      setEditingItems(false);
+      toast("success", "Estimate updated");
+    } catch {
+      toast("error", "Failed to save estimate items");
+    } finally {
+      setSavingItems(false);
+    }
+  }
+
   if (!open) return null;
+
+  const displayPoNumber = cv.poNumber || `PO${wfNumber}`;
 
   const vendorName = cv.vendor?.companyName || "Vendor";
   const vendorCategory = cv.vendor?.category;
@@ -427,7 +510,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
     }
 
     // Vendor — invited (no estimate yet)
-    if (isVendor && cv.status === "Invited") {
+    if (isVendor && localStatus === "Invited") {
       return (
         <div className="mt-3 pt-3 border-t border-border">
           <p className="text-xs text-text-tertiary mb-3">Submit your estimate as a PDF upload or itemized line items.</p>
@@ -440,7 +523,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
     }
 
     // Vendor — estimate submitted (waiting for review)
-    if (isVendor && cv.status === "Estimate Submitted") {
+    if (isVendor && localStatus === "Estimate Submitted") {
       return (
         <div className="mt-3 pt-3 border-t border-border space-y-2">
           <p className="text-xs text-text-secondary">Submitted — waiting for producer review.</p>
@@ -473,48 +556,134 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
     }
 
     // Producer — estimate submitted
-    if (isProducer && cv.status === "Estimate Submitted") {
-      const total = estimateItems.reduce((s, i) => s + i.amount, 0);
+    if (isProducer && localStatus === "Estimate Submitted") {
+      const displayItems = editingItems ? draftItems : estimateItems;
+      const total = displayItems.reduce((s, i) => s + i.amount, 0);
       return (
         <div className="mt-3 pt-3 border-t border-border space-y-3">
           {/* Line items */}
-          {!isPdfEstimate && estimateItems.length > 0 && (
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border text-text-tertiary">
-                  <th className="text-left py-1.5 font-medium">Description</th>
-                  <th className="text-right py-1.5 font-medium">Qty</th>
-                  <th className="text-right py-1.5 font-medium">Unit</th>
-                  <th className="text-right py-1.5 font-medium">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {estimateItems.map((item) => (
-                  <tr key={item.id} className="border-b border-border-light">
-                    <td className="py-1.5 text-text-primary">{item.description}</td>
-                    <td className="py-1.5 text-right text-text-secondary">{item.quantity}</td>
-                    <td className="py-1.5 text-right text-text-secondary">{formatCurrency(item.unitPrice)}</td>
-                    <td className="py-1.5 text-right font-medium text-text-primary">{formatCurrency(item.amount)}</td>
+          {!isPdfEstimate && (estimateItems.length > 0 || editingItems) && (
+            <div className="space-y-1.5">
+              {/* Edit / save header */}
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Line Items</span>
+                {!editingItems ? (
+                  <button
+                    onClick={startEditItems}
+                    className="inline-flex items-center gap-1 text-[10px] font-medium text-text-tertiary hover:text-primary transition-colors"
+                  >
+                    <Pencil className="h-3 w-3" /> Edit
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setEditingItems(false)}
+                      className="text-[10px] text-text-tertiary hover:text-text-secondary"
+                    >
+                      Cancel
+                    </button>
+                    <Button size="sm" onClick={saveEstimateItems} loading={savingItems} disabled={savingItems}>
+                      Save
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-text-tertiary">
+                    <th className="text-left py-1.5 font-medium">Description</th>
+                    <th className="text-right py-1.5 font-medium w-10">Qty</th>
+                    <th className="text-right py-1.5 font-medium w-16">Unit</th>
+                    <th className="text-right py-1.5 font-medium w-16">Total</th>
+                    {editingItems && <th className="w-5" />}
                   </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-border font-semibold">
-                  <td colSpan={3} className="py-1.5 text-text-primary">Total</td>
-                  <td className="py-1.5 text-right text-text-primary">{formatCurrency(total)}</td>
-                </tr>
-              </tfoot>
-            </table>
+                </thead>
+                <tbody>
+                  {displayItems.map((item, idx) => (
+                    <tr key={item.id} className="border-b border-border-light">
+                      {editingItems ? (
+                        <>
+                          <td className="py-1 pr-1">
+                            <input
+                              type="text"
+                              value={(item as typeof draftItems[number]).description}
+                              onChange={(e) => updateDraftItem(idx, "description", e.target.value)}
+                              className="w-full text-xs bg-surface-secondary border border-border rounded px-1.5 py-0.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              placeholder="Description"
+                            />
+                          </td>
+                          <td className="py-1 pr-1">
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={(item as typeof draftItems[number]).quantity}
+                              onChange={(e) => updateDraftItem(idx, "quantity", e.target.value)}
+                              className="w-full text-xs bg-surface-secondary border border-border rounded px-1.5 py-0.5 text-right text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                          </td>
+                          <td className="py-1 pr-1">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={(item as typeof draftItems[number]).unitPrice}
+                              onChange={(e) => updateDraftItem(idx, "unitPrice", e.target.value)}
+                              className="w-full text-xs bg-surface-secondary border border-border rounded px-1.5 py-0.5 text-right text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                          </td>
+                          <td className="py-1 text-right font-medium text-text-primary tabular-nums">
+                            {formatCurrency(item.amount)}
+                          </td>
+                          <td className="py-1 pl-1">
+                            <button
+                              onClick={() => removeDraftRow(idx)}
+                              className="text-text-disabled hover:text-destructive transition-colors"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="py-1.5 text-text-primary">{item.description}</td>
+                          <td className="py-1.5 text-right text-text-secondary">{item.quantity}</td>
+                          <td className="py-1.5 text-right text-text-secondary">{formatCurrency(item.unitPrice)}</td>
+                          <td className="py-1.5 text-right font-medium text-text-primary">{formatCurrency(item.amount)}</td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-border font-semibold">
+                    <td colSpan={editingItems ? 3 : 3} className="py-1.5 text-text-primary">Total</td>
+                    <td className="py-1.5 text-right text-text-primary">{formatCurrency(total)}</td>
+                    {editingItems && <td />}
+                  </tr>
+                </tfoot>
+              </table>
+
+              {editingItems && (
+                <button
+                  onClick={addDraftRow}
+                  className="inline-flex items-center gap-1 text-[10px] font-medium text-text-tertiary hover:text-primary transition-colors pt-0.5"
+                >
+                  <Plus className="h-3 w-3" /> Add row
+                </button>
+              )}
+            </div>
           )}
           {isPdfEstimate && (
             <p className="text-xs text-text-tertiary">PDF estimate — see document viewer.</p>
           )}
-          {estimateItems.length === 0 && (
+          {estimateItems.length === 0 && !editingItems && (
             <p className="text-xs text-text-tertiary">Loading estimate details…</p>
           )}
 
           {/* Actions */}
-          {!sendingBack && (
+          {!sendingBack && !editingItems && (
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setSendingBack(true)}
@@ -594,7 +763,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
     }
 
     // Vendor — PO uploaded, needs signing
-    if (isVendor && cv.status === "PO Uploaded") {
+    if (isVendor && localStatus === "PO Uploaded") {
       if (showPoSignature) {
         return (
           <div className="mt-3 pt-3 border-t border-border">
@@ -619,7 +788,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
     }
 
     // Vendor — PO signed, waiting for shoot
-    if (isVendor && cv.status === "PO Signed") {
+    if (isVendor && localStatus === "PO Signed") {
       return (
         <div className="mt-3 pt-3 border-t border-border space-y-1">
           <div className="flex items-center gap-2">
@@ -639,38 +808,23 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
       );
     }
 
-    // Producer — upload PO
-    if (isProducer && cv.status === "Estimate Approved") {
+    // Producer — ready to send PO
+    if (isProducer && localStatus === "Estimate Approved") {
       return (
         <div className="mt-3 pt-3 border-t border-border space-y-3">
-          <p className="text-xs text-text-secondary">Upload the PO document for this vendor to sign.</p>
-          <div>
-            <label className="block text-xs font-medium text-text-primary mb-1.5">PO Number</label>
-            <input
-              type="text"
-              value={poNumberInput}
-              onChange={(e) => setPoNumberInput(e.target.value)}
-              placeholder={`PO-${wfNumber}`}
-              className="w-full rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <input
-            ref={poFileInputRef}
-            type="file"
-            accept=".pdf,.doc,.docx"
-            className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePoUpload(f); e.target.value = ""; }}
-          />
-          <Button size="sm" variant="secondary" loading={uploadingPo} onClick={() => poFileInputRef.current?.click()}>
-            <Upload className="h-3.5 w-3.5" />
-            Upload PO Document
+          <p className="text-xs text-text-secondary">
+            The PO is generated from the approved estimate. Drag the signature field to where you want the vendor to sign, then send.
+          </p>
+          <Button size="sm" onClick={handleSendPO} loading={acting} disabled={acting}>
+            <PenLine className="h-3.5 w-3.5" />
+            Send for Signature
           </Button>
         </div>
       );
     }
 
     // Producer — PO uploaded, waiting for vendor to sign
-    if (isProducer && cv.status === "PO Uploaded") {
+    if (isProducer && localStatus === "PO Uploaded") {
       return (
         <div className="mt-3 pt-3 border-t border-border space-y-2">
           <p className="text-xs text-text-secondary">PO uploaded{cv.poNumber ? ` (${cv.poNumber})` : ""}. Waiting for vendor signature.</p>
@@ -678,31 +832,14 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
       );
     }
 
-    // Producer — PO signed, needs to mark shoot complete
-    if (isProducer && cv.status === "PO Signed") {
+    // Producer — PO signed (vendor will submit invoice directly)
+    if (isProducer && localStatus === "PO Signed") {
       return (
-        <div className="mt-3 pt-3 border-t border-border space-y-3">
+        <div className="mt-3 pt-3 border-t border-border">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-            <p className="text-xs text-text-secondary">PO signed by {cv.signatureName || "vendor"}.</p>
+            <p className="text-xs text-text-secondary">Signed{cv.signatureName ? ` by ${cv.signatureName}` : ""}. Waiting for vendor invoice.</p>
           </div>
-          {!confirmShootComplete ? (
-            <Button size="sm" variant="secondary" onClick={() => setConfirmShootComplete(true)}>
-              Mark Shoot Complete
-            </Button>
-          ) : (
-            <div className="rounded-lg border border-border bg-surface-secondary p-3 space-y-2">
-              <p className="text-xs font-medium text-text-primary">Mark shoot as complete?</p>
-              <p className="text-xs text-text-tertiary">This will notify the vendor to submit their invoice.</p>
-              <div className="flex gap-2">
-                <Button size="sm" onClick={() => { transition("Shoot Complete"); setConfirmShootComplete(false); }} disabled={acting} loading={acting}>
-                  <Check className="h-3.5 w-3.5" />
-                  Confirm
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setConfirmShootComplete(false)}>Cancel</Button>
-              </div>
-            </div>
-          )}
         </div>
       );
     }
@@ -721,11 +858,11 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
       );
     }
 
-    // Vendor — shoot complete, needs to upload invoice
-    if (isVendor && cv.status === "Shoot Complete") {
+    // Vendor — shoot complete or PO signed, upload invoice
+    if (isVendor && (localStatus === "Shoot Complete" || localStatus === "PO Signed")) {
       return (
         <div className="mt-3 pt-3 border-t border-border space-y-2">
-          <p className="text-xs text-text-secondary">The shoot is complete! Upload your invoice to begin payment processing.</p>
+          <p className="text-xs text-text-secondary">Your PO is signed. Upload your invoice to begin payment processing.</p>
           <input
             ref={invoiceFileInputRef}
             type="file"
@@ -760,7 +897,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
               <FileText className="h-3 w-3" /> {invoice.fileName} <ExternalLink className="h-3 w-3" />
             </a>
           )}
-          {cv.status === "Paid" && cv.paymentAmount > 0 && (
+          {localStatus === "Paid" && cv.paymentAmount > 0 && (
             <div className="flex items-center gap-2 mt-1">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
               <p className="text-xs font-medium text-emerald-700">
@@ -781,7 +918,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
     const isHopApproved = !!invoice?.hopApprovedAt;
 
     if (!invoice && isProducer) {
-      if (cv.status === "Shoot Complete") {
+      if (localStatus === "Shoot Complete") {
         // Producer can also upload invoice on behalf
         return (
           <div className="mt-3 pt-3 border-t border-border space-y-2">
@@ -955,7 +1092,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
       <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={onClose} />
 
       {/* Panel */}
-      <div className="relative w-full max-w-5xl flex flex-col bg-surface border border-border rounded-xl shadow-2xl overflow-hidden mt-4"
+      <div className="relative w-full max-w-[1044px] flex flex-col bg-surface border border-border rounded-xl shadow-2xl overflow-hidden mt-4"
         style={{ height: "calc(100vh - 3rem)" }}>
 
         {/* Header */}
@@ -977,19 +1114,128 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
         {/* Body */}
         <div className="flex flex-1 min-h-0">
           {/* Left: step cards */}
-          <div className="w-2/5 shrink-0 border-r border-border flex flex-col gap-3 p-4 overflow-y-auto">
+          <div className="w-[410px] shrink-0 border-r border-border flex flex-col gap-3 p-4 overflow-y-auto">
             <StepCard stepIndex={0} state={s0} label="Estimate" content={renderStep0Content()} selectedStep={selectedStep} onSelect={setSelectedStep} />
             <StepCard stepIndex={1} state={s1} label="PO" content={renderStep1Content()} selectedStep={selectedStep} onSelect={setSelectedStep} />
             <StepCard stepIndex={2} state={s2} label="Invoice" content={renderStep2Content()} selectedStep={selectedStep} onSelect={setSelectedStep} />
           </div>
 
           {/* Right: document viewer */}
-          <div className="flex-1 min-w-0">
-            <DocViewer
-              url={activeDocUrl}
-              fileName={activeDocName}
-              onRefresh={selectedStep === 2 ? () => mutateInvoice() : undefined}
-            />
+          <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
+            {/* Document tab strip — producer only, when multiple docs are available */}
+            {isProducer && localStatus !== "Estimate Approved" && s0 === "done" && (
+              <div className="flex items-center gap-0 border-b border-border bg-surface-secondary shrink-0 px-3">
+                {estimateDocUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setViewingDoc("estimate")}
+                    className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+                      viewingDoc === "estimate"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-text-tertiary hover:text-text-secondary"
+                    }`}
+                  >
+                    Estimate
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setViewingDoc("po")}
+                  className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+                    viewingDoc === "po"
+                      ? "border-primary text-primary"
+                      : "border-transparent text-text-tertiary hover:text-text-secondary"
+                  }`}
+                >
+                  {isSigned ? "Signed PO" : "PO"}
+                </button>
+                {invoiceDocUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setViewingDoc("invoice")}
+                    className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+                      viewingDoc === "invoice"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-text-tertiary hover:text-text-secondary"
+                    }`}
+                  >
+                    Invoice
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Content */}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {isProducer && localStatus === "Estimate Approved" ? (
+                <div className="flex flex-col h-full">
+                  {/* Header */}
+                  <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border shrink-0 bg-surface-secondary">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-3.5 w-3.5 text-text-tertiary shrink-0" />
+                      <span className="text-xs font-medium text-text-primary truncate">{estimateDocName}</span>
+                    </div>
+                    {estimateDocUrl && (
+                      <a href={proxyDocUrl(resolveDocUrl(estimateDocUrl)) || estimateDocUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-text-tertiary hover:text-text-primary transition-colors shrink-0">
+                        <ExternalLink className="h-3 w-3" />
+                        New tab
+                      </a>
+                    )}
+                  </div>
+                  {/* Placement canvas */}
+                  <div className="flex-1 overflow-y-auto">
+                    <div
+                      ref={placementRef}
+                      className="relative"
+                      style={{ height: PO_DOC_REF_HEIGHT }}
+                    >
+                      <iframe
+                        src={`/po/${cv.id}?placement=1`}
+                        title={estimateDocName}
+                        className="w-full border-0"
+                        style={{ height: PO_DOC_REF_HEIGHT, pointerEvents: dragging ? "none" : "auto" }}
+                      />
+                      {/* Signature placement field */}
+                      <div
+                        style={{ position: "absolute", left: `${sigPos.x}%`, top: `${(sigPos.y / 100) * PO_DOC_REF_HEIGHT}px`, zIndex: 10 }}
+                        onMouseDown={startDrag}
+                        className="cursor-grab active:cursor-grabbing select-none"
+                      >
+                        <div className={`flex items-center gap-2 rounded-md border-2 border-dashed px-3 py-2 transition-colors ${
+                          dragging ? "border-primary bg-primary/10" : "border-primary/60 bg-primary/5 hover:border-primary"
+                        }`}>
+                          <GripVertical className="h-4 w-4 text-primary/50 shrink-0" />
+                          <span className="text-sm font-medium text-primary">Vendor Signature</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Hint strip */}
+                  <div className="px-3 py-1.5 border-t border-border bg-surface-secondary shrink-0">
+                    <p className="text-[10px] text-text-tertiary">Drag the signature field to where you want the vendor to sign, then click "Send for Signature".</p>
+                  </div>
+                </div>
+              ) : (
+                <DocViewer
+                  url={
+                    isProducer && s0 === "done"
+                      ? (viewingDoc === "estimate" ? estimateDocUrl
+                        : viewingDoc === "po" ? poDocUrl
+                        : invoiceDocUrl)
+                      : activeDocUrl
+                  }
+                  fileName={
+                    isProducer && s0 === "done"
+                      ? (viewingDoc === "estimate" ? estimateDocName
+                        : viewingDoc === "po" ? poDocName
+                        : invoiceDocName)
+                      : activeDocName
+                  }
+                  onRefresh={viewingDoc === "invoice" || selectedStep === 2 ? () => mutateInvoice() : undefined}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>

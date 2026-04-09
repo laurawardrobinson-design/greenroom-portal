@@ -1,10 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { format } from "date-fns";
 import SignatureCanvas from "react-signature-canvas";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { ShieldCheck } from "lucide-react";
 
 interface Props {
   campaignVendorId: string;
@@ -22,6 +23,7 @@ export function PoSignature({
   const sigRef = useRef<SignatureCanvas | null>(null);
   const [name, setName] = useState("");
   const [signing, setSigning] = useState(false);
+  const signedAt = new Date();
 
   function clearSignature() {
     sigRef.current?.clear();
@@ -72,17 +74,10 @@ export function PoSignature({
   }
 
   return (
-    <form onSubmit={handleSign} className="space-y-5">
-      <div>
-        <p className="text-sm text-text-secondary mb-4">
-          By signing below, you agree to the terms of this Purchase Order.
-          Your signature, IP address, and timestamp will be recorded.
-        </p>
-      </div>
-
+    <form onSubmit={handleSign} autoComplete="off" className="space-y-4">
       {/* Signature canvas */}
       <div>
-        <label className="block text-sm font-medium text-text-primary mb-1.5">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
           Signature
         </label>
         <div className="rounded-lg border-2 border-dashed border-border bg-white overflow-hidden">
@@ -101,21 +96,38 @@ export function PoSignature({
           onClick={clearSignature}
           className="mt-1.5 text-xs text-text-tertiary hover:text-text-primary transition-colors"
         >
-          Clear signature
+          Clear
         </button>
       </div>
 
-      {/* Printed name */}
-      <Input
-        label="Printed Name"
-        placeholder="Your full legal name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-      />
+      {/* Printed name — autocomplete disabled to avoid browser autofill popup */}
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
+          Printed Name
+        </label>
+        <input
+          type="text"
+          autoComplete="off"
+          data-form-type="other"
+          placeholder="Your full legal name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          className="block w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+        />
+      </div>
+
+      {/* Timestamp + IP notice */}
+      <div className="flex items-start gap-2 rounded-lg bg-surface-secondary border border-border px-3 py-2">
+        <ShieldCheck className="h-3.5 w-3.5 text-text-tertiary shrink-0 mt-0.5" />
+        <div className="text-[10px] text-text-tertiary space-y-0.5">
+          <p><span className="font-medium text-text-secondary">Timestamp:</span> {format(signedAt, "MMM d, yyyy 'at' h:mm a")}</p>
+          <p><span className="font-medium text-text-secondary">IP address:</span> Captured server-side upon submission</p>
+        </div>
+      </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3">
+      <div className="flex justify-end gap-3 pt-1">
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>

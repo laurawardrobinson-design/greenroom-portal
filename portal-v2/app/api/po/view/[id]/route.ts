@@ -31,7 +31,11 @@ export async function GET(
       .order("sort_order", { ascending: true });
 
     return NextResponse.json({
-      cv,
+      cv: {
+        ...cv,
+        po_authorized_by: cv.po_authorized_by ?? null,
+        po_authorized_at: cv.po_authorized_at ?? null,
+      },
       estimateItems: estimateItems || [],
     });
   } catch (error) {
