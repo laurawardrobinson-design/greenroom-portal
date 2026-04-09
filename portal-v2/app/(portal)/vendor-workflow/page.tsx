@@ -8,10 +8,8 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { VendorLifecycleModal } from "@/components/campaigns/vendor-lifecycle-modal";
 import { formatCurrency } from "@/lib/utils/format";
-import { Settings2 } from "lucide-react";
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
@@ -143,46 +141,34 @@ export default function VendorWorkflowPage() {
             return (
               <Card
                 key={cv.id}
-                className={isFocused ? "ring-1 ring-primary/30 shadow-sm" : ""}
+                className={`cursor-pointer hover:bg-surface-hover transition-colors ${isFocused ? "ring-1 ring-primary/30 shadow-sm" : ""}`}
+                onClick={() => setManagingVendor(cv)}
               >
                 <CardHeader className="mb-0">
-                  <div className="min-w-0 flex-1">
-                    <CardTitle className="truncate">{campaignLabel}</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="min-w-0 flex-1 flex items-center gap-2">
                     {showDot && (
-                      <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                      <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
                     )}
-                    <Button
-                      size="sm"
-                      variant={showDot ? "primary" : "secondary"}
-                      onClick={() => setManagingVendor(cv)}
-                    >
-                      <Settings2 className="h-3.5 w-3.5" />
-                      Manage
-                    </Button>
+                    <CardTitle className="truncate">{campaignLabel}</CardTitle>
                   </div>
                 </CardHeader>
 
-                <div className="px-4 pb-3 mt-1.5 flex items-center gap-3 flex-wrap">
-                  {/* Phase + sub-label */}
-                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${PHASE_STYLE[phase]}`}>
+                <div className="px-4 pb-3 mt-1.5 flex items-center gap-3 overflow-hidden">
+                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold shrink-0 ${PHASE_STYLE[phase]}`}>
                     {PHASE_LABEL[phase]}
                   </span>
-                  <span className="text-xs text-text-secondary">{subLabel}</span>
-
-                  {/* Financials */}
+                  <span className="text-xs text-text-secondary shrink-0">{subLabel}</span>
                   {(cv.estimateTotal > 0 || cv.invoiceTotal > 0 || cv.paymentAmount > 0) && (
                     <>
-                      <span className="text-text-tertiary">·</span>
+                      <span className="text-text-tertiary shrink-0">·</span>
                       {cv.estimateTotal > 0 && (
-                        <span className="text-xs text-text-tertiary">Est: <span className="font-medium text-text-primary">{formatCurrency(cv.estimateTotal)}</span></span>
+                        <span className="text-xs text-text-tertiary shrink-0">Est: <span className="font-medium text-text-primary">{formatCurrency(cv.estimateTotal)}</span></span>
                       )}
                       {cv.invoiceTotal > 0 && (
-                        <span className="text-xs text-text-tertiary">Inv: <span className="font-medium text-text-primary">{formatCurrency(cv.invoiceTotal)}</span></span>
+                        <span className="text-xs text-text-tertiary shrink-0">Inv: <span className="font-medium text-text-primary">{formatCurrency(cv.invoiceTotal)}</span></span>
                       )}
                       {cv.paymentAmount > 0 && (
-                        <span className="text-xs text-text-tertiary">Paid: <span className="font-medium text-emerald-700">{formatCurrency(cv.paymentAmount)}</span></span>
+                        <span className="text-xs text-text-tertiary shrink-0">Paid: <span className="font-medium text-emerald-700">{formatCurrency(cv.paymentAmount)}</span></span>
                       )}
                     </>
                   )}
