@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Bell, AlertCircle, Calendar, X, Info } from "lucide-react";
 import { BudgetSidebarTile } from "@/components/campaigns/tiles/budget-sidebar-tile";
+import { ShotListModal } from "@/components/campaigns/shot-list-modal";
 import useSWR from "swr";
 import type { AppUser } from "@/types/domain";
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
@@ -89,6 +90,7 @@ export default function CampaignDetailPage({
 
   // Draft email modal
   const [showDraftEmail, setShowDraftEmail] = useState(false);
+  const [showShotListModal, setShowShotListModal] = useState(false);
   const [dismissedNotifs, setDismissedNotifs] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     try {
@@ -380,7 +382,7 @@ export default function CampaignDetailPage({
       </div>
 
       {/* === ROW 1: Calendar + Shoot Days | Documents | Budget === */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-stretch">
+      <div className={`grid grid-cols-1 gap-4 items-stretch ${isVendor ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
 
         {/* Calendar + Shoot Days */}
         <div className="lg:col-span-2 flex flex-col">
@@ -417,8 +419,8 @@ export default function CampaignDetailPage({
           hideAdminDocs={isArtDirector}
         />
 
-        {/* Budget */}
-        <div className="h-full">
+        {/* Budget / Inventory (vendors see inventory here instead) */}
+        <div className={`h-full ${isVendor ? "lg:col-span-2" : ""}`}>
           {showFinancials && (
             <CollapsibleSection
               id={`campaign-${id}-budget-sidebar`}
@@ -435,6 +437,16 @@ export default function CampaignDetailPage({
                 onRequestOverage={() => setShowOverageRequest(true)}
               />
             </CollapsibleSection>
+          )}
+          {isVendor && (
+            <InventoryTile
+              campaignProducts={campaignProducts}
+              campaignGear={campaignGear}
+              canEdit={false}
+              onAddProduct={() => {}}
+              onAddProps={() => {}}
+              onAddGear={() => {}}
+            />
           )}
         </div>
       </div>
@@ -453,10 +465,11 @@ export default function CampaignDetailPage({
         campaignStatus={campaign.status}
         onAddSetup={() => setShowAddSetup(true)}
         onMutate={mutate}
+        onViewFullList={isVendor ? () => setShowShotListModal(true) : undefined}
       />
 
       {/* === ROW 2: People | Inventory === */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+      <div className={`grid grid-cols-1 gap-4 items-stretch ${isVendor ? "" : "lg:grid-cols-2"}`}>
         <div>
           <PeopleTile
             campaignId={id}
@@ -480,14 +493,16 @@ export default function CampaignDetailPage({
             onAssignAD={async (userId) => { await handleUpdate("artDirectorId", userId); }}
           />
         </div>
-        <InventoryTile
-          campaignProducts={campaignProducts}
-          campaignGear={campaignGear}
-          canEdit={canEdit}
-          onAddProduct={() => setShowAddProduct(true)}
-          onAddProps={() => setShowAddProps(true)}
-          onAddGear={() => setShowAddGear(true)}
-        />
+        {!isVendor && (
+          <InventoryTile
+            campaignProducts={campaignProducts}
+            campaignGear={campaignGear}
+            canEdit={canEdit}
+            onAddProduct={() => setShowAddProduct(true)}
+            onAddProps={() => setShowAddProps(true)}
+            onAddGear={() => setShowAddGear(true)}
+          />
+        )}
       </div>
 
       {/* Shoot Day Modal */}
@@ -528,6 +543,15 @@ export default function CampaignDetailPage({
         onClose={() => setShowAddGear(false)}
         campaignId={id}
         onLinked={() => { setShowAddGear(false); mutate(); }}
+      />
+
+      {/* Shot List Modal (vendors) */}
+      <ShotListModal
+        open={showShotListModal}
+        onClose={() => setShowShotListModal(false)}
+        campaignName={campaign.name}
+        wfNumber={campaign.wfNumber}
+        setups={setups}
       />
 
       {/* Draft Email Modal */}

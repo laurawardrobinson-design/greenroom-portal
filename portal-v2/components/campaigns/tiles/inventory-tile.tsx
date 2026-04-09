@@ -45,7 +45,7 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
                   : "text-text-tertiary hover:text-text-primary"
               }`}
             >
-              {label}{count > 0 ? ` ${count}` : ""}
+              {label}
             </button>
           ))}
         </div>

@@ -20,6 +20,7 @@ interface Props {
   campaignStatus: CampaignStatus;
   onAddSetup: () => void;
   onMutate: () => void;
+  onViewFullList?: () => void;
 }
 
 export function ShotListTile({
@@ -35,6 +36,7 @@ export function ShotListTile({
   campaignStatus,
   onAddSetup,
   onMutate,
+  onViewFullList,
 }: Props) {
   const router = useRouter();
   return (
@@ -49,7 +51,7 @@ export function ShotListTile({
           size="sm"
           variant="ghost"
           className="text-xs text-text-secondary hover:text-text-primary"
-          onClick={() => router.push(`/campaigns/${campaignId}/pre-production`)}
+          onClick={onViewFullList ?? (() => router.push(`/campaigns/${campaignId}/pre-production`))}
         >
           View Full Shot List
         </Button>

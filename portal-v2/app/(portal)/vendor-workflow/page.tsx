@@ -128,7 +128,7 @@ export default function VendorWorkflowPage() {
           />
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="max-w-lg space-y-1.5">
           {sortedAssignments.map((cv) => {
             const campaignLabel = cv.wfNumber
               ? `${cv.wfNumber} — ${cv.campaignName}`
@@ -139,41 +139,34 @@ export default function VendorWorkflowPage() {
             const isFocused = focusedAssignment === cv.id;
 
             return (
-              <Card
+              <button
                 key={cv.id}
-                className={`cursor-pointer hover:bg-surface-hover transition-colors ${isFocused ? "ring-1 ring-primary/30 shadow-sm" : ""}`}
+                type="button"
+                className={`w-full text-left rounded-lg border border-border px-3.5 py-2.5 hover:bg-surface-hover transition-colors ${isFocused ? "ring-1 ring-primary/30 shadow-sm" : ""}`}
                 onClick={() => setManagingVendor(cv)}
               >
-                <CardHeader className="mb-0">
-                  <div className="min-w-0 flex-1 flex items-center gap-2">
-                    {showDot && (
-                      <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                    )}
-                    <CardTitle className="truncate">{campaignLabel}</CardTitle>
-                  </div>
-                </CardHeader>
-
-                <div className="px-4 pb-3 mt-1.5 flex items-center gap-3 overflow-hidden">
-                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold shrink-0 ${PHASE_STYLE[phase]}`}>
+                <div className="flex items-center gap-2">
+                  {showDot && (
+                    <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                  )}
+                  <p className="text-sm font-semibold text-text-primary truncate">{campaignLabel}</p>
+                </div>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${PHASE_STYLE[phase]}`}>
                     {PHASE_LABEL[phase]}
                   </span>
-                  <span className="text-xs text-text-secondary shrink-0">{subLabel}</span>
-                  {(cv.estimateTotal > 0 || cv.invoiceTotal > 0 || cv.paymentAmount > 0) && (
-                    <>
-                      <span className="text-text-tertiary shrink-0">·</span>
-                      {cv.estimateTotal > 0 && (
-                        <span className="text-xs text-text-tertiary shrink-0">Est: <span className="font-medium text-text-primary">{formatCurrency(cv.estimateTotal)}</span></span>
-                      )}
-                      {cv.invoiceTotal > 0 && (
-                        <span className="text-xs text-text-tertiary shrink-0">Inv: <span className="font-medium text-text-primary">{formatCurrency(cv.invoiceTotal)}</span></span>
-                      )}
-                      {cv.paymentAmount > 0 && (
-                        <span className="text-xs text-text-tertiary shrink-0">Paid: <span className="font-medium text-emerald-700">{formatCurrency(cv.paymentAmount)}</span></span>
-                      )}
-                    </>
+                  <span className="text-xs text-text-secondary">{subLabel}</span>
+                  {cv.estimateTotal > 0 && (
+                    <span className="text-xs text-text-tertiary">· Est: <span className="font-medium text-text-primary">{formatCurrency(cv.estimateTotal)}</span></span>
+                  )}
+                  {cv.invoiceTotal > 0 && (
+                    <span className="text-xs text-text-tertiary">· Inv: <span className="font-medium text-text-primary">{formatCurrency(cv.invoiceTotal)}</span></span>
+                  )}
+                  {cv.paymentAmount > 0 && (
+                    <span className="text-xs text-text-tertiary">· Paid: <span className="font-medium text-emerald-700">{formatCurrency(cv.paymentAmount)}</span></span>
                   )}
                 </div>
-              </Card>
+              </button>
             );
           })}
         </div>
