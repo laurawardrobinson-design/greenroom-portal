@@ -193,7 +193,7 @@ export default function VendorWorkflowPage() {
                     href={`/campaigns/${cv.campaignId}`}
                     className="inline-flex items-center gap-1 text-xs text-text-tertiary hover:text-text-primary"
                   >
-                    View campaign (read-only)
+                    View campaign
                     <ExternalLink className="h-3 w-3" />
                   </Link>
                 </div>
