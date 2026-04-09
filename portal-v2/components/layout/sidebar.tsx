@@ -65,7 +65,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Pre Production",
     href: "/pre-production",
     icon: ClipboardList,
-    roles: ["Admin", "Producer", "Studio"],
+    roles: ["Admin", "Producer"],
   },
   {
     label: "Estimates & Invoices",
@@ -218,7 +218,7 @@ export function Sidebar({
                   isActive ? "text-primary" : "text-[#D9E4D6]/40 group-hover:text-[#D9E4D6]/60"
                 }`}
               />
-              {(userRole === "Admin" && item.adminLabel) ? item.adminLabel : item.label}
+              {((userRole === "Admin" || userRole === "Studio") && item.adminLabel) ? item.adminLabel : item.label}
               {isActive && (
                 <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
               )}

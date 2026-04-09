@@ -21,14 +21,14 @@ export const SPACE_TYPE_ICON: Record<string, React.ElementType> = {
 };
 
 export const SPACE_TYPE_COLOR: Record<string, string> = {
-  shooting_bay:      "bg-violet-50 text-violet-700 border-violet-200",
-  set_kitchen:       "bg-amber-50 text-amber-700 border-amber-200",
-  prep_kitchen:      "bg-orange-50 text-orange-700 border-orange-200",
-  wardrobe:          "bg-pink-50 text-pink-700 border-pink-200",
-  multipurpose:      "bg-blue-50 text-blue-700 border-blue-200",
-  conference:        "bg-teal-50 text-teal-700 border-teal-200",
-  equipment_storage: "bg-slate-50 text-slate-600 border-slate-200",
-  prop_storage:      "bg-stone-50 text-stone-600 border-stone-200",
+  shooting_bay:      "bg-slate-100 text-slate-700 border-slate-200",
+  set_kitchen:       "bg-stone-100 text-stone-700 border-stone-200",
+  prep_kitchen:      "bg-stone-100 text-stone-700 border-stone-200",
+  wardrobe:          "bg-slate-100 text-slate-700 border-slate-200",
+  multipurpose:      "bg-slate-100 text-slate-700 border-slate-200",
+  conference:        "bg-slate-100 text-slate-700 border-slate-200",
+  equipment_storage: "bg-slate-50 text-slate-500 border-slate-200",
+  prop_storage:      "bg-slate-50 text-slate-500 border-slate-200",
 };
 
 export const SPACE_TYPE_LABELS: Record<string, string> = {

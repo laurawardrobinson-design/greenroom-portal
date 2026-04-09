@@ -425,10 +425,10 @@ function SpacesView({ userRole, userId }: SpacesViewProps) {
   }, [monthStart, monthEnd]);
 
   return (
-    <div className="grid gap-6 items-start" style={{ gridTemplateColumns: "1fr 2fr" }}>
+    <div className="grid gap-6 items-start" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,2fr)" }}>
 
       {/* ── Left: Calendar + Shoots (1/3) ──────────────────────────────────── */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 min-w-0">
       <div className="rounded-xl border border-border bg-surface overflow-hidden">
 
         {/* Header */}
@@ -481,17 +481,19 @@ function SpacesView({ userRole, userId }: SpacesViewProps) {
                 key={ds}
                 onClick={() => selectDay(day)}
                 className={`flex flex-col items-center justify-center rounded-lg py-2 transition-all ${
-                  isSelected
-                    ? "bg-primary text-white shadow-sm"
+                  isSelected && isTodayDay
+                    ? "bg-primary text-white font-semibold"
+                    : isSelected
+                    ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/25"
                     : isTodayDay
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "text-text-primary hover:bg-surface-secondary"
+                    ? "text-primary font-semibold"
+                    : "text-text-secondary hover:bg-surface-secondary"
                 }`}
               >
                 <span className="text-sm leading-none">{format(day, "d")}</span>
                 <div className="flex gap-0.5 mt-1 h-1.5 items-center">
-                  {hasShoot && <span className={`h-1 w-1 rounded-full ${isSelected ? "bg-white/80" : "bg-emerald-500"}`} />}
-                  {hasRes   && <span className={`h-1 w-1 rounded-full ${isSelected ? "bg-white/60" : "bg-primary"}`} />}
+                  {hasShoot && <span className={`h-1 w-1 rounded-full ${isSelected && isTodayDay ? "bg-white/70" : "bg-slate-300"}`} />}
+                  {hasRes   && <span className={`h-1 w-1 rounded-full ${isSelected && isTodayDay ? "bg-white" : "bg-emerald-500"}`} />}
                 </div>
               </button>
             );
@@ -501,84 +503,61 @@ function SpacesView({ userRole, userId }: SpacesViewProps) {
         {/* Dot legend */}
         <div className="flex gap-4 px-3.5 py-2 border-t border-border">
           <span className="flex items-center gap-1.5 text-[10px] text-text-tertiary">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />Shoot scheduled
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />Shoot scheduled
           </span>
           <span className="flex items-center gap-1.5 text-[10px] text-text-tertiary">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />Spaces reserved
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />Spaces reserved
           </span>
         </div>
 
-        {/* Viewing footer */}
-        <div className="px-3.5 py-2.5 border-t border-border">
-          <p className="text-xs text-text-tertiary">
-            Viewing{" "}
-            <span className={`font-semibold ${isToday(selectedDate) ? "text-primary" : "text-text-primary"}`}>
-              {isToday(selectedDate) ? "Today" : format(selectedDate, "EEE, MMM d, yyyy")}
-            </span>
-          </p>
-        </div>
-      </div>
-
-      {/* ── Shoots on selected date ──────────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-surface overflow-hidden">
-        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
-          <ClipboardList className="h-4 w-4 shrink-0 text-primary" />
-          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
-            Shoots
-          </span>
-          <span className="ml-auto text-[10px] font-semibold text-text-tertiary uppercase tracking-wider">
-            {isToday(selectedDate) ? "Today" : format(selectedDate, "MMM d")}
-          </span>
-        </div>
-
-        {todayShoots.length === 0 ? (
-          <div className="px-3.5 py-4 text-center">
-            <p className="text-xs text-text-tertiary">No shoots scheduled</p>
+        {/* Viewing footer + campaigns */}
+        <div className="border-t border-border">
+          <div className="px-3.5 py-2 flex items-center justify-between">
+            <p className="text-[10px] text-text-tertiary">
+              Viewing{" "}
+              <span className={`font-semibold ${isToday(selectedDate) ? "text-primary" : "text-text-primary"}`}>
+                {isToday(selectedDate) ? "Today" : format(selectedDate, "EEE, MMM d")}
+              </span>
+            </p>
           </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {todayShoots.map((shoot) => {
-              const isActive = activeShoot?.id === shoot.id;
-              return (
-                <div
-                  key={shoot.id}
-                  className={`flex items-center justify-between gap-3 px-3.5 py-3 transition-colors ${
-                    isActive ? "bg-primary/5" : "hover:bg-surface-secondary"
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-text-primary truncate">
-                      {shoot.campaign?.wfNumber} — {shoot.campaign?.name ?? shoot.shootName}
-                    </p>
-                    {shoot.callTime && (
-                      <p className="text-[10px] text-text-tertiary mt-0.5">
-                        Call {shoot.callTime}{shoot.location ? ` · ${shoot.location}` : ""}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (isActive) {
-                        setActiveShoot(null);
-                        setSelectedRooms(new Set());
-                      } else {
-                        setActiveShoot(shoot);
-                        setSelectedRooms(new Set());
-                      }
-                    }}
-                    className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
-                      isActive
-                        ? "bg-primary text-white"
-                        : "border border-border bg-surface text-text-secondary hover:border-primary hover:text-primary"
+          {todayShoots.length > 0 && (
+            <div className="divide-y divide-border border-t border-border">
+              {todayShoots.map((shoot) => {
+                const isActive = activeShoot?.id === shoot.id;
+                return (
+                  <div
+                    key={shoot.id}
+                    className={`flex items-center justify-between gap-2 px-3.5 py-2.5 transition-colors ${
+                      isActive ? "bg-emerald-500/5" : "hover:bg-surface-secondary"
                     }`}
                   >
-                    {isActive ? "Booking" : "Book"}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                    <p className="text-xs font-medium text-text-primary truncate min-w-0">
+                      {shoot.campaign?.name ?? shoot.shootName}
+                    </p>
+                    <button
+                      onClick={() => {
+                        if (isActive) {
+                          setActiveShoot(null);
+                          setSelectedRooms(new Set());
+                        } else {
+                          setActiveShoot(shoot);
+                          setSelectedRooms(new Set());
+                        }
+                      }}
+                      className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold transition-colors ${
+                        isActive
+                          ? "bg-emerald-500 text-white"
+                          : "border border-border bg-surface text-text-secondary hover:border-primary hover:text-primary"
+                      }`}
+                    >
+                      {isActive ? "Booking" : "Book"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       </div>{/* end left column */}
@@ -754,7 +733,7 @@ function SpacePickerModal({
                 key={space.id}
                 className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
                   isOurs
-                    ? "bg-primary/5 border-primary/30"
+                    ? "bg-emerald-500/5 border-primary/30"
                     : isTaken
                     ? "bg-surface-secondary border-border opacity-60"
                     : "bg-surface border-border"
@@ -789,7 +768,7 @@ function SpacePickerModal({
                   <button
                     onClick={() => reserveSpace(space.id)}
                     disabled={isBusy}
-                    className="shrink-0 rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+                    className="shrink-0 rounded-md border border-primary/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-primary hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
                   >
                     {isBusy ? "..." : "Reserve"}
                   </button>
@@ -893,7 +872,7 @@ function ShootPrepView({ userRole, userId }: ShootPrepViewProps) {
                       {format(parseISO(shoot.date), "EEE, MMM d")}
                     </span>
                     {isToday(parseISO(shoot.date)) && (
-                      <Badge variant="custom" className="bg-primary/10 text-primary text-[10px]">Today</Badge>
+                      <Badge variant="custom" className="bg-emerald-500/10 text-primary text-[10px]">Today</Badge>
                     )}
                   </div>
                 </div>
