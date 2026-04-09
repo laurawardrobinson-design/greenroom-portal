@@ -823,6 +823,70 @@ export interface PaymentBatch {
   items?: PaymentBatchItem[];
 }
 
+// --- Studio Management ---
+
+export type StudioSpaceType =
+  | "shooting_bay"
+  | "set_kitchen"
+  | "prep_kitchen"
+  | "wardrobe"
+  | "multipurpose"
+  | "conference"
+  | "equipment_storage"
+  | "prop_storage";
+
+export interface StudioSpace {
+  id: string;
+  name: string;
+  type: StudioSpaceType;
+  capacity: number | null;
+  notes: string | null;
+  sortOrder: number;
+}
+
+export interface SpaceReservation {
+  id: string;
+  campaignId: string;
+  spaceId: string;
+  reservedDate: string;
+  startTime: string | null;
+  endTime: string | null;
+  notes: string | null;
+  reservedBy: string;
+  createdAt: string;
+  updatedAt: string;
+  space?: StudioSpace;
+  campaign?: { id: string; wfNumber: string; name: string };
+  reservedByUser?: { id: string; name: string };
+}
+
+export type MealType = "crafty" | "breakfast" | "lunch" | "dinner" | "snacks";
+export type MealLocation = "greenroom" | "outside";
+export type MealStatus = "pending" | "ordered" | "confirmed" | "received" | "set";
+export type MealHandlerRole = "studio" | "producer";
+
+export interface ShootMeal {
+  id: string;
+  campaignId: string;
+  shootDate: string;
+  mealType: MealType;
+  location: MealLocation;
+  handlerRole: MealHandlerRole;
+  handlerId: string | null;
+  headcount: number | null;
+  dietaryNotes: string | null;
+  preferences: string | null;
+  vendor: string | null;
+  deliveryTime: string | null;
+  notes: string | null;
+  status: MealStatus;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  campaign?: { id: string; wfNumber: string; name: string };
+  handler?: { id: string; name: string };
+}
+
 // --- Onboarding ---
 
 export type OnboardingStatus = "complete" | "partial" | "none";

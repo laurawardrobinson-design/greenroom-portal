@@ -1,13 +1,13 @@
 "use client";
 
-import { use, useState, useRef, useEffect } from "react";
+import { use, useState, useRef, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCampaign, useCampaigns } from "@/hooks/use-campaigns";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import useSWR from "swr";
-import type { AppUser, Shoot, CampaignVendor, Vendor } from "@/types/domain";
+import type { AppUser, Shoot, CampaignVendor, Vendor, StudioSpace, SpaceReservation, ShootMeal } from "@/types/domain";
 import {
   CalendarDays,
   Truck,
@@ -19,12 +19,26 @@ import {
   Star,
   UserCircle,
   AlertTriangle,
+  Camera,
+  ChefHat,
+  Shirt,
+  Package,
+  Layers,
+  Box,
+  Plus,
+  X,
+  Utensils,
+  ExternalLink,
 } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/toast";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { ScheduleTab } from "@/components/pre-production/schedule-tab";
 import { VendorAssignmentPanel } from "@/components/campaigns/vendor-assignment-panel";
+import { format, parseISO } from "date-fns";
+import Link from "next/link";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
 
@@ -79,16 +93,322 @@ function PlaceholderTab({
   );
 }
 
+// ─── Space icon + color maps (mirrored from Studio page) ─────────────────────
+
+const SPACE_TYPE_ICON: Record<string, React.ElementType> = {
+  shooting_bay:      Camera,
+  set_kitchen:       ChefHat,
+  prep_kitchen:      ChefHat,
+  wardrobe:          Shirt,
+  multipurpose:      Layers,
+  conference:        Users,
+  equipment_storage: Package,
+  prop_storage:      Box,
+};
+
+const SPACE_TYPE_COLOR: Record<string, string> = {
+  shooting_bay:      "bg-violet-50 text-violet-700 border-violet-200",
+  set_kitchen:       "bg-amber-50 text-amber-700 border-amber-200",
+  prep_kitchen:      "bg-orange-50 text-orange-700 border-orange-200",
+  wardrobe:          "bg-pink-50 text-pink-700 border-pink-200",
+  multipurpose:      "bg-blue-50 text-blue-700 border-blue-200",
+  conference:        "bg-teal-50 text-teal-700 border-teal-200",
+  equipment_storage: "bg-slate-50 text-slate-600 border-slate-200",
+  prop_storage:      "bg-stone-50 text-stone-600 border-stone-200",
+};
+
+// ─── Space picker modal ───────────────────────────────────────────────────────
+
+function SpacePickerModal({
+  campaignId,
+  date,
+  spaces,
+  reservations,
+  onClose,
+  onSaved,
+}: {
+  campaignId: string;
+  date: string;
+  spaces: StudioSpace[];
+  reservations: SpaceReservation[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [saving, setSaving] = useState<string | null>(null);
+
+  const takenByOther = new Set(
+    reservations.filter((r) => r.campaignId !== campaignId).map((r) => r.spaceId)
+  );
+  const takenByUs = new Set(
+    reservations.filter((r) => r.campaignId === campaignId).map((r) => r.spaceId)
+  );
+
+  async function claim(spaceId: string) {
+    setSaving(spaceId);
+    try {
+      const res = await fetch("/api/studio/reservations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId, spaceId, reservedDate: date }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error ?? "Failed");
+      }
+      toast("success", "Space reserved");
+      onSaved();
+    } catch (err: unknown) {
+      toast("error", err instanceof Error ? err.message : "Failed to reserve");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function release(spaceId: string) {
+    const res = reservations.find((r) => r.campaignId === campaignId && r.spaceId === spaceId);
+    if (!res) return;
+    setSaving(spaceId);
+    try {
+      const r = await fetch(`/api/studio/reservations?id=${res.id}`, { method: "DELETE" });
+      if (!r.ok) throw new Error("Failed");
+      toast("success", "Reservation released");
+      onSaved();
+    } catch {
+      toast("error", "Failed to release");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={`Spaces — ${format(parseISO(date), "EEE, MMM d")}`}>
+      <div className="space-y-2">
+        {spaces.map((space) => {
+          const Icon = SPACE_TYPE_ICON[space.type] ?? Building2;
+          const color = SPACE_TYPE_COLOR[space.type] ?? "bg-surface-secondary text-text-secondary border-border";
+          const ours = takenByUs.has(space.id);
+          const taken = takenByOther.has(space.id);
+          const busy = saving === space.id;
+
+          return (
+            <div
+              key={space.id}
+              className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
+                ours ? "border-primary/30 bg-primary/5" : taken ? "border-border opacity-50" : "border-border bg-surface"
+              }`}
+            >
+              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded border ${color}`}>
+                <Icon className="h-3.5 w-3.5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-text-primary">{space.name}</p>
+                {taken && (
+                  <p className="text-[10px] text-text-tertiary">Reserved by another campaign</p>
+                )}
+                {space.capacity && !taken && (
+                  <p className="text-[10px] text-text-tertiary">Seats {space.capacity}</p>
+                )}
+              </div>
+              {!taken && (
+                <button
+                  onClick={() => ours ? release(space.id) : claim(space.id)}
+                  disabled={busy}
+                  className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                    ours
+                      ? "border-primary/30 bg-primary/10 text-primary hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                      : "border-border text-text-secondary hover:border-primary/40 hover:text-primary"
+                  }`}
+                >
+                  {busy ? "..." : ours ? "Release" : "Reserve"}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <ModalFooter>
+        <Button variant="ghost" onClick={onClose}>Done</Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
 // ─── Tab panels ───────────────────────────────────────────────────────────────
 
-function LogisticsTab() {
+function LogisticsTab({ campaignId, shoots }: { campaignId: string; shoots: Shoot[] }) {
+  const { toast } = useToast();
+
+  const { data: spaces } = useSWR<StudioSpace[]>("/api/studio/spaces", fetcher);
+  const { data: reservations, mutate: refreshRes } = useSWR<SpaceReservation[]>(
+    `/api/studio/reservations?campaignId=${campaignId}`,
+    fetcher
+  );
+  const { data: meals, mutate: refreshMeals } = useSWR<ShootMeal[]>(
+    `/api/shoot-meals?campaignId=${campaignId}`,
+    fetcher
+  );
+
+  const [spaceModal, setSpaceModal] = useState<string | null>(null); // shoot date
+
+  // All shoot dates across all shoots, deduplicated and sorted
+  const allDates = useMemo(() => {
+    const dates = new Set<string>();
+    shoots.forEach((s) => s.dates.forEach((d) => dates.add(d.shootDate)));
+    return [...dates].sort();
+  }, [shoots]);
+
+  // For a given date: which spaces does this campaign have?
+  function reservedSpaces(date: string) {
+    return (reservations ?? []).filter((r) => r.reservedDate === date && r.campaignId === campaignId);
+  }
+
+  // All reservations on a date (for picker conflict detection)
+  const { data: allResOnDate } = useSWR<SpaceReservation[]>(
+    spaceModal ? `/api/studio/reservations?dateFrom=${spaceModal}&dateTo=${spaceModal}` : null,
+    fetcher
+  );
+
+  // Meals grouped by date
+  const mealsByDate = useMemo(() => {
+    const m = new Map<string, ShootMeal[]>();
+    (meals ?? []).forEach((meal) => {
+      const arr = m.get(meal.shootDate) ?? [];
+      arr.push(meal);
+      m.set(meal.shootDate, arr);
+    });
+    return m;
+  }, [meals]);
+
+  if (!allDates.length) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-secondary">
+          <Truck className="h-5 w-5 text-text-tertiary" />
+        </div>
+        <p className="text-sm font-medium text-text-secondary">No shoot dates yet</p>
+        <p className="text-xs text-text-tertiary">Add shoot days in the Schedule tab first.</p>
+      </div>
+    );
+  }
+
   return (
-    <PlaceholderTab
-      icon={Truck}
-      title="Logistics"
-      description="Operational prep — locations, styling notes, and catering headcounts."
-      items={["Locations", "Styling", "Catering"]}
-    />
+    <div className="space-y-6">
+      {/* Spaces section */}
+      <div className="rounded-xl border border-border bg-surface overflow-hidden">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+          <Building2 className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Studio Spaces</span>
+          <Link href="/studio" className="ml-auto flex items-center gap-1 text-xs text-text-tertiary hover:text-primary transition-colors">
+            View calendar
+            <ExternalLink className="h-3 w-3" />
+          </Link>
+        </div>
+        <div className="divide-y divide-border">
+          {allDates.map((date) => {
+            const claimed = reservedSpaces(date);
+            return (
+              <div key={date} className="flex items-center gap-3 px-3.5 py-3">
+                <div className="w-24 shrink-0">
+                  <p className="text-xs font-semibold text-text-primary">
+                    {format(parseISO(date), "EEE, MMM d")}
+                  </p>
+                </div>
+                <div className="flex flex-1 flex-wrap gap-1.5">
+                  {claimed.length > 0 ? (
+                    claimed.map((r) => {
+                      const Icon = SPACE_TYPE_ICON[r.space?.type ?? ""] ?? Building2;
+                      const color = SPACE_TYPE_COLOR[r.space?.type ?? ""] ?? "bg-surface-secondary text-text-secondary border-border";
+                      return (
+                        <div
+                          key={r.id}
+                          className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium ${color}`}
+                        >
+                          <Icon className="h-3 w-3" />
+                          {r.space?.name ?? "Space"}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <span className="text-xs text-text-tertiary italic">No spaces reserved</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setSpaceModal(date)}
+                  className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs text-text-secondary hover:border-primary/40 hover:text-primary transition-colors"
+                >
+                  {claimed.length > 0 ? "Edit" : "Reserve"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Food & Crafty quick view */}
+      <div className="rounded-xl border border-border bg-surface overflow-hidden">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+          <Utensils className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Food & Crafty</span>
+          <Link href="/food-crafty" className="ml-auto flex items-center gap-1 text-xs text-text-tertiary hover:text-primary transition-colors">
+            Open full view
+            <ExternalLink className="h-3 w-3" />
+          </Link>
+        </div>
+        <div className="divide-y divide-border">
+          {allDates.map((date) => {
+            const dayMeals = mealsByDate.get(date) ?? [];
+            const MEAL_LABEL: Record<string, string> = { crafty: "Crafty", breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snacks: "Snacks" };
+            const STATUS_COLOR: Record<string, string> = {
+              pending: "bg-slate-100 text-slate-600", ordered: "bg-blue-100 text-blue-700",
+              confirmed: "bg-amber-100 text-amber-700", received: "bg-violet-100 text-violet-700", set: "bg-emerald-100 text-emerald-700",
+            };
+            return (
+              <div key={date} className="flex items-center gap-3 px-3.5 py-3">
+                <div className="w-24 shrink-0">
+                  <p className="text-xs font-semibold text-text-primary">
+                    {format(parseISO(date), "EEE, MMM d")}
+                  </p>
+                </div>
+                <div className="flex flex-1 flex-wrap gap-1.5">
+                  {dayMeals.length > 0 ? (
+                    dayMeals.map((m) => (
+                      <span
+                        key={m.id}
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_COLOR[m.status] ?? "bg-slate-100 text-slate-600"}`}
+                      >
+                        {MEAL_LABEL[m.mealType] ?? m.mealType}
+                        {m.headcount ? ` · ${m.headcount}` : ""}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-text-tertiary italic">Nothing logged</span>
+                  )}
+                </div>
+                <Link
+                  href="/food-crafty"
+                  className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs text-text-secondary hover:border-primary/40 hover:text-primary transition-colors"
+                >
+                  {dayMeals.length > 0 ? "Edit" : "Add"}
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Space picker modal */}
+      {spaceModal && spaces && (
+        <SpacePickerModal
+          campaignId={campaignId}
+          date={spaceModal}
+          spaces={spaces}
+          reservations={allResOnDate ?? []}
+          onClose={() => setSpaceModal(null)}
+          onSaved={() => refreshRes()}
+        />
+      )}
+    </div>
   );
 }
 
@@ -1235,7 +1555,7 @@ export default function PreProductionWorkspacePage({
             isArtDirector={isArtDirector}
           />
         )}
-        {resolvedActiveTab === "logistics" && <LogisticsTab />}
+        {resolvedActiveTab === "logistics" && <LogisticsTab campaignId={id} shoots={shoots} />}
         {resolvedActiveTab === "people"    && <PeopleTab campaignId={id} shoots={shoots} vendors={vendors} producerIds={campaign.producerIds} canManage={canManagePeople} onRefresh={refreshCampaign} />}
         {resolvedActiveTab === "contracts" && <ContractsTab campaignId={id} shoots={shoots} vendors={vendors} />}
       </div>

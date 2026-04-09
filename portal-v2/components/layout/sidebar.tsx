@@ -19,6 +19,8 @@ import {
   List,
   ClipboardCheck,
   FileText,
+  Building2,
+  Coffee,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -79,6 +81,19 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["Art Director"],
   },
   {
+    label: "Studio",
+    href: "/studio",
+    icon: Building2,
+    roles: ["Admin", "Studio"],
+    adminLabel: "Studio Management",
+  },
+  {
+    label: "Food & Crafty",
+    href: "/food-crafty",
+    icon: Coffee,
+    roles: ["Admin", "Producer", "Studio"],
+  },
+  {
     label: "Gear",
     href: "/gear",
     icon: Package,
@@ -91,7 +106,7 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["Admin", "Producer", "Studio", "Art Director"],
   },
   {
-    label: "Food",
+    label: "Food Products",
     href: "/food",
     icon: Utensils,
     roles: ["Admin", "Producer", "Studio", "Art Director"],
