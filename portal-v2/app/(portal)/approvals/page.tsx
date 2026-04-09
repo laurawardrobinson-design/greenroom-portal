@@ -37,6 +37,7 @@ interface ApprovalData {
     wfNumber: string;
     estimateTotal: number;
     invoiceTotal: number;
+    status: string;
     updatedAt: string;
   }>;
   pendingCrewBookings: Array<{
@@ -50,9 +51,59 @@ interface ApprovalData {
     classification: string;
     plannedDays: number;
     totalAmount: number;
+    status: string;
     createdAt: string;
   }>;
   pendingCrewPayments: Array<{
+    id: string;
+    bookingId: string;
+    campaignId: string;
+    personName: string;
+    role: string;
+    campaignName: string;
+    wfNumber: string;
+    totalDays: number;
+    totalAmount: number;
+    status: string;
+    confirmedAt: string | null;
+    createdAt: string;
+  }>;
+  resolvedRequests: Array<{
+    id: string;
+    campaignId: string;
+    amount: number;
+    rationale: string;
+    status: string;
+    createdAt: string;
+    campaign?: { name: string; wfNumber: string };
+    requester?: { name: string };
+  }>;
+  resolvedInvoices: Array<{
+    id: string;
+    campaignId: string;
+    vendorName: string;
+    campaignName: string;
+    wfNumber: string;
+    estimateTotal: number;
+    invoiceTotal: number;
+    status: string;
+    updatedAt: string;
+  }>;
+  resolvedCrewBookings: Array<{
+    id: string;
+    campaignId: string;
+    personName: string;
+    campaignName: string;
+    wfNumber: string;
+    role: string;
+    dayRate: number;
+    classification: string;
+    plannedDays: number;
+    totalAmount: number;
+    status: string;
+    createdAt: string;
+  }>;
+  resolvedCrewPayments: Array<{
     id: string;
     bookingId: string;
     campaignId: string;
@@ -99,6 +150,38 @@ const BATCH_STATUS_STYLE: Record<string, string> = {
   Confirmed: "text-emerald-700 bg-emerald-50",
 };
 
+function SectionTabs({ active, onChange }: {
+  active: "pending" | "history";
+  onChange: (tab: "pending" | "history") => void;
+}) {
+  return (
+    <div className="flex gap-0.5 rounded-md bg-surface-secondary p-0.5">
+      <button
+        type="button"
+        onClick={() => onChange("pending")}
+        className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+          active === "pending"
+            ? "bg-white text-text-primary shadow-sm"
+            : "text-text-tertiary hover:text-text-secondary"
+        }`}
+      >
+        Active
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("history")}
+        className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+          active === "history"
+            ? "bg-white text-text-primary shadow-sm"
+            : "text-text-tertiary hover:text-text-secondary"
+        }`}
+      >
+        Past
+      </button>
+    </div>
+  );
+}
+
 export default function ApprovalsPage() {
   const { toast } = useToast();
   const { data, mutate } = useSWR<ApprovalData>("/api/approvals", fetcher);
@@ -115,6 +198,11 @@ export default function ApprovalsPage() {
   const [creatingBatch, setCreatingBatch] = useState(false);
   const [reviewModal, setReviewModal] = useState<{ cv: CampaignVendor; wfNumber: string } | null>(null);
   const [loadingReview, setLoadingReview] = useState<string | null>(null);
+
+  const [budgetTab, setBudgetTab] = useState<"pending" | "history">("pending");
+  const [invoiceTab, setInvoiceTab] = useState<"pending" | "history">("pending");
+  const [crewPaymentTab, setCrewPaymentTab] = useState<"pending" | "history">("pending");
+  const [rateTab, setRateTab] = useState<"pending" | "history">("pending");
 
   async function openInvoiceReview(cvId: string, wfNumber: string) {
     setLoadingReview(cvId);
@@ -134,6 +222,11 @@ export default function ApprovalsPage() {
   const pendingInvoices = data?.pendingInvoices || [];
   const pendingCrewBookings = data?.pendingCrewBookings || [];
   const pendingCrewPayments = data?.pendingCrewPayments || [];
+  const resolvedRequests = data?.resolvedRequests || [];
+  const resolvedInvoices = data?.resolvedInvoices || [];
+  const resolvedCrewBookings = data?.resolvedCrewBookings || [];
+  const resolvedCrewPayments = data?.resolvedCrewPayments || [];
+
   const totalPending = budgetRequests.length + pendingInvoices.length + pendingCrewBookings.length + pendingCrewPayments.length;
 
   async function handleBudgetDecision(id: string, approved: boolean) {
@@ -226,9 +319,6 @@ export default function ApprovalsPage() {
   }
 
   function handleDownloadCSV(batchId: string, batchName: string) {
-    const a = document.createElement("a");
-    a.href = `/api/payment-batches/${batchId}`;
-    // We'll use a fetch + blob approach for the PATCH/download
     fetch(`/api/payment-batches/${batchId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -247,7 +337,7 @@ export default function ApprovalsPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-3xl space-y-[18px]">
       <div>
         <h2 className="text-2xl font-bold text-text-primary">Approvals</h2>
         <p className="text-sm text-text-secondary">
@@ -256,140 +346,232 @@ export default function ApprovalsPage() {
       </div>
 
       {/* Budget Requests */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-text-tertiary" />
-            Budget Requests
-            {budgetRequests.length > 0 && (
-              <Badge variant="warning">{budgetRequests.length}</Badge>
-            )}
-          </CardTitle>
+      <Card className="!pt-3">
+        <CardHeader className="!mb-2">
+          <div className="flex items-center justify-between w-full">
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-text-tertiary" />
+              Budget Requests
+            </CardTitle>
+            <SectionTabs active={budgetTab} onChange={setBudgetTab} />
+          </div>
         </CardHeader>
 
-        {budgetRequests.length === 0 ? (
-          <EmptyState title="No pending requests" description="Budget and overage requests will appear here." />
+        {budgetTab === "pending" ? (
+          budgetRequests.length === 0 ? (
+            <EmptyState title="No pending requests" description="Budget and overage requests will appear here." />
+          ) : (
+            <div className="space-y-2">
+              {budgetRequests.map((req) => (
+                <div key={req.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
+                  <div className="min-w-0 w-48 shrink-0">
+                    <Link href={`/campaigns/${req.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
+                      {req.campaign?.name || "Unknown Campaign"}
+                    </Link>
+                    <p className="text-xs text-text-tertiary truncate">{req.campaign?.wfNumber} — {req.requester?.name || "Unknown"}</p>
+                  </div>
+                  <p className="text-xs text-text-secondary truncate flex-1">{req.rationale}</p>
+                  <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(req.amount)}</span>
+                  <div className="flex gap-2 shrink-0">
+                    <Button size="sm" variant="secondary" onClick={() => handleBudgetDecision(req.id, false)}>
+                      <X className="h-3.5 w-3.5" />Decline
+                    </Button>
+                    <Button size="sm" onClick={() => handleBudgetDecision(req.id, true)}>
+                      <Check className="h-3.5 w-3.5" />Approve
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         ) : (
-          <div className="space-y-2">
-            {budgetRequests.map((req) => (
-              <div key={req.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
-                <div className="min-w-0 w-48 shrink-0">
-                  <Link href={`/campaigns/${req.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
-                    {req.campaign?.name || "Unknown Campaign"}
-                  </Link>
-                  <p className="text-xs text-text-tertiary truncate">{req.campaign?.wfNumber} — {req.requester?.name || "Unknown"}</p>
+          resolvedRequests.length === 0 ? (
+            <EmptyState title="No past requests" description="Approved and declined budget requests will appear here." />
+          ) : (
+            <div className="bg-surface-secondary -mx-5 -mb-5 rounded-b-xl px-5 pb-5 space-y-2">
+              {resolvedRequests.map((req) => (
+                <div key={req.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
+                  <div className="min-w-0 w-48 shrink-0">
+                    <Link href={`/campaigns/${req.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
+                      {req.campaign?.name || "Unknown Campaign"}
+                    </Link>
+                    <p className="text-xs text-text-tertiary truncate">{req.campaign?.wfNumber} — {req.requester?.name || "Unknown"}</p>
+                  </div>
+                  <p className="text-xs text-text-secondary truncate flex-1">{req.rationale}</p>
+                  <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(req.amount)}</span>
+                  <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
+                    req.status === "Approved" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+                  }`}>
+                    {req.status}
+                  </span>
                 </div>
-                <p className="text-xs text-text-secondary truncate flex-1">{req.rationale}</p>
-                <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(req.amount)}</span>
-                <div className="flex gap-2 shrink-0">
-                  <Button size="sm" variant="ghost" onClick={() => handleBudgetDecision(req.id, false)}>
-                    <X className="h-3.5 w-3.5" />Decline
-                  </Button>
-                  <Button size="sm" onClick={() => handleBudgetDecision(req.id, true)}>
-                    <Check className="h-3.5 w-3.5" />Approve
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
         )}
       </Card>
 
       {/* Pending Invoices */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-text-tertiary" />
-            Invoice Approvals
-            {pendingInvoices.length > 0 && (
-              <Badge variant="warning">{pendingInvoices.length}</Badge>
-            )}
-          </CardTitle>
+      <Card className="!pt-3">
+        <CardHeader className="!mb-2">
+          <div className="flex items-center justify-between w-full">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-text-tertiary" />
+              Invoice Approvals
+            </CardTitle>
+            <SectionTabs active={invoiceTab} onChange={setInvoiceTab} />
+          </div>
         </CardHeader>
 
-        {pendingInvoices.length === 0 ? (
-          <EmptyState title="No pending invoices" description="Pre-approved invoices awaiting your final sign-off will appear here." />
+        {invoiceTab === "pending" ? (
+          pendingInvoices.length === 0 ? (
+            <EmptyState title="No pending invoices" description="Pre-approved invoices awaiting your final sign-off will appear here." />
+          ) : (
+            <div className="space-y-2">
+              {pendingInvoices.map((inv) => (
+                <div key={inv.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
+                  <div className="min-w-0 w-48 shrink-0">
+                    <Link href={`/campaigns/${inv.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
+                      {inv.campaignName}
+                    </Link>
+                    <p className="text-xs text-text-tertiary truncate">{inv.wfNumber} — {inv.vendorName}</p>
+                  </div>
+                  <div className="flex gap-4 text-xs flex-1">
+                    <span className="text-text-tertiary">Est: <span className="font-medium text-text-primary">{formatCurrency(inv.estimateTotal)}</span></span>
+                    <span className="text-text-tertiary">Inv: <span className={`font-medium ${inv.invoiceTotal > inv.estimateTotal ? "text-red-600" : "text-text-primary"}`}>{formatCurrency(inv.invoiceTotal)}</span></span>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={loadingReview === inv.id}
+                      onClick={() => openInvoiceReview(inv.id, inv.wfNumber)}
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      Review
+                    </Button>
+                    <Button size="sm" onClick={() => handleInvoiceApproval(inv.id)}>
+                      <Check className="h-3.5 w-3.5" />Final Approve
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         ) : (
-          <div className="space-y-2">
-            {pendingInvoices.map((inv) => (
-              <div key={inv.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
-                <div className="min-w-0 w-48 shrink-0">
-                  <Link href={`/campaigns/${inv.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
-                    {inv.campaignName}
-                  </Link>
-                  <p className="text-xs text-text-tertiary truncate">{inv.wfNumber} — {inv.vendorName}</p>
-                </div>
-                <div className="flex gap-4 text-xs flex-1">
-                  <span className="text-text-tertiary">Est: <span className="font-medium text-text-primary">{formatCurrency(inv.estimateTotal)}</span></span>
-                  <span className="text-text-tertiary">Inv: <span className="font-medium text-text-primary">{formatCurrency(inv.invoiceTotal)}</span></span>
-                  {inv.invoiceTotal > inv.estimateTotal && <Badge variant="error">Over estimate</Badge>}
-                </div>
-                <div className="flex gap-2 shrink-0">
+          resolvedInvoices.length === 0 ? (
+            <EmptyState title="No past invoices" description="Approved and paid invoices will appear here." />
+          ) : (
+            <div className="bg-surface-secondary -mx-5 -mb-5 rounded-b-xl px-5 pb-5 space-y-2">
+              {resolvedInvoices.map((inv) => (
+                <div key={inv.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
+                  <div className="min-w-0 w-48 shrink-0">
+                    <Link href={`/campaigns/${inv.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
+                      {inv.campaignName}
+                    </Link>
+                    <p className="text-xs text-text-tertiary truncate">{inv.wfNumber} — {inv.vendorName}</p>
+                  </div>
+                  <div className="flex gap-4 text-xs flex-1">
+                    <span className="text-text-tertiary">Est: <span className="font-medium text-text-primary">{formatCurrency(inv.estimateTotal)}</span></span>
+                    <span className="text-text-tertiary">Inv: <span className={`font-medium ${inv.invoiceTotal > inv.estimateTotal ? "text-red-600" : "text-text-primary"}`}>{formatCurrency(inv.invoiceTotal)}</span></span>
+                  </div>
+                  <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
+                    inv.status === "Paid" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"
+                  }`}>
+                    {inv.status}
+                  </span>
                   <Button
                     size="sm"
                     variant="secondary"
                     loading={loadingReview === inv.id}
                     onClick={() => openInvoiceReview(inv.id, inv.wfNumber)}
                   >
-                    <FileText className="h-3.5 w-3.5" />
-                    Review
-                  </Button>
-                  <Button size="sm" onClick={() => handleInvoiceApproval(inv.id)}>
-                    <Check className="h-3.5 w-3.5" />Final Approve
+                    <FileText className="h-3.5 w-3.5" />Review
                   </Button>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
         )}
       </Card>
 
       {/* Crew Payment Approvals */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Banknote className="h-4 w-4 text-text-tertiary" />
-            Crew Payments
-            {pendingCrewPayments.length > 0 && (
-              <Badge variant="warning">{pendingCrewPayments.length}</Badge>
-            )}
-          </CardTitle>
+      <Card className="!pt-3">
+        <CardHeader className="!mb-2">
+          <div className="flex items-center justify-between w-full">
+            <CardTitle className="flex items-center gap-2">
+              <Banknote className="h-4 w-4 text-text-tertiary" />
+              Crew Payments
+            </CardTitle>
+            <SectionTabs active={crewPaymentTab} onChange={setCrewPaymentTab} />
+          </div>
         </CardHeader>
 
-        {pendingCrewPayments.length === 0 ? (
-          <EmptyState
-            title="No pending crew payments"
-            description="When a Producer submits confirmed days for payment, they appear here for your approval."
-          />
+        {crewPaymentTab === "pending" ? (
+          pendingCrewPayments.length === 0 ? (
+            <EmptyState
+              title="No pending crew payments"
+              description="When a Producer submits confirmed days for payment, they appear here for your approval."
+            />
+          ) : (
+            <div className="space-y-2">
+              {pendingCrewPayments.map((payment) => (
+                <div key={payment.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
+                  <div className="min-w-0 w-48 shrink-0">
+                    <Link href={`/campaigns/${payment.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
+                      {payment.campaignName}
+                    </Link>
+                    <p className="text-xs text-text-tertiary truncate">{payment.wfNumber} — {payment.personName}</p>
+                  </div>
+                  <div className="flex gap-4 text-xs flex-1">
+                    <span className="text-text-tertiary">Role: <span className="font-medium text-text-primary">{payment.role}</span></span>
+                    <span className="text-text-tertiary">Days: <span className="font-medium text-text-primary">{payment.totalDays}</span></span>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(payment.totalAmount)}</span>
+                  <div className="flex gap-2 shrink-0">
+                    <Button size="sm" onClick={() => handleCrewPaymentApproval(payment.id)}>
+                      <Check className="h-3.5 w-3.5" />Approve for Paymaster
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         ) : (
-          <div className="space-y-2">
-            {pendingCrewPayments.map((payment) => (
-              <div key={payment.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
-                <div className="min-w-0 w-48 shrink-0">
-                  <Link href={`/campaigns/${payment.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
-                    {payment.campaignName}
-                  </Link>
-                  <p className="text-xs text-text-tertiary truncate">{payment.wfNumber} — {payment.personName}</p>
+          resolvedCrewPayments.length === 0 ? (
+            <EmptyState title="No past crew payments" description="Approved and paid crew payments will appear here." />
+          ) : (
+            <div className="bg-surface-secondary -mx-5 -mb-5 rounded-b-xl px-5 pb-5 space-y-2">
+              {resolvedCrewPayments.map((payment) => (
+                <div key={payment.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
+                  <div className="min-w-0 w-48 shrink-0">
+                    <Link href={`/campaigns/${payment.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
+                      {payment.campaignName}
+                    </Link>
+                    <p className="text-xs text-text-tertiary truncate">{payment.wfNumber} — {payment.personName}</p>
+                  </div>
+                  <div className="flex gap-4 text-xs flex-1">
+                    <span className="text-text-tertiary">Role: <span className="font-medium text-text-primary">{payment.role}</span></span>
+                    <span className="text-text-tertiary">Days: <span className="font-medium text-text-primary">{payment.totalDays}</span></span>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(payment.totalAmount)}</span>
+                  <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
+                    payment.status === "Paid" ? "bg-emerald-50 text-emerald-700" :
+                    payment.status === "Sent to Paymaster" ? "bg-blue-50 text-blue-700" :
+                    "bg-amber-50 text-amber-700"
+                  }`}>
+                    {payment.status}
+                  </span>
                 </div>
-                <div className="flex gap-4 text-xs flex-1">
-                  <span className="text-text-tertiary">Role: <span className="font-medium text-text-primary">{payment.role}</span></span>
-                  <span className="text-text-tertiary">Days: <span className="font-medium text-text-primary">{payment.totalDays}</span></span>
-                </div>
-                <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(payment.totalAmount)}</span>
-                <div className="flex gap-2 shrink-0">
-                  <Button size="sm" onClick={() => handleCrewPaymentApproval(payment.id)}>
-                    <Check className="h-3.5 w-3.5" />Approve for Paymaster
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
         )}
       </Card>
 
       {/* Paymaster Batches */}
-      <Card>
-        <CardHeader>
+      <Card className="!pt-3">
+        <CardHeader className="!mb-2">
           <div className="flex items-center justify-between w-full">
             <CardTitle className="flex items-center gap-2">
               <Package className="h-4 w-4 text-text-tertiary" />
@@ -524,46 +706,76 @@ export default function ApprovalsPage() {
       </Card>
 
       {/* Rate Approvals */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <HardHat className="h-4 w-4 text-text-tertiary" />
-            Rate Approvals
-            {pendingCrewBookings.length > 0 && (
-              <Badge variant="warning">{pendingCrewBookings.length}</Badge>
-            )}
-          </CardTitle>
+      <Card className="!pt-3">
+        <CardHeader className="!mb-2">
+          <div className="flex items-center justify-between w-full">
+            <CardTitle className="flex items-center gap-2">
+              <HardHat className="h-4 w-4 text-text-tertiary" />
+              Rate Approvals
+            </CardTitle>
+            <SectionTabs active={rateTab} onChange={setRateTab} />
+          </div>
         </CardHeader>
 
-        {pendingCrewBookings.length === 0 ? (
-          <EmptyState title="No pending rate approvals" description="Crew bookings that exceed the standard rate card will appear here for approval." />
+        {rateTab === "pending" ? (
+          pendingCrewBookings.length === 0 ? (
+            <EmptyState title="No pending rate approvals" description="Crew bookings that exceed the standard rate card will appear here for approval." />
+          ) : (
+            <div className="space-y-2">
+              {pendingCrewBookings.map((booking) => (
+                <div key={booking.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
+                  <div className="min-w-0 w-48 shrink-0">
+                    <Link href={`/campaigns/${booking.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
+                      {booking.campaignName}
+                    </Link>
+                    <p className="text-xs text-text-tertiary truncate">{booking.wfNumber} — {booking.personName}</p>
+                  </div>
+                  <div className="flex gap-4 text-xs flex-1">
+                    <span className="text-text-tertiary">Role: <span className="font-medium text-text-primary">{booking.role}</span></span>
+                    <span className="text-text-tertiary">Rate: <span className="font-medium text-text-primary">{formatCurrency(booking.dayRate)}/day</span></span>
+                    <span className="text-text-tertiary">Days: <span className="font-medium text-text-primary">{booking.plannedDays}</span></span>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(booking.totalAmount)}</span>
+                  <div className="flex gap-2 shrink-0">
+                    <Button size="sm" variant="secondary" onClick={() => handleCrewBookingApproval(booking.id, false)}>
+                      <X className="h-3.5 w-3.5" />Decline
+                    </Button>
+                    <Button size="sm" onClick={() => handleCrewBookingApproval(booking.id, true)}>
+                      <Check className="h-3.5 w-3.5" />Approve
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         ) : (
-          <div className="space-y-2">
-            {pendingCrewBookings.map((booking) => (
-              <div key={booking.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
-                <div className="min-w-0 w-48 shrink-0">
-                  <Link href={`/campaigns/${booking.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
-                    {booking.campaignName}
-                  </Link>
-                  <p className="text-xs text-text-tertiary truncate">{booking.wfNumber} — {booking.personName}</p>
+          resolvedCrewBookings.length === 0 ? (
+            <EmptyState title="No past rate approvals" description="Approved and declined crew rate requests will appear here." />
+          ) : (
+            <div className="bg-surface-secondary -mx-5 -mb-5 rounded-b-xl px-5 pb-5 space-y-2">
+              {resolvedCrewBookings.map((booking) => (
+                <div key={booking.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
+                  <div className="min-w-0 w-48 shrink-0">
+                    <Link href={`/campaigns/${booking.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
+                      {booking.campaignName}
+                    </Link>
+                    <p className="text-xs text-text-tertiary truncate">{booking.wfNumber} — {booking.personName}</p>
+                  </div>
+                  <div className="flex gap-4 text-xs flex-1">
+                    <span className="text-text-tertiary">Role: <span className="font-medium text-text-primary">{booking.role}</span></span>
+                    <span className="text-text-tertiary">Rate: <span className="font-medium text-text-primary">{formatCurrency(booking.dayRate)}/day</span></span>
+                    <span className="text-text-tertiary">Days: <span className="font-medium text-text-primary">{booking.plannedDays}</span></span>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(booking.totalAmount)}</span>
+                  <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
+                    booking.status === "Cancelled" ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"
+                  }`}>
+                    {booking.status === "Cancelled" ? "Declined" : "Approved"}
+                  </span>
                 </div>
-                <div className="flex gap-4 text-xs flex-1">
-                  <span className="text-text-tertiary">Role: <span className="font-medium text-text-primary">{booking.role}</span></span>
-                  <span className="text-text-tertiary">Rate: <span className="font-medium text-text-primary">{formatCurrency(booking.dayRate)}/day</span></span>
-                  <span className="text-text-tertiary">Days: <span className="font-medium text-text-primary">{booking.plannedDays}</span></span>
-                </div>
-                <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(booking.totalAmount)}</span>
-                <div className="flex gap-2 shrink-0">
-                  <Button size="sm" variant="ghost" onClick={() => handleCrewBookingApproval(booking.id, false)}>
-                    <X className="h-3.5 w-3.5" />Decline
-                  </Button>
-                  <Button size="sm" onClick={() => handleCrewBookingApproval(booking.id, true)}>
-                    <Check className="h-3.5 w-3.5" />Approve
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
         )}
       </Card>
 

@@ -51,6 +51,15 @@ export async function GET() {
       .eq("status", "Pending Approval")
       .order("created_at", { ascending: false });
 
+    // Resolved crew booking approvals (approved or cancelled)
+    const { data: resolvedCrewBookingsRaw } = await db
+      .from("crew_bookings")
+      .select("*, vendors(company_name, contact_name), users(name), campaigns(name, wf_number), crew_booking_dates(*)")
+      .in("status", ["Rate Approved", "Confirmed", "Days Confirmed", "Completed", "Cancelled"])
+      .not("status", "eq", "Pending Approval")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
     function mapCrewBooking(row: any) {
       const personName = row.vendors
         ? row.vendors.contact_name || row.vendors.company_name
@@ -66,12 +75,44 @@ export async function GET() {
         classification: row.classification,
         plannedDays: (row.crew_booking_dates || []).length,
         totalAmount: (row.crew_booking_dates || []).length * Number(row.day_rate),
+        status: row.status,
         createdAt: row.created_at,
       };
     }
 
     // Pending crew payment approvals (days confirmed → awaiting HOP to approve for paymaster)
     const pendingCrewPayments = await listPendingCrewPayments();
+
+    // Resolved crew payments (approved, sent, or paid)
+    const { data: resolvedCrewPaymentsRaw } = await db
+      .from("crew_payments")
+      .select(
+        "*, crew_bookings!inner(campaign_id, role, vendor_id, user_id, vendors(contact_name, company_name), crew_person:users!crew_bookings_user_id_fkey(name), campaigns(name, wf_number))"
+      )
+      .in("status", ["Approved", "Sent to Paymaster", "Paid"])
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    function mapCrewPayment(row: any) {
+      const booking = row.crew_bookings;
+      const personName = booking?.vendors
+        ? booking.vendors.contact_name || booking.vendors.company_name
+        : booking?.crew_person?.name || "Unknown";
+      return {
+        id: row.id,
+        bookingId: row.booking_id,
+        campaignId: booking?.campaign_id || "",
+        personName,
+        role: booking?.role || "",
+        campaignName: booking?.campaigns?.name || "",
+        wfNumber: booking?.campaigns?.wf_number || "",
+        totalDays: Number(row.total_days),
+        totalAmount: Number(row.total_amount),
+        status: row.status,
+        confirmedAt: row.confirmed_at,
+        createdAt: row.created_at,
+      };
+    }
 
     return NextResponse.json({
       budgetRequests,
@@ -80,6 +121,8 @@ export async function GET() {
       pendingCrewPayments,
       resolvedRequests,
       resolvedInvoices: (completedInvoices || []).map(mapInvoice),
+      resolvedCrewBookings: (resolvedCrewBookingsRaw || []).map(mapCrewBooking),
+      resolvedCrewPayments: (resolvedCrewPaymentsRaw || []).map(mapCrewPayment),
     });
   } catch (error) {
     return authErrorResponse(error);
