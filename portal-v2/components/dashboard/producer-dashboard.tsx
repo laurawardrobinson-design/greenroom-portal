@@ -252,6 +252,14 @@ export function ProducerDashboard({ user }: Props) {
   }, [events]);
   const selectedDayAllEvents = selectedDateStr ? allGrouped.get(selectedDateStr) || [] : [];
 
+  function taskHref(type: string, campaignId: string): string {
+    const normalized = type.toLowerCase();
+    if (normalized.includes("estimate") || normalized.includes("invoice") || normalized.includes("po")) {
+      return `/campaigns/${campaignId}/pre-production?tab=payments`;
+    }
+    return `/campaigns/${campaignId}`;
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -529,7 +537,7 @@ export function ProducerDashboard({ user }: Props) {
           {stats?.pendingTasksList.map((t) => (
             <Link
               key={t.id}
-              href={`/campaigns/${t.campaignId}`}
+              href={taskHref(t.type, t.campaignId)}
               className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-surface-secondary"
             >
               <div className="min-w-0 flex-1">

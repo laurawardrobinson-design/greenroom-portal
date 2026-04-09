@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCampaigns } from "@/hooks/use-campaigns";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
@@ -9,6 +9,8 @@ import { ClipboardList } from "lucide-react";
 
 export default function PreProductionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab");
   const { user, isLoading: userLoading } = useCurrentUser();
   const { campaigns, isLoading: campaignsLoading } = useCampaigns();
 
@@ -26,9 +28,12 @@ export default function PreProductionPage() {
 
   useEffect(() => {
     if (!isLoading && target) {
-      router.replace(`/campaigns/${target.id}/pre-production`);
+      const nextPath = tab
+        ? `/campaigns/${target.id}/pre-production?tab=${encodeURIComponent(tab)}`
+        : `/campaigns/${target.id}/pre-production`;
+      router.replace(nextPath);
     }
-  }, [isLoading, target, router]);
+  }, [isLoading, target, router, tab]);
 
   if (isLoading || target) return <DashboardSkeleton />;
 

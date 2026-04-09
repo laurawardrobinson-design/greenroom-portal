@@ -4,13 +4,52 @@ import { useEffect, useRef, useState } from "react";
 import { Bell, Check, CheckCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useNotifications } from "@/hooks/use-notifications";
-import type { Notification } from "@/types/domain";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import type { Notification, NotificationType, UserRole } from "@/types/domain";
 
 const LEVEL_DOT: Record<string, string> = {
   urgent: "bg-red-500",
   warning: "bg-amber-400",
   info:    "bg-blue-400",
 };
+
+const WORKFLOW_NOTIFICATION_TYPES = new Set<NotificationType>([
+  "vendor_estimate",
+  "po_uploaded",
+  "invoice_submitted",
+  "invoice_approved",
+]);
+
+function isPaymentsWorkflowNotification(notification: Notification): boolean {
+  if (WORKFLOW_NOTIFICATION_TYPES.has(notification.type)) {
+    return true;
+  }
+  const text = `${notification.title} ${notification.body}`.toLowerCase();
+  return (
+    text.includes("estimate") ||
+    text.includes("invoice") ||
+    text.includes("purchase order") ||
+    text.includes("po ")
+  );
+}
+
+function notificationDestination(notification: Notification, role: UserRole | null | undefined): string {
+  const isWorkflow = isPaymentsWorkflowNotification(notification);
+
+  if (role === "Vendor" && isWorkflow) {
+    return "/vendor-workflow";
+  }
+  if (isWorkflow && notification.campaignId) {
+    return `/campaigns/${notification.campaignId}/pre-production?tab=payments`;
+  }
+  if (notification.campaignId) {
+    return `/campaigns/${notification.campaignId}`;
+  }
+  if (role === "Vendor") {
+    return "/vendor-workflow";
+  }
+  return "/dashboard";
+}
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -78,6 +117,7 @@ interface NotificationBellProps {
 
 export function NotificationBell({ variant = "topbar" }: NotificationBellProps) {
   const { notifications, unreadCount, isLoading, markRead, markAllRead } = useNotifications();
+  const { user } = useCurrentUser();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -105,7 +145,7 @@ export function NotificationBell({ variant = "topbar" }: NotificationBellProps) 
   async function handleNotificationClick(n: Notification) {
     if (!n.read) await markRead(n.id);
     setOpen(false);
-    if (n.campaignId) router.push(`/campaigns/${n.campaignId}`);
+    router.push(notificationDestination(n, user?.role));
   }
 
   const buttonBase =

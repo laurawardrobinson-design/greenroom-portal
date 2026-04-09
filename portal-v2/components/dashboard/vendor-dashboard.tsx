@@ -6,7 +6,6 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { HighlightsCard } from "@/components/dashboard/highlights-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { formatCurrency } from "@/lib/utils/format";
 import { VENDOR_STATUS_COLORS } from "@/lib/constants/statuses";
@@ -141,7 +140,7 @@ export function VendorDashboard({ user }: Props) {
               return (
                 <Link
                   key={a.id}
-                  href={`/campaigns/${a.campaignId}`}
+                  href={`/vendor-workflow?assignment=${a.id}`}
                   className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-surface-secondary transition-colors"
                 >
                   <div className="flex items-center gap-3">
@@ -190,7 +189,7 @@ export function VendorDashboard({ user }: Props) {
               return (
                 <Link
                   key={a.id}
-                  href={`/campaigns/${a.campaignId}`}
+                  href={`/vendor-workflow?assignment=${a.id}`}
                   className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-surface-secondary transition-colors"
                 >
                   <div>
@@ -217,7 +216,7 @@ export function VendorDashboard({ user }: Props) {
               return (
                 <Link
                   key={a.id}
-                  href={`/campaigns/${a.campaignId}`}
+                  href={`/vendor-workflow?assignment=${a.id}`}
                   className="flex items-center justify-between rounded-lg border border-border p-3 opacity-60 hover:opacity-100 transition-opacity"
                 >
                   <div>

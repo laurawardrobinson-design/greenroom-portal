@@ -74,10 +74,10 @@ export async function POST(request: Request) {
 
     // Vendor upload restrictions
     if (user.role === "Vendor") {
-      const allowed: AssetCategory[] = ["Deliverable", "Invoice"];
+      const allowed: AssetCategory[] = ["Deliverable", "Invoice", "Estimate"];
       if (!allowed.includes(category)) {
         return NextResponse.json(
-          { error: "Vendors can only upload Deliverables and Invoices" },
+          { error: "Vendors can only upload Deliverables, Estimates, and Invoices" },
           { status: 403 }
         );
       }

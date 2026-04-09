@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { FileSection } from "@/components/campaigns/file-section";
 import { FileText } from "lucide-react";
@@ -23,6 +24,17 @@ export function DocumentsTile({ campaignId, isVendor, canEdit, uploading, onUplo
       </div>
 
       <div className="flex-1 overflow-y-auto px-3.5 py-3">
+        {isVendor && (
+          <div className="mb-3 rounded-lg border border-border bg-surface-secondary px-3 py-2.5">
+            <p className="text-xs text-text-secondary">
+              Campaign documents are read-only for vendors. Use{" "}
+              <Link href="/vendor-workflow" className="font-medium text-primary hover:underline">
+                Workflow
+              </Link>{" "}
+              to submit estimates, sign POs, and upload invoices.
+            </p>
+          </div>
+        )}
         <div className={showAdminSection ? "grid grid-cols-1 md:grid-cols-2 gap-6" : ""}>
           <FileSection
             title={isVendor ? "Campaign Documents" : "Creative"}
@@ -31,7 +43,7 @@ export function DocumentsTile({ campaignId, isVendor, canEdit, uploading, onUplo
             categories={isVendor ? ["Deliverable"] : ["Shot List", "Concept Deck", "Reference", "Product Info"]}
             onUpload={onUpload}
             uploading={uploading}
-            canUpload={isVendor || canEdit || !!hideAdminDocs}
+            canUpload={!isVendor && (canEdit || !!hideAdminDocs)}
           />
           {showAdminSection && (
             <FileSection

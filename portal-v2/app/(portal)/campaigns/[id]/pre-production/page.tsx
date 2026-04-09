@@ -1,12 +1,11 @@
 "use client";
 
 import { use, useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCampaign, useCampaigns } from "@/hooks/use-campaigns";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/ui/page-header";
 import useSWR from "swr";
 import type { AppUser, Shoot, CampaignVendor, Vendor } from "@/types/domain";
 import {
@@ -25,6 +24,7 @@ import {
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { ScheduleTab } from "@/components/pre-production/schedule-tab";
+import { VendorAssignmentPanel } from "@/components/campaigns/vendor-assignment-panel";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
 
@@ -38,6 +38,12 @@ const TABS = [
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
+
+function parseTabId(value: string | null): TabId | null {
+  if (!value) return null;
+  if (TABS.some((tab) => tab.id === value)) return value as TabId;
+  return null;
+}
 
 // ─── Placeholder tab content ──────────────────────────────────────────────────
 function PlaceholderTab({
@@ -87,14 +93,17 @@ function LogisticsTab() {
   );
 }
 
-function PaymentsTab() {
+function PaymentsTab({ campaignId, canEdit }: { campaignId: string; canEdit: boolean }) {
   return (
-    <PlaceholderTab
-      icon={DollarSign}
-      title="Payments"
-      description="Financial approvals and disbursements — vendor estimates, invoices, and talent/crew paymaster."
-      items={["Estimates", "Invoices", "Paymaster"]}
-    />
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border bg-surface p-4">
+        <h3 className="text-sm font-semibold text-text-primary">Estimates & Invoices</h3>
+        <p className="mt-1 text-xs text-text-tertiary">
+          Producer workflow in one place: assign vendors, review submitted estimates, upload PO, review invoices, and approve for finance.
+        </p>
+      </div>
+      <VendorAssignmentPanel campaignId={campaignId} canEdit={canEdit} />
+    </div>
   );
 }
 
@@ -917,7 +926,17 @@ function PeopleTab({
 }
 
 // ─── Campaign switcher dropdown ───────────────────────────────────────────────
-function CampaignSwitcher({ currentId, currentName, currentWf }: { currentId: string; currentName: string; currentWf?: string | null }) {
+function CampaignSwitcher({
+  currentId,
+  currentName,
+  currentWf,
+  activeTab,
+}: {
+  currentId: string;
+  currentName: string;
+  currentWf?: string | null;
+  activeTab: TabId;
+}) {
   const router = useRouter();
   const { user } = useCurrentUser();
   const { campaigns } = useCampaigns();
@@ -989,7 +1008,7 @@ function CampaignSwitcher({ currentId, currentName, currentWf }: { currentId: st
                   type="button"
                   onClick={() => {
                     setOpen(false);
-                    router.push(`/campaigns/${c.id}/pre-production`);
+                    router.push(`/campaigns/${c.id}/pre-production?tab=${activeTab}`);
                   }}
                   className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-secondary transition-colors"
                 >
@@ -1020,9 +1039,17 @@ export default function PreProductionWorkspacePage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabFromUrl = parseTabId(searchParams.get("tab"));
   const { campaign, shoots, vendors, isLoading, mutate: refreshCampaign } = useCampaign(id);
   const { user } = useCurrentUser();
-  const [activeTab, setActiveTab] = useState<TabId>("schedule");
+  const [activeTab, setActiveTab] = useState<TabId>(tabFromUrl ?? "schedule");
+
+  useEffect(() => {
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl, activeTab]);
 
   if (isLoading) return <DashboardSkeleton />;
   if (!campaign) {
@@ -1054,9 +1081,14 @@ export default function PreProductionWorkspacePage({
     ? TABS.filter((t) => t.id === "schedule" || t.id === "people")
     : TABS;
 
-  const campaignLabel = campaign.wfNumber
-    ? `${campaign.wfNumber} ${campaign.name}`
-    : campaign.name;
+  const resolvedActiveTab = visibleTabs.some((tab) => tab.id === activeTab)
+    ? activeTab
+    : visibleTabs[0].id;
+
+  function handleTabClick(tabId: TabId) {
+    setActiveTab(tabId);
+    router.replace(`/campaigns/${id}/pre-production?tab=${tabId}`, { scroll: false });
+  }
 
   return (
     <div className="space-y-0">
@@ -1064,7 +1096,12 @@ export default function PreProductionWorkspacePage({
       <div className="space-y-3 pb-4 border-b border-border">
         <div className="flex items-start justify-between gap-4">
           <h2 className="text-2xl font-bold text-text-primary">Pre Production</h2>
-          <CampaignSwitcher currentId={id} currentName={campaign.name} currentWf={campaign.wfNumber} />
+          <CampaignSwitcher
+            currentId={id}
+            currentName={campaign.name}
+            currentWf={campaign.wfNumber}
+            activeTab={resolvedActiveTab}
+          />
         </div>
       </div>
 
@@ -1072,12 +1109,12 @@ export default function PreProductionWorkspacePage({
       <div className="border-b border-border">
         <nav className="flex gap-0">
           {visibleTabs.map(({ id: tabId, label, icon: Icon }) => {
-            const active = activeTab === tabId;
+            const active = resolvedActiveTab === tabId;
             return (
               <button
                 key={tabId}
                 type="button"
-                onClick={() => setActiveTab(tabId)}
+                onClick={() => handleTabClick(tabId)}
                 className={`
                   relative flex items-center gap-2 px-5 py-3.5 text-sm font-medium transition-colors
                   ${active
@@ -1099,7 +1136,7 @@ export default function PreProductionWorkspacePage({
 
       {/* Tab content */}
       <div className="pt-6">
-        {activeTab === "schedule"  && (
+        {resolvedActiveTab === "schedule"  && (
           <ScheduleTab
             campaignId={id}
             campaignName={campaign.name}
@@ -1111,10 +1148,10 @@ export default function PreProductionWorkspacePage({
             isArtDirector={isArtDirector}
           />
         )}
-        {activeTab === "logistics" && <LogisticsTab />}
-        {activeTab === "people"    && <PeopleTab campaignId={id} shoots={shoots} vendors={vendors} producerId={campaign.producerId} canManage={canManagePeople} onRefresh={refreshCampaign} />}
-        {activeTab === "payments"  && <PaymentsTab />}
-        {activeTab === "contracts" && <ContractsTab campaignId={id} shoots={shoots} vendors={vendors} />}
+        {resolvedActiveTab === "logistics" && <LogisticsTab />}
+        {resolvedActiveTab === "people"    && <PeopleTab campaignId={id} shoots={shoots} vendors={vendors} producerId={campaign.producerId} canManage={canManagePeople} onRefresh={refreshCampaign} />}
+        {resolvedActiveTab === "payments"  && <PaymentsTab campaignId={id} canEdit={canManagePeople} />}
+        {resolvedActiveTab === "contracts" && <ContractsTab campaignId={id} shoots={shoots} vendors={vendors} />}
       </div>
     </div>
   );
