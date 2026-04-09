@@ -64,8 +64,6 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
   // Approval state
   const isProducerApproved = !!invoice?.producerApprovedAt;
   const isHopApproved = !!invoice?.hopApprovedAt;
-  const isParsing = invoice?.parseStatus === "pending" || invoice?.parseStatus === "processing";
-
   const canApproveEstimate =
     status === "Estimate Submitted" && (user?.role === "Producer" || user?.role === "Admin");
   const canApproveInvoiceProducer =
@@ -308,15 +306,10 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
           <div className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">
             Invoice
           </div>
-          {isParsing ? (
-            <div className="flex items-center gap-2 py-2 text-xs text-text-tertiary">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              Parsing invoice…
-            </div>
-          ) : !invoice ? (
+          {!invoice ? (
             <p className="text-xs text-text-tertiary py-2">No invoice yet.</p>
           ) : invoiceItems.length === 0 ? (
-            <p className="text-xs text-text-tertiary py-2">No line items parsed.</p>
+            <p className="text-xs text-text-tertiary py-2">No line items available for this invoice.</p>
           ) : (
             <table className="w-full text-xs">
               <tbody>

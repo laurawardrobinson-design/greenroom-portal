@@ -16,7 +16,7 @@ import { formatCurrency } from "@/lib/utils/format";
 import { VENDOR_STATUS_COLORS } from "@/lib/constants/statuses";
 import { InvoiceReviewPanel } from "@/components/campaigns/invoice-review-panel";
 import { EstimateReviewPanel } from "@/components/campaigns/estimate-review-panel";
-import { Plus, Users, Trash2, Upload, FileSearch, FileText, PenLine, CheckCircle2, Clock, ExternalLink, Loader2 } from "lucide-react";
+import { Plus, Users, Trash2, Upload, FileSearch, FileText, PenLine, CheckCircle2, Clock, ExternalLink } from "lucide-react";
 import type { VendorInvoice } from "@/types/domain";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -30,7 +30,6 @@ function VendorInvoiceView({ campaignVendorId }: { campaignVendorId: string }) {
   const invoice = data?.invoice;
   if (!invoice) return null;
 
-  const isParsing = invoice.parseStatus === "pending" || invoice.parseStatus === "processing";
   const isProducerApproved = !!invoice.producerApprovedAt;
   const isHopApproved = !!invoice.hopApprovedAt;
 
@@ -53,12 +52,6 @@ function VendorInvoiceView({ campaignVendorId }: { campaignVendorId: string }) {
           {invoice.fileName}
           <ExternalLink className="h-3 w-3" />
         </a>
-        {isParsing && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Parsing...
-          </span>
-        )}
       </div>
       <p className="text-xs text-text-tertiary">{statusLabel}</p>
     </div>
@@ -507,7 +500,7 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                 <ul className="space-y-2 text-sm text-text-secondary">
                   <li className="flex items-start gap-2">
                     <FileSearch className="h-4 w-4 mt-0.5 shrink-0 text-blue-600" />
-                    <span>We'll parse line items from your invoice automatically</span>
+                    <span>The Producer will review your uploaded invoice document</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Users className="h-4 w-4 mt-0.5 shrink-0 text-blue-600" />

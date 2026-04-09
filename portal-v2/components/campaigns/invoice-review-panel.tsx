@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   ExternalLink,
-  Loader2,
   CornerDownLeft,
   Eye,
 } from "lucide-react";
@@ -81,8 +80,6 @@ export function InvoiceReviewPanel({
   const diff = invoiceTotal - estimateTotal;
   const diffPct = estimateTotal > 0 ? (diff / estimateTotal) * 100 : 0;
 
-  const isParsing = invoice.parseStatus === "pending" || invoice.parseStatus === "processing";
-  const hasFailed = invoice.parseStatus === "failed";
   const isProducerApproved = !!invoice.producerApprovedAt;
   const isHopApproved = !!invoice.hopApprovedAt;
   const invoiceDocumentUrl = invoiceHref(invoice, campaignVendorId);
@@ -158,17 +155,6 @@ export function InvoiceReviewPanel({
             Preview
             <Eye className="h-3 w-3" />
           </button>
-          {isParsing && (
-            <Badge variant="custom" className="bg-amber-50 text-amber-700">
-              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-              Parsing...
-            </Badge>
-          )}
-          {hasFailed && (
-            <Badge variant="custom" className="bg-red-50 text-red-700">
-              Parse failed
-            </Badge>
-          )}
         </div>
 
         {/* Approval actions — right side of header */}

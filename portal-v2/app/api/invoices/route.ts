@@ -17,8 +17,12 @@ export async function GET(request: Request) {
     if (!campaignVendorId) {
       return NextResponse.json({ error: "campaignVendorId required" }, { status: 400 });
     }
-    // Verify vendor can only access their own assignment
-    await requireVendorOwnership(user, campaignVendorId);
+    // Vendors can only access their own assignment; producers/admin can review all.
+    if (user.role === "Vendor") {
+      await requireVendorOwnership(user, campaignVendorId);
+    } else {
+      await requireRole(["Admin", "Producer"]);
+    }
     const result = await getInvoiceForCampaignVendor(campaignVendorId);
     return NextResponse.json(result || { invoice: null, items: [] });
   } catch (error) {
@@ -69,27 +73,6 @@ export async function POST(request: Request) {
 
     // Transition vendor status to "Invoice Submitted"
     await transitionVendorStatus(campaignVendorId, "Invoice Submitted");
-
-    // Trigger edge function for parsing (fire-and-forget)
-    // Passes storage path — edge function downloads directly from private storage
-    const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (projectUrl && serviceKey) {
-      fetch(`${projectUrl}/functions/v1/parse-invoice`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${serviceKey}`,
-        },
-        body: JSON.stringify({
-          invoiceId: invoice.id,
-          storagePath, // Private storage path — NOT a public URL
-          campaignVendorId,
-        }),
-      }).catch(() => {
-        // Edge function failure is non-blocking — can be retried
-      });
-    }
 
     return NextResponse.json(invoice, { status: 201 });
   } catch (error) {

@@ -64,7 +64,7 @@ export async function createInvoice(input: {
       file_url: input.fileUrl,
       file_name: input.fileName,
       storage_path: input.storagePath || null,
-      parse_status: "pending",
+      parse_status: "completed",
     })
     .select()
     .single();

@@ -129,7 +129,6 @@ function InvoiceStatusView({ campaignVendorId }: { campaignVendorId: string }) {
     return <p className="text-xs text-text-tertiary">No invoice file uploaded yet.</p>;
   }
 
-  const isParsing = invoice.parseStatus === "pending" || invoice.parseStatus === "processing";
   const isProducerApproved = !!invoice.producerApprovedAt;
   const isHopApproved = !!invoice.hopApprovedAt;
 
@@ -155,7 +154,6 @@ function InvoiceStatusView({ campaignVendorId }: { campaignVendorId: string }) {
       </div>
       <p className="text-xs text-text-tertiary">
         {statusText}
-        {isParsing ? " · Parsing in progress" : ""}
       </p>
     </div>
   );
