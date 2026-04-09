@@ -132,10 +132,10 @@ function InternalTab({
   const isSelf = campaignAdId === currentUserId;
 
   return (
-    <div className="space-y-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       {/* Producer row */}
       {producer && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-md border border-border bg-surface-secondary/40 p-2">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <UserCircle className="h-4 w-4" />
           </div>
@@ -147,7 +147,7 @@ function InternalTab({
       )}
 
       {/* Art Director row */}
-      <div>
+      <div className="rounded-md border border-border bg-surface-secondary/40 p-2">
         <div className="flex items-center gap-1.5 mb-1.5">
           <Palette className="h-3 w-3 text-text-tertiary" />
           <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Art Director</span>
@@ -240,10 +240,11 @@ function VendorsTab({ campaignId, canEdit }: { campaignId: string; canEdit: bool
       {vendors.length === 0 ? (
         <p className="text-xs text-text-tertiary py-1">No vendors assigned yet.</p>
       ) : (
-        vendors.map((cv) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {vendors.map((cv) => {
           const statusColor = VENDOR_STATUS_COLORS[cv.status as keyof typeof VENDOR_STATUS_COLORS] ?? "bg-slate-100 text-slate-600";
           return (
-            <div key={cv.id} className="flex items-center gap-3 py-1.5">
+            <div key={cv.id} className="flex items-center gap-3 rounded-md border border-border bg-surface-secondary/40 p-2">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
                 <Users className="h-3.5 w-3.5 text-text-tertiary" />
               </div>
@@ -260,7 +261,8 @@ function VendorsTab({ campaignId, canEdit }: { campaignId: string; canEdit: bool
               </span>
             </div>
           );
-        })
+          })}
+        </div>
       )}
 
       {canEdit && (
