@@ -4,6 +4,7 @@ import {
   listReservations,
   createReservation,
   deleteReservation,
+  autoCreateFoodPlan,
 } from "@/lib/services/studio.service";
 
 export async function GET(request: Request) {
@@ -44,6 +45,12 @@ export async function POST(request: Request) {
       notes: notes ?? null,
       reservedBy: user.id,
     });
+
+    // Fire-and-forget: auto-create a food planning entry if crew exists
+    autoCreateFoodPlan(campaignId, reservedDate, user.id).catch(() => {
+      // Silently ignore — food plan is a convenience, not critical
+    });
+
     return NextResponse.json(reservation, { status: 201 });
   } catch (error) {
     // Surface unique constraint violation as a readable error

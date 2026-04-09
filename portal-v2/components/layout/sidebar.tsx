@@ -20,7 +20,6 @@ import {
   ClipboardCheck,
   FileText,
   Building2,
-  Coffee,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -84,14 +83,8 @@ const NAV_ITEMS: NavItem[] = [
     label: "Studio",
     href: "/studio",
     icon: Building2,
-    roles: ["Admin", "Studio"],
-    adminLabel: "Studio Management",
-  },
-  {
-    label: "Food & Crafty",
-    href: "/food-crafty",
-    icon: Coffee,
     roles: ["Admin", "Producer", "Studio"],
+    adminLabel: "Studio Management",
   },
   {
     label: "Gear",
