@@ -411,6 +411,7 @@ function SpacesView({ userRole, userId }: SpacesViewProps) {
         toast("error", `${failed} space${failed !== 1 ? "s" : ""} could not be reserved`);
       }
       setSelectedRooms(new Set());
+      setActiveShoot(null);
       refreshRes();
     } finally {
       setSaving(false);
@@ -528,12 +529,17 @@ function SpacesView({ userRole, userId }: SpacesViewProps) {
                   <div
                     key={shoot.id}
                     className={`flex items-center justify-between gap-2 px-3.5 py-2.5 transition-colors ${
-                      isActive ? "bg-emerald-500/5" : "hover:bg-surface-secondary"
+                      isActive ? "bg-primary/5" : "hover:bg-surface-secondary"
                     }`}
                   >
-                    <p className="text-xs font-medium text-text-primary truncate min-w-0">
-                      {shoot.campaign?.name ?? shoot.shootName}
-                    </p>
+                    <div className="min-w-0">
+                      {shoot.campaign?.wfNumber && (
+                        <p className="text-[10px] text-text-tertiary font-mono">{shoot.campaign.wfNumber}</p>
+                      )}
+                      <p className="text-xs font-medium text-text-primary truncate">
+                        {shoot.campaign?.name ?? shoot.shootName}
+                      </p>
+                    </div>
                     <button
                       onClick={() => {
                         if (isActive) {
@@ -546,7 +552,7 @@ function SpacesView({ userRole, userId }: SpacesViewProps) {
                       }}
                       className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold transition-colors ${
                         isActive
-                          ? "bg-emerald-500 text-white"
+                          ? "bg-primary text-white"
                           : "border border-border bg-surface text-text-secondary hover:border-primary hover:text-primary"
                       }`}
                     >
@@ -589,13 +595,21 @@ function SpacesView({ userRole, userId }: SpacesViewProps) {
                 {activeShoot.campaign.wfNumber} — {activeShoot.campaign.name}
               </p>
             </div>
-            {selectedRooms.size > 0 ? (
-              <Button size="sm" onClick={handleConfirm} disabled={saving} className="shrink-0">
-                {saving ? "Reserving..." : `Confirm ${selectedRooms.size} space${selectedRooms.size !== 1 ? "s" : ""}`}
-              </Button>
-            ) : (
-              <p className="text-xs text-text-tertiary shrink-0">Click spaces to select</p>
-            )}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => { setActiveShoot(null); setSelectedRooms(new Set()); }}
+                className="rounded-md px-2.5 py-1 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors"
+              >
+                Cancel
+              </button>
+              {selectedRooms.size > 0 ? (
+                <Button size="sm" onClick={handleConfirm} disabled={saving}>
+                  {saving ? "Reserving..." : `Confirm ${selectedRooms.size} space${selectedRooms.size !== 1 ? "s" : ""}`}
+                </Button>
+              ) : (
+                <p className="text-xs text-text-tertiary">Click spaces to select</p>
+              )}
+            </div>
           </div>
         )}
 
@@ -733,7 +747,7 @@ function SpacePickerModal({
                 key={space.id}
                 className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
                   isOurs
-                    ? "bg-emerald-500/5 border-primary/30"
+                    ? "bg-primary/5 border-primary/30"
                     : isTaken
                     ? "bg-surface-secondary border-border opacity-60"
                     : "bg-surface border-border"
@@ -768,7 +782,7 @@ function SpacePickerModal({
                   <button
                     onClick={() => reserveSpace(space.id)}
                     disabled={isBusy}
-                    className="shrink-0 rounded-md border border-primary/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-primary hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                    className="shrink-0 rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
                   >
                     {isBusy ? "..." : "Reserve"}
                   </button>
