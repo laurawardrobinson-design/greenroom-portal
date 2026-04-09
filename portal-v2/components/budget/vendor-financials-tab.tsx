@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency } from "@/lib/utils/format";
@@ -348,19 +348,17 @@ export function VendorFinancialsTab() {
 
   return (
     <>
-      <Card className="max-w-2xl">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Receipt className="h-4 w-4 text-text-tertiary" />
-            Vendor Financials
-          </CardTitle>
+      <Card padding="none" className="max-w-2xl">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+          <Receipt className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Vendor Financials</span>
           <select
             value={campaignFilter}
             onChange={(e) => {
               setCampaignFilter(e.target.value);
               setOpenId(null);
             }}
-            className="text-xs bg-surface-secondary border border-border rounded-md px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="ml-auto text-xs bg-surface-secondary border border-border rounded-md px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="all">All campaigns</option>
             {campaignOptions.map((c) => (
@@ -369,7 +367,7 @@ export function VendorFinancialsTab() {
               </option>
             ))}
           </select>
-        </CardHeader>
+        </div>
 
         {!data ? (
           <div className="flex items-center justify-center py-10 text-text-tertiary">

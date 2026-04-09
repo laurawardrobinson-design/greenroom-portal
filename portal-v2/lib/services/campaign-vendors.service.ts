@@ -275,6 +275,36 @@ export async function getEstimateItems(
   }));
 }
 
+// Update estimate items (producer correction of AI scrape)
+export async function updateEstimateItems(
+  campaignVendorId: string,
+  items: { description: string; amount: number; category?: string; quantity?: number; unitPrice?: number }[]
+): Promise<void> {
+  const db = createAdminClient();
+
+  const rows = items.map((item, i) => ({
+    campaign_vendor_id: campaignVendorId,
+    category: item.category ?? null,
+    description: item.description,
+    quantity: item.quantity ?? 1,
+    unit_price: item.unitPrice ?? item.amount,
+    amount: item.amount,
+    sort_order: i,
+  }));
+
+  await db.from("vendor_estimate_items").delete().eq("campaign_vendor_id", campaignVendorId);
+
+  const { error } = await db.from("vendor_estimate_items").insert(rows);
+  if (error) throw error;
+
+  const total = items.reduce((s, i) => s + i.amount, 0);
+  const { error: updateErr } = await db
+    .from("campaign_vendors")
+    .update({ estimate_total: total })
+    .eq("id", campaignVendorId);
+  if (updateErr) throw updateErr;
+}
+
 // Remove vendor from campaign
 export async function removeVendorFromCampaign(id: string): Promise<void> {
   const db = createAdminClient();

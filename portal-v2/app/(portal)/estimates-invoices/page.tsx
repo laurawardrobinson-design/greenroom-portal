@@ -19,25 +19,25 @@ type PendingRow = CampaignVendor & { campaignName: string; wfNumber: string };
 // ── Status chips ──────────────────────────────────────────────────────────────
 
 const STATUS_LABEL: Partial<Record<CampaignVendorStatus, string>> = {
-  "Estimate Submitted":  "Submitted",
-  "Estimate Approved":   "Approved",
+  "Estimate Submitted":  "",
+  "Estimate Approved":   "",
   "Rejected":            "Rejected",
-  "PO Uploaded":         "Upload PO",
-  "PO Signed":           "Signed",
-  "Shoot Complete":      "Upload Invoice",
-  "Invoice Submitted":   "Submitted",
-  "Invoice Pre-Approved":"Pre-Approved",
+  "PO Uploaded":         "Awaiting Signature",
+  "PO Signed":           "PO Signed",
+  "Shoot Complete":      "Shoot Complete",
+  "Invoice Submitted":   "",
+  "Invoice Pre-Approved":"Sent to Finance",
   "Invoice Approved":    "Approved",
   "Paid":                "Paid",
 };
 
 const STATUS_STYLE: Partial<Record<CampaignVendorStatus, string>> = {
   "Estimate Submitted":  "bg-amber-50 text-amber-700 border-amber-200",
-  "Estimate Approved":   "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Estimate Approved":   "bg-amber-50 text-amber-700 border-amber-200",
   "Rejected":            "bg-red-50 text-red-700 border-red-200",
-  "PO Uploaded":         "bg-amber-50 text-amber-700 border-amber-200",
-  "PO Signed":           "bg-blue-50 text-blue-700 border-blue-200",
-  "Shoot Complete":      "bg-amber-50 text-amber-700 border-amber-200",
+  "PO Uploaded":         "bg-blue-50 text-blue-700 border-blue-200",
+  "PO Signed":           "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Shoot Complete":      "bg-surface-secondary text-text-secondary border-border",
   "Invoice Submitted":   "bg-amber-50 text-amber-700 border-amber-200",
   "Invoice Pre-Approved":"bg-blue-50 text-blue-700 border-blue-200",
   "Invoice Approved":    "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -80,47 +80,49 @@ function SectionTabs({ active, onChange }: {
 
 // ── Shared row ────────────────────────────────────────────────────────────────
 
-function DocRow({ row, onOpen, isPast }: { row: PendingRow; onOpen: () => void; isPast?: boolean }) {
-  const label = STATUS_LABEL[row.status] ?? row.status;
+function DocRow({ row, onOpen }: { row: PendingRow; onOpen: () => void }) {
+  const label = STATUS_LABEL[row.status] ?? "";
   const style = STATUS_STYLE[row.status] ?? "bg-surface-secondary text-text-secondary border-border";
   const isOver = row.invoiceTotal > 0 && row.estimateTotal > 0 && row.invoiceTotal > row.estimateTotal;
 
   return (
-    <div className={`px-3.5 py-3 flex items-center gap-3 ${isPast ? "" : ""}`}>
-      <div className="min-w-0 flex-1">
+    <div className="px-3.5 py-2.5 flex items-center gap-4">
+      {/* Vendor + campaign */}
+      <div className="min-w-0 w-48 shrink-0">
         <p className="text-sm font-semibold text-text-primary truncate">
           {row.vendor?.companyName || "Unknown Vendor"}
         </p>
-        <p className="text-xs text-text-tertiary truncate mt-0.5">
+        <p className="text-xs text-text-tertiary truncate">
           {row.wfNumber && `${row.wfNumber} — `}{row.campaignName}
         </p>
-        <div className="flex items-center gap-3 mt-1">
-          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${style}`}>
-            {label}
-          </span>
-          <span className="text-xs text-text-secondary">
-            {row.estimateTotal > 0 && (
-              <>Est: <span className="font-medium text-text-primary">{formatCurrency(row.estimateTotal)}</span></>
-            )}
-            {row.estimateTotal > 0 && row.invoiceTotal > 0 && <span className="mx-1.5 text-border">·</span>}
-            {row.invoiceTotal > 0 && (
-              <>
-                Inv:{" "}
-                <span className={`font-medium ${isOver ? "text-amber-600" : "text-text-primary"}`}>
-                  {formatCurrency(row.invoiceTotal)}
-                </span>
-                {isOver && <span className="ml-1 text-[10px] text-amber-600 font-semibold">↑ over</span>}
-              </>
-            )}
-            {row.paymentAmount > 0 && (
-              <>
-                {row.invoiceTotal > 0 && <span className="mx-1.5 text-border">·</span>}
-                Paid: <span className="font-medium text-emerald-700">{formatCurrency(row.paymentAmount)}</span>
-              </>
-            )}
-          </span>
-        </div>
       </div>
+
+      {/* Amounts */}
+      <div className="flex gap-4 text-xs flex-1">
+        {row.estimateTotal > 0 && (
+          <span className="text-text-tertiary">Est: <span className="font-medium text-text-primary">{formatCurrency(row.estimateTotal)}</span></span>
+        )}
+        {row.invoiceTotal > 0 && (
+          <span className="text-text-tertiary">
+            Inv:{" "}
+            <span className={`font-medium ${isOver ? "text-amber-600" : "text-text-primary"}`}>
+              {formatCurrency(row.invoiceTotal)}
+            </span>
+            {isOver && <span className="ml-1 text-[10px] text-amber-600 font-semibold">↑ over</span>}
+          </span>
+        )}
+        {row.paymentAmount > 0 && (
+          <span className="text-text-tertiary">Paid: <span className="font-medium text-emerald-700">{formatCurrency(row.paymentAmount)}</span></span>
+        )}
+      </div>
+
+      {/* Instructional badge (e.g. Upload PO, Sent to Finance) */}
+      {label && (
+        <span className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${style}`}>
+          {label}
+        </span>
+      )}
+
       <Button size="sm" variant="secondary" onClick={onOpen}>
         Review
       </Button>
@@ -160,9 +162,9 @@ export default function EstimatesInvoicesPage() {
   const poActive = all.filter((r) => r.status === "Estimate Approved");
   const poPast   = all.filter((r) => ["PO Uploaded", "PO Signed", "Shoot Complete", "Invoice Submitted", "Invoice Pre-Approved", "Invoice Approved", "Paid"].includes(r.status));
 
-  // Invoices
-  const invoicesActive = all.filter((r) => ["Invoice Submitted", "Invoice Pre-Approved"].includes(r.status));
-  const invoicesPast   = all.filter((r) => ["Invoice Approved", "Paid"].includes(r.status));
+  // Invoices — active = producer needs to pre-approve; past = sent to finance or done
+  const invoicesActive = all.filter((r) => r.status === "Invoice Submitted");
+  const invoicesPast   = all.filter((r) => ["Invoice Pre-Approved", "Invoice Approved", "Paid"].includes(r.status));
 
   function handleStatusChange() {
     Promise.all([mutatePending(), mutateRecent()]).then(([updatedPending]) => {
@@ -199,7 +201,7 @@ export default function EstimatesInvoicesPage() {
         <div className="space-y-4">
 
           {/* Estimates */}
-          <Card>
+          <Card padding="none">
             <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
               <FileText className="h-4 w-4 shrink-0 text-primary" />
               <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Estimates</span>
@@ -221,9 +223,9 @@ export default function EstimatesInvoicesPage() {
               estimatesPast.length === 0 ? (
                 <EmptyState title="No past estimates" description="Approved estimates will appear here." />
               ) : (
-                <div className="bg-surface-secondary -mx-5 -mb-5 rounded-b-xl divide-y divide-border">
+                <div className="bg-surface-secondary rounded-b-xl divide-y divide-border">
                   {estimatesPast.map((row) => (
-                    <DocRow key={row.id} row={row} onOpen={() => setManagingRow(row)} isPast />
+                    <DocRow key={row.id} row={row} onOpen={() => setManagingRow(row)} />
                   ))}
                 </div>
               )
@@ -231,7 +233,7 @@ export default function EstimatesInvoicesPage() {
           </Card>
 
           {/* Purchase Orders */}
-          <Card>
+          <Card padding="none">
             <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
               <ClipboardList className="h-4 w-4 shrink-0 text-primary" />
               <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Purchase Orders</span>
@@ -253,9 +255,9 @@ export default function EstimatesInvoicesPage() {
               poPast.length === 0 ? (
                 <EmptyState title="No past POs" description="POs from completed campaigns will appear here." />
               ) : (
-                <div className="bg-surface-secondary -mx-5 -mb-5 rounded-b-xl divide-y divide-border">
+                <div className="bg-surface-secondary rounded-b-xl divide-y divide-border">
                   {poPast.map((row) => (
-                    <DocRow key={row.id} row={row} onOpen={() => setManagingRow(row)} isPast />
+                    <DocRow key={row.id} row={row} onOpen={() => setManagingRow(row)} />
                   ))}
                 </div>
               )
@@ -263,7 +265,7 @@ export default function EstimatesInvoicesPage() {
           </Card>
 
           {/* Invoices */}
-          <Card>
+          <Card padding="none">
             <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
               <Receipt className="h-4 w-4 shrink-0 text-primary" />
               <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Invoices</span>
@@ -285,9 +287,9 @@ export default function EstimatesInvoicesPage() {
               invoicesPast.length === 0 ? (
                 <EmptyState title="No past invoices" description="Approved and paid invoices will appear here." />
               ) : (
-                <div className="bg-surface-secondary -mx-5 -mb-5 rounded-b-xl divide-y divide-border">
+                <div className="bg-surface-secondary rounded-b-xl divide-y divide-border">
                   {invoicesPast.map((row) => (
-                    <DocRow key={row.id} row={row} onOpen={() => setManagingRow(row)} isPast />
+                    <DocRow key={row.id} row={row} onOpen={() => setManagingRow(row)} />
                   ))}
                 </div>
               )

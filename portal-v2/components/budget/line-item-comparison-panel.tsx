@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatCurrency } from "@/lib/utils/format";
-import { FileText, AlertTriangle, Check, CheckCircle2, CornerDownLeft, Loader2 } from "lucide-react";
+import { FileText, AlertTriangle, Check, CheckCircle2, CornerDownLeft, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -30,8 +30,11 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
   const [acting, setActing] = useState(false);
   const [sendingBack, setSendingBack] = useState(false);
   const [reason, setReason] = useState("");
+  const [editingEstimate, setEditingEstimate] = useState(false);
+  const [editRows, setEditRows] = useState<{ description: string; amount: string }[]>([]);
+  const [savingEstimate, setSavingEstimate] = useState(false);
 
-  const { data: cvData } = useSWR<{ estimateItems: VendorEstimateItem[] }>(
+  const { data: cvData, mutate: mutateCv } = useSWR<{ estimateItems: VendorEstimateItem[] }>(
     `/api/campaign-vendors/${campaignVendorId}`,
     fetcher
   );
@@ -113,6 +116,39 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
       toast("error", "Failed to approve invoice");
     } finally {
       setActing(false);
+    }
+  }
+
+  function startEditEstimate() {
+    setEditRows(estimateItems.map((i) => ({ description: i.description, amount: String(i.amount) })));
+    setEditingEstimate(true);
+  }
+
+  function cancelEditEstimate() {
+    setEditingEstimate(false);
+    setEditRows([]);
+  }
+
+  async function saveEstimateItems() {
+    const items = editRows
+      .filter((r) => r.description.trim())
+      .map((r) => ({ description: r.description.trim(), amount: parseFloat(r.amount) || 0 }));
+    setSavingEstimate(true);
+    try {
+      const res = await fetch(`/api/campaign-vendors/${campaignVendorId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update_estimate_items", items }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      await mutateCv();
+      toast("success", "Estimate updated");
+      setEditingEstimate(false);
+      setEditRows([]);
+    } catch {
+      toast("error", "Failed to save estimate");
+    } finally {
+      setSavingEstimate(false);
     }
   }
 
@@ -269,10 +305,73 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
       <div className="grid grid-cols-2 gap-4">
         {/* Left: Estimate */}
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">
-            Estimate
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+              Estimate
+            </span>
+            {!isPdfEstimate && !editingEstimate && (canApproveEstimate || user?.role === "Admin") && (
+              <button
+                onClick={startEditEstimate}
+                className="flex items-center gap-1 text-[10px] text-text-tertiary hover:text-primary transition-colors"
+              >
+                <Pencil className="h-3 w-3" />
+                Edit
+              </button>
+            )}
           </div>
-          {isPdfEstimate ? (
+
+          {editingEstimate ? (
+            <div className="space-y-1">
+              {editRows.map((row, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={row.description}
+                    onChange={(e) => {
+                      const next = [...editRows];
+                      next[i] = { ...next[i], description: e.target.value };
+                      setEditRows(next);
+                    }}
+                    placeholder="Description"
+                    className="flex-1 min-w-0 text-xs rounded border border-border bg-white px-1.5 py-1 text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <input
+                    type="number"
+                    value={row.amount}
+                    onChange={(e) => {
+                      const next = [...editRows];
+                      next[i] = { ...next[i], amount: e.target.value };
+                      setEditRows(next);
+                    }}
+                    placeholder="0.00"
+                    className="w-20 shrink-0 text-xs rounded border border-border bg-white px-1.5 py-1 text-right text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <button
+                    onClick={() => setEditRows(editRows.filter((_, j) => j !== i))}
+                    className="text-text-tertiary hover:text-destructive shrink-0"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => setEditRows([...editRows, { description: "", amount: "" }])}
+                className="flex items-center gap-1 text-[10px] text-text-tertiary hover:text-primary mt-1"
+              >
+                <Plus className="h-3 w-3" />
+                Add row
+              </button>
+              <div className="flex items-center gap-2 pt-1 border-t border-border">
+                <Button size="sm" variant="secondary" onClick={saveEstimateItems} disabled={savingEstimate} loading={savingEstimate}>
+                  Save
+                </Button>
+                <button onClick={cancelEditEstimate} className="flex items-center gap-1 text-xs text-text-tertiary hover:text-text-secondary">
+                  <X className="h-3 w-3" />
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : isPdfEstimate ? (
             <div className="flex items-center gap-2 py-2 text-xs text-text-secondary">
               <FileText className="h-3.5 w-3.5 text-text-tertiary shrink-0" />
               <span>{pdfEstimateFileName}</span>

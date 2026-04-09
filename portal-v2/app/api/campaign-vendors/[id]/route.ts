@@ -5,6 +5,7 @@ import {
   transitionVendorStatus,
   submitEstimate,
   getEstimateItems,
+  updateEstimateItems,
   removeVendorFromCampaign,
 } from "@/lib/services/campaign-vendors.service";
 import { submitEstimateSchema } from "@/lib/validation/estimates.schema";
@@ -104,6 +105,14 @@ export async function PATCH(
 
       const cv = await transitionVendorStatus(id, targetStatus, body.payload);
       return NextResponse.json(cv);
+    }
+
+    // Update estimate items (producer correction)
+    if (body.action === "update_estimate_items") {
+      await requireRole(["Admin", "Producer"]);
+      await updateEstimateItems(id, body.items);
+      const [cv, estimateItems] = await Promise.all([getCampaignVendor(id), getEstimateItems(id)]);
+      return NextResponse.json({ ...cv, estimateItems });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
