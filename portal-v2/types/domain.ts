@@ -171,6 +171,9 @@ export interface CampaignListItem extends Campaign {
   artDirectorName: string | null;
   additionalFundsRequested: number;
   additionalFundsApproved: number;
+  foodCount: number;
+  propsCount: number;
+  gearCount: number;
 }
 
 export interface ShootSummary {

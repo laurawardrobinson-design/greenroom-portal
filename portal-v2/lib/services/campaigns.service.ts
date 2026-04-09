@@ -39,6 +39,9 @@ function toCampaignListItem(row: Record<string, unknown>): CampaignListItem {
     artDirectorName: null,
     additionalFundsRequested: 0,
     additionalFundsApproved: 0,
+    foodCount: Number(row.food_count) || 0,
+    propsCount: Number(row.props_count) || 0,
+    gearCount: Number(row.gear_count) || 0,
   };
 }
 

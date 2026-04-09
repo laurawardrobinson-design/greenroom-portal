@@ -202,6 +202,7 @@ export default function CampaignsPage() {
               <div className="w-24 shrink-0">Status</div>
               <div className="w-20 shrink-0 text-right">Next Shoot</div>
               <div className="w-20 shrink-0 text-right hidden lg:block">Assets Due</div>
+              {user?.role === "Vendor" && <div className="w-36 shrink-0 text-right">Inventory</div>}
               {user?.role !== "Vendor" && <div className="w-20 shrink-0 text-right">Budget</div>}
               {user?.role !== "Vendor" && <div className="w-28 shrink-0 text-right hidden lg:block">Add&apos;l Funds</div>}
             </div>
