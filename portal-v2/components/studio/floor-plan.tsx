@@ -4,79 +4,85 @@ import React from "react";
 import type { StudioSpace, SpaceReservation } from "@/types/domain";
 
 // ── SVG canvas ────────────────────────────────────────────────────────────────
-// 5 equal columns × 175px = 875px wide
-// Row heights: top bays=220, middle=250, bottom=220
 const VW = 875;
-const VH = 690; // 220+250+220
+const VH = 790;
 
-// ── Fill palettes (hex required for SVG — Tailwind classes don't work on SVG fills) ──
+// ── Fill palettes (SVG needs raw hex, not Tailwind classes) ───────────────────
 
+// Light tint — available state
 const AVAIL: Record<string, string> = {
-  shooting_bay:      "#EFF6FF",
-  set_kitchen:       "#FFF7ED",
-  prep_kitchen:      "#FFFBEB",
-  wardrobe:          "#FAF5FF",
-  multipurpose:      "#F0FDF4",
-  conference:        "#EEF2FF",
-  equipment_storage: "#F8FAFC",
-  prop_storage:      "#FAFAFA",
+  shooting_bay:      "#EFF6FF", // blue-50
+  set_kitchen:       "#FFF7ED", // orange-50
+  prep_kitchen:      "#FFFBEB", // amber-50
+  wardrobe:          "#FAF5FF", // purple-50
+  multipurpose:      "#F0FDF4", // green-50
+  conference:        "#EEF2FF", // indigo-50
+  equipment_storage: "#F8FAFC", // slate-50
+  prop_storage:      "#FAFAFA", // zinc-50
 };
 
+// Medium tint — reserved state
 const RESERVED: Record<string, string> = {
-  shooting_bay:      "#BFDBFE",
-  set_kitchen:       "#FED7AA",
-  prep_kitchen:      "#FDE68A",
-  wardrobe:          "#E9D5FF",
-  multipurpose:      "#BBF7D0",
-  conference:        "#C7D2FE",
-  equipment_storage: "#CBD5E1",
-  prop_storage:      "#D4D4D8",
+  shooting_bay:      "#BFDBFE", // blue-200
+  set_kitchen:       "#FED7AA", // orange-200
+  prep_kitchen:      "#FDE68A", // amber-200
+  wardrobe:          "#E9D5FF", // purple-200
+  multipurpose:      "#BBF7D0", // green-200
+  conference:        "#C7D2FE", // indigo-200
+  equipment_storage: "#CBD5E1", // slate-300
+  prop_storage:      "#D4D4D8", // zinc-300
 };
 
+// Text color when reserved (darker shade of same hue)
 const RES_TEXT: Record<string, string> = {
-  shooting_bay:      "#1D4ED8",
-  set_kitchen:       "#C2410C",
-  prep_kitchen:      "#B45309",
-  wardrobe:          "#7E22CE",
-  multipurpose:      "#15803D",
-  conference:        "#4338CA",
-  equipment_storage: "#334155",
-  prop_storage:      "#3F3F46",
+  shooting_bay:      "#1D4ED8", // blue-700
+  set_kitchen:       "#C2410C", // orange-700
+  prep_kitchen:      "#B45309", // amber-700
+  wardrobe:          "#7E22CE", // purple-700
+  multipurpose:      "#15803D", // green-700
+  conference:        "#4338CA", // indigo-700
+  equipment_storage: "#334155", // slate-700
+  prop_storage:      "#3F3F46", // zinc-700
 };
 
-// ── Room definitions ──────────────────────────────────────────────────────────
+// ── Room layout ───────────────────────────────────────────────────────────────
+// Row heights: bays=220, multipurpose row=250, lower=200, conference=120
+// Col width: 175 each × 5 = 875
 
 interface FloorRoom {
-  dbName: string | null;  // exact DB space name — null = non-reservable/no-book
+  dbName: string | null;   // exact DB space name — null = non-reservable
   label: string;
-  sub?: string;
+  sub?: string;            // second line of label
   x: number;
   y: number;
   w: number;
   h: number;
   type?: string;
-  dashTop?: boolean;
+  dashTop?: boolean;       // dashed partition line at top edge
 }
 
 const ROOMS: FloorRoom[] = [
-  // ── Row 1: 5 equal shooting bays ──────────────────────────────────────────
-  { dbName: "Bay 1",                label: "BAY 1",           x:   0, y:   0, w: 175, h: 220, type: "shooting_bay" },
-  { dbName: "Bay 2",                label: "BAY 2",           x: 175, y:   0, w: 175, h: 220, type: "shooting_bay" },
-  { dbName: "Bay 3",                label: "BAY 3",           x: 350, y:   0, w: 175, h: 220, type: "shooting_bay" },
-  { dbName: "Bay 4",                label: "BAY 4",           x: 525, y:   0, w: 175, h: 220, type: "shooting_bay" },
-  { dbName: "Wardrobe / Dressing",  label: "WARDROBE",        x: 700, y:   0, w: 175, h: 220, type: "wardrobe" },
+  // ── Top row: 5 equal bays ──────────────────────────────────────────────────
+  { dbName: "Bay 1",               label: "BAY 1",                       x:   0, y:   0, w: 175, h: 220, type: "shooting_bay" },
+  { dbName: "Bay 2",               label: "BAY 2",                       x: 175, y:   0, w: 175, h: 220, type: "shooting_bay" },
+  { dbName: "Bay 3",               label: "BAY 3",                       x: 350, y:   0, w: 175, h: 220, type: "shooting_bay" },
+  { dbName: "Bay 4",               label: "BAY 4",                       x: 525, y:   0, w: 175, h: 220, type: "shooting_bay" },
+  { dbName: "Wardrobe / Dressing", label: "WARDROBE /", sub: "DRESSING", x: 700, y:   0, w: 175, h: 220, type: "wardrobe" },
 
-  // ── Row 2: Lobby | Multipurpose | Prep A / Prep B ─────────────────────────
-  { dbName: null,                   label: "LOBBY",           x:   0, y: 220, w: 175, h: 250 },
-  { dbName: "Multipurpose Area",    label: "MULTIPURPOSE",    x: 175, y: 220, w: 525, h: 250, type: "multipurpose" },
-  { dbName: "Prep Kitchen – Bay A", label: "PREP KITCHEN A",  x: 700, y: 220, w: 175, h: 125, type: "prep_kitchen" },
-  { dbName: "Prep Kitchen – Bay B", label: "PREP KITCHEN B",  x: 700, y: 345, w: 175, h: 125, type: "prep_kitchen", dashTop: true },
+  // ── Middle row ─────────────────────────────────────────────────────────────
+  { dbName: null,                  label: "ENTRY",                       x:   0, y: 220, w: 175, h: 250 },
+  { dbName: "Multipurpose Area",   label: "MULTIPURPOSE",                x: 175, y: 220, w: 525, h: 250, type: "multipurpose" },
+  { dbName: "Prep Kitchen – Bay A",label: "PREP KITCHEN", sub: "BAY A",  x: 700, y: 220, w: 175, h: 125, type: "prep_kitchen" },
+  { dbName: "Prep Kitchen – Bay B",label: "PREP KITCHEN", sub: "BAY B",  x: 700, y: 345, w: 175, h: 125, type: "prep_kitchen", dashTop: true },
 
-  // ── Row 3: Conference | Prop | Bay 5 Set Kitchen | Gear ───────────────────
-  { dbName: "Conference Room",      label: "CONFERENCE",      x:   0, y: 470, w: 175, h: 220, type: "conference" },
-  { dbName: "Prop Storage",         label: "PROP",            x: 175, y: 470, w: 175, h: 220, type: "prop_storage" },
-  { dbName: "Bay 5 / Set Kitchen",  label: "BAY 5", sub: "SET KITCHEN", x: 350, y: 470, w: 175, h: 220, type: "set_kitchen" },
-  { dbName: "Equipment Storage",    label: "GEAR",            x: 525, y: 470, w: 350, h: 220, type: "equipment_storage" },
+  // ── Bottom row ─────────────────────────────────────────────────────────────
+  { dbName: null,                  label: "COMMUNAL", sub: "WORKSPACE",  x:   0, y: 470, w: 175, h: 200 },
+  { dbName: "Prop Storage",        label: "PROP", sub: "STORAGE",        x: 175, y: 470, w: 175, h: 200, type: "prop_storage" },
+  { dbName: "Bay 5 / Set Kitchen", label: "BAY 5 /", sub: "SET KITCHEN", x: 350, y: 470, w: 350, h: 200, type: "set_kitchen" },
+  { dbName: "Equipment Storage",   label: "EQUIPMENT", sub: "STORAGE",   x: 700, y: 470, w: 175, h: 200, type: "equipment_storage" },
+
+  // ── Conference extension (hangs below bottom-left) ─────────────────────────
+  { dbName: "Conference Room",     label: "CONFERENCE", sub: "ROOM",     x:   0, y: 670, w: 175, h: 120, type: "conference" },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -105,14 +111,14 @@ export function FloorPlan({ spaces, reservations, onRoomClick }: FloorPlanProps)
       <svg
         viewBox={`0 0 ${VW} ${VH}`}
         className="w-full h-auto"
-        style={{ minWidth: 520 }}
+        style={{ minWidth: 540 }}
         aria-label="Greenroom floor plan"
       >
         <style>{`
           .floor-room { cursor: default; }
           .floor-room.reservable { cursor: pointer; }
-          .floor-room.reservable .room-fill { transition: filter 0.1s; }
-          .floor-room.reservable:hover .room-fill { filter: brightness(0.92); }
+          .floor-room.reservable .room-fill { transition: filter 0.12s; }
+          .floor-room.reservable:hover .room-fill { filter: brightness(0.94); }
         `}</style>
 
         {ROOMS.map((room) => {
@@ -138,18 +144,18 @@ export function FloorPlan({ spaces, reservations, onRoomClick }: FloorPlanProps)
 
           // Font size: smaller for narrow rooms, larger for wide
           const fs  = room.w < 200 ? 11 : room.w > 400 ? 14 : 12;
-          const fsS = room.w < 200 ? 10 : 11; // reservation detail text
+          const fsS = room.w < 200 ? 10 : 11;
 
-          // Vertical block: label lines + optional reservation info
-          const lineH = fs + 6;
+          // Vertical block layout
+          const lineH      = fs + 6;
           const labelLines = room.sub ? 2 : 1;
           const resLines   = booked ? 2 : 0;
-          const totalH     = (labelLines + resLines - 1) * lineH + (booked ? 8 : 0); // 8px gap before res
+          const totalH     = (labelLines + resLines - 1) * lineH + (booked ? 8 : 0);
           let   textY      = cy - totalH / 2;
 
           return (
             <g
-              key={`${room.dbName ?? room.label}`}
+              key={`${room.dbName ?? room.label}-${room.x}`}
               className={`floor-room${reservable ? " reservable" : ""}`}
               onClick={reservable ? () => onRoomClick(space!, res) : undefined}
               role={reservable ? "button" : undefined}
@@ -164,7 +170,7 @@ export function FloorPlan({ spaces, reservations, onRoomClick }: FloorPlanProps)
                 strokeWidth="2"
               />
 
-              {/* Dashed moveable partition */}
+              {/* Dashed moveable partition (Prep B) */}
               {room.dashTop && (
                 <line
                   x1={room.x + 2}          y1={room.y}
@@ -182,7 +188,7 @@ export function FloorPlan({ spaces, reservations, onRoomClick }: FloorPlanProps)
                 fontSize={fs}
                 fontWeight="600"
                 fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif"
-                letterSpacing="0.06em"
+                letterSpacing="0.04em"
                 fill={labelColor}
                 style={{ userSelect: "none" }}
               >
@@ -200,7 +206,7 @@ export function FloorPlan({ spaces, reservations, onRoomClick }: FloorPlanProps)
                     fontSize={fs}
                     fontWeight="600"
                     fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif"
-                    letterSpacing="0.06em"
+                    letterSpacing="0.04em"
                     fill={labelColor}
                     style={{ userSelect: "none" }}
                   >
@@ -211,7 +217,7 @@ export function FloorPlan({ spaces, reservations, onRoomClick }: FloorPlanProps)
 
               {/* Reservation info */}
               {booked && res && (() => {
-                textY += lineH + 8; // gap
+                textY += lineH + 8;
                 const divY  = textY - 4;
                 const wfY   = textY + 4;
                 const nameY = wfY + lineH;
