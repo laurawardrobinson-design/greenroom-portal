@@ -101,6 +101,7 @@ export default function CampaignDetailPage({
   const canEditShots = canEdit || user?.role === "Art Director";
   const canCompleteShots = canEdit || user?.role === "Art Director" || user?.role === "Studio";
   const isAdmin = user?.role === "Admin";
+  const canDelete = user?.role === "Admin" || user?.role === "Producer";
   const isVendor = user?.role === "Vendor";
   const isArtDirector = user?.role === "Art Director";
   const showFinancials = !isVendor && !isArtDirector;
@@ -286,7 +287,7 @@ export default function CampaignDetailPage({
         <CampaignDetailHeader
           campaign={campaign}
           canEdit={canEdit}
-          isAdmin={isAdmin}
+          canDelete={canDelete}
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}
           deleting={deleting}

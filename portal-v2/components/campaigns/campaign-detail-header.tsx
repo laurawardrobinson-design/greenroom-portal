@@ -11,7 +11,7 @@ import { CopyButton } from "./copy-button";
 interface Props {
   campaign: Campaign;
   canEdit: boolean;
-  isAdmin: boolean;
+  canDelete: boolean;
   onStatusChange: (status: CampaignStatus) => void;
   onDelete: () => void;
   deleting: boolean;
@@ -21,7 +21,7 @@ interface Props {
 export function CampaignDetailHeader({
   campaign,
   canEdit,
-  isAdmin,
+  canDelete,
   onStatusChange,
   onDelete,
   deleting,
@@ -187,7 +187,7 @@ export function CampaignDetailHeader({
           )
         }
         actions={
-          !editingField && isAdmin ? (
+          !editingField && canDelete ? (
             <Button
               variant="ghost"
               size="sm"

@@ -143,7 +143,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin"]);
+    await requireRole(["Admin", "Producer"]);
     const { id } = await params;
     const result = await deleteCampaign(id);
     return NextResponse.json({ success: true, ...result });
