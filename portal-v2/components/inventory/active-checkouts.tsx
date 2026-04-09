@@ -6,8 +6,8 @@ import type { GearCheckout } from "@/types/domain";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { ArrowUpFromLine, ArrowDownToLine, User } from "lucide-react";
-import { formatDistanceToNow, parseISO } from "date-fns";
+import { ArrowUpFromLine, ArrowDownToLine, User, Calendar, Tag } from "lucide-react";
+import { formatDistanceToNow, parseISO, format, isPast } from "date-fns";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -52,9 +52,9 @@ export function ActiveCheckouts() {
     return (
       <div className="rounded-xl border border-border bg-surface p-5">
         <div className="flex items-center gap-2 mb-3">
-          <ArrowUpFromLine className="h-4 w-4 text-text-tertiary" />
-          <h3 className="text-sm font-semibold text-text-primary">
-            Currently Checked Out
+          <ArrowUpFromLine className="h-4 w-4 shrink-0 text-primary" />
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+            CURRENTLY CHECKED OUT
           </h3>
         </div>
         <p className="text-sm text-text-secondary">
@@ -66,10 +66,10 @@ export function ActiveCheckouts() {
 
   return (
     <div className="rounded-xl border border-border bg-surface overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-        <ArrowUpFromLine className="h-4 w-4 text-text-tertiary" />
-        <h3 className="text-sm font-semibold text-text-primary">
-          Currently Checked Out
+      <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+        <ArrowUpFromLine className="h-4 w-4 shrink-0 text-primary" />
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+          CURRENTLY CHECKED OUT
         </h3>
         <Badge variant="default">{checkouts.length}</Badge>
       </div>
@@ -89,6 +89,21 @@ export function ActiveCheckouts() {
                   addSuffix: true,
                 })}
               </p>
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                {co.campaignId && co.campaign && (
+                  <span className="flex items-center gap-1 text-[10px] text-text-tertiary">
+                    <Tag className="h-2.5 w-2.5" />
+                    {co.campaign.wfNumber || co.campaign.name}
+                  </span>
+                )}
+                {co.dueDate && (
+                  <span className={`flex items-center gap-1 text-[10px] font-medium ${isPast(new Date(co.dueDate)) ? "text-red-600" : "text-text-tertiary"}`}>
+                    <Calendar className="h-2.5 w-2.5" />
+                    Due {format(new Date(co.dueDate), "MMM d")}
+                    {isPast(new Date(co.dueDate)) && " — overdue"}
+                  </span>
+                )}
+              </div>
             </div>
             <Button
               size="sm"

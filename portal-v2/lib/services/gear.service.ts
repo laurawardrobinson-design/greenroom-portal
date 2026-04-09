@@ -209,6 +209,7 @@ export async function checkoutGear(input: {
   campaignId?: string;
   condition: GearCondition;
   notes?: string;
+  dueDate?: string;
 }): Promise<string> {
   const db = createAdminClient();
   const { data, error } = await db.rpc("atomic_checkout", {
@@ -217,6 +218,7 @@ export async function checkoutGear(input: {
     p_campaign_id: input.campaignId || null,
     p_condition: input.condition,
     p_notes: input.notes || "",
+    p_due_date: input.dueDate || null,
   });
   if (error) throw error;
   return data as string;
@@ -256,6 +258,7 @@ export async function getActiveCheckouts(userId?: string): Promise<GearCheckout[
     campaignId: row.campaign_id,
     checkedOutAt: row.checked_out_at,
     checkedInAt: row.checked_in_at,
+    dueDate: row.due_date || null,
     conditionOut: row.condition_out,
     conditionIn: row.condition_in,
     notes: row.notes,
@@ -476,7 +479,8 @@ export interface BatchResult {
 export async function batchCheckoutGear(
   items: { gearItemId: string; condition: GearCondition; name?: string }[],
   userId: string,
-  campaignId?: string
+  campaignId?: string,
+  dueDate?: string
 ): Promise<BatchResult[]> {
   // Process all items in parallel — no per-item pre-fetch needed
   const settled = await Promise.allSettled(
@@ -486,6 +490,7 @@ export async function batchCheckoutGear(
         userId,
         campaignId,
         condition: item.condition,
+        dueDate,
       })
     )
   );
@@ -610,6 +615,7 @@ export async function getRecentActivity(limit = 10): Promise<GearCheckout[]> {
     campaignId: row.campaign_id,
     checkedOutAt: row.checked_out_at,
     checkedInAt: row.checked_in_at,
+    dueDate: row.due_date || null,
     conditionOut: row.condition_out,
     conditionIn: row.condition_in,
     notes: row.notes,

@@ -415,11 +415,13 @@ export interface GearCheckout {
   campaignId: string | null;
   checkedOutAt: string;
   checkedInAt: string | null;
+  dueDate: string | null;
   conditionOut: GearCondition;
   conditionIn: GearCondition | null;
   notes: string;
   gearItem?: GearItem;
   user?: AppUser;
+  campaign?: Campaign;
 }
 
 export type ReservationStatus =

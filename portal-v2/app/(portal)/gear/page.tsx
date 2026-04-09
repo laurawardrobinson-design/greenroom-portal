@@ -30,6 +30,7 @@ import { CreateKitModal } from "@/components/inventory/create-kit-modal";
 import { EditKitModal } from "@/components/inventory/edit-kit-modal";
 import { QrScanner } from "@/components/ui/qr-scanner";
 import { BatchCart } from "@/components/inventory/batch-cart";
+import { CheckoutDetailsModal } from "@/components/inventory/checkout-details-modal";
 import { ActiveCheckouts } from "@/components/inventory/active-checkouts";
 import { Modal } from "@/components/ui/modal";
 import {
@@ -47,6 +48,7 @@ import {
   QrCode,
   ArrowDownToLine,
   ScanLine,
+  StopCircle,
   X,
   Wrench,
   Layers,
@@ -114,6 +116,7 @@ export default function InventoryPage() {
 
   // Scanner drawer state
   const [showScanner, setShowScanner] = useState(false);
+  const [scannerActive, setScannerActive] = useState(false);
 
   // Checkout tab state
   const [cartItems, setCartItems] = useState<GearItem[]>([]);
@@ -121,7 +124,8 @@ export default function InventoryPage() {
   const [conflictIds, setConflictIds] = useState<Set<string>>(new Set());
   const [showConflictConfirm, setShowConflictConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState<"checkout" | "checkin" | null>(null);
-  const [scannerActive, setScannerActive] = useState(false);
+  const [showCheckoutDetails, setShowCheckoutDetails] = useState(false);
+  const [pendingCheckoutItems, setPendingCheckoutItems] = useState<GearItem[]>([]);
   const [processing, setProcessing] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const cartRef = useRef<GearItem[]>([]);
@@ -210,9 +214,13 @@ export default function InventoryPage() {
     }
   }, [searchParams]);
 
-  // Activate scanner when drawer is visible
+  // Auto-activate scanner when modal opens; reset to inactive when it closes
   useEffect(() => {
-    setScannerActive(showScanner);
+    if (showScanner) {
+      setScannerActive(true);
+    } else {
+      setScannerActive(false);
+    }
   }, [showScanner]);
 
   // Scan handler — stable ref to avoid restarting camera
@@ -261,7 +269,7 @@ export default function InventoryPage() {
     await handleScan(code);
   }
 
-  async function executeBatchCheckout(items: GearItem[]) {
+  async function executeBatchCheckout(items: GearItem[], opts?: { campaignId?: string; dueDate?: string }) {
     setProcessing(true);
     try {
       const res = await fetch("/api/gear", {
@@ -269,6 +277,8 @@ export default function InventoryPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "batch_checkout",
+          campaignId: opts?.campaignId || undefined,
+          dueDate: opts?.dueDate || undefined,
           items: items.map((i) => ({
             gearItemId: i.id,
             condition: i.condition || "Good",
@@ -333,7 +343,9 @@ export default function InventoryPage() {
       setPendingAction("checkout");
       setShowConflictConfirm(true);
     } else {
-      executeBatchCheckout(cartItems.filter((i) => i.status === "Available" || i.status === "Reserved"));
+      const items = cartItems.filter((i) => i.status === "Available" || i.status === "Reserved");
+      setPendingCheckoutItems(items);
+      setShowCheckoutDetails(true);
     }
   }
 
@@ -350,7 +362,9 @@ export default function InventoryPage() {
   function handleConfirmOverride() {
     setShowConflictConfirm(false);
     if (pendingAction === "checkout") {
-      executeBatchCheckout(cartItems.filter((i) => i.status === "Available" || i.status === "Reserved" || conflictIds.has(i.id)));
+      const items = cartItems.filter((i) => i.status === "Available" || i.status === "Reserved" || conflictIds.has(i.id));
+      setPendingCheckoutItems(items);
+      setShowCheckoutDetails(true);
     } else if (pendingAction === "checkin") {
       executeBatchCheckin(cartItems.filter((i) => i.status === "Checked Out" || conflictIds.has(i.id)));
     }
@@ -1101,18 +1115,46 @@ export default function InventoryPage() {
         <div className="space-y-4">
           {/* Scanner tile */}
           <div className="rounded-xl border border-border bg-surface overflow-hidden">
-            <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
-              <QrCode className="h-4 w-4 shrink-0 text-primary" />
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
-                SCAN ITEMS
-              </h3>
+            <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
+              <div className="flex items-center gap-2">
+                <QrCode className="h-4 w-4 shrink-0 text-primary" />
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+                  SCAN ITEMS
+                </h3>
+              </div>
+              {scannerActive ? (
+                <button
+                  onClick={() => setScannerActive(false)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  <StopCircle className="h-3.5 w-3.5" />
+                  Stop scanning
+                </button>
+              ) : (
+                <button
+                  onClick={() => setScannerActive(true)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                >
+                  <ScanLine className="h-3.5 w-3.5" />
+                  Start scanning
+                </button>
+              )}
             </div>
             <div className="p-4">
-              <QrScanner
-                active={scannerActive && showScanner}
-                onScan={handleScan}
-                onError={(err) => toast("error", err)}
-              />
+              {scannerActive ? (
+                <QrScanner
+                  active={scannerActive && showScanner}
+                  onScan={handleScan}
+                  onError={(err) => toast("error", err)}
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-surface-secondary/50 p-6 text-center">
+                  <QrCode className="h-5 w-5 text-text-tertiary" />
+                  <p className="text-sm text-text-secondary">
+                    Camera stopped. Tap <strong>Start scanning</strong> to resume.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1158,6 +1200,21 @@ export default function InventoryPage() {
           <ActiveCheckouts />
         </div>
       </Modal>
+
+      {/* Checkout details modal — collects campaign + return date */}
+      <CheckoutDetailsModal
+        open={showCheckoutDetails}
+        itemCount={pendingCheckoutItems.length}
+        onConfirm={(opts) => {
+          setShowCheckoutDetails(false);
+          executeBatchCheckout(pendingCheckoutItems, opts);
+          setPendingCheckoutItems([]);
+        }}
+        onCancel={() => {
+          setShowCheckoutDetails(false);
+          setPendingCheckoutItems([]);
+        }}
+      />
 
       {/* Conflict confirmation modal */}
       <Modal

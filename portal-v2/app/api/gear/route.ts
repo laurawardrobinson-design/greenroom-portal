@@ -53,6 +53,7 @@ export async function POST(request: Request) {
         campaignId: body.campaignId,
         condition: body.condition as GearCondition || "Good",
         notes: body.notes,
+        dueDate: body.dueDate || undefined,
       });
       return NextResponse.json({ checkoutId });
     }
@@ -86,7 +87,8 @@ export async function POST(request: Request) {
       const results = await batchCheckoutGear(
         body.items || [],
         user.id,
-        body.campaignId
+        body.campaignId || undefined,
+        body.dueDate || undefined
       );
       return NextResponse.json({ results });
     }
