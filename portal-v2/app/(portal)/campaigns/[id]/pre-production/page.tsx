@@ -11,7 +11,6 @@ import type { AppUser, Shoot, CampaignVendor, Vendor } from "@/types/domain";
 import {
   CalendarDays,
   Truck,
-  DollarSign,
   FileText,
   ChevronDown,
   Check,
@@ -33,7 +32,6 @@ const TABS = [
   { id: "schedule",  label: "Schedule",  icon: CalendarDays },
   { id: "logistics", label: "Logistics", icon: Truck },
   { id: "people",    label: "People",    icon: Users },
-  { id: "payments",  label: "Payments",  icon: DollarSign },
   { id: "contracts", label: "Contracts", icon: FileText },
 ] as const;
 
@@ -90,20 +88,6 @@ function LogisticsTab() {
       description="Operational prep — locations, styling notes, and catering headcounts."
       items={["Locations", "Styling", "Catering"]}
     />
-  );
-}
-
-function PaymentsTab({ campaignId, wfNumber, canEdit }: { campaignId: string; wfNumber: string; canEdit: boolean }) {
-  return (
-    <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-surface p-4">
-        <h3 className="text-sm font-semibold text-text-primary">Estimates & Invoices</h3>
-        <p className="mt-1 text-xs text-text-tertiary">
-          Producer workflow in one place: assign vendors, review submitted estimates, upload PO, review invoices, and approve for finance.
-        </p>
-      </div>
-      <VendorAssignmentPanel campaignId={campaignId} wfNumber={wfNumber} canEdit={canEdit} />
-    </div>
   );
 }
 
@@ -717,13 +701,15 @@ function PeopleTab({
   onRefresh: () => void;
 }) {
   const { data: allUsers = [] } = useSWR<AppUser[]>("/api/users", fetcher);
+  const { data: allVendors = [] } = useSWR<Vendor[]>("/api/vendors", fetcher);
   const { data: talentEntries = [] } = useSWR<ShotTalentEntry[]>(
     `/api/shot-list/talent?campaignId=${campaignId}`,
     fetcher
   );
-  const [addInternalOpen, setAddInternalOpen] = useState(false);
-  const [addVendorOpen, setAddVendorOpen] = useState(false);
-  const [addTalentOpen, setAddTalentOpen] = useState(false);
+  const [internalQuery, setInternalQuery] = useState("");
+  const [vendorQuery, setVendorQuery] = useState("");
+  const [talentQuery, setTalentQuery] = useState("");
+  const [saving, setSaving] = useState<string | null>(null);
 
   // Deduplicate talent by number (same person across shots)
   const uniqueTalent = talentEntries.reduce((acc, t) => {
@@ -770,19 +756,74 @@ function PeopleTab({
   );
   const assignedVendorIds = new Set(vendors.map((cv) => cv.vendor?.id).filter(Boolean) as string[]);
 
-  const addBtn = (onClick: () => void) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium text-text-tertiary hover:text-text-primary hover:bg-surface-secondary transition-colors"
-    >
-      + Add
-    </button>
-  );
+  // Inline search filtered lists
+  const internalRoles: AppUser["role"][] = ["Admin", "Producer", "Studio", "Art Director"];
+  const availableInternal = allUsers.filter(u => internalRoles.includes(u.role) && !assignedUserIds.has(u.id));
+  const filteredInternal = internalQuery ? availableInternal.filter(u => u.name.toLowerCase().includes(internalQuery.toLowerCase())) : [];
+
+  const availableCompanyVendors = allVendors.filter(v => !assignedVendorIds.has(v.id) && v.category?.toLowerCase() !== "talent");
+  const filteredVendors = vendorQuery ? availableCompanyVendors.filter(v =>
+    v.companyName.toLowerCase().includes(vendorQuery.toLowerCase()) ||
+    v.contactName.toLowerCase().includes(vendorQuery.toLowerCase())
+  ) : [];
+
+  const availableTalentVendors = allVendors.filter(v => !assignedVendorIds.has(v.id) && v.category?.toLowerCase() === "talent");
+  const filteredTalent = talentQuery ? availableTalentVendors.filter(v =>
+    v.companyName.toLowerCase().includes(talentQuery.toLowerCase()) ||
+    v.contactName.toLowerCase().includes(talentQuery.toLowerCase())
+  ) : [];
+
+  async function handleAddInternal(user: AppUser) {
+    if (shoots.length === 0) return;
+    setSaving(user.id);
+    setInternalQuery("");
+    try {
+      await Promise.all(shoots.map(shoot =>
+        fetch(`/api/shoots/${shoot.id}/crew`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: user.id, roleOnShoot: user.role }),
+        })
+      ));
+      onRefresh();
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function handleAddVendor(vendor: Vendor) {
+    setSaving(vendor.id);
+    setVendorQuery("");
+    try {
+      await fetch("/api/campaign-vendors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId, vendorId: vendor.id }),
+      });
+      onRefresh();
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function handleAddTalent(vendor: Vendor) {
+    setSaving(vendor.id + "-t");
+    setTalentQuery("");
+    try {
+      await fetch("/api/campaign-vendors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId, vendorId: vendor.id }),
+      });
+      onRefresh();
+    } finally {
+      setSaving(null);
+    }
+  }
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Internal */}
         <PeopleSection
           title="Internal"
@@ -846,7 +887,6 @@ function PeopleTab({
         <PeopleSection
           title="Talent"
           icon={Star}
-          className="md:col-span-2"
           actions={canManage ? addBtn(() => setAddTalentOpen(true)) : undefined}
         >
           {uniqueTalent.length === 0 && talentVendors.length === 0 ? (
@@ -1153,7 +1193,6 @@ export default function PreProductionWorkspacePage({
         )}
         {resolvedActiveTab === "logistics" && <LogisticsTab />}
         {resolvedActiveTab === "people"    && <PeopleTab campaignId={id} shoots={shoots} vendors={vendors} producerId={campaign.producerId} canManage={canManagePeople} onRefresh={refreshCampaign} />}
-        {resolvedActiveTab === "payments"  && <PaymentsTab campaignId={id} wfNumber={campaign.wfNumber || ""} canEdit={canManagePeople} />}
         {resolvedActiveTab === "contracts" && <ContractsTab campaignId={id} shoots={shoots} vendors={vendors} />}
       </div>
     </div>
