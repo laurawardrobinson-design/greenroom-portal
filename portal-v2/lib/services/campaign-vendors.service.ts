@@ -17,9 +17,14 @@ function toCampaignVendor(row: Record<string, unknown>): CampaignVendor {
     status: row.status as CampaignVendorStatus,
     invitedAt: row.invited_at as string,
     estimateTotal: Number(row.estimate_total) || 0,
+    estimateFileUrl: (row.estimate_file_url as string) || null,
+    estimateFileName: (row.estimate_file_name as string) || null,
     poFileUrl: (row.po_file_url as string) || null,
+    poSignedFileUrl: (row.po_signed_file_url as string) || null,
+    poNumber: (row.po_number as string) || null,
     poSignedAt: (row.po_signed_at as string) || null,
     signatureUrl: (row.signature_url as string) || null,
+    signatureName: (row.signature_name as string) || null,
     signedIp: (row.signed_ip as string) || null,
     signatureTimestamp: (row.signature_timestamp as string) || null,
     invoiceTotal: Number(row.invoice_total) || 0,
@@ -190,7 +195,8 @@ export async function transitionVendorStatus(
 // Submit estimate (vendor submits itemized line items)
 export async function submitEstimate(
   campaignVendorId: string,
-  items: EstimateItemInput[]
+  items: EstimateItemInput[],
+  options?: { estimateFileUrl?: string; estimateFileName?: string }
 ): Promise<void> {
   const db = createAdminClient();
 
@@ -222,7 +228,12 @@ export async function submitEstimate(
   // Update total and transition status
   const { error: updateErr } = await db
     .from("campaign_vendors")
-    .update({ estimate_total: total, status: "Estimate Submitted" })
+    .update({
+      estimate_total: total,
+      status: "Estimate Submitted",
+      estimate_file_url: options?.estimateFileUrl || null,
+      estimate_file_name: options?.estimateFileName || null,
+    })
     .eq("id", campaignVendorId);
   if (updateErr) throw updateErr;
 }

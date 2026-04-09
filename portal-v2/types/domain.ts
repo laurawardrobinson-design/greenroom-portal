@@ -236,9 +236,14 @@ export interface CampaignVendor {
   status: CampaignVendorStatus;
   invitedAt: string;
   estimateTotal: number;
+  estimateFileUrl: string | null;
+  estimateFileName: string | null;
   poFileUrl: string | null;
+  poSignedFileUrl: string | null;
+  poNumber: string | null;
   poSignedAt: string | null;
   signatureUrl: string | null;
+  signatureName: string | null;
   signedIp: string | null;
   signatureTimestamp: string | null;
   invoiceTotal: number;

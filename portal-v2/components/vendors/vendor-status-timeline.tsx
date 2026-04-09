@@ -1,21 +1,54 @@
 "use client";
 
-import { VENDOR_STATUS_ORDER } from "@/lib/constants/statuses";
 import type { CampaignVendorStatus } from "@/types/domain";
 import { Check, Info } from "lucide-react";
 
-const STEP_LABELS: Record<string, string> = {
-  Invited: "Submit Your Estimate",
-  "Estimate Submitted": "Waiting for Review",
-  "Estimate Approved": "Waiting for PO",
-  "PO Uploaded": "Sign the PO",
-  "PO Signed": "Waiting for Shoot Day",
-  "Shoot Complete": "Upload Your Invoice",
-  "Invoice Submitted": "Invoice Under Review",
-  "Invoice Pre-Approved": "Final Approval Pending",
-  "Invoice Approved": "Payment Processing",
-  Paid: "Complete",
-  Rejected: "Declined",
+const STAGES = [
+  { id: "estimate", label: "Estimate" },
+  { id: "po", label: "PO" },
+  { id: "invoice", label: "Invoice" },
+] as const;
+
+const STAGE_BY_STATUS: Record<CampaignVendorStatus, (typeof STAGES)[number]["id"]> = {
+  Invited: "estimate",
+  "Estimate Submitted": "estimate",
+  "Estimate Approved": "estimate",
+  "PO Uploaded": "po",
+  "PO Signed": "po",
+  "Shoot Complete": "po",
+  "Invoice Submitted": "invoice",
+  "Invoice Pre-Approved": "invoice",
+  "Invoice Approved": "invoice",
+  Paid: "invoice",
+  Rejected: "estimate",
+};
+
+const STATUS_BADGE: Record<CampaignVendorStatus, { label: string; tone: string }> = {
+  Invited: { label: "Action Needed", tone: "bg-slate-100 text-slate-700" },
+  "Estimate Submitted": { label: "In Review", tone: "bg-amber-50 text-amber-700" },
+  "Estimate Approved": { label: "Complete", tone: "bg-emerald-50 text-emerald-700" },
+  "PO Uploaded": { label: "Action Needed", tone: "bg-blue-50 text-blue-700" },
+  "PO Signed": { label: "Complete", tone: "bg-emerald-50 text-emerald-700" },
+  "Shoot Complete": { label: "Ready", tone: "bg-purple-50 text-purple-700" },
+  "Invoice Submitted": { label: "In Review", tone: "bg-amber-50 text-amber-700" },
+  "Invoice Pre-Approved": { label: "Final Approval", tone: "bg-teal-50 text-teal-700" },
+  "Invoice Approved": { label: "Processing", tone: "bg-emerald-50 text-emerald-700" },
+  Paid: { label: "Paid", tone: "bg-emerald-100 text-emerald-800" },
+  Rejected: { label: "Declined", tone: "bg-red-50 text-red-700" },
+};
+
+const STATUS_LABEL: Record<CampaignVendorStatus, string> = {
+  Invited: "Submit your estimate",
+  "Estimate Submitted": "Waiting for producer review",
+  "Estimate Approved": "Estimate approved",
+  "PO Uploaded": "PO uploaded, awaiting signature",
+  "PO Signed": "PO signed",
+  "Shoot Complete": "Shoot complete, ready for invoice",
+  "Invoice Submitted": "Invoice under review",
+  "Invoice Pre-Approved": "Awaiting HOP approval",
+  "Invoice Approved": "Invoice approved",
+  Paid: "Payment complete",
+  Rejected: "Request was declined",
 };
 
 const STATUS_CONTEXT: Record<string, string> = {
@@ -37,23 +70,30 @@ interface Props {
 }
 
 export function VendorStatusTimeline({ currentStatus }: Props) {
-  const currentIndex = VENDOR_STATUS_ORDER.indexOf(currentStatus);
   const isRejected = currentStatus === "Rejected";
-  const total = VENDOR_STATUS_ORDER.length;
-  const stepNum = isRejected ? 0 : currentIndex + 1;
-  const label = STEP_LABELS[currentStatus] || currentStatus;
+  const currentStage = STAGE_BY_STATUS[currentStatus];
+  const currentStageIndex = STAGES.findIndex((stage) => stage.id === currentStage);
+  const badge = STATUS_BADGE[currentStatus];
+  const label = STATUS_LABEL[currentStatus] || currentStatus;
   const context = STATUS_CONTEXT[currentStatus] || "";
-  const progressPct = isRejected ? 0 : ((currentIndex + 1) / total) * 100;
+  const progressPct = isRejected
+    ? 0
+    : currentStatus === "Paid"
+    ? 100
+    : ((currentStageIndex + 1) / STAGES.length) * 100;
 
   return (
     <div className="space-y-2.5 py-1">
       {/* Step header + progress bar */}
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-semibold text-text-primary">
-            {isRejected ? "Declined" : `Step ${stepNum} of ${total}`}
+            {isRejected ? "Estimate" : STAGES[currentStageIndex]?.label || "Estimate"}
             <span className="font-normal text-text-secondary"> · {label}</span>
           </p>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${badge.tone}`}>
+            {badge.label}
+          </span>
         </div>
         <div className="h-1.5 w-full rounded-full bg-surface-tertiary overflow-hidden">
           <div
@@ -67,14 +107,14 @@ export function VendorStatusTimeline({ currentStatus }: Props) {
 
       {/* Dot timeline */}
       <div className="flex items-center gap-0 w-full">
-        {VENDOR_STATUS_ORDER.map((status, i) => {
-          const isComplete = i < currentIndex && !isRejected;
-          const isCurrent = status === currentStatus;
+        {STAGES.map((stage, i) => {
+          const isComplete = !isRejected && (currentStatus === "Paid" || i < currentStageIndex);
+          const isCurrent = !isRejected && i === currentStageIndex;
 
           return (
-            <div key={status} className="flex items-center flex-1 last:flex-none">
+            <div key={stage.id} className="flex items-center flex-1 last:flex-none">
               <div
-                title={status}
+                title={stage.label}
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold transition-all ${
                   isComplete
                     ? "bg-emerald-100 text-emerald-600"
@@ -87,7 +127,7 @@ export function VendorStatusTimeline({ currentStatus }: Props) {
               >
                 {isComplete ? <Check className="h-2.5 w-2.5" /> : i + 1}
               </div>
-              {i < VENDOR_STATUS_ORDER.length - 1 && (
+              {i < STAGES.length - 1 && (
                 <div
                   className={`h-px flex-1 mx-0.5 ${
                     isComplete ? "bg-emerald-300" : "bg-border"
@@ -97,6 +137,11 @@ export function VendorStatusTimeline({ currentStatus }: Props) {
             </div>
           );
         })}
+      </div>
+      <div className="grid grid-cols-3 text-[10px] uppercase tracking-wide text-text-tertiary">
+        {STAGES.map((stage) => (
+          <span key={stage.id} className="text-center">{stage.label}</span>
+        ))}
       </div>
 
       {/* Contextual help message */}

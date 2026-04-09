@@ -3,11 +3,11 @@
 import { useState } from "react";
 import useSWR from "swr";
 import type { VendorInvoice, VendorInvoiceItem, VendorEstimateItem } from "@/types/domain";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
+import { PdfPreviewModal } from "@/components/budget/pdf-preview-modal";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatCurrency } from "@/lib/utils/format";
 import {
@@ -17,6 +17,7 @@ import {
   ExternalLink,
   Loader2,
   CornerDownLeft,
+  Eye,
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -49,6 +50,7 @@ export function InvoiceReviewPanel({
   const [approving, setApproving] = useState(false);
   const [sendingBack, setSendingBack] = useState(false);
   const [reason, setReason] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
 
   const { data, mutate } = useSWR<{
     invoice: VendorInvoice | null;
@@ -83,6 +85,7 @@ export function InvoiceReviewPanel({
   const hasFailed = invoice.parseStatus === "failed";
   const isProducerApproved = !!invoice.producerApprovedAt;
   const isHopApproved = !!invoice.hopApprovedAt;
+  const invoiceDocumentUrl = invoiceHref(invoice, campaignVendorId);
 
   async function handleSendBack() {
     if (!reason.trim()) return;
@@ -139,7 +142,7 @@ export function InvoiceReviewPanel({
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-text-tertiary" />
           <a
-            href={invoiceHref(invoice, campaignVendorId)}
+            href={invoiceDocumentUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
@@ -147,6 +150,14 @@ export function InvoiceReviewPanel({
             {invoice.fileName}
             <ExternalLink className="h-3 w-3" />
           </a>
+          <button
+            type="button"
+            onClick={() => setShowPreview(true)}
+            className="text-xs font-medium text-primary hover:underline inline-flex items-center gap-1"
+          >
+            Preview
+            <Eye className="h-3 w-3" />
+          </button>
           {isParsing && (
             <Badge variant="custom" className="bg-amber-50 text-amber-700">
               <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -354,6 +365,14 @@ export function InvoiceReviewPanel({
           </table>
         </div>
       )}
+
+      <PdfPreviewModal
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        url={invoiceDocumentUrl}
+        fileName={invoice.fileName}
+        onRefresh={mutate}
+      />
 
     </div>
   );

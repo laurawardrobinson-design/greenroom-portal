@@ -2,13 +2,24 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import type { CampaignAsset, VendorEstimateItem } from "@/types/domain";
+import type { VendorEstimateItem } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { PdfPreviewModal } from "@/components/budget/pdf-preview-modal";
 import { formatCurrency } from "@/lib/utils/format";
-import { Check, Loader2, FileText, CornerDownLeft, ExternalLink } from "lucide-react";
+import { Check, Loader2, FileText, CornerDownLeft, ExternalLink, Eye } from "lucide-react";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = async (url: string) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) throw new Error(`Failed (${res.status})`);
+    return res.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 interface Props {
   campaignVendorId: string;
@@ -21,11 +32,15 @@ export function EstimateReviewPanel({ campaignVendorId, status, onStatusChange }
   const [acting, setActing] = useState(false);
   const [sendingBack, setSendingBack] = useState(false);
   const [reason, setReason] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+  const fullEstimateHref = `/estimates/${campaignVendorId}`;
 
-  const { data } = useSWR<{
+  const { data, error, isLoading } = useSWR<{
     campaignId: string;
     vendorId: string;
     estimateItems: VendorEstimateItem[];
+    estimateFileUrl: string | null;
+    estimateFileName: string | null;
   }>(
     `/api/campaign-vendors/${campaignVendorId}`,
     fetcher
@@ -37,28 +52,10 @@ export function EstimateReviewPanel({ campaignVendorId, status, onStatusChange }
   const pdfFileName = isPdfUpload
     ? items[0].description.replace("Per attached: ", "")
     : null;
+  const estimatePreviewUrl = data?.estimateFileUrl || fullEstimateHref;
+  const estimatePreviewName = data?.estimateFileName || pdfFileName || "Estimate";
   const total = items.reduce((s, i) => s + i.amount, 0);
   const isPending = status === "Estimate Submitted";
-
-  const { data: estimateAssets } = useSWR<CampaignAsset[]>(
-    data?.campaignId && isPdfUpload && pdfFileName
-      ? `/api/files?campaignId=${data.campaignId}&type=boring`
-      : null,
-    fetcher
-  );
-
-  const uploadedEstimateDoc =
-    estimateAssets?.find(
-      (asset) =>
-        asset.category === "Estimate" &&
-        asset.vendorId === data?.vendorId &&
-        asset.fileName === pdfFileName
-    ) ||
-    estimateAssets?.find(
-      (asset) =>
-        asset.category === "Estimate" &&
-        asset.vendorId === data?.vendorId
-    );
 
   async function handleApprove() {
     setActing(true);
@@ -102,38 +99,34 @@ export function EstimateReviewPanel({ campaignVendorId, status, onStatusChange }
     }
   }
 
-  if (!data) {
-    return (
-      <div className="flex items-center gap-2 py-4 text-text-tertiary">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        <span className="text-xs">Loading estimate…</span>
-      </div>
-    );
-  }
-
   return (
     <div className="mt-3 pt-3 border-t border-border space-y-3">
       {/* Header row — filename/label + approve button */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <FileText className="h-4 w-4 text-text-tertiary" />
           {isPdfUpload && pdfFileName ? (
-            uploadedEstimateDoc?.fileUrl ? (
-              <a
-                href={uploadedEstimateDoc.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-medium text-primary hover:underline inline-flex items-center gap-1"
-              >
-                {pdfFileName}
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            ) : (
-              <span className="text-sm font-medium text-text-primary">{pdfFileName}</span>
-            )
+            <span className="text-sm font-medium text-text-primary truncate">{pdfFileName}</span>
           ) : (
             <span className="text-sm font-medium text-text-primary">Estimate</span>
           )}
+          <button
+            type="button"
+            onClick={() => setShowPreview(true)}
+            className="text-xs font-medium text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+          >
+            Preview
+            <Eye className="h-3 w-3" />
+          </button>
+          <a
+            href={fullEstimateHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+          >
+            Open Full Estimate
+            <ExternalLink className="h-3 w-3" />
+          </a>
         </div>
 
         {isPending && !sendingBack && (
@@ -185,8 +178,21 @@ export function EstimateReviewPanel({ campaignVendorId, status, onStatusChange }
         </div>
       )}
 
+      {isLoading && (
+        <div className="flex items-center gap-2 py-1 text-text-tertiary">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <span className="text-xs">Loading estimate details…</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          Could not load inline estimate details. Use <span className="font-semibold">Open Full Estimate</span> to review the submitted document.
+        </div>
+      )}
+
       {/* Line items table */}
-      {!isPdfUpload && items.length > 0 && (
+      {!isLoading && !error && !isPdfUpload && items.length > 0 && (
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border text-text-tertiary">
@@ -215,9 +221,16 @@ export function EstimateReviewPanel({ campaignVendorId, status, onStatusChange }
         </table>
       )}
 
-      {items.length === 0 && !isPdfUpload && (
+      {!isLoading && !error && items.length === 0 && !isPdfUpload && (
         <p className="text-xs text-text-tertiary">No line items on file.</p>
       )}
+
+      <PdfPreviewModal
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        url={estimatePreviewUrl}
+        fileName={estimatePreviewName}
+      />
     </div>
   );
 }

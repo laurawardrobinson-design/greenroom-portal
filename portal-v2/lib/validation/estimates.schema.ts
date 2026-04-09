@@ -23,7 +23,17 @@ export const estimateItemSchema = z.object({
 export const submitEstimateSchema = z.object({
   campaignVendorId: z.string().uuid(),
   items: z.array(estimateItemSchema).min(1, "At least one line item is required"),
-});
+  estimateFileUrl: z.string().min(1).optional(),
+  estimateFileName: z.string().min(1).optional(),
+}).refine(
+  (data) =>
+    (!!data.estimateFileUrl && !!data.estimateFileName) ||
+    (!data.estimateFileUrl && !data.estimateFileName),
+  {
+    message: "Estimate file URL and name must both be provided",
+    path: ["estimateFileUrl"],
+  }
+);
 
 export type EstimateItemInput = z.infer<typeof estimateItemSchema>;
 export type SubmitEstimateInput = z.infer<typeof submitEstimateSchema>;

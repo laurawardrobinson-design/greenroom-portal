@@ -100,7 +100,9 @@ export function EstimateForm({ campaignVendorId, campaignId, onSubmitted, onCanc
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "submit_estimate",
-          items: [{ category: "Estimate", description: `Per attached: ${uploadedFile.name}`, quantity: 1, unitPrice: total, amount: total }],
+          items: [{ category: "Other", description: `Per attached: ${uploadedFile.name}`, quantity: 1, unitPrice: total, amount: total }],
+          estimateFileUrl: uploadedFile.url,
+          estimateFileName: uploadedFile.name,
         }),
       });
 

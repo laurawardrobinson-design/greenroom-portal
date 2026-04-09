@@ -59,8 +59,13 @@ export async function PATCH(
       const parsed = submitEstimateSchema.parse({
         campaignVendorId: id,
         items: body.items,
+        estimateFileUrl: body.estimateFileUrl,
+        estimateFileName: body.estimateFileName,
       });
-      await submitEstimate(id, parsed.items);
+      await submitEstimate(id, parsed.items, {
+        estimateFileUrl: parsed.estimateFileUrl,
+        estimateFileName: parsed.estimateFileName,
+      });
       const cv = await getCampaignVendor(id);
       return NextResponse.json(cv);
     }
