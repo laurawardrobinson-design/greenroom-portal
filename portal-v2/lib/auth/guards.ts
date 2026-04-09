@@ -79,25 +79,11 @@ export async function requireCampaignAccess(
   user: AppUser,
   campaignId: string
 ): Promise<void> {
-  if (user.role === "Admin" || user.role === "Producer" || user.role === "Art Director") {
+  if (user.role === "Admin" || user.role === "Producer" || user.role === "Art Director" || user.role === "Studio") {
     return; // Full access
   }
 
   const admin = createAdminClient();
-
-  if (user.role === "Studio") {
-    const { data } = await admin
-      .from("shoot_crew")
-      .select("id, shoots!inner(campaign_id)")
-      .eq("shoots.campaign_id", campaignId)
-      .eq("user_id", user.id)
-      .limit(1);
-
-    if (!data?.length) {
-      throw new AuthError("No access to this campaign", 403);
-    }
-    return;
-  }
 
   if (user.role === "Vendor") {
     if (!user.vendorId) {

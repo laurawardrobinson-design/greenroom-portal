@@ -91,9 +91,13 @@ export interface FloorPlanProps {
   spaces: StudioSpace[];
   reservations: SpaceReservation[];
   onRoomClick: (space: StudioSpace, reservation: SpaceReservation | null) => void;
+  /** spaceIds staged for reservation (pending confirmation) */
+  selectedSpaceIds?: Set<string>;
+  /** campaign being planned — rooms belonging to a different campaign are blocked */
+  activeCampaignId?: string | null;
 }
 
-export function FloorPlan({ spaces, reservations, onRoomClick }: FloorPlanProps) {
+export function FloorPlan({ spaces, reservations, onRoomClick, selectedSpaceIds, activeCampaignId }: FloorPlanProps) {
   const spaceByName = React.useMemo(() => {
     const m = new Map<string, StudioSpace>();
     spaces.forEach((s) => m.set(s.name, s));
@@ -111,14 +115,14 @@ export function FloorPlan({ spaces, reservations, onRoomClick }: FloorPlanProps)
       <svg
         viewBox={`0 0 ${VW} ${VH}`}
         className="w-full h-auto"
-        style={{ minWidth: 540 }}
         aria-label="Greenroom floor plan"
       >
         <style>{`
           .floor-room { cursor: default; }
-          .floor-room.reservable { cursor: pointer; }
-          .floor-room.reservable .room-fill { transition: filter 0.12s; }
-          .floor-room.reservable:hover .room-fill { filter: brightness(0.94); }
+          .floor-room.interactive { cursor: pointer; }
+          .floor-room.blocked { cursor: not-allowed; }
+          .floor-room.interactive .room-fill { transition: filter 0.12s; }
+          .floor-room.interactive:hover .room-fill { filter: brightness(0.93); }
         `}</style>
 
         {ROOMS.map((room) => {
@@ -127,24 +131,37 @@ export function FloorPlan({ spaces, reservations, onRoomClick }: FloorPlanProps)
           const reservable = !!space;
           const booked     = !!res;
 
+          // Selection / blocking states
+          const isSelected    = selectedSpaceIds?.has(space?.id ?? "") ?? false;
+          const isOurs        = booked && !!activeCampaignId && res?.campaignId === activeCampaignId;
+          const isBlocked     = booked && !!activeCampaignId && res?.campaignId !== activeCampaignId;
+          const isInteractive = reservable && !isBlocked;
+
           const fill = !reservable
-            ? "#F1F5F9"
+            ? "#FFFFFF"                                    // non-reservable: white
+            : isSelected
+            ? "#DBEAFE"                                    // staged: blue-100
             : booked
-            ? (RESERVED[room.type!] ?? "#E2E8F0")
-            : (AVAIL[room.type!]    ?? "#F8FAFC");
+            ? (RESERVED[room.type!] ?? "#E2E8F0")         // reserved: type color
+            : "#F8FAFC";                                   // available: light gray
+
+          const stroke      = isSelected ? "#2563EB" : "#1E293B";
+          const strokeWidth = isSelected ? "3"       : "2";
 
           const labelColor = !reservable
             ? "#94A3B8"
+            : isSelected
+            ? "#1D4ED8"                                    // blue-700
             : booked
             ? (RES_TEXT[room.type!] ?? "#334155")
-            : "#64748B";
+            : "#475569";
 
           const cx = room.x + room.w / 2;
           const cy = room.y + room.h / 2;
 
-          // Font size: smaller for narrow rooms, larger for wide
-          const fs  = room.w < 200 ? 11 : room.w > 400 ? 14 : 12;
-          const fsS = room.w < 200 ? 10 : 11;
+          // Uniform font size across all rooms — SVG scales to ~80% of viewBox so 16 renders ~13px
+          const fs  = 16;
+          const fsS = 13;
 
           // Vertical block layout
           const lineH      = fs + 6;
@@ -156,9 +173,9 @@ export function FloorPlan({ spaces, reservations, onRoomClick }: FloorPlanProps)
           return (
             <g
               key={`${room.dbName ?? room.label}-${room.x}`}
-              className={`floor-room${reservable ? " reservable" : ""}`}
-              onClick={reservable ? () => onRoomClick(space!, res) : undefined}
-              role={reservable ? "button" : undefined}
+              className={`floor-room${isInteractive ? " interactive" : ""}${isBlocked ? " blocked" : ""}`}
+              onClick={isInteractive ? () => onRoomClick(space!, res) : undefined}
+              role={isInteractive ? "button" : undefined}
             >
               {/* Room fill */}
               <rect
@@ -166,8 +183,8 @@ export function FloorPlan({ spaces, reservations, onRoomClick }: FloorPlanProps)
                 x={room.x} y={room.y}
                 width={room.w} height={room.h}
                 fill={fill}
-                stroke="#1E293B"
-                strokeWidth="2"
+                stroke={stroke}
+                strokeWidth={strokeWidth}
               />
 
               {/* Dashed moveable partition (Prep B) */}
@@ -186,9 +203,9 @@ export function FloorPlan({ spaces, reservations, onRoomClick }: FloorPlanProps)
                 x={cx} y={textY}
                 textAnchor="middle" dominantBaseline="middle"
                 fontSize={fs}
-                fontWeight="600"
+                fontWeight="700"
                 fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif"
-                letterSpacing="0.04em"
+                letterSpacing="0.05em"
                 fill={labelColor}
                 style={{ userSelect: "none" }}
               >

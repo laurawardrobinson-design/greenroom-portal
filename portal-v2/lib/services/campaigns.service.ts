@@ -96,22 +96,7 @@ export async function listCampaigns(filters?: {
     results = results.filter((r) => ids.has(r.id as string));
   }
 
-  // Studio: only see campaigns they're crew on (via shoot_crew)
-  if (filters?.role === "Studio" && filters?.userId) {
-    const { data: crewRows } = await db
-      .from("shoot_crew")
-      .select("shoot_id, shoots(campaign_id, deleted_at)")
-      .eq("user_id", filters.userId);
-    const ids = new Set(
-      (crewRows || [])
-        .filter((r) => {
-          const shoot = (r as Record<string, unknown>).shoots as Record<string, unknown>;
-          return !shoot?.deleted_at; // Only include non-deleted campaigns
-        })
-        .map((r) => ((r as Record<string, unknown>).shoots as Record<string, unknown>)?.campaign_id as string)
-    );
-    results = results.filter((r) => ids.has(r.id as string));
-  }
+  // Studio users see all campaigns (no filtering)
 
   // Sort by created_at descending
   results.sort(

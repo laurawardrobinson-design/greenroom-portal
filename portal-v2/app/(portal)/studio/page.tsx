@@ -24,10 +24,11 @@ import {
   Coffee,
   Sun,
   QrCode,
-  LayoutGrid,
-  Map as MapIcon,
 } from "lucide-react";
-import { format, addDays, startOfWeek, parseISO, isToday } from "date-fns";
+import {
+  format, addDays, startOfWeek, parseISO, isToday, isSameDay, isSameMonth,
+  startOfMonth, endOfMonth, eachDayOfInterval, getISODay, subMonths, addMonths,
+} from "date-fns";
 import Link from "next/link";
 
 const fetcher = (url: string) =>
@@ -258,302 +259,7 @@ function ReserveModal({ space, date, existingReservation, userRole, userId, onCl
   );
 }
 
-// ─── Spaces view (grid + map) ─────────────────────────────────────────────────
-
-interface SpacesViewProps {
-  userRole: string;
-  userId: string;
-}
-
-function SpacesView({ userRole, userId }: SpacesViewProps) {
-  const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
-
-  // ── Grid state ──────────────────────────────────────────────────────────────
-  const [anchor, setAnchor] = useState(() => new Date());
-  const weekDays = useMemo(() => getWeekDays(anchor), [anchor]);
-  const dateFrom = format(weekDays[0], "yyyy-MM-dd");
-  const dateTo   = format(weekDays[6], "yyyy-MM-dd");
-
-  // ── Map state ───────────────────────────────────────────────────────────────
-  const [mapDate, setMapDate] = useState(() => new Date());
-  const mapDateStr = format(mapDate, "yyyy-MM-dd");
-
-  // ── Data ────────────────────────────────────────────────────────────────────
-  const { data: spaces, isLoading: loadingSpaces } =
-    useSWR<StudioSpace[]>("/api/studio/spaces", fetcher);
-
-  // Grid reservations (full week)
-  const { data: gridRes, isLoading: loadingGridRes, mutate: refreshGrid } =
-    useSWR<SpaceReservation[]>(
-      viewMode === "grid"
-        ? `/api/studio/reservations?dateFrom=${dateFrom}&dateTo=${dateTo}`
-        : null,
-      fetcher
-    );
-
-  // Map reservations (single day, only when map is shown)
-  const { data: mapRes, mutate: refreshMap } =
-    useSWR<SpaceReservation[]>(
-      viewMode === "map"
-        ? `/api/studio/reservations?dateFrom=${mapDateStr}&dateTo=${mapDateStr}`
-        : null,
-      fetcher
-    );
-
-  // ── Modal (shared between grid + map) ────────────────────────────────────────
-  const [modal, setModal] = useState<{ space: StudioSpace; date: Date } | null>(null);
-
-  // Grid reservation lookup
-  const gridResMap = useMemo(() => {
-    const m = new Map<string, SpaceReservation>();
-    (gridRes ?? []).forEach((r) => m.set(`${r.spaceId}::${r.reservedDate}`, r));
-    return m;
-  }, [gridRes]);
-
-  // Map reservation lookup
-  const mapResMap = useMemo(() => {
-    const m = new Map<string, SpaceReservation>();
-    (mapRes ?? []).forEach((r) => m.set(r.spaceId, r));
-    return m;
-  }, [mapRes]);
-
-  const modalReservation = useMemo(() => {
-    if (!modal) return null;
-    if (viewMode === "map") return mapResMap.get(modal.space.id) ?? null;
-    return gridResMap.get(`${modal.space.id}::${format(modal.date, "yyyy-MM-dd")}`) ?? null;
-  }, [modal, viewMode, mapResMap, gridResMap]);
-
-  function handleReserved() {
-    refreshGrid();
-    refreshMap();
-  }
-
-  // Grid helpers
-  const currentWeekDays = useMemo(() => getWeekDays(new Date()), []);
-  const isCurrentWeek = weekDays[0].toDateString() === currentWeekDays[0].toDateString();
-
-  const isLoading = loadingSpaces || loadingGridRes;
-
-  if (viewMode === "grid" && isLoading) return (
-    <div className="space-y-2">
-      {[1,2,3,4].map(i => (
-        <div key={i} className="h-10 rounded-lg bg-surface-secondary animate-pulse" />
-      ))}
-    </div>
-  );
-
-  return (
-    <div className="space-y-4">
-
-      {/* ── View toggle ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 rounded-lg bg-surface-secondary p-1">
-          <button
-            onClick={() => setViewMode("grid")}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${
-              viewMode === "grid"
-                ? "bg-surface text-text-primary shadow-sm"
-                : "text-text-secondary hover:text-text-primary"
-            }`}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            Grid
-          </button>
-          <button
-            onClick={() => setViewMode("map")}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${
-              viewMode === "map"
-                ? "bg-surface text-text-primary shadow-sm"
-                : "text-text-secondary hover:text-text-primary"
-            }`}
-          >
-            <MapIcon className="h-3.5 w-3.5" />
-            Map
-          </button>
-        </div>
-
-        {/* Date navigator — changes label based on mode */}
-        {viewMode === "grid" ? (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setAnchor((d) => addDays(d, -7))}
-              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-text-secondary hover:bg-surface-secondary transition-colors"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            {!isCurrentWeek && (
-              <button
-                onClick={() => setAnchor(new Date())}
-                className="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
-              >
-                Today
-              </button>
-            )}
-            <span className="text-sm font-semibold text-text-primary min-w-[160px] text-center">
-              {format(weekDays[0], "MMM d")} – {format(weekDays[6], "MMM d, yyyy")}
-            </span>
-            <button
-              onClick={() => setAnchor((d) => addDays(d, 7))}
-              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-text-secondary hover:bg-surface-secondary transition-colors"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setMapDate((d) => addDays(d, -1))}
-              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-text-secondary hover:bg-surface-secondary transition-colors"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            {!isToday(mapDate) && (
-              <button
-                onClick={() => setMapDate(new Date())}
-                className="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors"
-              >
-                Today
-              </button>
-            )}
-            <span className={`text-sm font-semibold min-w-[180px] text-center ${isToday(mapDate) ? "text-primary" : "text-text-primary"}`}>
-              {isToday(mapDate) ? "Today — " : ""}{format(mapDate, "EEE, MMM d, yyyy")}
-            </span>
-            <button
-              onClick={() => setMapDate((d) => addDays(d, 1))}
-              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-text-secondary hover:bg-surface-secondary transition-colors"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* ── Grid view ────────────────────────────────────────────────────────── */}
-      {viewMode === "grid" && (
-        <>
-          <div className="rounded-xl border border-border bg-surface overflow-x-auto">
-            <table className="w-full min-w-[700px]">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="w-44 px-3.5 py-2.5 text-left">
-                    <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Space</span>
-                  </th>
-                  {weekDays.map((day) => (
-                    <th
-                      key={day.toISOString()}
-                      className={`px-2 py-2.5 text-center ${isToday(day) ? "bg-primary/5" : ""}`}
-                    >
-                      <div className="flex flex-col items-center gap-0.5">
-                        <span className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
-                          {format(day, "EEE")}
-                        </span>
-                        <span className={`text-sm font-bold leading-none ${isToday(day) ? "text-primary" : "text-text-primary"}`}>
-                          {format(day, "d")}
-                        </span>
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(spaces ?? []).map((space, idx) => {
-                  const SpaceIcon = SPACE_TYPE_ICON[space.type] ?? Building2;
-                  const typeColor = SPACE_TYPE_COLOR[space.type] ?? "bg-surface-secondary text-text-secondary border-transparent";
-                  return (
-                    <tr
-                      key={space.id}
-                      className={`border-b border-border last:border-0 ${idx % 2 === 0 ? "" : "bg-surface-secondary/30"}`}
-                    >
-                      <td className="px-3.5 py-2">
-                        <div className="flex items-center gap-2">
-                          <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded border ${typeColor}`}>
-                            <SpaceIcon className="h-3 w-3" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-text-primary truncate">{space.name}</p>
-                            {space.capacity && (
-                              <p className="text-[10px] text-text-tertiary">Seats {space.capacity}</p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      {weekDays.map((day) => {
-                        const key = `${space.id}::${format(day, "yyyy-MM-dd")}`;
-                        const res = gridResMap.get(key);
-                        return (
-                          <td
-                            key={day.toISOString()}
-                            className={`px-1.5 py-1.5 text-center ${isToday(day) ? "bg-primary/5" : ""}`}
-                          >
-                            <button
-                              onClick={() => setModal({ space, date: day })}
-                              className={`w-full min-h-[36px] rounded-md border text-[10px] font-medium transition-all ${
-                                res
-                                  ? "bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
-                                  : "border-border bg-surface hover:bg-surface-secondary text-text-tertiary hover:text-text-secondary"
-                              }`}
-                            >
-                              {res ? (
-                                <div className="px-1 py-0.5 text-left leading-tight">
-                                  <div className="font-semibold truncate">{res.campaign?.wfNumber}</div>
-                                  <div className="opacity-70 truncate">{res.campaign?.name}</div>
-                                </div>
-                              ) : (
-                                <span className="opacity-40">+</span>
-                              )}
-                            </button>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-
-      {/* ── Map view ─────────────────────────────────────────────────────────── */}
-      {viewMode === "map" && spaces && (
-        <FloorPlan
-          spaces={spaces}
-          reservations={mapRes ?? []}
-          onRoomClick={(space, reservation) => setModal({ space, date: mapDate })}
-        />
-      )}
-
-      {/* ── Legend (both views) ──────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-3">
-        {Object.entries(SPACE_TYPE_LABELS).map(([type, label]) => {
-          const Icon = SPACE_TYPE_ICON[type] ?? Building2;
-          const color = SPACE_TYPE_COLOR[type] ?? "";
-          return (
-            <div key={type} className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium ${color}`}>
-              <Icon className="h-3 w-3" />
-              {label}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── Reserve / view modal ────────────────────────────────────────────── */}
-      {modal && (
-        <ReserveModal
-          space={modal.space}
-          date={modal.date}
-          existingReservation={modalReservation}
-          userRole={userRole}
-          userId={userId}
-          onClose={() => setModal(null)}
-          onReserved={handleReserved}
-        />
-      )}
-    </div>
-  );
-}
-
-// ─── Shoot Prep view ──────────────────────────────────────────────────────────
+// ─── Shared types ────────────────────────────────────────────────────────────
 
 interface CalendarEvent {
   id: string;
@@ -569,6 +275,386 @@ interface CalendarEvent {
     status: string;
   } | null;
 }
+
+// ─── Spaces view — calendar + floor plan ─────────────────────────────────────
+
+interface SpacesViewProps {
+  userRole: string;
+  userId: string;
+}
+
+function SpacesView({ userRole, userId }: SpacesViewProps) {
+  const today = useMemo(() => new Date(), []);
+  const { toast } = useToast();
+
+  // Selected date drives the floor plan; calMonth drives the calendar display
+  const [selectedDate, setSelectedDate] = useState<Date>(today);
+  const [calMonth, setCalMonth]         = useState<Date>(today);
+
+  // Rooms staged for reservation (spaceIds pending confirmation)
+  const [selectedRooms, setSelectedRooms] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+
+  // User-selected shoot for booking mode (null = not in booking mode)
+  const [activeShoot, setActiveShoot] = useState<CalendarEvent | null>(null);
+
+  // Manual reserve modal (used only when no shoot is selected)
+  const [modal, setModal] = useState<{ space: StudioSpace; date: Date } | null>(null);
+
+  const monthStart  = startOfMonth(calMonth);
+  const monthEnd    = endOfMonth(calMonth);
+  const selectedStr = format(selectedDate, "yyyy-MM-dd");
+  const calMonthStr = format(calMonth, "yyyy-MM");
+
+  const { data: spaces } = useSWR<StudioSpace[]>("/api/studio/spaces", fetcher);
+
+  // Full month reservations — powers calendar dots + floor plan
+  const { data: monthRes, mutate: refreshRes } = useSWR<SpaceReservation[]>(
+    `/api/studio/reservations?dateFrom=${format(monthStart, "yyyy-MM-dd")}&dateTo=${format(monthEnd, "yyyy-MM-dd")}`,
+    fetcher
+  );
+
+  // Shoot dates for the displayed month — green dots + selection mode
+  const { data: calEvents } = useSWR<CalendarEvent[]>(
+    `/api/calendar?month=${calMonthStr}`,
+    fetcher
+  );
+
+  // Days with any reservation → blue dot
+  const markedDays = useMemo(() => {
+    const s = new Set<string>();
+    (monthRes ?? []).forEach((r) => s.add(r.reservedDate));
+    return s;
+  }, [monthRes]);
+
+  // Days with scheduled shoots → green dot; multiple shoots per day supported
+  const shootDays = useMemo(() => {
+    const m = new Map<string, CalendarEvent[]>();
+    (calEvents ?? []).forEach((e) => {
+      if (e.campaign) {
+        if (!m.has(e.date)) m.set(e.date, []);
+        m.get(e.date)!.push(e);
+      }
+    });
+    return m;
+  }, [calEvents]);
+
+  // All shoots on the selected date — listed below the calendar
+  const todayShoots = shootDays.get(selectedStr) ?? [];
+
+  // Reservations for the selected date → drives floor plan
+  const dayRes = useMemo(
+    () => (monthRes ?? []).filter((r) => r.reservedDate === selectedStr),
+    [monthRes, selectedStr]
+  );
+
+  // activeCampaignId comes from user clicking a shoot, not auto-derived
+  const activeCampaignId = activeShoot?.campaign?.id ?? null;
+
+  const modalReservation = useMemo(() => {
+    if (!modal) return null;
+    return dayRes.find((r) => r.spaceId === modal.space.id) ?? null;
+  }, [modal, dayRes]);
+
+  function selectDay(day: Date) {
+    setSelectedDate(day);
+    setSelectedRooms(new Set());
+    setActiveShoot(null);
+    if (!isSameMonth(day, calMonth)) setCalMonth(day);
+  }
+
+  function navMonth(dir: 1 | -1) {
+    const newMonth    = dir === 1 ? addMonths(calMonth, 1) : subMonths(calMonth, 1);
+    const newSelected = isSameMonth(newMonth, today) ? today : startOfMonth(newMonth);
+    setCalMonth(newMonth);
+    setSelectedDate(newSelected);
+    setSelectedRooms(new Set());
+    setActiveShoot(null);
+  }
+
+  function handleRoomClick(space: StudioSpace, res: SpaceReservation | null) {
+    if (!activeCampaignId) {
+      // No shoot on this date — fall back to manual reserve modal
+      setModal({ space, date: selectedDate });
+      return;
+    }
+    // Blocked by another campaign — cannot override
+    if (res && res.campaignId !== activeCampaignId) return;
+    // Already confirmed for this campaign — not re-selectable
+    if (res && res.campaignId === activeCampaignId) return;
+    // Toggle selection
+    setSelectedRooms((prev) => {
+      const next = new Set(prev);
+      if (next.has(space.id)) next.delete(space.id);
+      else next.add(space.id);
+      return next;
+    });
+  }
+
+  async function handleConfirm() {
+    if (!activeCampaignId || selectedRooms.size === 0) return;
+    setSaving(true);
+    try {
+      const results = await Promise.allSettled(
+        Array.from(selectedRooms).map((spaceId) =>
+          fetch("/api/studio/reservations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ campaignId: activeCampaignId, spaceId, reservedDate: selectedStr }),
+          }).then((r) => { if (!r.ok) throw new Error("Failed"); })
+        )
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed === 0) {
+        toast("success", `${selectedRooms.size} space${selectedRooms.size !== 1 ? "s" : ""} reserved`);
+      } else {
+        toast("error", `${failed} space${failed !== 1 ? "s" : ""} could not be reserved`);
+      }
+      setSelectedRooms(new Set());
+      refreshRes();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Calendar grid: Mon–Sun with leading nulls for offset
+  const calDays = useMemo(() => {
+    const days   = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    const offset = getISODay(monthStart) - 1;
+    return [...Array<null>(offset).fill(null), ...days];
+  }, [monthStart, monthEnd]);
+
+  return (
+    <div className="grid gap-6 items-start" style={{ gridTemplateColumns: "1fr 2fr" }}>
+
+      {/* ── Left: Calendar + Shoots (1/3) ──────────────────────────────────── */}
+      <div className="flex flex-col gap-4">
+      <div className="rounded-xl border border-border bg-surface overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+              {format(calMonth, "MMMM yyyy")}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            {!isSameMonth(today, calMonth) && (
+              <button
+                onClick={() => { setCalMonth(today); setSelectedDate(today); setSelectedRooms(new Set()); }}
+                className="rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] font-semibold text-text-secondary hover:bg-surface-secondary transition-colors"
+              >
+                Today
+              </button>
+            )}
+            <button onClick={() => navMonth(-1)} className="rounded-md p-1 text-text-secondary hover:bg-surface-secondary transition-colors">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button onClick={() => navMonth(1)} className="rounded-md p-1 text-text-secondary hover:bg-surface-secondary transition-colors">
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Day-of-week header */}
+        <div className="grid grid-cols-7 border-b border-border">
+          {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d) => (
+            <div key={d} className="py-2 text-center text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Day cells */}
+        <div className="grid grid-cols-7 p-2 gap-1">
+          {calDays.map((day, i) => {
+            if (!day) return <div key={`empty-${i}`} />;
+            const ds         = format(day, "yyyy-MM-dd");
+            const isSelected = isSameDay(day, selectedDate);
+            const isTodayDay = isToday(day);
+            const hasShoot   = shootDays.has(ds);
+            const hasRes     = markedDays.has(ds);
+
+            return (
+              <button
+                key={ds}
+                onClick={() => selectDay(day)}
+                className={`flex flex-col items-center justify-center rounded-lg py-2 transition-all ${
+                  isSelected
+                    ? "bg-primary text-white shadow-sm"
+                    : isTodayDay
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-text-primary hover:bg-surface-secondary"
+                }`}
+              >
+                <span className="text-sm leading-none">{format(day, "d")}</span>
+                <div className="flex gap-0.5 mt-1 h-1.5 items-center">
+                  {hasShoot && <span className={`h-1 w-1 rounded-full ${isSelected ? "bg-white/80" : "bg-emerald-500"}`} />}
+                  {hasRes   && <span className={`h-1 w-1 rounded-full ${isSelected ? "bg-white/60" : "bg-primary"}`} />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Dot legend */}
+        <div className="flex gap-4 px-3.5 py-2 border-t border-border">
+          <span className="flex items-center gap-1.5 text-[10px] text-text-tertiary">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />Shoot scheduled
+          </span>
+          <span className="flex items-center gap-1.5 text-[10px] text-text-tertiary">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />Spaces reserved
+          </span>
+        </div>
+
+        {/* Viewing footer */}
+        <div className="px-3.5 py-2.5 border-t border-border">
+          <p className="text-xs text-text-tertiary">
+            Viewing{" "}
+            <span className={`font-semibold ${isToday(selectedDate) ? "text-primary" : "text-text-primary"}`}>
+              {isToday(selectedDate) ? "Today" : format(selectedDate, "EEE, MMM d, yyyy")}
+            </span>
+          </p>
+        </div>
+      </div>
+
+      {/* ── Shoots on selected date ──────────────────────────────────────────── */}
+      <div className="rounded-xl border border-border bg-surface overflow-hidden">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+          <ClipboardList className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+            Shoots
+          </span>
+          <span className="ml-auto text-[10px] font-semibold text-text-tertiary uppercase tracking-wider">
+            {isToday(selectedDate) ? "Today" : format(selectedDate, "MMM d")}
+          </span>
+        </div>
+
+        {todayShoots.length === 0 ? (
+          <div className="px-3.5 py-4 text-center">
+            <p className="text-xs text-text-tertiary">No shoots scheduled</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {todayShoots.map((shoot) => {
+              const isActive = activeShoot?.id === shoot.id;
+              return (
+                <div
+                  key={shoot.id}
+                  className={`flex items-center justify-between gap-3 px-3.5 py-3 transition-colors ${
+                    isActive ? "bg-primary/5" : "hover:bg-surface-secondary"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-text-primary truncate">
+                      {shoot.campaign?.wfNumber} — {shoot.campaign?.name ?? shoot.shootName}
+                    </p>
+                    {shoot.callTime && (
+                      <p className="text-[10px] text-text-tertiary mt-0.5">
+                        Call {shoot.callTime}{shoot.location ? ` · ${shoot.location}` : ""}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (isActive) {
+                        setActiveShoot(null);
+                        setSelectedRooms(new Set());
+                      } else {
+                        setActiveShoot(shoot);
+                        setSelectedRooms(new Set());
+                      }
+                    }}
+                    className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
+                      isActive
+                        ? "bg-primary text-white"
+                        : "border border-border bg-surface text-text-secondary hover:border-primary hover:text-primary"
+                    }`}
+                  >
+                    {isActive ? "Booking" : "Book"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      </div>{/* end left column */}
+
+      {/* ── Right: Floor plan (2/3) ─────────────────────────────────────────── */}
+      <div className="rounded-xl border border-border bg-surface">
+
+        {/* Tile header */}
+        <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 shrink-0 text-primary" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+              Greenroom
+            </span>
+          </div>
+          <span className="text-xs text-text-tertiary">
+            {dayRes.length > 0
+              ? `${dayRes.length} space${dayRes.length !== 1 ? "s" : ""} reserved`
+              : "No reservations"}
+          </span>
+        </div>
+
+        {/* Booking context banner — visible when a shoot is scheduled on selected date */}
+        {activeShoot?.campaign && (
+          <div className="flex items-center justify-between gap-4 px-3.5 py-2.5 border-b border-border bg-surface-secondary">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-0.5">Booking for</p>
+              <p className="text-sm font-semibold text-text-primary truncate">
+                {activeShoot.campaign.wfNumber} — {activeShoot.campaign.name}
+              </p>
+            </div>
+            {selectedRooms.size > 0 ? (
+              <Button size="sm" onClick={handleConfirm} disabled={saving} className="shrink-0">
+                {saving ? "Reserving..." : `Confirm ${selectedRooms.size} space${selectedRooms.size !== 1 ? "s" : ""}`}
+              </Button>
+            ) : (
+              <p className="text-xs text-text-tertiary shrink-0">Click spaces to select</p>
+            )}
+          </div>
+        )}
+
+        {/* Floor plan */}
+        <div className="p-3">
+          {spaces ? (
+            <FloorPlan
+              spaces={spaces}
+              reservations={dayRes}
+              onRoomClick={handleRoomClick}
+              selectedSpaceIds={selectedRooms}
+              activeCampaignId={activeCampaignId}
+            />
+          ) : (
+            <div className="h-64 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Manual reserve modal (no shoot on selected date) */}
+      {modal && (
+        <ReserveModal
+          space={modal.space}
+          date={modal.date}
+          existingReservation={modalReservation}
+          userRole={userRole}
+          userId={userId}
+          onClose={() => setModal(null)}
+          onReserved={() => refreshRes()}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Shoot Prep view ──────────────────────────────────────────────────────────
 
 // ─── Space picker modal for Shoot Prep ───────────────────────────────────────
 
