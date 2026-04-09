@@ -27,6 +27,7 @@ import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ScheduleTab } from "@/components/pre-production/schedule-tab";
+import { VendorAssignmentPanel } from "@/components/campaigns/vendor-assignment-panel";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
 
@@ -89,14 +90,33 @@ function LogisticsTab() {
   );
 }
 
-function PaymentsTab() {
+function PaymentsTab({
+  campaignId,
+  canEdit,
+  isVendor,
+}: {
+  campaignId: string;
+  canEdit: boolean;
+  isVendor: boolean;
+}) {
   return (
-    <PlaceholderTab
-      icon={DollarSign}
-      title="Payments"
-      description="Financial approvals and disbursements — vendor estimates, invoices, and talent/crew paymaster."
-      items={["Estimates", "Invoices", "Paymaster"]}
-    />
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border bg-surface p-4">
+        <p className="text-sm font-semibold text-text-primary">
+          Estimate → PO → Invoice Workflow
+        </p>
+        <p className="mt-1 text-sm text-text-secondary">
+          Complete estimate submission, PO send/signature, shoot-complete handoff, invoice submission, and approvals in this single section.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-border bg-surface p-4">
+        <VendorAssignmentPanel
+          campaignId={campaignId}
+          canEdit={canEdit && !isVendor}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -1219,22 +1239,29 @@ export default function PreProductionWorkspacePage({
   const canAccess =
     user?.role === "Admin" ||
     user?.role === "Producer" ||
-    user?.role === "Art Director";
+    user?.role === "Art Director" ||
+    user?.role === "Vendor";
 
   if (!canAccess) {
     return (
       <EmptyState
         title="Access restricted"
-        description="Pre-production is available to Producers and Art Directors."
+        description="Pre-production is available to Producers, Vendors, and Art Directors."
       />
     );
   }
 
   const isArtDirector = user?.role === "Art Director";
+  const isVendor = user?.role === "Vendor";
   const canManagePeople = user?.role === "Admin" || user?.role === "Producer";
   const visibleTabs = isArtDirector
     ? TABS.filter((t) => t.id === "schedule" || t.id === "people")
+    : isVendor
+      ? TABS.filter((t) => t.id === "payments")
     : TABS;
+  const resolvedActiveTab = visibleTabs.some((tab) => tab.id === activeTab)
+    ? activeTab
+    : visibleTabs[0].id;
 
   const campaignLabel = campaign.wfNumber
     ? `${campaign.wfNumber} ${campaign.name}`
@@ -1254,7 +1281,7 @@ export default function PreProductionWorkspacePage({
       <div className="border-b border-border">
         <nav className="flex gap-0">
           {visibleTabs.map(({ id: tabId, label, icon: Icon }) => {
-            const active = activeTab === tabId;
+            const active = resolvedActiveTab === tabId;
             return (
               <button
                 key={tabId}
@@ -1281,7 +1308,7 @@ export default function PreProductionWorkspacePage({
 
       {/* Tab content */}
       <div className="pt-6">
-        {activeTab === "schedule"  && (
+        {resolvedActiveTab === "schedule"  && (
           <ScheduleTab
             campaignId={id}
             campaignName={campaign.name}
@@ -1293,10 +1320,12 @@ export default function PreProductionWorkspacePage({
             isArtDirector={isArtDirector}
           />
         )}
-        {activeTab === "logistics" && <LogisticsTab />}
-        {activeTab === "people"    && <PeopleTab campaignId={id} shoots={shoots} vendors={vendors} producerId={campaign.producerId} canManage={canManagePeople} onRefresh={refreshCampaign} />}
-        {activeTab === "payments"  && <PaymentsTab />}
-        {activeTab === "contracts" && <ContractsTab campaignId={id} shoots={shoots} vendors={vendors} />}
+        {resolvedActiveTab === "logistics" && <LogisticsTab />}
+        {resolvedActiveTab === "people"    && <PeopleTab campaignId={id} shoots={shoots} vendors={vendors} producerId={campaign.producerId} canManage={canManagePeople} onRefresh={refreshCampaign} />}
+        {resolvedActiveTab === "payments"  && (
+          <PaymentsTab campaignId={id} canEdit={canManagePeople} isVendor={isVendor} />
+        )}
+        {resolvedActiveTab === "contracts" && <ContractsTab campaignId={id} shoots={shoots} vendors={vendors} />}
       </div>
     </div>
   );
