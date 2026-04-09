@@ -12,7 +12,6 @@ import { CampaignDetailHeader } from "@/components/campaigns/campaign-detail-hea
 import { ProductionCalendarTile } from "@/components/campaigns/tiles/production-calendar-tile";
 import { ShootDayListTile } from "@/components/campaigns/tiles/shoot-day-list-tile";
 import { ShootDayModal } from "@/components/campaigns/shoot-day-modal";
-import { formatCurrency } from "@/lib/utils/format";
 import { ShotListTile } from "@/components/campaigns/tiles/shot-list-tile";
 import { DocumentsTabTile } from "@/components/campaigns/tiles/documents-tab-tile";
 import { InventoryTile } from "@/components/campaigns/tiles/inventory-tile";
@@ -21,11 +20,12 @@ import { LinkProductDrawer } from "@/components/campaigns/link-product-drawer";
 import { LinkGearDrawer } from "@/components/campaigns/link-gear-drawer";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { PeopleTile } from "@/components/campaigns/tiles/people-tile";
+import { BudgetSidebarTile } from "@/components/campaigns/tiles/budget-sidebar-tile";
 import { useToast } from "@/components/ui/toast";
+import { formatCurrency } from "@/lib/utils/format";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Bell, AlertCircle, Calendar, X, Info } from "lucide-react";
-import { BudgetSidebarTile } from "@/components/campaigns/tiles/budget-sidebar-tile";
 import { ShotListModal } from "@/components/campaigns/shot-list-modal";
 import useSWR from "swr";
 import type { AppUser } from "@/types/domain";
@@ -641,6 +641,7 @@ export default function CampaignDetailPage({
           </ModalFooter>
         </form>
       </Modal>
+
     </div>
   );
 }

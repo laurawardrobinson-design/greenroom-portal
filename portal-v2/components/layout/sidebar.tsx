@@ -11,7 +11,6 @@ import {
   Package,
   Boxes,
   Utensils,
-  DollarSign,
   Settings,
   LogOut,
   X,
@@ -109,12 +108,6 @@ const NAV_ITEMS: NavItem[] = [
     href: "/goals",
     icon: Compass,
     roles: ["Admin", "Producer", "Studio"],
-  },
-  {
-    label: "Budget",
-    href: "/budget",
-    icon: DollarSign,
-    roles: ["Admin", "Producer"],
   },
   {
     label: "Settings",
