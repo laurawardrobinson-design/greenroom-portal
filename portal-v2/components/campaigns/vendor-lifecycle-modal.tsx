@@ -1,0 +1,998 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import useSWR from "swr";
+import type { CampaignVendor, CampaignVendorStatus, VendorEstimateItem, VendorInvoice, VendorInvoiceItem, InvoiceFlag } from "@/types/domain";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/toast";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { formatCurrency } from "@/lib/utils/format";
+import { EstimateForm } from "@/components/vendors/estimate-form";
+import { PoSignature } from "@/components/vendors/po-signature";
+import {
+  X, FileText, Check, CheckCircle2, Lock, Upload, AlertTriangle,
+  CornerDownLeft, ExternalLink, PenLine, Download,
+} from "lucide-react";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+type StepState = "locked" | "active" | "done";
+
+function getStepStates(status: CampaignVendorStatus): [StepState, StepState, StepState] {
+  if (status === "Rejected") return ["active", "locked", "locked"];
+  const step0Done = !["Invited", "Estimate Submitted"].includes(status);
+  const step1Done = ["Shoot Complete", "Invoice Submitted", "Invoice Pre-Approved", "Invoice Approved", "Paid"].includes(status);
+  const step2Done = ["Invoice Approved", "Paid"].includes(status);
+  return [
+    step0Done ? "done" : "active",
+    step0Done ? (step1Done ? "done" : "active") : "locked",
+    step1Done ? (step2Done ? "done" : "active") : "locked",
+  ];
+}
+
+function getDefaultStep(status: CampaignVendorStatus): number {
+  if (["Estimate Approved", "PO Uploaded", "PO Signed"].includes(status)) return 1;
+  if (["Shoot Complete", "Invoice Submitted", "Invoice Pre-Approved", "Invoice Approved", "Paid"].includes(status)) return 2;
+  return 0;
+}
+
+function resolveDocUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("/") && typeof window !== "undefined") return `${window.location.origin}${url}`;
+  return url;
+}
+
+function proxyDocUrl(resolved: string | null): string | null {
+  if (!resolved) return null;
+  if (typeof window !== "undefined" && !resolved.startsWith(window.location.origin)) {
+    return `/api/document-proxy?url=${encodeURIComponent(resolved)}`;
+  }
+  return resolved;
+}
+
+const SEVERITY_STYLE: Record<string, string> = {
+  high: "bg-red-50 text-red-700",
+  medium: "bg-amber-50 text-amber-700",
+  low: "bg-blue-50 text-blue-700",
+};
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function StepHeader({
+  number, label, state, selected, onClick,
+}: {
+  number: number; label: string; state: StepState; selected: boolean; onClick?: () => void;
+}) {
+  const canClick = state !== "locked" && !!onClick;
+  return (
+    <button
+      type="button"
+      onClick={canClick ? onClick : undefined}
+      disabled={!canClick}
+      className={`w-full flex items-center gap-3 text-left transition-colors ${canClick ? "hover:text-primary" : "cursor-default"}`}
+    >
+      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+        state === "done"
+          ? "bg-emerald-100 text-emerald-700"
+          : state === "active"
+          ? selected ? "bg-primary text-white" : "bg-primary/10 text-primary"
+          : "bg-surface-tertiary text-text-disabled"
+      }`}>
+        {state === "done" ? <Check className="h-3.5 w-3.5" /> : state === "locked" ? <Lock className="h-3 w-3" /> : number}
+      </div>
+      <span className={`text-sm font-semibold uppercase tracking-wider ${
+        state === "locked" ? "text-text-disabled" : state === "done" ? "text-text-secondary" : "text-text-primary"
+      }`}>
+        {label}
+      </span>
+      {state === "active" && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary shrink-0" />}
+    </button>
+  );
+}
+
+function StepCard({ stepIndex, state, label, content, selectedStep, onSelect }: {
+  stepIndex: number; state: StepState; label: string; content: React.ReactNode;
+  selectedStep: number; onSelect: (i: number) => void;
+}) {
+  const isSelected = selectedStep === stepIndex;
+  return (
+    <div className={`rounded-lg border transition-colors ${
+      state === "locked"
+        ? "border-border bg-surface-secondary opacity-50"
+        : isSelected
+        ? "border-primary/40 bg-primary/5"
+        : "border-border bg-surface hover:border-border-strong cursor-pointer"
+    }`}>
+      <div className="px-3.5 py-3">
+        <StepHeader
+          number={stepIndex + 1}
+          label={label}
+          state={state}
+          selected={isSelected}
+          onClick={state !== "locked" ? () => onSelect(stepIndex) : undefined}
+        />
+        {content}
+      </div>
+    </div>
+  );
+}
+
+function DocViewer({ url, fileName, onRefresh }: { url: string | null; fileName?: string; onRefresh?: () => void }) {
+  const [loadError, setLoadError] = useState(false);
+  const resolved = resolveDocUrl(url);
+  const proxied = proxyDocUrl(resolved);
+
+  useEffect(() => { setLoadError(false); }, [url]);
+
+  if (!url || !resolved) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-8">
+        <FileText className="h-10 w-10 text-text-disabled" />
+        <p className="text-sm text-text-tertiary">No document yet for this step.</p>
+      </div>
+    );
+  }
+
+  const displayName = fileName || "Document";
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border shrink-0 bg-surface-secondary">
+        <div className="flex items-center gap-2 min-w-0">
+          <FileText className="h-3.5 w-3.5 text-text-tertiary shrink-0" />
+          <span className="text-xs font-medium text-text-primary truncate">{displayName}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href={resolved}
+            download={displayName}
+            className="inline-flex items-center gap-1 text-xs text-text-tertiary hover:text-text-primary transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download
+          </a>
+          <a
+            href={resolved}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-text-tertiary hover:text-text-primary transition-colors"
+          >
+            <ExternalLink className="h-3 w-3" />
+            New tab
+          </a>
+        </div>
+      </div>
+      <div className="flex-1 relative">
+        {loadError ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-6">
+            <p className="text-sm text-text-secondary">The document could not be loaded.</p>
+            <a href={resolved} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
+              Open in new tab <ExternalLink className="h-3 w-3" />
+            </a>
+            {onRefresh && (
+              <Button size="sm" variant="secondary" onClick={() => { setLoadError(false); onRefresh(); }}>
+                Refresh
+              </Button>
+            )}
+          </div>
+        ) : (
+          <iframe
+            key={proxied || resolved}
+            src={proxied || resolved}
+            title={displayName}
+            className="w-full h-full border-0"
+            onError={() => setLoadError(true)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main modal ───────────────────────────────────────────────────────────────
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  campaignVendor: CampaignVendor;
+  campaignId: string;
+  wfNumber: string;
+  onStatusChange: () => void;
+}
+
+export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campaignId, wfNumber, onStatusChange }: Props) {
+  const { user } = useCurrentUser();
+  const { toast } = useToast();
+  const isVendor = user?.role === "Vendor";
+  const isProducer = user?.role === "Producer" || user?.role === "Admin";
+  const isHop = user?.role === "Admin";
+
+  const [selectedStep, setSelectedStep] = useState(() => getDefaultStep(cv.status));
+  const [showEstimateForm, setShowEstimateForm] = useState(false);
+  const [showPoSignature, setShowPoSignature] = useState(false);
+  const [acting, setActing] = useState(false);
+  const [sendingBack, setSendingBack] = useState(false);
+  const [sendBackReason, setSendBackReason] = useState("");
+  const [uploadingPo, setUploadingPo] = useState(false);
+  const [uploadingInvoice, setUploadingInvoice] = useState(false);
+  const [confirmShootComplete, setConfirmShootComplete] = useState(false);
+  const [poNumberInput, setPoNumberInput] = useState(cv.poNumber || `PO-${wfNumber}`);
+  const poFileInputRef = useRef<HTMLInputElement>(null);
+  const invoiceFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync selected step when status changes
+  useEffect(() => {
+    setSelectedStep(getDefaultStep(cv.status));
+    setShowEstimateForm(false);
+    setShowPoSignature(false);
+    setSendingBack(false);
+    setSendBackReason("");
+    setConfirmShootComplete(false);
+  }, [cv.status]);
+
+  // Keep PO number input in sync with actual value (after PO uploaded)
+  useEffect(() => {
+    if (cv.poNumber) setPoNumberInput(cv.poNumber);
+  }, [cv.poNumber]);
+
+  // Escape key + body scroll lock
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = "";
+    };
+  }, [open, onClose]);
+
+  // Data fetches
+  const { data: cvData, mutate: mutateCv } = useSWR<{
+    estimateItems: VendorEstimateItem[];
+    estimateFileUrl: string | null;
+    estimateFileName: string | null;
+  }>(open ? `/api/campaign-vendors/${cv.id}` : null, fetcher);
+
+  const { data: invoiceData, mutate: mutateInvoice } = useSWR<{
+    invoice: VendorInvoice | null;
+    items: VendorInvoiceItem[];
+  }>(open ? `/api/invoices?campaignVendorId=${cv.id}` : null, fetcher);
+
+  const estimateItems = cvData?.estimateItems || [];
+  const invoice = invoiceData?.invoice;
+  const invoiceItems = invoiceData?.items || [];
+
+  const [s0, s1, s2] = getStepStates(cv.status);
+
+  // Document URL per step
+  const estimateDocUrl = cvData?.estimateFileUrl || (estimateItems.length > 0 ? `/estimates/${cv.id}` : null);
+  const estimateDocName = cvData?.estimateFileName || `${cv.vendor?.companyName || "Vendor"} Estimate`;
+  const poDocUrl = cv.poSignedFileUrl || cv.poFileUrl;
+  const poDocName = `${cv.vendor?.companyName || "Vendor"} PO${cv.poNumber ? ` — ${cv.poNumber}` : ""}`;
+  const invoiceDocUrl = invoice
+    ? (invoice.storagePath && invoice.fileUrl && !invoice.fileUrl.startsWith("internal")
+        ? invoice.fileUrl
+        : `/invoices/${cv.id}`)
+    : null;
+  const invoiceDocName = invoice?.fileName || `${cv.vendor?.companyName || "Vendor"} Invoice`;
+
+  const activeDocUrl =
+    selectedStep === 0 ? estimateDocUrl
+    : selectedStep === 1 ? poDocUrl
+    : invoiceDocUrl;
+  const activeDocName =
+    selectedStep === 0 ? estimateDocName
+    : selectedStep === 1 ? poDocName
+    : invoiceDocName;
+
+  // ─── Action handlers ───────────────────────────────────────────────────────
+
+  async function transition(targetStatus: CampaignVendorStatus, payload?: Record<string, unknown>) {
+    setActing(true);
+    try {
+      const res = await fetch(`/api/campaign-vendors/${cv.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "transition", targetStatus, payload }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed");
+      }
+      mutateCv();
+      onStatusChange();
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Action failed");
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function handleApproveEstimate() {
+    await transition("Estimate Approved");
+    toast("success", "Estimate approved");
+    setSendingBack(false);
+  }
+
+  async function handleSendBack() {
+    if (!sendBackReason.trim()) return;
+    setActing(true);
+    try {
+      const res = await fetch(`/api/campaign-vendors/${cv.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "transition", targetStatus: "Rejected", payload: { notes: sendBackReason.trim() } }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast("success", "Sent back to vendor");
+      setSendingBack(false);
+      setSendBackReason("");
+      onStatusChange();
+    } catch {
+      toast("error", "Failed to send back");
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function handlePoUpload(file: File) {
+    setUploadingPo(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("campaignId", campaignId);
+      formData.append("category", "Contract");
+      const uploadRes = await fetch("/api/files", { method: "POST", body: formData });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      const { url } = await uploadRes.json();
+      await fetch(`/api/campaign-vendors/${cv.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "transition", targetStatus: "PO Uploaded", payload: { poFileUrl: url, poNumber: poNumberInput.trim() || undefined } }),
+      });
+      toast("success", "PO uploaded");
+      setSelectedStep(1);
+      onStatusChange();
+    } catch {
+      toast("error", "Failed to upload PO");
+    } finally {
+      setUploadingPo(false);
+    }
+  }
+
+  async function handleInvoiceUpload(file: File) {
+    setUploadingInvoice(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("campaignVendorId", cv.id);
+      const res = await fetch("/api/invoices", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      toast("success", "Invoice uploaded");
+      mutateInvoice();
+      onStatusChange();
+    } catch {
+      toast("error", "Failed to upload invoice");
+    } finally {
+      setUploadingInvoice(false);
+    }
+  }
+
+  async function handleApproveInvoice(type: "producer" | "hop") {
+    if (!invoice) return;
+    setActing(true);
+    try {
+      const res = await fetch("/api/invoices", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId: invoice.id, campaignVendorId: cv.id, approverType: type }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast("success", "Invoice approved");
+      mutateInvoice();
+      onStatusChange();
+    } catch {
+      toast("error", "Failed to approve invoice");
+    } finally {
+      setActing(false);
+    }
+  }
+
+  if (!open) return null;
+
+  const vendorName = cv.vendor?.companyName || "Vendor";
+  const vendorCategory = cv.vendor?.category;
+  const isPdfEstimate = estimateItems.length === 1 && estimateItems[0]?.description?.startsWith("Per attached:");
+
+  // ─── Step 0: Estimate content ─────────────────────────────────────────────
+
+  function renderStep0Content() {
+    if (showEstimateForm) {
+      return (
+        <div className="mt-3 pt-3 border-t border-border">
+          <EstimateForm
+            campaignVendorId={cv.id}
+            campaignId={campaignId}
+            onSubmitted={() => { setShowEstimateForm(false); mutateCv(); onStatusChange(); }}
+            onCancel={() => setShowEstimateForm(false)}
+          />
+        </div>
+      );
+    }
+
+    // Vendor — invited (no estimate yet)
+    if (isVendor && cv.status === "Invited") {
+      return (
+        <div className="mt-3 pt-3 border-t border-border">
+          <p className="text-xs text-text-tertiary mb-3">Submit your estimate as a PDF upload or itemized line items.</p>
+          <Button size="sm" onClick={() => setShowEstimateForm(true)}>
+            <FileText className="h-3.5 w-3.5" />
+            Submit Estimate
+          </Button>
+        </div>
+      );
+    }
+
+    // Vendor — estimate submitted (waiting for review)
+    if (isVendor && cv.status === "Estimate Submitted") {
+      return (
+        <div className="mt-3 pt-3 border-t border-border space-y-2">
+          <p className="text-xs text-text-secondary">Submitted — waiting for producer review.</p>
+          {cvData?.estimateFileUrl && (
+            <a href={cvData.estimateFileUrl} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+              <FileText className="h-3 w-3" /> View your submitted estimate <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+          <button
+            onClick={() => setShowEstimateForm(true)}
+            className="block text-xs text-text-tertiary hover:text-text-secondary"
+          >
+            Withdraw &amp; resubmit
+          </button>
+        </div>
+      );
+    }
+
+    // Vendor — estimate approved
+    if (isVendor && s0 === "done") {
+      return (
+        <div className="mt-3 pt-3 border-t border-border flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+          <p className="text-xs text-text-secondary">
+            Approved{cv.estimateTotal > 0 ? ` — ${formatCurrency(cv.estimateTotal)}` : ""}
+          </p>
+        </div>
+      );
+    }
+
+    // Producer — estimate submitted
+    if (isProducer && cv.status === "Estimate Submitted") {
+      const total = estimateItems.reduce((s, i) => s + i.amount, 0);
+      return (
+        <div className="mt-3 pt-3 border-t border-border space-y-3">
+          {/* Line items */}
+          {!isPdfEstimate && estimateItems.length > 0 && (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border text-text-tertiary">
+                  <th className="text-left py-1.5 font-medium">Description</th>
+                  <th className="text-right py-1.5 font-medium">Qty</th>
+                  <th className="text-right py-1.5 font-medium">Unit</th>
+                  <th className="text-right py-1.5 font-medium">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {estimateItems.map((item) => (
+                  <tr key={item.id} className="border-b border-border-light">
+                    <td className="py-1.5 text-text-primary">{item.description}</td>
+                    <td className="py-1.5 text-right text-text-secondary">{item.quantity}</td>
+                    <td className="py-1.5 text-right text-text-secondary">{formatCurrency(item.unitPrice)}</td>
+                    <td className="py-1.5 text-right font-medium text-text-primary">{formatCurrency(item.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border font-semibold">
+                  <td colSpan={3} className="py-1.5 text-text-primary">Total</td>
+                  <td className="py-1.5 text-right text-text-primary">{formatCurrency(total)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+          {isPdfEstimate && (
+            <p className="text-xs text-text-tertiary">PDF estimate — see document viewer.</p>
+          )}
+          {estimateItems.length === 0 && (
+            <p className="text-xs text-text-tertiary">Loading estimate details…</p>
+          )}
+
+          {/* Actions */}
+          {!sendingBack && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSendingBack(true)}
+                disabled={acting}
+                className="text-xs text-text-tertiary hover:text-destructive font-medium disabled:opacity-50"
+              >
+                Send Back
+              </button>
+              <Button size="sm" variant="secondary" onClick={handleApproveEstimate} disabled={acting} loading={acting}>
+                <Check className="h-3.5 w-3.5" />
+                Approve Estimate
+              </Button>
+            </div>
+          )}
+          {sendingBack && (
+            <div className="space-y-2">
+              <textarea
+                value={sendBackReason}
+                onChange={(e) => setSendBackReason(e.target.value)}
+                placeholder="Explain what needs to change…"
+                className="w-full text-xs rounded-md border border-border bg-surface-secondary px-3 py-2 text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                rows={3}
+                autoFocus
+              />
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="secondary" onClick={handleSendBack} disabled={!sendBackReason.trim() || acting} loading={acting}>
+                  <CornerDownLeft className="h-3 w-3" />
+                  Send Back
+                </Button>
+                <button onClick={() => { setSendingBack(false); setSendBackReason(""); }}
+                  className="text-xs text-text-tertiary hover:text-text-secondary">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Producer — estimate approved (step done summary)
+    if (isProducer && s0 === "done") {
+      return (
+        <div className="mt-3 pt-3 border-t border-border flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+          <p className="text-xs text-text-secondary">
+            Approved{cv.estimateTotal > 0 ? ` — ${formatCurrency(cv.estimateTotal)}` : ""}
+          </p>
+        </div>
+      );
+    }
+
+    return null;
+  }
+
+  // ─── Step 1: PO content ───────────────────────────────────────────────────
+
+  function renderStep1Content() {
+    if (s1 === "locked") {
+      return (
+        <div className="mt-3 pt-3 border-t border-border">
+          <p className="text-xs text-text-disabled">Available after estimate is approved.</p>
+        </div>
+      );
+    }
+
+    // PO is done (shoot complete or later)
+    if (s1 === "done") {
+      return (
+        <div className="mt-3 pt-3 border-t border-border flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+          <p className="text-xs text-text-secondary">
+            PO signed{cv.poNumber ? ` — ${cv.poNumber}` : ""}{cv.signatureName ? ` by ${cv.signatureName}` : ""}
+          </p>
+        </div>
+      );
+    }
+
+    // Vendor — PO uploaded, needs signing
+    if (isVendor && cv.status === "PO Uploaded") {
+      if (showPoSignature) {
+        return (
+          <div className="mt-3 pt-3 border-t border-border">
+            <PoSignature
+              campaignVendorId={cv.id}
+              poFileUrl={cv.poFileUrl}
+              onSigned={() => { setShowPoSignature(false); onStatusChange(); }}
+              onCancel={() => setShowPoSignature(false)}
+            />
+          </div>
+        );
+      }
+      return (
+        <div className="mt-3 pt-3 border-t border-border space-y-2">
+          <p className="text-xs text-text-secondary">Your PO is ready. Review the document and sign below.</p>
+          <Button size="sm" onClick={() => { setShowPoSignature(true); setSelectedStep(1); }}>
+            <PenLine className="h-3.5 w-3.5" />
+            Sign Purchase Order
+          </Button>
+        </div>
+      );
+    }
+
+    // Vendor — PO signed, waiting for shoot
+    if (isVendor && cv.status === "PO Signed") {
+      return (
+        <div className="mt-3 pt-3 border-t border-border space-y-1">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+            <p className="text-xs text-text-secondary">PO signed{cv.signatureName ? ` by ${cv.signatureName}` : ""}. Waiting for shoot date.</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Vendor — waiting for PO
+    if (isVendor) {
+      return (
+        <div className="mt-3 pt-3 border-t border-border">
+          <p className="text-xs text-text-secondary">Waiting for the producer to upload your PO.</p>
+        </div>
+      );
+    }
+
+    // Producer — upload PO
+    if (isProducer && cv.status === "Estimate Approved") {
+      return (
+        <div className="mt-3 pt-3 border-t border-border space-y-3">
+          <p className="text-xs text-text-secondary">Upload the PO document for this vendor to sign.</p>
+          <div>
+            <label className="block text-xs font-medium text-text-primary mb-1.5">PO Number</label>
+            <input
+              type="text"
+              value={poNumberInput}
+              onChange={(e) => setPoNumberInput(e.target.value)}
+              placeholder={`PO-${wfNumber}`}
+              className="w-full rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <input
+            ref={poFileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePoUpload(f); e.target.value = ""; }}
+          />
+          <Button size="sm" variant="secondary" loading={uploadingPo} onClick={() => poFileInputRef.current?.click()}>
+            <Upload className="h-3.5 w-3.5" />
+            Upload PO Document
+          </Button>
+        </div>
+      );
+    }
+
+    // Producer — PO uploaded, waiting for vendor to sign
+    if (isProducer && cv.status === "PO Uploaded") {
+      return (
+        <div className="mt-3 pt-3 border-t border-border space-y-2">
+          <p className="text-xs text-text-secondary">PO uploaded{cv.poNumber ? ` (${cv.poNumber})` : ""}. Waiting for vendor signature.</p>
+        </div>
+      );
+    }
+
+    // Producer — PO signed, needs to mark shoot complete
+    if (isProducer && cv.status === "PO Signed") {
+      return (
+        <div className="mt-3 pt-3 border-t border-border space-y-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+            <p className="text-xs text-text-secondary">PO signed by {cv.signatureName || "vendor"}.</p>
+          </div>
+          {!confirmShootComplete ? (
+            <Button size="sm" variant="secondary" onClick={() => setConfirmShootComplete(true)}>
+              Mark Shoot Complete
+            </Button>
+          ) : (
+            <div className="rounded-lg border border-border bg-surface-secondary p-3 space-y-2">
+              <p className="text-xs font-medium text-text-primary">Mark shoot as complete?</p>
+              <p className="text-xs text-text-tertiary">This will notify the vendor to submit their invoice.</p>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => { transition("Shoot Complete"); setConfirmShootComplete(false); }} disabled={acting} loading={acting}>
+                  <Check className="h-3.5 w-3.5" />
+                  Confirm
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmShootComplete(false)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return null;
+  }
+
+  // ─── Step 2: Invoice content ──────────────────────────────────────────────
+
+  function renderStep2Content() {
+    if (s2 === "locked") {
+      return (
+        <div className="mt-3 pt-3 border-t border-border">
+          <p className="text-xs text-text-disabled">Available after shoot is complete.</p>
+        </div>
+      );
+    }
+
+    // Vendor — shoot complete, needs to upload invoice
+    if (isVendor && cv.status === "Shoot Complete") {
+      return (
+        <div className="mt-3 pt-3 border-t border-border space-y-2">
+          <p className="text-xs text-text-secondary">The shoot is complete! Upload your invoice to begin payment processing.</p>
+          <input
+            ref={invoiceFileInputRef}
+            type="file"
+            accept=".pdf,.png,.jpg,.jpeg"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleInvoiceUpload(f); e.target.value = ""; }}
+          />
+          <Button size="sm" loading={uploadingInvoice} onClick={() => invoiceFileInputRef.current?.click()}>
+            <Upload className="h-3.5 w-3.5" />
+            Upload Invoice
+          </Button>
+        </div>
+      );
+    }
+
+    // Vendor — invoice submitted or later
+    if (isVendor) {
+      const isProducerApproved = !!invoice?.producerApprovedAt;
+      const isHopApproved = !!invoice?.hopApprovedAt;
+      const statusText = isHopApproved
+        ? "Fully approved — payment in progress"
+        : isProducerApproved
+        ? "Producer approved, waiting finance review"
+        : "Submitted — under review";
+
+      return (
+        <div className="mt-3 pt-3 border-t border-border space-y-2">
+          <p className="text-xs text-text-secondary">{statusText}</p>
+          {invoice?.fileUrl && (
+            <a href={invoice.fileUrl} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+              <FileText className="h-3 w-3" /> {invoice.fileName} <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+          {cv.status === "Paid" && cv.paymentAmount > 0 && (
+            <div className="flex items-center gap-2 mt-1">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <p className="text-xs font-medium text-emerald-700">
+                Paid {formatCurrency(cv.paymentAmount)}{cv.paymentDate ? ` on ${new Date(cv.paymentDate).toLocaleDateString("en-US")}` : ""}
+              </p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Producer — invoice submitted, needs review
+    const estimateTotal = estimateItems.reduce((s, i) => s + i.amount, 0);
+    const invoiceTotal = invoiceItems.reduce((s, i) => s + i.amount, 0);
+    const diff = invoiceTotal - estimateTotal;
+    const diffPct = estimateTotal > 0 ? (diff / estimateTotal) * 100 : 0;
+    const isProducerApproved = !!invoice?.producerApprovedAt;
+    const isHopApproved = !!invoice?.hopApprovedAt;
+
+    if (!invoice && isProducer) {
+      if (cv.status === "Shoot Complete") {
+        // Producer can also upload invoice on behalf
+        return (
+          <div className="mt-3 pt-3 border-t border-border space-y-2">
+            <p className="text-xs text-text-secondary">Waiting for the vendor to submit their invoice.</p>
+            <input
+              ref={invoiceFileInputRef}
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleInvoiceUpload(f); e.target.value = ""; }}
+            />
+            <Button size="sm" variant="secondary" loading={uploadingInvoice} onClick={() => invoiceFileInputRef.current?.click()}>
+              <Upload className="h-3.5 w-3.5" />
+              Upload Invoice
+            </Button>
+          </div>
+        );
+      }
+      return (
+        <div className="mt-3 pt-3 border-t border-border">
+          <p className="text-xs text-text-tertiary">No invoice submitted yet.</p>
+        </div>
+      );
+    }
+
+    if (isProducer && invoice) {
+      return (
+        <div className="mt-3 pt-3 border-t border-border space-y-3">
+          {/* Approval status — linear flow */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className={`flex items-center gap-1 ${isProducerApproved ? "text-emerald-600 font-medium" : "text-text-tertiary"}`}>
+              {isProducerApproved ? <CheckCircle2 className="h-3.5 w-3.5" /> : <span className="h-3.5 w-3.5 rounded-full border border-current inline-block" />}
+              Producer
+            </span>
+            <span className="text-text-tertiary">→</span>
+            <span className={`flex items-center gap-1 ${isHopApproved ? "text-emerald-600 font-medium" : "text-text-tertiary"}`}>
+              {isHopApproved ? <CheckCircle2 className="h-3.5 w-3.5" /> : <span className="h-3.5 w-3.5 rounded-full border border-current inline-block" />}
+              Finance
+            </span>
+          </div>
+
+          {/* Flags */}
+          {invoice.autoFlags && invoice.autoFlags.length > 0 && (
+            <div className="space-y-1.5">
+              {invoice.autoFlags.map((flag: InvoiceFlag, i: number) => (
+                <div key={i} className="flex items-start gap-2 rounded-lg bg-surface-secondary p-2.5">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="custom" className={SEVERITY_STYLE[flag.severity]}>{flag.severity}</Badge>
+                      <span className="text-xs font-medium text-text-primary">{flag.type}</span>
+                    </div>
+                    <p className="text-xs text-text-secondary mt-0.5">{flag.message}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Invoice line items */}
+          {invoiceItems.length > 0 && (
+            <div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-text-tertiary">
+                    <th className="text-left py-1.5 font-medium">Description</th>
+                    <th className="text-right py-1.5 font-medium">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoiceItems.map((item) => (
+                    <tr key={item.id} className={`border-b border-border-light ${item.flagged ? "bg-red-50/50" : ""}`}>
+                      <td className="py-1.5 text-text-primary">
+                        {item.description}{item.flagged && <span className="ml-1 text-red-500">⚑</span>}
+                      </td>
+                      <td className="py-1.5 text-right font-medium text-text-primary">{formatCurrency(item.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-border font-semibold">
+                    <td className="py-1.5 text-text-primary">Total</td>
+                    <td className="py-1.5 text-right text-text-primary">{formatCurrency(invoiceTotal)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+              {/* vs. estimate summary */}
+              {estimateTotal > 0 && (
+                <div className={`mt-2 text-xs flex items-center gap-1.5 ${diff > 0 ? "text-red-600" : diff < 0 ? "text-emerald-600" : "text-text-tertiary"}`}>
+                  {diff > 0 ? <AlertTriangle className="h-3 w-3 shrink-0" /> : <CheckCircle2 className="h-3 w-3 shrink-0" />}
+                  {diff === 0
+                    ? `Matches estimate (${formatCurrency(estimateTotal)})`
+                    : `${diff > 0 ? "+" : ""}${formatCurrency(diff)} vs. estimate (${formatCurrency(estimateTotal)})`}
+                  {diffPct !== 0 && <span className="text-text-tertiary">· {diffPct > 0 ? "+" : ""}{diffPct.toFixed(1)}%</span>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Approval actions */}
+          {!isProducerApproved && !sendingBack && isProducer && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSendingBack(true)}
+                disabled={acting}
+                className="text-xs text-text-tertiary hover:text-destructive font-medium disabled:opacity-50"
+              >
+                Send Back
+              </button>
+              <Button size="sm" variant="secondary" loading={acting} onClick={() => handleApproveInvoice("producer")}>
+                <Check className="h-3.5 w-3.5" />
+                Approve Invoice
+              </Button>
+            </div>
+          )}
+          {isProducerApproved && !isHopApproved && isHop && !sendingBack && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSendingBack(true)}
+                disabled={acting}
+                className="text-xs text-text-tertiary hover:text-destructive font-medium disabled:opacity-50"
+              >
+                Send Back
+              </button>
+              <Button size="sm" loading={acting} onClick={() => handleApproveInvoice("hop")}>
+                <Check className="h-3.5 w-3.5" />
+                Final Approve
+              </Button>
+            </div>
+          )}
+          {isHopApproved && (
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <p className="text-xs text-emerald-700 font-medium">Fully approved</p>
+            </div>
+          )}
+          {sendingBack && (
+            <div className="space-y-2">
+              <textarea
+                value={sendBackReason}
+                onChange={(e) => setSendBackReason(e.target.value)}
+                placeholder="Explain what needs to change…"
+                className="w-full text-xs rounded-md border border-border bg-surface-secondary px-3 py-2 text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                rows={3}
+                autoFocus
+              />
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="secondary" onClick={handleSendBack} disabled={!sendBackReason.trim() || acting} loading={acting}>
+                  <CornerDownLeft className="h-3 w-3" />
+                  Send Back
+                </Button>
+                <button onClick={() => { setSendingBack(false); setSendBackReason(""); }}
+                  className="text-xs text-text-tertiary hover:text-text-secondary">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return null;
+  }
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={onClose} />
+
+      {/* Panel */}
+      <div className="relative w-full max-w-5xl flex flex-col bg-surface border border-border rounded-xl shadow-2xl overflow-hidden mt-4"
+        style={{ height: "calc(100vh - 3rem)" }}>
+
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border shrink-0 bg-surface">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-semibold text-text-primary truncate">{vendorName}</h2>
+            <p className="text-xs text-text-tertiary truncate">
+              {vendorCategory ? `${vendorCategory} · ` : ""}Estimate → PO → Invoice
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-text-tertiary hover:text-text-primary transition-colors p-1 rounded-md hover:bg-surface-secondary"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex flex-1 min-h-0">
+          {/* Left: step cards */}
+          <div className="w-2/5 shrink-0 border-r border-border flex flex-col gap-3 p-4 overflow-y-auto">
+            <StepCard stepIndex={0} state={s0} label="Estimate" content={renderStep0Content()} selectedStep={selectedStep} onSelect={setSelectedStep} />
+            <StepCard stepIndex={1} state={s1} label="PO" content={renderStep1Content()} selectedStep={selectedStep} onSelect={setSelectedStep} />
+            <StepCard stepIndex={2} state={s2} label="Invoice" content={renderStep2Content()} selectedStep={selectedStep} onSelect={setSelectedStep} />
+          </div>
+
+          {/* Right: document viewer */}
+          <div className="flex-1 min-w-0">
+            <DocViewer
+              url={activeDocUrl}
+              fileName={activeDocName}
+              onRefresh={selectedStep === 2 ? () => mutateInvoice() : undefined}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

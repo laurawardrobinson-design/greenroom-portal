@@ -25,6 +25,7 @@ import { useRouter } from "next/navigation";
 import { GatorEasterEgg } from "./gator-easter-egg";
 import { NotificationBell } from "./notification-bell";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { SidebarPendingBadge } from "./sidebar-pending-badge";
 
 interface NavItem {
   label: string;
@@ -142,6 +143,7 @@ export function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const filteredNav = NAV_ITEMS.filter((item) => item.roles.includes(userRole));
+  const showPendingBadge = userRole === "Admin" || userRole === "Producer";
 
   async function handleLogout() {
     const supabase = createClient();
@@ -202,6 +204,9 @@ export function Sidebar({
                 }`}
               />
               {(userRole === "Admin" && item.adminLabel) ? item.adminLabel : item.label}
+              {item.href === "/estimates-invoices" && showPendingBadge && !isActive && (
+                <SidebarPendingBadge />
+              )}
               {isActive && (
                 <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
               )}

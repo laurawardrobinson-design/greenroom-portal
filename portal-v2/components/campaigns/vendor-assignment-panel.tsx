@@ -2,65 +2,74 @@
 
 import { useState, forwardRef, useImperativeHandle } from "react";
 import useSWR from "swr";
-import type { CampaignVendor, Vendor } from "@/types/domain";
+import type { CampaignVendor, CampaignVendorStatus, Vendor } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Badge } from "@/components/ui/badge";
-import { PdfPreviewModal } from "@/components/budget/pdf-preview-modal";
-import { VendorStatusTimeline } from "@/components/vendors/vendor-status-timeline";
-import { EstimateForm } from "@/components/vendors/estimate-form";
-import { PoSignature } from "@/components/vendors/po-signature";
 import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatCurrency } from "@/lib/utils/format";
-import { VENDOR_STATUS_COLORS } from "@/lib/constants/statuses";
-import { InvoiceReviewPanel } from "@/components/campaigns/invoice-review-panel";
-import { EstimateReviewPanel } from "@/components/campaigns/estimate-review-panel";
-import { Plus, Users, Trash2, Upload, FileSearch, FileText, PenLine, CheckCircle2, Clock, ExternalLink } from "lucide-react";
-import type { VendorInvoice } from "@/types/domain";
+import { VendorLifecycleModal } from "@/components/campaigns/vendor-lifecycle-modal";
+import { Plus, Trash2, Settings2 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-/** Read-only invoice status shown to vendors after they've submitted */
-function VendorInvoiceView({ campaignVendorId }: { campaignVendorId: string }) {
-  const { data } = useSWR<{ invoice: VendorInvoice | null }>(
-    `/api/invoices?campaignVendorId=${campaignVendorId}`,
-    fetcher
-  );
-  const invoice = data?.invoice;
-  if (!invoice) return null;
+// ─── Phase chip helpers ───────────────────────────────────────────────────────
 
-  const isProducerApproved = !!invoice.producerApprovedAt;
-  const isHopApproved = !!invoice.hopApprovedAt;
+type Phase = "estimate" | "po" | "invoice" | "complete";
 
-  const statusLabel = isHopApproved
-    ? "Fully approved"
-    : isProducerApproved
-    ? "Producer approved — awaiting HOP"
-    : "Under review";
-
-  return (
-    <div className="mt-3 pt-3 border-t border-border space-y-2">
-      <div className="flex items-center gap-2">
-        <FileText className="h-3.5 w-3.5 text-text-tertiary shrink-0" />
-        <a
-          href={invoice.fileUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
-        >
-          {invoice.fileName}
-          <ExternalLink className="h-3 w-3" />
-        </a>
-      </div>
-      <p className="text-xs text-text-tertiary">{statusLabel}</p>
-    </div>
-  );
+function getPhase(status: CampaignVendorStatus): Phase {
+  if (["Invited", "Estimate Submitted", "Estimate Approved", "Rejected"].includes(status)) return "estimate";
+  if (["PO Uploaded", "PO Signed", "Shoot Complete"].includes(status)) return "po";
+  if (["Invoice Submitted", "Invoice Pre-Approved", "Invoice Approved"].includes(status)) return "invoice";
+  return "complete"; // Paid
 }
+
+const PHASE_LABEL: Record<Phase, string> = {
+  estimate: "Estimate",
+  po: "PO",
+  invoice: "Invoice",
+  complete: "Complete",
+};
+
+const PHASE_STYLE: Record<Phase, string> = {
+  estimate: "bg-amber-50 text-amber-700 border-amber-200",
+  po: "bg-blue-50 text-blue-700 border-blue-200",
+  invoice: "bg-violet-50 text-violet-700 border-violet-200",
+  complete: "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
+function getSubLabel(status: CampaignVendorStatus): string {
+  switch (status) {
+    case "Invited":            return "Awaiting submission";
+    case "Estimate Submitted": return "Submitted — review needed";
+    case "Estimate Approved":  return "Approved — upload PO";
+    case "Rejected":           return "Sent back";
+    case "PO Uploaded":        return "Awaiting signature";
+    case "PO Signed":          return "Signed — shoot pending";
+    case "Shoot Complete":     return "Submit invoice";
+    case "Invoice Submitted":  return "Submitted — review needed";
+    case "Invoice Pre-Approved": return "Pre-approved — final review";
+    case "Invoice Approved":   return "Approved";
+    case "Paid":               return "Paid";
+    default:                   return status;
+  }
+}
+
+function needsProducerAction(status: CampaignVendorStatus, isHop: boolean): boolean {
+  if (isHop && status === "Invoice Pre-Approved") return true;
+  return ["Estimate Submitted", "Estimate Approved", "Invoice Submitted"].includes(status);
+}
+
+function needsVendorAction(status: CampaignVendorStatus): boolean {
+  return ["Invited", "PO Uploaded", "Shoot Complete", "Rejected"].includes(status);
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 interface Props {
   campaignId: string;
+  wfNumber?: string;
   canEdit?: boolean;
 }
 
@@ -69,18 +78,11 @@ export interface VendorAssignmentPanelHandle {
 }
 
 export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Props>(
-  function VendorAssignmentPanel({ campaignId, canEdit }, ref) {
+  function VendorAssignmentPanel({ campaignId, wfNumber = "", canEdit }, ref) {
     const { user } = useCurrentUser();
     const { toast } = useToast();
     const [showAssign, setShowAssign] = useState(false);
-    const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null);
-    const [expandedEstimate, setExpandedEstimate] = useState<string | null>(null);
-    const [uploadingInvoice, setUploadingInvoice] = useState<string | null>(null);
-    const [showEstimateForm, setShowEstimateForm] = useState<string | null>(null);
-    const [showPoSignature, setShowPoSignature] = useState<string | null>(null);
-    const [uploadingPo, setUploadingPo] = useState<string | null>(null);
-    const [invoiceConfirmation, setInvoiceConfirmation] = useState<{ fileName: string; fileSize: number } | null>(null);
-    const [docPreview, setDocPreview] = useState<{ url: string; fileName: string } | null>(null);
+    const [managingVendor, setManagingVendor] = useState<CampaignVendor | null>(null);
 
     useImperativeHandle(ref, () => ({
       openAssign: () => setShowAssign(true),
@@ -93,76 +95,12 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
     const campaignVendors = Array.isArray(rawData) ? rawData : [];
 
     const isVendor = user?.role === "Vendor";
+    const isHop = user?.role === "Admin";
 
     // For vendors, filter to only their own assignment
     const visibleVendors = isVendor
       ? campaignVendors.filter((cv) => cv.vendorId === user?.vendorId)
       : campaignVendors;
-
-    async function handleTransition(
-      cvId: string,
-      targetStatus: string,
-      payload?: Record<string, unknown>
-    ) {
-      try {
-        const res = await fetch(`/api/campaign-vendors/${cvId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "transition", targetStatus, payload }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error);
-        }
-        toast("success", `Status updated to ${targetStatus}`);
-        mutate();
-      } catch (err) {
-        toast("error", err instanceof Error ? err.message : "Failed to update");
-      }
-    }
-
-    async function handlePoUpload(cvId: string, file: File) {
-      setUploadingPo(cvId);
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("campaignId", campaignId);
-        formData.append("category", "Contract");
-
-        const uploadRes = await fetch("/api/files", {
-          method: "POST",
-          body: formData,
-        });
-        if (!uploadRes.ok) throw new Error("Upload failed");
-        const uploadData = await uploadRes.json();
-
-        await handleTransition(cvId, "PO Uploaded", {
-          poFileUrl: uploadData.url,
-        });
-      } catch {
-        toast("error", "Failed to upload PO document");
-      } finally {
-        setUploadingPo(null);
-      }
-    }
-
-    async function handleInvoiceUpload(cvId: string, file: File) {
-      setUploadingInvoice(cvId);
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("campaignVendorId", cvId);
-        const res = await fetch("/api/invoices", { method: "POST", body: formData });
-        if (!res.ok) throw new Error("Upload failed");
-        toast("success", "Invoice uploaded");
-        setInvoiceConfirmation({ fileName: file.name, fileSize: file.size });
-        mutate();
-      } catch {
-        toast("error", "Failed to upload invoice");
-      } finally {
-        setUploadingInvoice(null);
-      }
-    }
 
     async function handleRemove(cvId: string) {
       try {
@@ -174,55 +112,14 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
       }
     }
 
-    function triggerFileInput(accept: string, onFile: (file: File) => void) {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = accept;
-      input.onchange = () => {
-        const file = input.files?.[0];
-        if (file) onFile(file);
-      };
-      input.click();
-    }
-
-    function openDocumentPreview(url: string | null | undefined, fileName: string) {
-      if (!url) {
-        toast("error", "No document found to preview");
-        return;
-      }
-      setDocPreview({ url, fileName });
-    }
-
-    function handleOpenEstimate(cv: CampaignVendor) {
-      setExpandedEstimate(cv.id);
-      openDocumentPreview(
-        cv.estimateFileUrl || `/estimates/${cv.id}`,
-        cv.estimateFileName || `${cv.vendor?.companyName || "Vendor"} Estimate`
-      );
-    }
-
-    function handleOpenInvoice(campaignVendorId: string) {
-      setExpandedInvoice(campaignVendorId);
-      fetch(`/api/invoices?campaignVendorId=${campaignVendorId}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          const invoice = data?.invoice;
-          if (invoice?.fileUrl) {
-            setDocPreview({ url: invoice.fileUrl, fileName: invoice.fileName || "Invoice" });
-            return;
-          }
-          // Always provide a viewable fallback doc immediately.
-          setDocPreview({
-            url: `/invoices/${campaignVendorId}`,
-            fileName: `${data?.vendorName || "Vendor"} Invoice`,
-          });
-        })
-        .catch(() => {
-          setDocPreview({
-            url: `/invoices/${campaignVendorId}`,
-            fileName: "Invoice",
-          });
-        });
+    // Keep managingVendor in sync when the SWR data refreshes
+    function handleStatusChange() {
+      mutate().then((updatedVendors) => {
+        if (managingVendor && Array.isArray(updatedVendors)) {
+          const updated = updatedVendors.find((cv) => cv.id === managingVendor.id);
+          if (updated) setManagingVendor(updated);
+        }
+      });
     }
 
     return (
@@ -230,8 +127,11 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
         {visibleVendors.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-4 px-5">
             {canEdit && !isVendor ? (
-              <button type="button" onClick={() => setShowAssign(true)}
-                className="inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-xs font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors">
+              <button
+                type="button"
+                onClick={() => setShowAssign(true)}
+                className="inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-xs font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors"
+              >
                 <Plus className="h-3 w-3" />
                 Assign Vendor
               </button>
@@ -242,280 +142,118 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 max-h-[480px] overflow-y-auto pr-1">
-            {visibleVendors.map((cv) => (
-              <div
-                key={cv.id}
-                className="rounded-lg border border-border bg-surface-secondary p-4"
-              >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <h4 className="text-sm font-semibold text-text-primary">
-                      {cv.vendor?.companyName || "Unknown Vendor"}
-                    </h4>
-                    {cv.vendor?.contactName && (
-                      <p className="text-xs text-text-tertiary">
-                        {cv.vendor.contactName}
-                        {cv.vendor.category && ` — ${cv.vendor.category}`}
+          <div className="space-y-2">
+            {canEdit && !isVendor && (
+              <div className="flex justify-end mb-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAssign(true)}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  <Plus className="h-3 w-3" />
+                  Assign another vendor
+                </button>
+              </div>
+            )}
+            {visibleVendors.map((cv) => {
+              const phase = getPhase(cv.status);
+              const subLabel = getSubLabel(cv.status);
+              const showDot = isVendor
+                ? needsVendorAction(cv.status)
+                : needsProducerAction(cv.status, isHop);
+
+              return (
+                <div
+                  key={cv.id}
+                  className={`relative rounded-lg border bg-surface-secondary p-3.5 transition-colors ${
+                    showDot ? "border-amber-300/60" : "border-border"
+                  }`}
+                >
+                  {/* Action-needed pulse dot */}
+                  {showDot && (
+                    <span className="absolute top-3 right-3 h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                  )}
+
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      {/* Vendor name */}
+                      <p className="text-sm font-semibold text-text-primary truncate">
+                        {cv.vendor?.companyName || "Unknown Vendor"}
                       </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="custom"
-                      className={VENDOR_STATUS_COLORS[cv.status]}
-                    >
-                      {cv.status}
-                    </Badge>
-                    {!isVendor && !["Shoot Complete", "Invoice Submitted", "Invoice Pre-Approved", "Invoice Approved", "Paid"].includes(cv.status) && (
-                      <button
-                        onClick={() => {
-                          if (cv.status !== "Invited") {
-                            if (!confirm(`Remove ${cv.vendor?.companyName}? This will discard their estimate and PO data.`)) return;
-                          }
-                          handleRemove(cv.id);
-                        }}
-                        className="text-text-tertiary hover:text-error transition-colors"
-                        title="Remove vendor"
+                      {cv.vendor?.contactName && (
+                        <p className="text-xs text-text-tertiary truncate">
+                          {cv.vendor.contactName}
+                          {cv.vendor.category && ` — ${cv.vendor.category}`}
+                        </p>
+                      )}
+
+                      {/* Phase chip + sub-label */}
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${PHASE_STYLE[phase]}`}>
+                          {PHASE_LABEL[phase]}
+                        </span>
+                        <span className="text-xs text-text-tertiary">{subLabel}</span>
+                      </div>
+
+                      {/* Financial summary */}
+                      {(cv.estimateTotal > 0 || cv.paymentAmount > 0) && (
+                        <div className="mt-2 flex gap-4 text-xs">
+                          {cv.estimateTotal > 0 && (
+                            <span className="text-text-tertiary">
+                              Est: <span className="font-medium text-text-primary">{formatCurrency(cv.estimateTotal)}</span>
+                            </span>
+                          )}
+                          {cv.paymentAmount > 0 && (
+                            <span className="text-text-tertiary">
+                              Paid: <span className="font-medium text-emerald-600">{formatCurrency(cv.paymentAmount)}</span>
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setManagingVendor(cv)}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
+                        <Settings2 className="h-3.5 w-3.5" />
+                        Manage
+                      </Button>
+                      {!isVendor && !["Invoice Submitted", "Invoice Pre-Approved", "Invoice Approved", "Paid"].includes(cv.status) && (
+                        <button
+                          onClick={() => {
+                            if (cv.status !== "Invited") {
+                              if (!confirm(`Remove ${cv.vendor?.companyName}? This will discard their estimate and PO data.`)) return;
+                            }
+                            handleRemove(cv.id);
+                          }}
+                          className="text-text-tertiary hover:text-error transition-colors p-1"
+                          title="Remove vendor"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                {/* Status timeline */}
-                <VendorStatusTimeline currentStatus={cv.status} />
-
-                {/* Financial summary */}
-                {cv.estimateTotal > 0 && (
-                  <div className="mt-3 flex gap-4 text-xs">
-                    <span className="text-text-tertiary">
-                      Estimate:{" "}
-                      <span className="font-medium text-text-primary">
-                        {formatCurrency(cv.estimateTotal)}
-                      </span>
-                    </span>
-                    {cv.paymentAmount > 0 && (
-                      <span className="text-text-tertiary">
-                        Paid:{" "}
-                        <span className="font-medium text-emerald-600">
-                          {formatCurrency(cv.paymentAmount)}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* ===== VENDOR actions ===== */}
-                {isVendor && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {cv.status === "Invited" && (
-                      <Button
-                        size="sm"
-                        onClick={() => setShowEstimateForm(cv.id)}
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                        Submit Estimate
-                      </Button>
-                    )}
-                    {cv.status === "PO Uploaded" && (
-                      <Button
-                        size="sm"
-                        onClick={() => setShowPoSignature(cv.id)}
-                      >
-                        <PenLine className="h-3.5 w-3.5" />
-                        Sign PO
-                      </Button>
-                    )}
-                    {cv.status === "Shoot Complete" && (
-                      <Button
-                        size="sm"
-                        loading={uploadingInvoice === cv.id}
-                        onClick={() =>
-                          triggerFileInput(".pdf,.png,.jpg,.jpeg", (file) =>
-                            handleInvoiceUpload(cv.id, file)
-                          )
-                        }
-                      >
-                        <Upload className="h-3.5 w-3.5" />
-                        Upload Invoice
-                      </Button>
-                    )}
-                  </div>
-                )}
-
-                {/* Vendor: read-only invoice view after submission */}
-                {isVendor && ["Invoice Submitted", "Invoice Pre-Approved", "Invoice Approved", "Paid"].includes(cv.status) && (
-                  <VendorInvoiceView campaignVendorId={cv.id} />
-                )}
-
-                {/* ===== PRODUCER/ADMIN actions ===== */}
-                {!isVendor && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {cv.status === "Estimate Submitted" && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleOpenEstimate(cv)}
-                      >
-                        <FileSearch className="h-3.5 w-3.5" />
-                        Review Estimate
-                      </Button>
-                    )}
-                    {cv.poFileUrl && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => openDocumentPreview(cv.poFileUrl, `${cv.vendor?.companyName || "Vendor"} PO`)}
-                      >
-                        <FileSearch className="h-3.5 w-3.5" />
-                        View PO
-                      </Button>
-                    )}
-                    {cv.poSignedFileUrl && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => openDocumentPreview(cv.poSignedFileUrl, `${cv.vendor?.companyName || "Vendor"} Signed PO`)}
-                      >
-                        <FileSearch className="h-3.5 w-3.5" />
-                        View Signed PO
-                      </Button>
-                    )}
-                    {cv.status === "Estimate Approved" && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        loading={uploadingPo === cv.id}
-                        onClick={() =>
-                          triggerFileInput(
-                            ".pdf,.doc,.docx",
-                            (file) => handlePoUpload(cv.id, file)
-                          )
-                        }
-                      >
-                        <Upload className="h-3.5 w-3.5" />
-                        Upload PO
-                      </Button>
-                    )}
-                    {cv.status === "PO Signed" && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() =>
-                          handleTransition(cv.id, "Shoot Complete")
-                        }
-                      >
-                        Mark Shoot Complete
-                      </Button>
-                    )}
-                    {cv.status === "Shoot Complete" && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        loading={uploadingInvoice === cv.id}
-                        onClick={() =>
-                          triggerFileInput(".pdf,.png,.jpg,.jpeg", (file) =>
-                            handleInvoiceUpload(cv.id, file)
-                          )
-                        }
-                      >
-                        <Upload className="h-3.5 w-3.5" />
-                        Upload Invoice
-                      </Button>
-                    )}
-                    {["Invoice Submitted", "Invoice Pre-Approved", "Invoice Approved", "Paid"].includes(cv.status) && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleOpenInvoice(cv.id)}
-                      >
-                        <FileSearch className="h-3.5 w-3.5" />
-                        {["Invoice Approved", "Paid"].includes(cv.status) ? "View Invoice" : "Review Invoice"}
-                      </Button>
-                    )}
-                  </div>
-                )}
-
-                {/* Estimate form (expanded inline) */}
-                {showEstimateForm === cv.id && (
-                  <div className="mt-4 border-t border-border pt-4">
-                    <EstimateForm
-                      campaignVendorId={cv.id}
-                      campaignId={campaignId}
-                      onSubmitted={() => {
-                        setShowEstimateForm(null);
-                        mutate();
-                      }}
-                      onCancel={() => setShowEstimateForm(null)}
-                    />
-                  </div>
-                )}
-
-                {/* Estimate review panel (expanded) */}
-                {expandedEstimate === cv.id && (
-                  <EstimateReviewPanel
-                    campaignVendorId={cv.id}
-                    status={cv.status}
-                    onStatusChange={() => mutate()}
-                  />
-                )}
-
-                {/* PO Signature (expanded inline) */}
-                {showPoSignature === cv.id && (
-                  <div className="mt-4 border-t border-border pt-4 space-y-4">
-                    {/* PO document preview above signature */}
-                    {cv.poFileUrl && (
-                      <div className="border border-border rounded-lg overflow-hidden">
-                        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-surface-secondary border-b border-border">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-3.5 w-3.5 text-text-tertiary" />
-                            <span className="text-xs font-medium text-text-primary">Purchase Order</span>
-                          </div>
-                          <a
-                            href={cv.poFileUrl.startsWith("/") && typeof window !== "undefined"
-                              ? `${window.location.origin}${cv.poFileUrl}`
-                              : cv.poFileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-text-tertiary hover:text-primary transition-colors"
-                          >
-                            Open in new tab ↗
-                          </a>
-                        </div>
-                        <iframe
-                          src={cv.poFileUrl.startsWith("/") && typeof window !== "undefined"
-                            ? `${window.location.origin}${cv.poFileUrl}`
-                            : cv.poFileUrl}
-                          title="Purchase Order"
-                          className="w-full border-0"
-                          style={{ height: "400px" }}
-                        />
-                      </div>
-                    )}
-                    <PoSignature
-                      campaignVendorId={cv.id}
-                      poFileUrl={cv.poFileUrl}
-                      onSigned={() => {
-                        setShowPoSignature(null);
-                        mutate();
-                      }}
-                      onCancel={() => setShowPoSignature(null)}
-                    />
-                  </div>
-                )}
-
-                {/* Invoice review panel (expanded) */}
-                {expandedInvoice === cv.id && (
-                  <InvoiceReviewPanel
-                    campaignVendorId={cv.id}
-                    onStatusChange={() => mutate()}
-                  />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
+        )}
+
+        {/* Vendor lifecycle modal */}
+        {managingVendor && (
+          <VendorLifecycleModal
+            open={!!managingVendor}
+            onClose={() => setManagingVendor(null)}
+            campaignVendor={managingVendor}
+            campaignId={campaignId}
+            wfNumber={wfNumber}
+            onStatusChange={handleStatusChange}
+          />
         )}
 
         {/* Assign vendor modal */}
@@ -523,97 +261,26 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
           open={showAssign}
           onClose={() => setShowAssign(false)}
           campaignId={campaignId}
-          onAssigned={() => {
-            mutate();
-            setShowAssign(false);
-          }}
+          onAssigned={() => { mutate(); setShowAssign(false); }}
           existingVendorIds={campaignVendors.map((cv) => cv.vendorId)}
-        />
-
-        {/* Invoice upload confirmation */}
-        <Modal
-          open={!!invoiceConfirmation}
-          onClose={() => setInvoiceConfirmation(null)}
-          title="Invoice Uploaded"
-          size="sm"
-        >
-          {invoiceConfirmation && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-emerald-900 truncate">{invoiceConfirmation.fileName}</p>
-                  <p className="text-xs text-emerald-700">
-                    {(invoiceConfirmation.fileSize / 1024 / 1024).toFixed(2)} MB
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-text-primary">What happens next</h3>
-                <ul className="space-y-2 text-sm text-text-secondary">
-                  <li className="flex items-start gap-2">
-                    <FileSearch className="h-4 w-4 mt-0.5 shrink-0 text-blue-600" />
-                    <span>The Producer will review your uploaded invoice document</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Users className="h-4 w-4 mt-0.5 shrink-0 text-blue-600" />
-                    <span>The Producer will review and compare against your estimate</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-blue-600" />
-                    <span>Once approved by Producer and Finance, payment is processed</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="border-t border-border pt-3">
-                <p className="text-xs text-text-tertiary flex items-center gap-1.5">
-                  <Clock className="h-3 w-3" />
-                  Typical timeline: reviewed in 48h, payment 5–10 business days
-                </p>
-              </div>
-            </div>
-          )}
-          <ModalFooter>
-            <Button onClick={() => setInvoiceConfirmation(null)}>Got It</Button>
-          </ModalFooter>
-        </Modal>
-
-        <PdfPreviewModal
-          open={docPreview !== null}
-          onClose={() => setDocPreview(null)}
-          url={docPreview?.url ?? null}
-          fileName={docPreview?.fileName ?? null}
         />
       </>
     );
   }
 );
 
+// ─── Assign vendor modal ──────────────────────────────────────────────────────
+
 function AssignVendorModal({
-  open,
-  onClose,
-  campaignId,
-  onAssigned,
-  existingVendorIds,
+  open, onClose, campaignId, onAssigned, existingVendorIds,
 }: {
-  open: boolean;
-  onClose: () => void;
-  campaignId: string;
-  onAssigned: () => void;
-  existingVendorIds: string[];
+  open: boolean; onClose: () => void; campaignId: string; onAssigned: () => void; existingVendorIds: string[];
 }) {
   const { toast } = useToast();
-  const { data: allVendors = [] } = useSWR<Vendor[]>(
-    open ? "/api/vendors" : null,
-    fetcher
-  );
+  const { data: allVendors = [] } = useSWR<Vendor[]>(open ? "/api/vendors" : null, fetcher);
   const [assigning, setAssigning] = useState<string | null>(null);
 
-  const available = allVendors.filter(
-    (v) => !existingVendorIds.includes(v.id)
-  );
+  const available = allVendors.filter((v) => !existingVendorIds.includes(v.id));
 
   async function handleAssign(vendorId: string) {
     setAssigning(vendorId);
@@ -655,12 +322,9 @@ function AssignVendorModal({
               className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-surface-secondary transition-colors"
             >
               <div>
-                <p className="text-sm font-medium text-text-primary">
-                  {vendor.companyName}
-                </p>
+                <p className="text-sm font-medium text-text-primary">{vendor.companyName}</p>
                 <p className="text-xs text-text-tertiary">
-                  {vendor.contactName}
-                  {vendor.category && ` — ${vendor.category}`}
+                  {vendor.contactName}{vendor.category && ` — ${vendor.category}`}
                 </p>
               </div>
               <Button
@@ -677,9 +341,7 @@ function AssignVendorModal({
         </div>
       )}
       <ModalFooter>
-        <Button variant="ghost" onClick={onClose}>
-          Done
-        </Button>
+        <Button variant="ghost" onClick={onClose}>Close</Button>
       </ModalFooter>
     </Modal>
   );

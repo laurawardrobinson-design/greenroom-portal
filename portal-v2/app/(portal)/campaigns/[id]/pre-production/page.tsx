@@ -93,7 +93,7 @@ function LogisticsTab() {
   );
 }
 
-function PaymentsTab({ campaignId, canEdit }: { campaignId: string; canEdit: boolean }) {
+function PaymentsTab({ campaignId, wfNumber, canEdit }: { campaignId: string; wfNumber: string; canEdit: boolean }) {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-surface p-4">
@@ -102,7 +102,7 @@ function PaymentsTab({ campaignId, canEdit }: { campaignId: string; canEdit: boo
           Producer workflow in one place: assign vendors, review submitted estimates, upload PO, review invoices, and approve for finance.
         </p>
       </div>
-      <VendorAssignmentPanel campaignId={campaignId} canEdit={canEdit} />
+      <VendorAssignmentPanel campaignId={campaignId} wfNumber={wfNumber} canEdit={canEdit} />
     </div>
   );
 }
@@ -1153,7 +1153,7 @@ export default function PreProductionWorkspacePage({
         )}
         {resolvedActiveTab === "logistics" && <LogisticsTab />}
         {resolvedActiveTab === "people"    && <PeopleTab campaignId={id} shoots={shoots} vendors={vendors} producerId={campaign.producerId} canManage={canManagePeople} onRefresh={refreshCampaign} />}
-        {resolvedActiveTab === "payments"  && <PaymentsTab campaignId={id} canEdit={canManagePeople} />}
+        {resolvedActiveTab === "payments"  && <PaymentsTab campaignId={id} wfNumber={campaign.wfNumber || ""} canEdit={canManagePeople} />}
         {resolvedActiveTab === "contracts" && <ContractsTab campaignId={id} shoots={shoots} vendors={vendors} />}
       </div>
     </div>

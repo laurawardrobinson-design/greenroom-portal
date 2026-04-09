@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import useSWR from "swr";
+import type { CampaignVendor } from "@/types/domain";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
+import { VendorLifecycleModal } from "@/components/campaigns/vendor-lifecycle-modal";
 import {
   ShieldCheck, DollarSign, FileText, Check, X, HardHat, Banknote,
   Package, Download, Send, CheckCircle2, ChevronDown, ChevronRight,
@@ -111,6 +113,22 @@ export default function ApprovalsPage() {
 
   const [expandedBatch, setExpandedBatch] = useState<string | null>(null);
   const [creatingBatch, setCreatingBatch] = useState(false);
+  const [reviewModal, setReviewModal] = useState<{ cv: CampaignVendor; wfNumber: string } | null>(null);
+  const [loadingReview, setLoadingReview] = useState<string | null>(null);
+
+  async function openInvoiceReview(cvId: string, wfNumber: string) {
+    setLoadingReview(cvId);
+    try {
+      const res = await fetch(`/api/campaign-vendors/${cvId}`);
+      if (!res.ok) throw new Error("Failed to load");
+      const cv = await res.json();
+      setReviewModal({ cv, wfNumber });
+    } catch {
+      toast("error", "Failed to load invoice details");
+    } finally {
+      setLoadingReview(null);
+    }
+  }
 
   const budgetRequests = data?.budgetRequests || [];
   const pendingInvoices = data?.pendingInvoices || [];
@@ -307,12 +325,15 @@ export default function ApprovalsPage() {
                   {inv.invoiceTotal > inv.estimateTotal && <Badge variant="error">Over estimate</Badge>}
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <Link href={`/campaigns/${inv.campaignId}/pre-production?tab=payments`}>
-                    <Button size="sm" variant="secondary">
-                      <FileText className="h-3.5 w-3.5" />
-                      Review Docs
-                    </Button>
-                  </Link>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={loadingReview === inv.id}
+                    onClick={() => openInvoiceReview(inv.id, inv.wfNumber)}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Review
+                  </Button>
                   <Button size="sm" onClick={() => handleInvoiceApproval(inv.id)}>
                     <Check className="h-3.5 w-3.5" />Final Approve
                   </Button>
@@ -545,6 +566,18 @@ export default function ApprovalsPage() {
           </div>
         )}
       </Card>
+
+      {/* Invoice review modal */}
+      {reviewModal && (
+        <VendorLifecycleModal
+          open={!!reviewModal}
+          onClose={() => setReviewModal(null)}
+          campaignVendor={reviewModal.cv}
+          campaignId={reviewModal.cv.campaignId}
+          wfNumber={reviewModal.wfNumber}
+          onStatusChange={() => { mutate(); setReviewModal(null); }}
+        />
+      )}
     </div>
   );
 }
