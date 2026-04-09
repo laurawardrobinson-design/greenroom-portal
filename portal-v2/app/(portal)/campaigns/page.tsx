@@ -188,7 +188,7 @@ export default function CampaignsPage() {
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {displayedCampaigns.map((campaign) => (
-              <CampaignCard key={campaign.id} campaign={campaign} />
+              <CampaignCard key={campaign.id} campaign={campaign} hideFinancials={user?.role === "Vendor"} />
             ))}
           </div>
         ) : (
@@ -202,11 +202,11 @@ export default function CampaignsPage() {
               <div className="w-24 shrink-0">Status</div>
               <div className="w-20 shrink-0 text-right">Next Shoot</div>
               <div className="w-20 shrink-0 text-right hidden lg:block">Assets Due</div>
-              <div className="w-20 shrink-0 text-right">Budget</div>
-              <div className="w-28 shrink-0 text-right hidden lg:block">Add&apos;l Funds</div>
+              {user?.role !== "Vendor" && <div className="w-20 shrink-0 text-right">Budget</div>}
+              {user?.role !== "Vendor" && <div className="w-28 shrink-0 text-right hidden lg:block">Add&apos;l Funds</div>}
             </div>
             {displayedCampaigns.map((campaign) => (
-              <CampaignRow key={campaign.id} campaign={campaign} onMutate={mutate} />
+              <CampaignRow key={campaign.id} campaign={campaign} onMutate={mutate} hideFinancials={user?.role === "Vendor"} />
             ))}
           </div>
         )}

@@ -7,6 +7,7 @@ import { format, parseISO, isPast, differenceInDays } from "date-fns";
 
 interface CampaignCardProps {
   campaign: CampaignListItem;
+  hideFinancials?: boolean;
 }
 
 const STATUS_PILL: Record<string, { bg: string; text: string; dot: string }> = {
@@ -44,7 +45,7 @@ function formatShootDates(dates: string[]): string {
     (sorted.length > 2 ? ` +${sorted.length - 2}` : "");
 }
 
-export function CampaignCard({ campaign }: CampaignCardProps) {
+export function CampaignCard({ campaign, hideFinancials }: CampaignCardProps) {
   const pill = STATUS_PILL[campaign.status] || STATUS_PILL.Planning;
 
   const today = new Date();
@@ -125,7 +126,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
         )}
 
         {/* Budget bar — pinned to bottom */}
-        <div className="mt-auto pt-3">
+        {!hideFinancials && <div className="mt-auto pt-3">
           {campaign.productionBudget > 0 ? (
             <>
               <div className="flex items-baseline justify-between mb-1.5">
@@ -148,7 +149,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
               <span className="text-[11px] text-text-tertiary">No budget set</span>
             </div>
           )}
-        </div>
+        </div>}
       </div>
     </Link>
   );

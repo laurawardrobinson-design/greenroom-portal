@@ -13,9 +13,10 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 interface Props {
   campaign: CampaignListItem;
   onMutate?: () => void;
+  hideFinancials?: boolean;
 }
 
-export function CampaignRow({ campaign, onMutate }: Props) {
+export function CampaignRow({ campaign, onMutate, hideFinancials }: Props) {
   const router = useRouter();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -201,6 +202,7 @@ export function CampaignRow({ campaign, onMutate }: Props) {
       </div>
 
       {/* Budget */}
+      {!hideFinancials && (
       <div
         className="w-20 shrink-0 text-right"
         onClick={(e) => { e.stopPropagation(); setEditingBudget(true); }}
@@ -224,8 +226,10 @@ export function CampaignRow({ campaign, onMutate }: Props) {
           </span>
         )}
       </div>
+      )}
 
       {/* Additional Funds */}
+      {!hideFinancials && (
       <div
         ref={fundsRef}
         className="w-28 shrink-0 text-right hidden lg:block relative"
@@ -281,6 +285,7 @@ export function CampaignRow({ campaign, onMutate }: Props) {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

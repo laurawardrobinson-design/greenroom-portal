@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import type { CampaignVendor } from "@/types/domain";
@@ -12,7 +11,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { VendorLifecycleModal } from "@/components/campaigns/vendor-lifecycle-modal";
 import { formatCurrency } from "@/lib/utils/format";
-import { ExternalLink, Settings2 } from "lucide-react";
+import { Settings2 } from "lucide-react";
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
@@ -165,37 +164,28 @@ export default function VendorWorkflowPage() {
                   </div>
                 </CardHeader>
 
-                <div className="px-4 pb-4 mt-3 space-y-3">
+                <div className="px-4 pb-3 mt-1.5 flex items-center gap-3 flex-wrap">
                   {/* Phase + sub-label */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${PHASE_STYLE[phase]}`}>
-                      {PHASE_LABEL[phase]}
-                    </span>
-                    <span className="text-xs text-text-secondary">{subLabel}</span>
-                  </div>
+                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${PHASE_STYLE[phase]}`}>
+                    {PHASE_LABEL[phase]}
+                  </span>
+                  <span className="text-xs text-text-secondary">{subLabel}</span>
 
                   {/* Financials */}
                   {(cv.estimateTotal > 0 || cv.invoiceTotal > 0 || cv.paymentAmount > 0) && (
-                    <div className="flex flex-wrap gap-4 text-xs text-text-tertiary">
+                    <>
+                      <span className="text-text-tertiary">·</span>
                       {cv.estimateTotal > 0 && (
-                        <span>Estimate: <span className="font-medium text-text-primary">{formatCurrency(cv.estimateTotal)}</span></span>
+                        <span className="text-xs text-text-tertiary">Est: <span className="font-medium text-text-primary">{formatCurrency(cv.estimateTotal)}</span></span>
                       )}
                       {cv.invoiceTotal > 0 && (
-                        <span>Invoice: <span className="font-medium text-text-primary">{formatCurrency(cv.invoiceTotal)}</span></span>
+                        <span className="text-xs text-text-tertiary">Inv: <span className="font-medium text-text-primary">{formatCurrency(cv.invoiceTotal)}</span></span>
                       )}
                       {cv.paymentAmount > 0 && (
-                        <span>Paid: <span className="font-medium text-emerald-700">{formatCurrency(cv.paymentAmount)}</span></span>
+                        <span className="text-xs text-text-tertiary">Paid: <span className="font-medium text-emerald-700">{formatCurrency(cv.paymentAmount)}</span></span>
                       )}
-                    </div>
+                    </>
                   )}
-
-                  <Link
-                    href={`/campaigns/${cv.campaignId}`}
-                    className="inline-flex items-center gap-1 text-xs text-text-tertiary hover:text-text-primary"
-                  >
-                    View campaign
-                    <ExternalLink className="h-3 w-3" />
-                  </Link>
                 </div>
               </Card>
             );
