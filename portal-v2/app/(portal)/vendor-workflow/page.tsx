@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import type { Campaign, CampaignVendor } from "@/types/domain";
+import type { CampaignVendor } from "@/types/domain";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -67,25 +67,16 @@ export default function VendorWorkflowPage() {
   const searchParams = useSearchParams();
   const focusedAssignment = searchParams.get("assignment");
 
-  const [managingVendor, setManagingVendor] = useState<CampaignVendor | null>(null);
-  const [managingCampaign, setManagingCampaign] = useState<Campaign | null>(null);
+  const [managingVendor, setManagingVendor] = useState<any | null>(null);
 
-  const { data: rawAssignments, isLoading: loadingAssignments, mutate } = useSWR<CampaignVendor[]>(
+  const { data: rawAssignments, isLoading: loadingAssignments, mutate } = useSWR<any[]>(
     user?.vendorId ? `/api/campaign-vendors?vendorId=${user.vendorId}` : null,
-    fetcher
-  );
-  const { data: campaigns = [] } = useSWR<Campaign[]>(
-    user ? "/api/campaigns" : null,
     fetcher
   );
 
   const assignments = useMemo(
     () => (Array.isArray(rawAssignments) ? rawAssignments : []),
     [rawAssignments]
-  );
-  const campaignById = useMemo(
-    () => new Map(campaigns.map((c) => [c.id, c])),
-    [campaigns]
   );
 
   const sortedAssignments = useMemo(() => {
@@ -121,7 +112,7 @@ export default function VendorWorkflowPage() {
   return (
     <div className="space-y-5">
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-text-primary">Workflow</h1>
+        <h1 className="text-2xl font-bold text-text-primary">Estimates & Invoices</h1>
         <p className="text-sm text-text-secondary">
           Submit estimates, sign POs, and upload invoices here.
         </p>
@@ -142,10 +133,9 @@ export default function VendorWorkflowPage() {
       ) : (
         <div className="space-y-3">
           {sortedAssignments.map((cv) => {
-            const campaign = campaignById.get(cv.campaignId);
-            const campaignLabel = campaign?.wfNumber
-              ? `${campaign.wfNumber} ${campaign.name}`
-              : campaign?.name || "Campaign";
+            const campaignLabel = cv.wfNumber
+              ? `${cv.wfNumber} — ${cv.campaignName}`
+              : cv.campaignName || "Campaign";
             const phase = getPhase(cv.status);
             const subLabel = getSubLabel(cv.status);
             const showDot = needsVendorAction(cv.status);
@@ -167,10 +157,7 @@ export default function VendorWorkflowPage() {
                     <Button
                       size="sm"
                       variant={showDot ? "primary" : "secondary"}
-                      onClick={() => {
-                        setManagingVendor(cv);
-                        setManagingCampaign(campaign || null);
-                      }}
+                      onClick={() => setManagingVendor(cv)}
                     >
                       <Settings2 className="h-3.5 w-3.5" />
                       Manage
@@ -220,10 +207,10 @@ export default function VendorWorkflowPage() {
       {managingVendor && (
         <VendorLifecycleModal
           open={!!managingVendor}
-          onClose={() => { setManagingVendor(null); setManagingCampaign(null); }}
+          onClose={() => setManagingVendor(null)}
           campaignVendor={managingVendor}
           campaignId={managingVendor.campaignId}
-          wfNumber={managingCampaign?.wfNumber || ""}
+          wfNumber={managingVendor.wfNumber || ""}
           onStatusChange={() => handleStatusChange(managingVendor)}
         />
       )}

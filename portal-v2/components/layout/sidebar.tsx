@@ -55,9 +55,9 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["Admin", "Producer", "Studio", "Vendor", "Art Director"],
   },
   {
-    label: "Workflow",
+    label: "Estimates & Invoices",
     href: "/vendor-workflow",
-    icon: ClipboardList,
+    icon: FileText,
     roles: ["Vendor"],
   },
   {
@@ -70,7 +70,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Estimates & Invoices",
     href: "/estimates-invoices",
     icon: FileText,
-    roles: ["Admin", "Producer"],
+    roles: ["Producer"],
   },
   {
     label: "Shot List",

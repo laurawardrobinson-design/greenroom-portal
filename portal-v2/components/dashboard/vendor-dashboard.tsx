@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import type { AppUser, Campaign, CampaignVendor } from "@/types/domain";
+import type { AppUser } from "@/types/domain";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { HighlightsCard } from "@/components/dashboard/highlights-card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -45,24 +45,11 @@ const WAITING_MESSAGE: Record<string, string> = {
 
 export function VendorDashboard({ user }: Props) {
   const { data: stats } = useSWR("/api/dashboard", fetcher);
-  const { data: campaigns, isLoading: loadingCampaigns } = useSWR<Campaign[]>(
-    "/api/campaigns",
-    fetcher
-  );
-  const { data: rawAssignments, isLoading: loadingAssignments } = useSWR<CampaignVendor[]>(
+  const { data: rawAssignments, isLoading } = useSWR<any[]>(
     user.vendorId ? `/api/campaign-vendors?vendorId=${user.vendorId}` : null,
     fetcher
   );
   const assignments = Array.isArray(rawAssignments) ? rawAssignments : [];
-  const isLoading = loadingCampaigns || loadingAssignments;
-
-  // Build a map of campaignId → campaign for lookup
-  const campaignMap = new Map<string, Campaign>();
-  if (campaigns) {
-    for (const c of campaigns) {
-      campaignMap.set(c.id, c);
-    }
-  }
 
   // Separate active vs. completed
   const active = assignments.filter((a) => a.status !== "Paid" && a.status !== "Rejected");
@@ -133,7 +120,7 @@ export function VendorDashboard({ user }: Props) {
           </CardHeader>
           <div className="space-y-2">
             {needsAction.map((a) => {
-              const campaign = campaignMap.get(a.campaignId);
+              const campaign = { name: a.campaignName, wfNumber: a.wfNumber };
               const action = NEXT_ACTION[a.status];
               if (!action) return null;
               const Icon = action.icon;
@@ -151,7 +138,9 @@ export function VendorDashboard({ user }: Props) {
                       <p className="text-sm font-medium text-text-primary">
                         {campaign?.name || "Campaign"}
                       </p>
-                      <p className="text-xs text-text-tertiary">{action.label}</p>
+                      <p className="text-xs text-text-tertiary">
+                        {campaign?.wfNumber && <span className="font-medium">{campaign.wfNumber} — </span>}{action.label}
+                      </p>
                     </div>
                   </div>
                   <Badge variant="custom" className={VENDOR_STATUS_COLORS[a.status]}>
@@ -183,7 +172,7 @@ export function VendorDashboard({ user }: Props) {
         ) : (
           <div className="space-y-2">
             {active.map((a) => {
-              const campaign = campaignMap.get(a.campaignId);
+              const campaign = { name: a.campaignName, wfNumber: a.wfNumber };
               const action = NEXT_ACTION[a.status];
               const waiting = WAITING_MESSAGE[a.status];
               return (
@@ -197,7 +186,7 @@ export function VendorDashboard({ user }: Props) {
                       {campaign?.name || "Campaign"}
                     </p>
                     <p className="text-xs text-text-tertiary">
-                      {action ? action.label : waiting || a.status}
+                      {campaign?.wfNumber && <span className="font-medium">{campaign.wfNumber} — </span>}{action ? action.label : waiting || a.status}
                     </p>
                     {a.estimateTotal > 0 && (
                       <p className="text-xs text-text-tertiary mt-0.5">
@@ -212,7 +201,7 @@ export function VendorDashboard({ user }: Props) {
               );
             })}
             {completed.map((a) => {
-              const campaign = campaignMap.get(a.campaignId);
+              const campaign = { name: a.campaignName, wfNumber: a.wfNumber };
               return (
                 <Link
                   key={a.id}

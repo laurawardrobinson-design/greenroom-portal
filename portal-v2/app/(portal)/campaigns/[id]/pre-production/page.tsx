@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { ScheduleTab } from "@/components/pre-production/schedule-tab";
 import { VendorAssignmentPanel } from "@/components/campaigns/vendor-assignment-panel";
 
@@ -722,6 +723,7 @@ function PeopleTab({
   for (const shoot of shoots) {
     for (const c of shoot.crew) {
       if (!c.user) continue;
+      if (c.user.role === "Vendor") continue;
       if (crewMap.has(c.userId)) {
         const entry = crewMap.get(c.userId)!;
         if (c.roleOnShoot && !entry.roles.includes(c.roleOnShoot)) {
@@ -832,14 +834,12 @@ function PeopleTab({
             <div className="space-y-2">
               {internalPeople.map(({ user, roles }) => (
                 <div key={user.id} className="flex items-center gap-3 py-1.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                    <UserCircle className="h-4 w-4 text-primary" />
-                  </div>
+                  <UserAvatar name={user.name} favoriteProduct={user.favoritePublixProduct} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-text-primary truncate">{user.name}</p>
-                    <p className="text-xs text-text-tertiary truncate">
-                      {roles.length > 0 ? roles.join(", ") : user.role}
-                    </p>
+                    {roles.length > 0 && (
+                      <p className="text-xs text-text-tertiary truncate">{roles.join(", ")}</p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -866,7 +866,7 @@ function PeopleTab({
                       disabled={saving === u.id}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-surface-secondary transition-colors disabled:opacity-50"
                     >
-                      <UserCircle className="h-4 w-4 text-primary shrink-0" />
+                      <UserAvatar name={u.name} favoriteProduct={u.favoritePublixProduct} size="xs" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-text-primary truncate">{u.name}</p>
                         <p className="text-xs text-text-tertiary">{u.role}</p>
@@ -887,9 +887,7 @@ function PeopleTab({
             <div className="space-y-2">
               {companyVendors.map((cv) => (
                 <div key={cv.id} className="flex items-start gap-3 py-1.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
-                    <Building2 className="h-4 w-4 text-text-tertiary" />
-                  </div>
+                  <UserAvatar name={cv.vendor?.companyName ?? "?"} favoriteProduct={cv.vendor?.favoritePublixProduct} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-text-primary truncate">
                       {cv.vendor?.companyName ?? "Unknown"}
@@ -924,7 +922,7 @@ function PeopleTab({
                       disabled={saving === v.id}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-surface-secondary transition-colors disabled:opacity-50"
                     >
-                      <Building2 className="h-4 w-4 text-text-tertiary shrink-0" />
+                      <UserAvatar name={v.companyName} favoriteProduct={v.favoritePublixProduct} size="xs" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-text-primary truncate">{v.companyName}</p>
                         <p className="text-xs text-text-tertiary truncate">{v.contactName}{v.category ? ` · ${v.category}` : ""}</p>
@@ -965,9 +963,7 @@ function PeopleTab({
               })}
               {talentVendors.map((cv) => (
                 <div key={cv.id} className="flex items-start gap-3 py-1.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-secondary">
-                    <Star className="h-4 w-4 text-text-tertiary" />
-                  </div>
+                  <UserAvatar name={cv.vendor?.companyName ?? "?"} favoriteProduct={cv.vendor?.favoritePublixProduct} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-text-primary truncate">
                       {cv.vendor?.companyName ?? "Unknown"}

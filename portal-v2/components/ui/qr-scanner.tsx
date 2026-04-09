@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Camera, CameraOff, AlertTriangle } from "lucide-react";
-import { Button } from "./button";
+import { AlertTriangle } from "lucide-react";
 
 interface QrScannerProps {
   active: boolean;
@@ -14,6 +13,7 @@ export function QrScanner({ active, onScan, onError }: QrScannerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scannerRef = useRef<import("html5-qrcode").Html5Qrcode | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const lastScannedRef = useRef<string>("");
   const lastScannedTimeRef = useRef<number>(0);
@@ -50,6 +50,7 @@ export function QrScanner({ active, onScan, onError }: QrScannerProps) {
       if (!containerRef.current) return;
       setStarting(true);
       setPermissionDenied(false);
+      setStartError(null);
 
       try {
         const { Html5Qrcode } = await import("html5-qrcode");
@@ -63,30 +64,48 @@ export function QrScanner({ active, onScan, onError }: QrScannerProps) {
         const scanner = new Html5Qrcode(containerId);
         scannerRef.current = scanner;
 
-        await scanner.start(
-          { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: { width: 220, height: 220 },
-            aspectRatio: 1.0,
-          },
-          (decodedText) => {
-            // Debounce: don't fire same code within 2 seconds
-            const now = Date.now();
-            if (
-              decodedText === lastScannedRef.current &&
-              now - lastScannedTimeRef.current < 2000
-            ) {
-              return;
-            }
-            lastScannedRef.current = decodedText;
-            lastScannedTimeRef.current = now;
-            onScan(decodedText);
-          },
-          () => {
-            // QR scan failure (no code detected) — ignore silently
+        const scannerConfig = {
+          fps: 10,
+          qrbox: { width: 220, height: 220 },
+          aspectRatio: 1.0,
+        };
+        const onScanSuccess = (decodedText: string) => {
+          const normalized = decodedText.trim();
+          if (!normalized) return;
+
+          // Debounce: don't fire same code within 2 seconds
+          const now = Date.now();
+          if (
+            normalized === lastScannedRef.current &&
+            now - lastScannedTimeRef.current < 2000
+          ) {
+            return;
           }
-        );
+          lastScannedRef.current = normalized;
+          lastScannedTimeRef.current = now;
+          onScan(normalized);
+        };
+
+        const onScanFailure = () => {
+          // QR scan failure (no code detected) — ignore silently
+        };
+
+        try {
+          // Prefer rear camera when available (mobile).
+          await scanner.start(
+            { facingMode: { exact: "environment" } },
+            scannerConfig,
+            onScanSuccess,
+            onScanFailure
+          );
+        } catch {
+          // Fallback for desktops or browsers that do not expose facingMode.
+          const cameras = await Html5Qrcode.getCameras();
+          if (!cameras.length) {
+            throw new Error("No camera devices available");
+          }
+          await scanner.start(cameras[0].id, scannerConfig, onScanSuccess, onScanFailure);
+        }
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
@@ -97,6 +116,7 @@ export function QrScanner({ active, onScan, onError }: QrScannerProps) {
         ) {
           setPermissionDenied(true);
         } else {
+          setStartError(msg);
           onError?.(msg);
         }
       } finally {
@@ -129,6 +149,17 @@ export function QrScanner({ active, onScan, onError }: QrScannerProps) {
             use manual entry below.
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (startError) {
+    return (
+      <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface-secondary p-4 text-center">
+        <p className="text-sm font-medium text-text-primary">Unable to start camera</p>
+        <p className="text-xs text-text-secondary">
+          {startError}
+        </p>
       </div>
     );
   }

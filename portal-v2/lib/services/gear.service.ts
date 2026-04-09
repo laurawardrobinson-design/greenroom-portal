@@ -32,6 +32,37 @@ function toGearItem(row: Record<string, unknown>): GearItem {
   };
 }
 
+function extractQrCandidates(input: string): string[] {
+  const trimmed = input.trim();
+  if (!trimmed) return [];
+
+  const candidates = new Set<string>();
+  candidates.add(trimmed);
+
+  // Handle labels that encode a full URL with a query param like ?qr=GEAR-001
+  try {
+    const asUrl = new URL(trimmed);
+    const qrParam =
+      asUrl.searchParams.get("qr") ||
+      asUrl.searchParams.get("code") ||
+      asUrl.searchParams.get("qrcode");
+    if (qrParam?.trim()) {
+      candidates.add(qrParam.trim());
+    }
+  } catch {
+    // Not a URL payload; continue parsing as plain text.
+  }
+
+  // Handle payloads that contain the code within surrounding text or URLs.
+  const tokenPattern = /\b(?:GEAR-[A-Z0-9-]+|GR-[A-Z0-9-]+)\b/gi;
+  for (const match of trimmed.matchAll(tokenPattern)) {
+    const value = match[0]?.trim();
+    if (value) candidates.add(value);
+  }
+
+  return Array.from(candidates);
+}
+
 // --- Gear Items ---
 export async function listGearItems(filters?: {
   category?: GearCategory;
@@ -67,9 +98,28 @@ export async function getGearItem(id: string): Promise<GearItem | null> {
 
 export async function getGearItemByQr(qrCode: string): Promise<GearItem | null> {
   const db = createAdminClient();
-  const { data, error } = await db.from("gear_items").select("*").eq("qr_code", qrCode).single();
-  if (error) return null;
-  return toGearItem(data);
+  const candidates = extractQrCandidates(qrCode);
+  if (candidates.length === 0) return null;
+
+  // Exact matching first (fast path, index-friendly).
+  const { data: exactRows, error: exactError } = await db
+    .from("gear_items")
+    .select("*")
+    .in("qr_code", candidates)
+    .limit(1);
+  if (exactError) return null;
+  if (exactRows && exactRows.length > 0) return toGearItem(exactRows[0]);
+
+  // Case-insensitive fallback for manual/scanner case variance.
+  for (const candidate of candidates) {
+    const { data: fallback, error: fallbackError } = await db
+      .from("gear_items")
+      .select("*")
+      .ilike("qr_code", candidate)
+      .maybeSingle();
+    if (!fallbackError && fallback) return toGearItem(fallback);
+  }
+  return null;
 }
 
 export async function getGearItemByRfid(rfidTag: string): Promise<GearItem | null> {

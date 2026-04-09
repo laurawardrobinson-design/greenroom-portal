@@ -81,6 +81,79 @@ export async function createNotification(params: {
   if (error) throw error;
 }
 
+// Notify all producers assigned to a campaign (via campaign_producers + fallback producer_id)
+export async function notifyCampaignProducers(
+  campaignVendorId: string,
+  notification: { type: string; level?: string; title: string; body?: string }
+): Promise<void> {
+  const supabase = createAdminClient();
+
+  // Get campaign info + vendor name via campaign_vendors
+  const { data: cv } = await supabase
+    .from("campaign_vendors")
+    .select("campaign_id, vendors(company_name), campaigns(id, name, wf_number, producer_id)")
+    .eq("id", campaignVendorId)
+    .single();
+
+  if (!cv) return;
+  const campaignId = cv.campaign_id;
+  const campaign = cv.campaigns as { id: string; name: string; wf_number: string; producer_id: string | null } | null;
+
+  // Gather producer user IDs
+  const producerIds = new Set<string>();
+  const { data: assigned } = await supabase
+    .from("campaign_producers")
+    .select("user_id")
+    .eq("campaign_id", campaignId);
+  (assigned || []).forEach((r: { user_id: string }) => producerIds.add(r.user_id));
+  if (campaign?.producer_id) producerIds.add(campaign.producer_id);
+
+  if (producerIds.size === 0) return;
+
+  const inserts = [...producerIds].map((userId) => ({
+    user_id: userId,
+    type: notification.type,
+    level: notification.level || "info",
+    title: notification.title,
+    body: notification.body || "",
+    campaign_id: campaignId,
+  }));
+
+  const { error } = await supabase.from("notifications").insert(inserts);
+  if (error) throw error;
+}
+
+// Notify all Admin users (HOP)
+export async function notifyAdmins(notification: {
+  type: string;
+  level?: string;
+  title: string;
+  body?: string;
+  campaignId?: string;
+}): Promise<void> {
+  const supabase = createAdminClient();
+
+  const { data: admins } = await supabase
+    .from("users")
+    .select("id")
+    .eq("role", "Admin")
+    .eq("active", true);
+
+  if (!admins?.length) return;
+
+  const inserts = admins.map((u: { id: string }) => ({
+    user_id: u.id,
+    type: notification.type,
+    level: notification.level || "info",
+    title: notification.title,
+    body: notification.body || "",
+    campaign_id: notification.campaignId || null,
+  }));
+
+  const { error } = await supabase.from("notifications").insert(inserts);
+  if (error) throw error;
+}
+
 export async function notifyGoalStakeholders(
   goalId: string,
   excludeUserId: string,

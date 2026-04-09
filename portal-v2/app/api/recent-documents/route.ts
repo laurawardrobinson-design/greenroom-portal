@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
-import { getAuthUser, requireRole, authErrorResponse } from "@/lib/auth/guards";
+import { requireRole, authErrorResponse } from "@/lib/auth/guards";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CampaignVendorStatus } from "@/types/domain";
 
-// GET /api/pending-documents
-// Returns all CampaignVendors with status "Estimate Submitted" or "Invoice Submitted"
-// (plus campaign info) for the current Producer/Admin.
+// GET /api/recent-documents
+// Returns recently actioned CampaignVendors (approved, signed, paid, rejected)
+// ordered by most recently updated, limit 30.
 export async function GET() {
   try {
     await requireRole(["Producer"]);
-    const user = await getAuthUser();
     const db = createAdminClient();
 
     const { data, error } = await db
@@ -19,8 +18,18 @@ export async function GET() {
         vendors(id, company_name, contact_name, email, phone, category, title, specialty, tax_id, active, onboarded_date, notes, favorite_drinks, favorite_snacks, dietary_restrictions, allergies, energy_boost, favorite_publix_product, created_at, updated_at),
         campaigns(id, name, wf_number, producer_id)
       `)
-      .in("status", ["Estimate Submitted", "Invoice Submitted"])
-      .order("updated_at", { ascending: false });
+      .in("status", [
+        "Estimate Approved",
+        "PO Uploaded",
+        "PO Signed",
+        "Shoot Complete",
+        "Invoice Pre-Approved",
+        "Invoice Approved",
+        "Paid",
+        "Rejected",
+      ])
+      .order("updated_at", { ascending: false })
+      .limit(30);
 
     if (error) throw error;
 
@@ -28,7 +37,6 @@ export async function GET() {
       const vendor = row.vendors;
       const campaign = row.campaigns;
       return {
-        // Full CampaignVendor shape
         id: row.id,
         campaignId: row.campaign_id,
         vendorId: row.vendor_id,
@@ -73,7 +81,6 @@ export async function GET() {
           createdAt: vendor.created_at,
           updatedAt: vendor.updated_at,
         } : undefined,
-        // Campaign info for display
         campaignName: campaign?.name || "Unknown Campaign",
         wfNumber: campaign?.wf_number || "",
       };

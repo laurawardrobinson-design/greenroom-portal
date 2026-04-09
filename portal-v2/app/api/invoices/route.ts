@@ -7,6 +7,7 @@ import {
 } from "@/lib/services/invoice.service";
 import { transitionVendorStatus } from "@/lib/services/campaign-vendors.service";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notifyCampaignProducers, notifyAdmins } from "@/lib/services/notifications.service";
 
 // GET /api/invoices?campaignVendorId=xxx
 export async function GET(request: Request) {
@@ -74,6 +75,14 @@ export async function POST(request: Request) {
     // Transition vendor status to "Invoice Submitted"
     await transitionVendorStatus(campaignVendorId, "Invoice Submitted");
 
+    // Notify campaign producers
+    notifyCampaignProducers(campaignVendorId, {
+      type: "invoice_submitted",
+      level: "urgent",
+      title: "Invoice submitted",
+      body: `A vendor has submitted an invoice for review.`,
+    }).catch(() => {}); // non-blocking
+
     return NextResponse.json(invoice, { status: 201 });
   } catch (error) {
     return authErrorResponse(error);
@@ -101,9 +110,24 @@ export async function PATCH(request: Request) {
       userId: user.id,
     });
 
-    // Transition vendor status
+    // Transition vendor status + route to next approver
     if (approverType === "producer" && campaignVendorId) {
       await transitionVendorStatus(campaignVendorId, "Invoice Pre-Approved");
+      // Get campaign info to include in notification
+      const db = createAdminClient();
+      const { data: cv } = await db
+        .from("campaign_vendors")
+        .select("campaign_id, campaigns(name, wf_number)")
+        .eq("id", campaignVendorId)
+        .single();
+      const campaign = cv?.campaigns as { name: string; wf_number: string } | null;
+      notifyAdmins({
+        type: "invoice_submitted",
+        level: "urgent",
+        title: "Invoice ready for final approval",
+        body: `A producer has pre-approved an invoice${campaign ? ` for ${campaign.wf_number} — ${campaign.name}` : ""}.`,
+        campaignId: cv?.campaign_id,
+      }).catch(() => {}); // non-blocking
     } else if (approverType === "hop" && campaignVendorId) {
       await transitionVendorStatus(campaignVendorId, "Invoice Approved");
     }

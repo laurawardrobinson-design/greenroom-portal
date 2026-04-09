@@ -82,12 +82,16 @@ export async function listVendorAssignments(
   const db = createAdminClient();
   const { data, error } = await db
     .from("campaign_vendors")
-    .select("*, vendors(*)")
+    .select("*, vendors(*), campaigns(id, name, wf_number)")
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return (data || []).map(toCampaignVendor);
+  return (data || []).map((row: any) => ({
+    ...toCampaignVendor(row),
+    campaignName: row.campaigns?.name || "",
+    wfNumber: row.campaigns?.wf_number || "",
+  })) as any;
 }
 
 // Get a single campaign-vendor assignment
@@ -236,6 +240,15 @@ export async function submitEstimate(
     })
     .eq("id", campaignVendorId);
   if (updateErr) throw updateErr;
+
+  // Notify campaign producers
+  const { notifyCampaignProducers } = await import("@/lib/services/notifications.service");
+  await notifyCampaignProducers(campaignVendorId, {
+    type: "vendor_estimate",
+    level: "urgent",
+    title: "Estimate submitted",
+    body: `A vendor has submitted an estimate for review.`,
+  }).catch(() => {}); // non-blocking
 }
 
 // Get estimate items for a campaign vendor

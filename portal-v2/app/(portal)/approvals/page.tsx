@@ -247,7 +247,7 @@ export default function ApprovalsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-3xl space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-text-primary">Approvals</h2>
         <p className="text-sm text-text-secondary">

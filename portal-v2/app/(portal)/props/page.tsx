@@ -99,18 +99,24 @@ export default function PropsPage() {
 
   // Scan handler — stable ref to avoid restarting camera
   const handleScan = useCallback(async (code: string) => {
-    if (cartRef.current.some((i) => i.qrCode === code)) {
+    const normalized = code.trim();
+    if (!normalized) return;
+
+    if (cartRef.current.some((i) => i.qrCode.trim().toLowerCase() === normalized.toLowerCase())) {
       toast("info", "Item already scanned");
       return;
     }
     try {
-      const res = await fetch(`/api/gear?qr=${encodeURIComponent(code)}`);
+      const res = await fetch(`/api/gear?qr=${encodeURIComponent(normalized)}`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Item not found");
       }
       const item: GearItem = await res.json();
-      setCartItems((prev) => [...prev, item]);
+      setCartItems((prev) => {
+        if (prev.some((i) => i.id === item.id)) return prev;
+        return [...prev, item];
+      });
       toast("success", `Added: ${item.name}`);
       if (navigator.vibrate) navigator.vibrate(100);
     } catch (err) {

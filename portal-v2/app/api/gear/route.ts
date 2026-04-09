@@ -14,12 +14,18 @@ export async function GET(request: Request) {
     const rfidTag = searchParams.get("rfid");
 
     if (qrCode) {
-      const item = await getGearItemByQr(qrCode);
+      const item = await getGearItemByQr(qrCode.trim());
+      if (!item) {
+        return NextResponse.json({ error: "Item not found" }, { status: 404 });
+      }
       return NextResponse.json(item);
     }
 
     if (rfidTag) {
       const item = await getGearItemByRfid(rfidTag);
+      if (!item) {
+        return NextResponse.json({ error: "Item not found" }, { status: 404 });
+      }
       return NextResponse.json(item);
     }
 
