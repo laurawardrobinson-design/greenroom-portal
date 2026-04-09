@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import type { VendorEstimateItem } from "@/types/domain";
+import type { CampaignAsset, VendorEstimateItem } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
-import { Check, Loader2, FileText, CornerDownLeft } from "lucide-react";
+import { Check, Loader2, FileText, CornerDownLeft, ExternalLink } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -22,7 +22,11 @@ export function EstimateReviewPanel({ campaignVendorId, status, onStatusChange }
   const [sendingBack, setSendingBack] = useState(false);
   const [reason, setReason] = useState("");
 
-  const { data } = useSWR<{ estimateItems: VendorEstimateItem[] }>(
+  const { data } = useSWR<{
+    campaignId: string;
+    vendorId: string;
+    estimateItems: VendorEstimateItem[];
+  }>(
     `/api/campaign-vendors/${campaignVendorId}`,
     fetcher
   );
@@ -35,6 +39,26 @@ export function EstimateReviewPanel({ campaignVendorId, status, onStatusChange }
     : null;
   const total = items.reduce((s, i) => s + i.amount, 0);
   const isPending = status === "Estimate Submitted";
+
+  const { data: estimateAssets } = useSWR<CampaignAsset[]>(
+    data?.campaignId && isPdfUpload && pdfFileName
+      ? `/api/files?campaignId=${data.campaignId}&type=boring`
+      : null,
+    fetcher
+  );
+
+  const uploadedEstimateDoc =
+    estimateAssets?.find(
+      (asset) =>
+        asset.category === "Estimate" &&
+        asset.vendorId === data?.vendorId &&
+        asset.fileName === pdfFileName
+    ) ||
+    estimateAssets?.find(
+      (asset) =>
+        asset.category === "Estimate" &&
+        asset.vendorId === data?.vendorId
+    );
 
   async function handleApprove() {
     setActing(true);
@@ -94,7 +118,19 @@ export function EstimateReviewPanel({ campaignVendorId, status, onStatusChange }
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-text-tertiary" />
           {isPdfUpload && pdfFileName ? (
-            <span className="text-sm font-medium text-text-primary">{pdfFileName}</span>
+            uploadedEstimateDoc?.fileUrl ? (
+              <a
+                href={uploadedEstimateDoc.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-primary hover:underline inline-flex items-center gap-1"
+              >
+                {pdfFileName}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : (
+              <span className="text-sm font-medium text-text-primary">{pdfFileName}</span>
+            )
           ) : (
             <span className="text-sm font-medium text-text-primary">Estimate</span>
           )}

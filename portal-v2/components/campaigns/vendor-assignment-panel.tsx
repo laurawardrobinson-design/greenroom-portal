@@ -15,6 +15,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatCurrency } from "@/lib/utils/format";
 import { VENDOR_STATUS_COLORS } from "@/lib/constants/statuses";
 import { InvoiceReviewPanel } from "@/components/campaigns/invoice-review-panel";
+import { EstimateReviewPanel } from "@/components/campaigns/estimate-review-panel";
 import { Plus, Users, Trash2, Upload, FileSearch, FileText, PenLine, CheckCircle2, Clock, ExternalLink, Loader2 } from "lucide-react";
 import type { VendorInvoice } from "@/types/domain";
 
@@ -79,6 +80,7 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
     const { toast } = useToast();
     const [showAssign, setShowAssign] = useState(false);
     const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null);
+    const [expandedEstimate, setExpandedEstimate] = useState<string | null>(null);
     const [uploadingInvoice, setUploadingInvoice] = useState<string | null>(null);
     const [showEstimateForm, setShowEstimateForm] = useState<string | null>(null);
     const [showPoSignature, setShowPoSignature] = useState<string | null>(null);
@@ -321,10 +323,13 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                         size="sm"
                         variant="secondary"
                         onClick={() =>
-                          handleTransition(cv.id, "Estimate Approved")
+                          setExpandedEstimate(
+                            expandedEstimate === cv.id ? null : cv.id
+                          )
                         }
                       >
-                        Approve Estimate
+                        <FileSearch className="h-3.5 w-3.5" />
+                        {expandedEstimate === cv.id ? "Hide Estimate" : "Review Estimate"}
                       </Button>
                     )}
                     {cv.status === "Estimate Approved" && (
@@ -399,6 +404,15 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
                       onCancel={() => setShowEstimateForm(null)}
                     />
                   </div>
+                )}
+
+                {/* Estimate review panel (expanded) */}
+                {expandedEstimate === cv.id && (
+                  <EstimateReviewPanel
+                    campaignVendorId={cv.id}
+                    status={cv.status}
+                    onStatusChange={() => mutate()}
+                  />
                 )}
 
                 {/* PO Signature (expanded inline) */}

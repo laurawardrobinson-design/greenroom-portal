@@ -307,6 +307,12 @@ export default function ApprovalsPage() {
                   {inv.invoiceTotal > inv.estimateTotal && <Badge variant="error">Over estimate</Badge>}
                 </div>
                 <div className="flex gap-2 shrink-0">
+                  <Link href={`/campaigns/${inv.campaignId}/pre-production?tab=payments`}>
+                    <Button size="sm" variant="secondary">
+                      <FileText className="h-3.5 w-3.5" />
+                      Review Docs
+                    </Button>
+                  </Link>
                   <Button size="sm" onClick={() => handleInvoiceApproval(inv.id)}>
                     <Check className="h-3.5 w-3.5" />Final Approve
                   </Button>
