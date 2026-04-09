@@ -110,7 +110,7 @@ export default function VendorWorkflowPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-2xl">
       <div className="space-y-1">
         <h1 className="text-2xl font-bold text-text-primary">Estimates & Invoices</h1>
         <p className="text-sm text-text-secondary">

@@ -104,7 +104,7 @@ export default function EstimatesInvoicesPage() {
       {loadingRows ? (
         <DashboardSkeleton />
       ) : (
-        <div className="grid grid-cols-[500px_500px] gap-6 items-start">
+        <div className="grid grid-cols-[400px_400px] gap-6 items-start">
           {/* Left column — pending queue */}
           <div className="space-y-4">
             {/* Pending Estimates */}
