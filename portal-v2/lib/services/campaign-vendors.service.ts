@@ -250,7 +250,7 @@ export async function assignVendorToCampaign(
 
   let { data, error } = await createAssignment(true);
   const isMissingShootDateColumn =
-    error?.code === "42703" &&
+    (error?.code === "42703" || error?.code === "PGRST204") &&
     typeof error.message === "string" &&
     error.message.includes("assigned_shoot_date_ids");
 
