@@ -3,7 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import type { CampaignVendor } from "@/types/domain";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -12,7 +12,7 @@ import { formatCurrency } from "@/lib/utils/format";
 import { VendorLifecycleModal } from "@/components/campaigns/vendor-lifecycle-modal";
 import {
   ShieldCheck, DollarSign, FileText, Check, X, HardHat, Banknote,
-  Package, Download, Send, CheckCircle2, ChevronDown, ChevronRight,
+  Download, Send, CheckCircle2, ChevronDown, ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -346,16 +346,12 @@ export default function ApprovalsPage() {
       </div>
 
       {/* Budget Requests */}
-      <Card className="!pt-3">
-        <CardHeader className="!mb-2">
-          <div className="flex items-center justify-between w-full">
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-text-tertiary" />
-              Budget Requests
-            </CardTitle>
-            <SectionTabs active={budgetTab} onChange={setBudgetTab} />
-          </div>
-        </CardHeader>
+      <Card padding="none">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+          <DollarSign className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Budget Requests</span>
+          <div className="ml-auto"><SectionTabs active={budgetTab} onChange={setBudgetTab} /></div>
+        </div>
 
         {budgetTab === "pending" ? (
           budgetRequests.length === 0 ? (
@@ -388,7 +384,7 @@ export default function ApprovalsPage() {
           resolvedRequests.length === 0 ? (
             <EmptyState title="No past requests" description="Approved and declined budget requests will appear here." />
           ) : (
-            <div className="bg-surface-secondary -mx-5 -mb-5 rounded-b-xl px-5 pb-5 space-y-2">
+            <div className="bg-surface-secondary rounded-b-xl px-3.5 pt-3 pb-3 space-y-2">
               {resolvedRequests.map((req) => (
                 <div key={req.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
                   <div className="min-w-0 w-48 shrink-0">
@@ -412,16 +408,12 @@ export default function ApprovalsPage() {
       </Card>
 
       {/* Pending Invoices */}
-      <Card className="!pt-3">
-        <CardHeader className="!mb-2">
-          <div className="flex items-center justify-between w-full">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-text-tertiary" />
-              Invoice Approvals
-            </CardTitle>
-            <SectionTabs active={invoiceTab} onChange={setInvoiceTab} />
-          </div>
-        </CardHeader>
+      <Card padding="none">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+          <FileText className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Invoice Approvals</span>
+          <div className="ml-auto"><SectionTabs active={invoiceTab} onChange={setInvoiceTab} /></div>
+        </div>
 
         {invoiceTab === "pending" ? (
           pendingInvoices.length === 0 ? (
@@ -451,7 +443,7 @@ export default function ApprovalsPage() {
                       Review
                     </Button>
                     <Button size="sm" onClick={() => handleInvoiceApproval(inv.id)}>
-                      <Check className="h-3.5 w-3.5" />Final Approve
+                      <Check className="h-3.5 w-3.5" />Approve
                     </Button>
                   </div>
                 </div>
@@ -462,7 +454,7 @@ export default function ApprovalsPage() {
           resolvedInvoices.length === 0 ? (
             <EmptyState title="No past invoices" description="Approved and paid invoices will appear here." />
           ) : (
-            <div className="bg-surface-secondary -mx-5 -mb-5 rounded-b-xl px-5 pb-5 space-y-2">
+            <div className="bg-surface-secondary rounded-b-xl px-3.5 pt-3 pb-3 space-y-2">
               {resolvedInvoices.map((inv) => (
                 <div key={inv.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
                   <div className="min-w-0 w-48 shrink-0">
@@ -495,227 +487,176 @@ export default function ApprovalsPage() {
         )}
       </Card>
 
-      {/* Crew Payment Approvals */}
-      <Card className="!pt-3">
-        <CardHeader className="!mb-2">
-          <div className="flex items-center justify-between w-full">
-            <CardTitle className="flex items-center gap-2">
-              <Banknote className="h-4 w-4 text-text-tertiary" />
-              Crew Payments
-            </CardTitle>
-            <SectionTabs active={crewPaymentTab} onChange={setCrewPaymentTab} />
-          </div>
-        </CardHeader>
+      {/* Crew Payments (approvals + paymaster batches merged) */}
+      <Card padding="none">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+          <Banknote className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Crew Payments</span>
+          <div className="ml-auto"><SectionTabs active={crewPaymentTab} onChange={setCrewPaymentTab} /></div>
+        </div>
 
         {crewPaymentTab === "pending" ? (
-          pendingCrewPayments.length === 0 ? (
+          pendingCrewPayments.length === 0 && unbatched.length === 0 ? (
             <EmptyState
               title="No pending crew payments"
               description="When a Producer submits confirmed days for payment, they appear here for your approval."
             />
           ) : (
-            <div className="space-y-2">
-              {pendingCrewPayments.map((payment) => (
-                <div key={payment.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
-                  <div className="min-w-0 w-48 shrink-0">
-                    <Link href={`/campaigns/${payment.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
-                      {payment.campaignName}
-                    </Link>
-                    <p className="text-xs text-text-tertiary truncate">{payment.wfNumber} — {payment.personName}</p>
-                  </div>
-                  <div className="flex gap-4 text-xs flex-1">
-                    <span className="text-text-tertiary">Role: <span className="font-medium text-text-primary">{payment.role}</span></span>
-                    <span className="text-text-tertiary">Days: <span className="font-medium text-text-primary">{payment.totalDays}</span></span>
-                  </div>
-                  <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(payment.totalAmount)}</span>
-                  <div className="flex gap-2 shrink-0">
-                    <Button size="sm" onClick={() => handleCrewPaymentApproval(payment.id)}>
-                      <Check className="h-3.5 w-3.5" />Approve for Paymaster
-                    </Button>
+            <div>
+              {/* Pending approvals */}
+              {pendingCrewPayments.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  {pendingCrewPayments.map((payment) => (
+                    <div key={payment.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
+                      <div className="min-w-0 w-48 shrink-0">
+                        <Link href={`/campaigns/${payment.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
+                          {payment.campaignName}
+                        </Link>
+                        <p className="text-xs text-text-tertiary truncate">{payment.wfNumber} — {payment.personName}</p>
+                      </div>
+                      <div className="flex gap-4 text-xs flex-1">
+                        <span className="text-text-tertiary">Role: <span className="font-medium text-text-primary">{payment.role}</span></span>
+                        <span className="text-text-tertiary">Days: <span className="font-medium text-text-primary">{payment.totalDays}</span></span>
+                      </div>
+                      <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(payment.totalAmount)}</span>
+                      <Button size="sm" onClick={() => handleCrewPaymentApproval(payment.id)}>
+                        <Check className="h-3.5 w-3.5" />Approve
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Ready to batch */}
+              {unbatched.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary px-0.5 pb-2">
+                    Ready to Batch ({unbatched.length})
+                  </p>
+                  <div className="divide-y divide-border border-t border-border">
+                    {unbatched.map((p) => (
+                      <div key={p.id} className="grid grid-cols-12 gap-3 items-center px-3.5 py-2.5">
+                        <div className="col-span-3">
+                          <p className="text-sm font-medium text-text-primary">{p.personName}</p>
+                          <p className="text-[10px] text-text-tertiary">{p.classification}</p>
+                        </div>
+                        <div className="col-span-3">
+                          <Link href={`/campaigns/${p.campaignId}`} className="text-xs text-text-secondary hover:text-primary">
+                            {p.wfNumber}
+                          </Link>
+                          <p className="text-[10px] text-text-tertiary truncate">{p.campaignName}</p>
+                        </div>
+                        <div className="col-span-3">
+                          <p className="text-xs text-text-primary">{p.role}</p>
+                          <p className="text-[10px] text-text-tertiary">{p.totalDays}d × {formatCurrency(p.dayRate)}</p>
+                        </div>
+                        <div className="col-span-3 text-right">
+                          <p className="text-sm font-semibold text-text-primary">{formatCurrency(p.totalAmount)}</p>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between px-3.5 py-2.5 bg-surface-secondary rounded-b-xl">
+                      <p className="text-xs font-semibold text-text-primary">Batch total</p>
+                      <div className="flex items-center gap-2 ml-auto">
+                        <Button size="sm" variant="secondary" onClick={handleCreateBatch} disabled={creatingBatch}>
+                          <Send className="h-3.5 w-3.5" />
+                          {creatingBatch ? "Creating…" : "Batch"}
+                        </Button>
+                        <p className="text-sm font-bold text-text-primary tabular-nums">
+                          {formatCurrency(unbatched.reduce((s, p) => s + p.totalAmount, 0))}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           )
         ) : (
-          resolvedCrewPayments.length === 0 ? (
-            <EmptyState title="No past crew payments" description="Approved and paid crew payments will appear here." />
+          batches.length === 0 ? (
+            <EmptyState
+              title="No paymaster batches yet"
+              description="Once crew payments are approved, create a batch to release them to the paymaster."
+            />
           ) : (
-            <div className="bg-surface-secondary -mx-5 -mb-5 rounded-b-xl px-5 pb-5 space-y-2">
-              {resolvedCrewPayments.map((payment) => (
-                <div key={payment.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
-                  <div className="min-w-0 w-48 shrink-0">
-                    <Link href={`/campaigns/${payment.campaignId}`} className="text-sm font-semibold text-text-primary hover:text-primary truncate block">
-                      {payment.campaignName}
-                    </Link>
-                    <p className="text-xs text-text-tertiary truncate">{payment.wfNumber} — {payment.personName}</p>
-                  </div>
-                  <div className="flex gap-4 text-xs flex-1">
-                    <span className="text-text-tertiary">Role: <span className="font-medium text-text-primary">{payment.role}</span></span>
-                    <span className="text-text-tertiary">Days: <span className="font-medium text-text-primary">{payment.totalDays}</span></span>
-                  </div>
-                  <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(payment.totalAmount)}</span>
-                  <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
-                    payment.status === "Paid" ? "bg-emerald-50 text-emerald-700" :
-                    payment.status === "Sent to Paymaster" ? "bg-blue-50 text-blue-700" :
-                    "bg-amber-50 text-amber-700"
-                  }`}>
-                    {payment.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )
-        )}
-      </Card>
-
-      {/* Paymaster Batches */}
-      <Card className="!pt-3">
-        <CardHeader className="!mb-2">
-          <div className="flex items-center justify-between w-full">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-text-tertiary" />
-              Paymaster Batches
-              {unbatched.length > 0 && (
-                <Badge variant="warning">{unbatched.length} ready</Badge>
-              )}
-            </CardTitle>
-            {unbatched.length > 0 && (
-              <Button size="sm" onClick={handleCreateBatch} disabled={creatingBatch}>
-                <Send className="h-3.5 w-3.5" />
-                {creatingBatch ? "Creating…" : "Create Batch"}
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-
-        {/* Approved-but-unbatched payments */}
-        {unbatched.length > 0 && (
-          <div className="mb-4">
-            <p className="px-3.5 pb-2 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-              Ready to Batch ({unbatched.length})
-            </p>
-            <div className="divide-y divide-border border-t border-border">
-              {unbatched.map((p) => (
-                <div key={p.id} className="grid grid-cols-12 gap-3 items-center px-3.5 py-2.5">
-                  <div className="col-span-3">
-                    <p className="text-sm font-medium text-text-primary">{p.personName}</p>
-                    <p className="text-[10px] text-text-tertiary">{p.classification}</p>
-                  </div>
-                  <div className="col-span-3">
-                    <Link href={`/campaigns/${p.campaignId}`} className="text-xs text-text-secondary hover:text-primary">
-                      {p.wfNumber}
-                    </Link>
-                    <p className="text-[10px] text-text-tertiary truncate">{p.campaignName}</p>
-                  </div>
-                  <div className="col-span-3">
-                    <p className="text-xs text-text-primary">{p.role}</p>
-                    <p className="text-[10px] text-text-tertiary">{p.totalDays}d × {formatCurrency(p.dayRate)}</p>
-                  </div>
-                  <div className="col-span-3 text-right">
-                    <p className="text-sm font-semibold text-text-primary">{formatCurrency(p.totalAmount)}</p>
-                  </div>
-                </div>
-              ))}
-              <div className="flex items-center justify-between px-3.5 py-2.5 bg-surface-secondary">
-                <p className="text-xs font-semibold text-text-primary">Batch total</p>
-                <p className="text-sm font-bold text-text-primary">
-                  {formatCurrency(unbatched.reduce((s, p) => s + p.totalAmount, 0))}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Existing batches */}
-        {batches.length === 0 && unbatched.length === 0 ? (
-          <EmptyState
-            icon={<Package className="h-5 w-5" />}
-            title="No paymaster batches yet"
-            description="Once crew payments are approved, create a batch to release them to the paymaster."
-          />
-        ) : batches.length > 0 ? (
-          <div className="divide-y divide-border border-t border-border">
-            {batches.map((batch) => (
-              <div key={batch.id}>
-                <button
-                  type="button"
-                  onClick={() => setExpandedBatch(expandedBatch === batch.id ? null : batch.id)}
-                  className="flex w-full items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-secondary transition-colors"
-                >
-                  {expandedBatch === batch.id
-                    ? <ChevronDown className="h-4 w-4 text-text-tertiary shrink-0" />
-                    : <ChevronRight className="h-4 w-4 text-text-tertiary shrink-0" />
-                  }
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text-primary truncate">{batch.name}</p>
-                    <p className="text-[10px] text-text-tertiary">
-                      {batch.itemCount} payment{batch.itemCount !== 1 ? "s" : ""} · {new Date(batch.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${BATCH_STATUS_STYLE[batch.status]}`}>
-                    {batch.status}
-                  </span>
-                  <span className="text-sm font-semibold text-text-primary ml-2 shrink-0">
-                    {formatCurrency(batch.totalAmount)}
-                  </span>
-                </button>
-
-                {expandedBatch === batch.id && (
-                  <div className="border-t border-border bg-surface-secondary px-3.5 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownloadCSV(batch.id, batch.name)}
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        Download CSV
-                      </Button>
-                      {batch.status === "Draft" && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleBatchAction(batch.id, "mark_sent")}
-                        >
-                          <Send className="h-3.5 w-3.5" />
-                          Mark as Sent to Paymaster
-                        </Button>
-                      )}
-                      {batch.status === "Sent" && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleBatchAction(batch.id, "mark_confirmed")}
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Confirm Paid
-                        </Button>
-                      )}
-                      {batch.status === "Confirmed" && (
-                        <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Payments confirmed{batch.confirmedAt ? ` · ${new Date(batch.confirmedAt).toLocaleDateString()}` : ""}
-                        </span>
-                      )}
+            <div className="bg-surface-secondary -mx-5 -mb-5 rounded-b-xl divide-y divide-border">
+              {batches.map((batch) => (
+                <div key={batch.id}>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedBatch(expandedBatch === batch.id ? null : batch.id)}
+                    className="flex w-full items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-hover transition-colors rounded-t-xl"
+                  >
+                    {expandedBatch === batch.id
+                      ? <ChevronDown className="h-4 w-4 text-text-tertiary shrink-0" />
+                      : <ChevronRight className="h-4 w-4 text-text-tertiary shrink-0" />
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-text-primary truncate">{batch.name}</p>
+                      <p className="text-[10px] text-text-tertiary">
+                        {batch.itemCount} payment{batch.itemCount !== 1 ? "s" : ""} · {new Date(batch.createdAt).toLocaleDateString()}
+                      </p>
                     </div>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${BATCH_STATUS_STYLE[batch.status]}`}>
+                      {batch.status}
+                    </span>
+                    <span className="text-sm font-semibold text-text-primary ml-2 shrink-0">
+                      {formatCurrency(batch.totalAmount)}
+                    </span>
+                  </button>
+
+                  {expandedBatch === batch.id && (
+                    <div className="border-t border-border bg-white px-3.5 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadCSV(batch.id, batch.name)}
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Download CSV
+                        </Button>
+                        {batch.status === "Draft" && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleBatchAction(batch.id, "mark_sent")}
+                          >
+                            <Send className="h-3.5 w-3.5" />
+                            Mark as Sent to Paymaster
+                          </Button>
+                        )}
+                        {batch.status === "Sent" && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleBatchAction(batch.id, "mark_confirmed")}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Confirm Paid
+                          </Button>
+                        )}
+                        {batch.status === "Confirmed" && (
+                          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Payments confirmed{batch.confirmedAt ? ` · ${new Date(batch.confirmedAt).toLocaleDateString()}` : ""}
+                          </span>
+                        )}
+                      </div>
                   </div>
                 )}
               </div>
             ))}
           </div>
-        ) : null}
+          )
+        )}
       </Card>
 
       {/* Rate Approvals */}
-      <Card className="!pt-3">
-        <CardHeader className="!mb-2">
-          <div className="flex items-center justify-between w-full">
-            <CardTitle className="flex items-center gap-2">
-              <HardHat className="h-4 w-4 text-text-tertiary" />
-              Rate Approvals
-            </CardTitle>
-            <SectionTabs active={rateTab} onChange={setRateTab} />
-          </div>
-        </CardHeader>
+      <Card padding="none">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+          <HardHat className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Rate Approvals</span>
+          <div className="ml-auto"><SectionTabs active={rateTab} onChange={setRateTab} /></div>
+        </div>
 
         {rateTab === "pending" ? (
           pendingCrewBookings.length === 0 ? (
@@ -752,7 +693,7 @@ export default function ApprovalsPage() {
           resolvedCrewBookings.length === 0 ? (
             <EmptyState title="No past rate approvals" description="Approved and declined crew rate requests will appear here." />
           ) : (
-            <div className="bg-surface-secondary -mx-5 -mb-5 rounded-b-xl px-5 pb-5 space-y-2">
+            <div className="bg-surface-secondary rounded-b-xl px-3.5 pt-3 pb-3 space-y-2">
               {resolvedCrewBookings.map((booking) => (
                 <div key={booking.id} className="rounded-lg border border-border px-3.5 py-2.5 flex items-center gap-4">
                   <div className="min-w-0 w-48 shrink-0">
