@@ -88,8 +88,7 @@ export async function listCampaigns(filters?: {
     const { data: assignedIds } = await db
       .from("campaign_vendors")
       .select("campaign_id")
-      .eq("vendor_id", filters.vendorId)
-      .eq("deleted_at", null);
+      .eq("vendor_id", filters.vendorId);
     const ids = new Set((assignedIds || []).map((r) => r.campaign_id));
     results = results.filter((r) => ids.has(r.id as string));
   }

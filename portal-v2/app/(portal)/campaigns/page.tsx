@@ -34,11 +34,11 @@ export default function CampaignsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Default Admins to "show all" since they aren't assigned to individual campaigns
+  // Default Admins and Vendors to "show all" — their filtering is done server-side
   useEffect(() => {
     if (user && !showAllInitialized) {
       setShowAllInitialized(true);
-      if (user.role === "Admin") setShowAll(true);
+      if (user.role === "Admin" || user.role === "Vendor") setShowAll(true);
     }
   }, [user, showAllInitialized]);
 
