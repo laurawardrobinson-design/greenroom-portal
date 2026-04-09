@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import type { GearCheckout } from "@/types/domain";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function ActiveCheckouts() {
   const { toast } = useToast();
+  const { mutate: globalMutate } = useSWRConfig();
   const { data: checkouts = [], mutate } = useSWR<GearCheckout[]>(
     "/api/gear/checkouts",
     fetcher,
@@ -39,6 +40,7 @@ export function ActiveCheckouts() {
       if (!res.ok) throw new Error(data.error || "Check-in failed");
       toast("success", `${co.gearItem?.name || "Item"} checked in`);
       mutate();
+      globalMutate("/api/gear");
     } catch (err) {
       toast("error", err instanceof Error ? err.message : "Check-in failed");
     } finally {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { useSearchParams } from "next/navigation";
 import type {
   GearItem,
@@ -94,6 +94,7 @@ type Tab = "items" | "kits" | "reservations" | "maintenance";
 
 export default function InventoryPage() {
   const { toast } = useToast();
+  const { mutate: globalMutate } = useSWRConfig();
   const { user } = useCurrentUser();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>("items");
@@ -116,11 +117,17 @@ export default function InventoryPage() {
 
   // Checkout tab state
   const [cartItems, setCartItems] = useState<GearItem[]>([]);
+  const [cartMode, setCartMode] = useState<"checkout" | "checkin" | null>(null);
+  const [conflictIds, setConflictIds] = useState<Set<string>>(new Set());
+  const [showConflictConfirm, setShowConflictConfirm] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"checkout" | "checkin" | null>(null);
   const [scannerActive, setScannerActive] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const cartRef = useRef<GearItem[]>([]);
   cartRef.current = cartItems;
+  const cartModeRef = useRef<"checkout" | "checkin" | null>(null);
+  cartModeRef.current = cartMode;
 
   // Inline row editing
   const [editingRow, setEditingRow] = useState<{
@@ -224,11 +231,23 @@ export default function InventoryPage() {
         throw new Error(data.error || "Item not found");
       }
       const item: GearItem = await res.json();
+      const itemMode = item.status === "Checked Out" ? "checkin" : "checkout";
+      const currentMode = cartModeRef.current;
+      const isConflict = currentMode !== null && itemMode !== currentMode;
+
+      if (currentMode === null) {
+        setCartMode(itemMode);
+      }
       setCartItems((prev) => {
         if (prev.some((i) => i.id === item.id)) return prev;
         return [...prev, item];
       });
-      toast("success", `Added: ${item.name}`);
+      if (isConflict) {
+        setConflictIds((prev) => new Set([...prev, item.id]));
+        toast("warning", `${item.name} flagged — status conflicts with current operation`);
+      } else {
+        toast("success", `Added: ${item.name}`);
+      }
       if (navigator.vibrate) navigator.vibrate(100);
     } catch (err) {
       toast("error", err instanceof Error ? err.message : "Scan failed");
@@ -242,11 +261,7 @@ export default function InventoryPage() {
     await handleScan(code);
   }
 
-  async function handleBatchCheckout() {
-    const eligible = cartItems.filter(
-      (i) => i.status === "Available" || i.status === "Reserved"
-    );
-    if (eligible.length === 0) return;
+  async function executeBatchCheckout(items: GearItem[]) {
     setProcessing(true);
     try {
       const res = await fetch("/api/gear", {
@@ -254,7 +269,7 @@ export default function InventoryPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "batch_checkout",
-          items: eligible.map((i) => ({
+          items: items.map((i) => ({
             gearItemId: i.id,
             condition: i.condition || "Good",
           })),
@@ -262,9 +277,17 @@ export default function InventoryPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Checkout failed");
-      toast("success", `Checked out ${eligible.length} item(s)`);
+      const failed = (data.results || []).filter((r: { success: boolean }) => !r.success);
+      if (failed.length > 0) {
+        toast("error", `${failed.length} item(s) could not be checked out`);
+      } else {
+        toast("success", `Checked out ${items.length} item(s)`);
+      }
       setCartItems([]);
+      setCartMode(null);
+      setConflictIds(new Set());
       mutate();
+      globalMutate("/api/gear/checkouts");
     } catch (err) {
       toast("error", err instanceof Error ? err.message : "Checkout failed");
     } finally {
@@ -272,9 +295,7 @@ export default function InventoryPage() {
     }
   }
 
-  async function handleBatchCheckin() {
-    const eligible = cartItems.filter((i) => i.status === "Checked Out");
-    if (eligible.length === 0) return;
+  async function executeBatchCheckin(items: GearItem[]) {
     setProcessing(true);
     try {
       const res = await fetch("/api/gear", {
@@ -282,20 +303,66 @@ export default function InventoryPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "batch_checkin",
-          gearItemIds: eligible.map((i) => i.id),
+          gearItemIds: items.map((i) => i.id),
           condition: "Good",
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Check-in failed");
-      toast("success", `Checked in ${eligible.length} item(s)`);
+      const failed = (data.results || []).filter((r: { success: boolean }) => !r.success);
+      if (failed.length > 0) {
+        toast("error", `${failed.length} item(s) could not be checked in`);
+      } else {
+        toast("success", `Checked in ${items.length} item(s)`);
+      }
       setCartItems([]);
+      setCartMode(null);
+      setConflictIds(new Set());
       mutate();
+      globalMutate("/api/gear/checkouts");
     } catch (err) {
       toast("error", err instanceof Error ? err.message : "Check-in failed");
     } finally {
       setProcessing(false);
     }
+  }
+
+  function handleBatchCheckout() {
+    const conflicts = cartItems.filter((i) => conflictIds.has(i.id));
+    if (conflicts.length > 0) {
+      setPendingAction("checkout");
+      setShowConflictConfirm(true);
+    } else {
+      executeBatchCheckout(cartItems.filter((i) => i.status === "Available" || i.status === "Reserved"));
+    }
+  }
+
+  function handleBatchCheckin() {
+    const conflicts = cartItems.filter((i) => conflictIds.has(i.id));
+    if (conflicts.length > 0) {
+      setPendingAction("checkin");
+      setShowConflictConfirm(true);
+    } else {
+      executeBatchCheckin(cartItems.filter((i) => i.status === "Checked Out"));
+    }
+  }
+
+  function handleConfirmOverride() {
+    setShowConflictConfirm(false);
+    if (pendingAction === "checkout") {
+      executeBatchCheckout(cartItems.filter((i) => i.status === "Available" || i.status === "Reserved" || conflictIds.has(i.id)));
+    } else if (pendingAction === "checkin") {
+      executeBatchCheckin(cartItems.filter((i) => i.status === "Checked Out" || conflictIds.has(i.id)));
+    }
+    setPendingAction(null);
+  }
+
+  function handleDismissConflicts() {
+    setShowConflictConfirm(false);
+    setPendingAction(null);
+    // Remove conflicting items from cart and proceed with clean items only
+    setCartItems((prev) => prev.filter((i) => !conflictIds.has(i.id)));
+    setConflictIds(new Set());
   }
 
   const availableCount = items.filter((i) => i.status === "Available").length;
@@ -1075,15 +1142,52 @@ export default function InventoryPage() {
           {/* Scanned items cart */}
           <BatchCart
             items={cartItems}
-            onRemove={(id) => setCartItems((prev) => prev.filter((i) => i.id !== id))}
+            conflictIds={conflictIds}
+            cartMode={cartMode}
+            onRemove={(id) => {
+              setCartItems((prev) => prev.filter((i) => i.id !== id));
+              setConflictIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+            }}
             onCheckOutAll={handleBatchCheckout}
             onCheckInAll={handleBatchCheckin}
-            onClear={() => setCartItems([])}
+            onClear={() => { setCartItems([]); setCartMode(null); setConflictIds(new Set()); }}
             processing={processing}
           />
 
           {/* Active checkouts */}
           <ActiveCheckouts />
+        </div>
+      </Modal>
+
+      {/* Conflict confirmation modal */}
+      <Modal
+        open={showConflictConfirm}
+        onClose={() => { setShowConflictConfirm(false); setPendingAction(null); }}
+        title="Some items need attention"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-text-secondary">
+            {pendingAction === "checkout"
+              ? "The following items are already checked out. Checking them out again will override the existing record. Continue?"
+              : "The following items show as available in the system. Checking them in anyway will mark them as returned. Continue?"}
+          </p>
+          <ul className="rounded-lg border border-border divide-y divide-border-light overflow-hidden">
+            {cartItems.filter((i) => conflictIds.has(i.id)).map((item) => (
+              <li key={item.id} className="flex items-center gap-3 px-3.5 py-2.5">
+                <span className="text-sm font-medium text-text-primary flex-1 truncate">{item.name}</span>
+                <span className="text-xs text-amber-600 font-medium">{item.status}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="flex gap-2 justify-end">
+            <Button variant="secondary" onClick={handleDismissConflicts}>
+              Remove &amp; continue without them
+            </Button>
+            <Button onClick={handleConfirmOverride}>
+              Override &amp; {pendingAction === "checkout" ? "check out" : "check in"} all
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>
