@@ -242,7 +242,7 @@ export const VendorAssignmentPanel = forwardRef<VendorAssignmentPanelHandle, Pro
             )}
           </div>
         ) : (
-          <div className="space-y-3 max-h-[480px] overflow-y-auto">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 max-h-[480px] overflow-y-auto pr-1">
             {visibleVendors.map((cv) => (
               <div
                 key={cv.id}

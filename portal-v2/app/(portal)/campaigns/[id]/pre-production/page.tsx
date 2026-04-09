@@ -383,15 +383,17 @@ function PeopleSection({
   title,
   icon: Icon,
   actions,
+  className,
   children,
 }: {
   title: string;
   icon: React.ElementType;
   actions?: React.ReactNode;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-surface overflow-hidden">
+    <div className={`rounded-lg border border-border bg-surface overflow-hidden ${className ?? ""}`}>
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
         <Icon className="h-4 w-4 shrink-0 text-primary" />
         <span className="text-sm font-semibold uppercase tracking-wider text-text-primary flex-1">{title}</span>
@@ -780,7 +782,7 @@ function PeopleTab({
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Internal */}
         <PeopleSection
           title="Internal"
@@ -844,6 +846,7 @@ function PeopleTab({
         <PeopleSection
           title="Talent"
           icon={Star}
+          className="md:col-span-2"
           actions={canManage ? addBtn(() => setAddTalentOpen(true)) : undefined}
         >
           {uniqueTalent.length === 0 && talentVendors.length === 0 ? (
