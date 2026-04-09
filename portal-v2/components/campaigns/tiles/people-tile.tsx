@@ -38,47 +38,23 @@ export function PeopleTile({
   isArtDirector,
   onAssign,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<"internal" | "vendors">("internal");
-
   if (isVendor) return null;
 
   return (
     <Card padding="none">
       {/* Header */}
-      <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
+      <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 shrink-0 text-primary" />
           <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">People</span>
         </div>
-        {/* Tab pills */}
-        <div className="flex items-center gap-1 bg-surface-secondary rounded-md p-0.5">
-          <button
-            type="button"
-            onClick={() => setActiveTab("internal")}
-            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
-              activeTab === "internal"
-                ? "bg-surface text-text-primary shadow-sm"
-                : "text-text-tertiary hover:text-text-secondary"
-            }`}
-          >
-            Internal
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("vendors")}
-            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
-              activeTab === "vendors"
-                ? "bg-surface text-text-primary shadow-sm"
-                : "text-text-tertiary hover:text-text-secondary"
-            }`}
-          >
-            Vendors
-          </button>
-        </div>
       </div>
 
-      <div className="px-3.5 py-3">
-        {activeTab === "internal" ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-3.5 py-3">
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+            Internal
+          </p>
           <InternalTab
             currentAd={currentAd}
             adUsers={adUsers}
@@ -89,9 +65,14 @@ export function PeopleTile({
             campaignAdId={campaignAdId}
             onAssign={onAssign}
           />
-        ) : (
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+            Vendors
+          </p>
           <VendorsTab campaignId={campaignId} canEdit={canEdit} />
-        )}
+        </div>
       </div>
     </Card>
   );
