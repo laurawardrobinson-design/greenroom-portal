@@ -48,6 +48,7 @@ export function AppShell({ children }: AppShellProps) {
           userAvatar={user.avatarUrl}
           userProductIcon={getProductIcon(user.favoritePublixProduct) ?? undefined}
           userFavoriteProduct={user.favoritePublixProduct || undefined}
+          vendorId={user.vendorId || undefined}
           mobileOpen={mobileOpen}
           onMobileClose={() => setMobileOpen(false)}
         />

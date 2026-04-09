@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import useSWR from "swr";
 import type { UserRole } from "@/types/domain";
 import {
   LayoutDashboard,
@@ -129,6 +130,7 @@ interface SidebarProps {
   userAvatar?: string;
   userProductIcon?: string;
   userFavoriteProduct?: string;
+  vendorId?: string;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 }
@@ -137,12 +139,24 @@ export function Sidebar({
   userRole,
   userName,
   userFavoriteProduct,
+  vendorId,
   mobileOpen = false,
   onMobileClose,
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const filteredNav = NAV_ITEMS.filter((item) => item.roles.includes(userRole));
+
+  const { data: vendorAssignments } = useSWR<any[]>(
+    userRole === "Vendor" && vendorId ? `/api/campaign-vendors?vendorId=${vendorId}` : null,
+    (url: string) => fetch(url).then((r) => r.json())
+  );
+  const hasAssignments = Array.isArray(vendorAssignments) && vendorAssignments.length > 0;
+
+  const filteredNav = NAV_ITEMS.filter((item) => {
+    if (!item.roles.includes(userRole)) return false;
+    if (item.href === "/vendor-workflow" && userRole === "Vendor") return hasAssignments;
+    return true;
+  });
   const showPendingBadge = userRole === "Admin" || userRole === "Producer";
 
   async function handleLogout() {
