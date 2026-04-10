@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ArrowUpFromLine, ArrowDownToLine, User, Calendar, Tag } from "lucide-react";
-import { formatDistanceToNow, parseISO, format, isPast } from "date-fns";
+import { formatDistanceToNow, parseISO, format, isBefore, startOfDay } from "date-fns";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -97,10 +97,10 @@ export function ActiveCheckouts() {
                   </span>
                 )}
                 {co.dueDate && (
-                  <span className={`flex items-center gap-1 text-[10px] font-medium ${isPast(new Date(co.dueDate)) ? "text-red-600" : "text-text-tertiary"}`}>
+                  <span className={`flex items-center gap-1 text-[10px] font-medium ${isBefore(parseISO(co.dueDate), startOfDay(new Date())) ? "text-red-600" : "text-text-tertiary"}`}>
                     <Calendar className="h-2.5 w-2.5" />
-                    Due {format(new Date(co.dueDate), "MMM d")}
-                    {isPast(new Date(co.dueDate)) && " — overdue"}
+                    Due {format(parseISO(co.dueDate), "MMM d")}
+                    {isBefore(parseISO(co.dueDate), startOfDay(new Date())) && " — overdue"}
                   </span>
                 )}
               </div>

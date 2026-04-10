@@ -229,7 +229,6 @@ export default function InventoryPage() {
     if (!normalized) return;
 
     if (cartRef.current.some((i) => i.qrCode.trim().toLowerCase() === normalized.toLowerCase())) {
-      toast("info", "Item already scanned");
       return;
     }
     try {

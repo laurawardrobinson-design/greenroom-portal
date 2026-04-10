@@ -13,6 +13,8 @@ interface Props {
   canEdit: boolean;
   sameCrew: boolean;
   onSameCrewChange: (v: boolean) => void;
+  sameLocation: boolean;
+  onSameLocationChange: (v: boolean) => void;
   onDayClick: (shoot: Shoot) => void;
   onMutate: () => void;
 }
@@ -23,6 +25,8 @@ export function ShootDayListTile({
   canEdit,
   sameCrew,
   onSameCrewChange,
+  sameLocation,
+  onSameLocationChange,
   onDayClick,
   onMutate,
 }: Props) {
@@ -243,9 +247,9 @@ export function ShootDayListTile({
         </div>
       )}
 
-      {/* Same crew toggle */}
+      {/* Same crew / same location toggles */}
       {canEdit && shoots.length > 1 && (
-        <div className="px-3.5 py-2.5 border-t border-border">
+        <div className="px-3.5 py-2.5 border-t border-border flex flex-col gap-2">
           <label className="flex items-center gap-2 cursor-pointer group">
             <input
               type="checkbox"
@@ -255,6 +259,17 @@ export function ShootDayListTile({
             />
             <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors">
               Same crew for all days
+            </span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={sameLocation}
+              onChange={(e) => onSameLocationChange(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-border accent-primary cursor-pointer"
+            />
+            <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors">
+              Same location for all days
             </span>
           </label>
         </div>

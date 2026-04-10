@@ -62,6 +62,7 @@ export default function CampaignDetailPage({
   // Selected shoot day for modal
   const [selectedShootId, setSelectedShootId] = useState<string | null>(null);
   const [sameCrew, setSameCrew] = useState(true);
+  const [sameLocation, setSameLocation] = useState(false);
 
   // Notes editing
   const [editingNotes, setEditingNotes] = useState(false);
@@ -412,6 +413,8 @@ export default function CampaignDetailPage({
                 canEdit={canEdit}
                 sameCrew={sameCrew}
                 onSameCrewChange={setSameCrew}
+                sameLocation={sameLocation}
+                onSameLocationChange={setSameLocation}
                 onDayClick={(shoot) => setSelectedShootId(shoot.id)}
                 onMutate={mutate}
               />
