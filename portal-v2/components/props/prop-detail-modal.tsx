@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { PROPS_CATEGORIES } from "@/lib/constants/categories";
 import type { GearItem, GearCondition, GearStatus } from "@/types/domain";
-import { Camera, Pencil, X } from "lucide-react";
+import { Camera, Pencil, Trash2, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 
 const STATUS_BADGE: Record<string, string> = {
@@ -41,15 +41,20 @@ export function PropDetailModal({
   open,
   onClose,
   onSaved,
+  onDeleted,
+  canEdit = true,
 }: {
   item: GearItem | null;
   open: boolean;
   onClose: () => void;
   onSaved?: () => void;
+  onDeleted?: () => void;
+  canEdit?: boolean;
 }) {
   const { toast } = useToast();
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Form fields
   const [name, setName] = useState("");
@@ -140,6 +145,22 @@ export function PropDetailModal({
       imageFileRef.current = null;
     }
     setEditMode(false);
+  }
+
+  async function handleDelete() {
+    if (!item) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/gear/${item.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete prop");
+      toast("success", "Prop deleted");
+      onDeleted?.();
+      onClose();
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Failed to delete prop");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   if (!item) return null;
@@ -296,11 +317,20 @@ export function PropDetailModal({
               <Button type="submit" loading={saving}>Save Changes</Button>
             </div>
           ) : (
-            onSaved && (
-              <Button type="button" size="sm" onClick={() => setEditMode(true)}>
-                <Pencil className="h-3.5 w-3.5" />
-                Edit
-              </Button>
+            canEdit && (
+              <div className="flex items-center justify-between w-full">
+                <Button type="button" variant="ghost" size="sm" onClick={handleDelete} loading={deleting}
+                  className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </Button>
+                {onSaved && (
+                  <Button type="button" size="sm" onClick={() => setEditMode(true)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </Button>
+                )}
+              </div>
             )
           )}
         </ModalFooter>

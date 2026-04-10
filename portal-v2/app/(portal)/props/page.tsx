@@ -422,6 +422,7 @@ export default function PropsPage() {
         open={!!detailItem}
         onClose={() => setDetailItem(null)}
         onSaved={() => { mutate(); }}
+        onDeleted={() => { setDetailItem(null); mutate(); }}
       />
       {checkoutItem && (
         <CheckoutModal
