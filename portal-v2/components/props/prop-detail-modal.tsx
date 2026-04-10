@@ -92,8 +92,7 @@ export function PropDetailModal({
     return data.url;
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSave() {
     if (!item || !name.trim()) {
       toast("error", "Name is required");
       return;
@@ -174,7 +173,7 @@ export function PropDetailModal({
         <X className="h-4 w-4" />
       </button>
 
-      <form onSubmit={handleSave} className="space-y-4">
+      <div className="space-y-4">
         {/* ── Image ── */}
         <div className="relative">
           {imageUrl ? (
@@ -314,7 +313,7 @@ export function PropDetailModal({
           {editMode ? (
             <div className="flex gap-2 ml-auto">
               <Button type="button" variant="ghost" onClick={handleCancel}>Cancel</Button>
-              <Button type="submit" loading={saving}>Save Changes</Button>
+              <Button type="button" onClick={handleSave} loading={saving}>Save Changes</Button>
             </div>
           ) : (
             canEdit && (
@@ -334,7 +333,7 @@ export function PropDetailModal({
             )
           )}
         </ModalFooter>
-      </form>
+      </div>
     </Modal>
   );
 }
