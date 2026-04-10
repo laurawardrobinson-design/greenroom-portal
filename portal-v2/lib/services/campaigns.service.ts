@@ -20,6 +20,7 @@ function toCampaign(row: Record<string, unknown>): Campaign {
     notes: row.notes as string,
     producerIds: [],
     producerId: (row.producer_id as string) || null,
+    producerRoles: {},
     artDirectorId: (row.art_director_id as string) || null,
     createdBy: (row.created_by as string) || "",
     createdAt: row.created_at as string,
@@ -218,13 +219,16 @@ export async function getCampaign(id: string): Promise<Campaign | null> {
   const db = createAdminClient();
   const [{ data, error }, { data: producerRows }] = await Promise.all([
     db.from("campaigns").select("*").eq("id", id).single(),
-    db.from("campaign_producers").select("user_id").eq("campaign_id", id).order("created_at", { ascending: true }),
+    db.from("campaign_producers").select("user_id, campaign_role").eq("campaign_id", id).order("created_at", { ascending: true }),
   ]);
 
   if (error) return null;
   const campaign = toCampaign(data);
   campaign.producerIds = (producerRows || []).map((r) => r.user_id);
   campaign.producerId = campaign.producerIds[0] ?? null;
+  campaign.producerRoles = Object.fromEntries(
+    (producerRows || []).map((r) => [r.user_id, r.campaign_role ?? null])
+  );
   return campaign;
 }
 

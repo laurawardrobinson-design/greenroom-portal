@@ -43,7 +43,7 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={`mb-4 flex items-center justify-between ${className}`}>
+    <div className={`flex items-center justify-between px-3.5 py-2.5 border-b border-border ${className}`}>
       {children}
     </div>
   );

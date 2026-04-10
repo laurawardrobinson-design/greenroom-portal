@@ -36,6 +36,7 @@ function toCampaignVendor(row: Record<string, unknown>): CampaignVendor {
     invoiceTotal: Number(row.invoice_total) || 0,
     paymentAmount: Number(row.payment_amount) || 0,
     paymentDate: (row.payment_date as string) || null,
+    campaignRole: (row.campaign_role as string) || null,
     notes: row.notes as string,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,

@@ -11,6 +11,8 @@ interface Props {
   shoots: Shoot[];
   wfNumber: string | null | undefined;
   canEdit: boolean;
+  sameCrew: boolean;
+  onSameCrewChange: (v: boolean) => void;
   onDayClick: (shoot: Shoot) => void;
   onMutate: () => void;
 }
@@ -19,6 +21,8 @@ export function ShootDayListTile({
   shoots,
   wfNumber,
   canEdit,
+  sameCrew,
+  onSameCrewChange,
   onDayClick,
   onMutate,
 }: Props) {
@@ -236,6 +240,23 @@ export function ShootDayListTile({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Same crew toggle */}
+      {canEdit && shoots.length > 1 && (
+        <div className="px-3.5 py-2.5 border-t border-border">
+          <label className="flex items-center gap-2 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={sameCrew}
+              onChange={(e) => onSameCrewChange(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-border accent-primary cursor-pointer"
+            />
+            <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors">
+              Same crew for all days
+            </span>
+          </label>
         </div>
       )}
     </Card>

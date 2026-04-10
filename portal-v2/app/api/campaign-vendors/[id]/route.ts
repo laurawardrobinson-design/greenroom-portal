@@ -115,6 +115,19 @@ export async function PATCH(
       return NextResponse.json({ ...cv, estimateItems });
     }
 
+    // Update campaign-level role override
+    if (body.action === "update_campaign_role") {
+      await requireRole(["Admin", "Producer"]);
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const db = createAdminClient();
+      const { error } = await db
+        .from("campaign_vendors")
+        .update({ campaign_role: body.campaignRole ?? null })
+        .eq("id", id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ ok: true });
+    }
+
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
     if (error instanceof Error) {

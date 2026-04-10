@@ -235,8 +235,8 @@ function VendorsTab({ campaignId, canEdit }: { campaignId: string; canEdit: bool
                   <p className="text-sm font-medium text-text-primary truncate">
                     {cv.vendor?.companyName ?? "Unknown Vendor"}
                   </p>
-                  {cv.vendor?.category && (
-                    <p className="text-[10px] text-text-tertiary">{cv.vendor.category}</p>
+                  {(cv.campaignRole || cv.vendor?.category) && (
+                    <p className="text-[10px] text-text-tertiary">{cv.campaignRole ?? cv.vendor?.category}</p>
                   )}
                 </div>
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColor}`}>

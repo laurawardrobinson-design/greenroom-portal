@@ -136,18 +136,18 @@ export async function GET(request: Request) {
 
     if (user.role === "Studio") {
       const [
-        { data: myShootRows },
-        { data: myCheckouts },
+        { data: allShootDates },
+        { data: allCheckouts },
         { data: overdueCheckouts },
       ] = await Promise.all([
-        db.from("shoot_crew").select("shoot_id, shoots!inner(campaign_id)").eq("user_id", user.id),
-        db.from("gear_checkouts").select("id").eq("user_id", user.id).is("checked_in_at", null),
+        db.from("shoot_dates").select("id").gte("shoot_date", today),
+        db.from("gear_checkouts").select("id").is("checked_in_at", null),
         db.from("gear_checkouts").select("id").is("checked_in_at", null).lt("expected_return_date", today),
       ]);
 
       return NextResponse.json({
-        upcomingShoots: myShootRows?.length || 0,
-        gearCheckedOut: myCheckouts?.length || 0,
+        upcomingShoots: allShootDates?.length || 0,
+        gearCheckedOut: allCheckouts?.length || 0,
         overdueReturns: overdueCheckouts?.length || 0,
       });
     }

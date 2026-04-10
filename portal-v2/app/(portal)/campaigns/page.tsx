@@ -38,7 +38,7 @@ export default function CampaignsPage() {
   useEffect(() => {
     if (user && !showAllInitialized) {
       setShowAllInitialized(true);
-      if (user.role === "Admin" || user.role === "Vendor") setShowAll(true);
+      if (user.role === "Admin" || user.role === "Vendor" || user.role === "Studio") setShowAll(true);
     }
   }, [user, showAllInitialized]);
 

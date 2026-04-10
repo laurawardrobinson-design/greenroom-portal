@@ -61,6 +61,7 @@ export default function CampaignDetailPage({
 
   // Selected shoot day for modal
   const [selectedShootId, setSelectedShootId] = useState<string | null>(null);
+  const [sameCrew, setSameCrew] = useState(true);
 
   // Notes editing
   const [editingNotes, setEditingNotes] = useState(false);
@@ -215,6 +216,13 @@ export default function CampaignDetailPage({
     : null;
 
   const artDirectorUsers = allUsers.filter((u) => u.role === "Art Director");
+
+  const activeVendorIds = new Set(
+    vendors.filter((cv) => cv.status !== "Rejected").map((cv) => cv.vendorId)
+  );
+  const vendorUsers = allUsers.filter(
+    (u) => u.vendorId && activeVendorIds.has(u.vendorId)
+  );
 
   // Compute attention items for Campaign Info
   const attentionItems: { label: string; context?: string }[] = [];
@@ -402,6 +410,8 @@ export default function CampaignDetailPage({
                 shoots={shoots}
                 wfNumber={campaign.wfNumber}
                 canEdit={canEdit}
+                sameCrew={sameCrew}
+                onSameCrewChange={setSameCrew}
                 onDayClick={(shoot) => setSelectedShootId(shoot.id)}
                 onMutate={mutate}
               />
@@ -512,6 +522,11 @@ export default function CampaignDetailPage({
         open={!!selectedShootId}
         wfNumber={campaign.wfNumber}
         canEdit={canEdit}
+        campaignId={id}
+        sameCrew={sameCrew}
+        campaignPeople={[...producers, ...(artDirector ? [artDirector] : []), ...vendorUsers]}
+        campaignVendors={vendors}
+        producerRoles={campaign.producerRoles ?? {}}
         onClose={() => setSelectedShootId(null)}
         onMutate={mutate}
       />

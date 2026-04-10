@@ -12,7 +12,7 @@ const TEST_USERS: Record<
 > = {
   admin: { email: "admin@test.local", name: "Gretchen Siss", role: "Admin" },
   producer: { email: "producer@test.local", name: "Laura Robinson", role: "Producer" },
-  studio: { email: "studio@test.local", name: "Studio Manager", role: "Studio" },
+  studio: { email: "studio@test.local", name: "Astasia", role: "Studio" },
   vendor: { email: "vendor@test.local", name: "Sam", role: "Vendor" },
   artdirector: { email: "artdirector@test.local", name: "Alex Rivera", role: "Art Director" },
 };

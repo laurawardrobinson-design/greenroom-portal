@@ -320,7 +320,7 @@ export async function listReservations(filters?: {
   const db = createAdminClient();
   let query = db
     .from("gear_reservations")
-    .select("*, gear_items(*)")
+    .select("*, gear_items(*), campaigns(id, name)")
     .eq("status", "Confirmed")
     .order("start_date");
 
@@ -335,6 +335,7 @@ export async function listReservations(filters?: {
     gearItemId: row.gear_item_id,
     userId: row.user_id,
     campaignId: row.campaign_id,
+    campaignName: (row.campaigns as any)?.name ?? null,
     startDate: row.start_date,
     endDate: row.end_date,
     status: row.status,

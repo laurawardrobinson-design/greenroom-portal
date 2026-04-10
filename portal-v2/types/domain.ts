@@ -117,6 +117,7 @@ export interface Campaign {
   notes: string;
   producerIds: string[];
   producerId: string | null; // = producerIds[0] ?? null — kept for backward compat
+  producerRoles: Record<string, string | null>; // userId → campaign_role override
   artDirectorId: string | null;
   createdBy: string;
   createdAt: string;
@@ -238,6 +239,7 @@ export interface CampaignVendor {
   campaignId: string;
   vendorId: string;
   status: CampaignVendorStatus;
+  campaignRole: string | null;
   invitedAt: string;
   estimateTotal: number;
   estimateFileUrl: string | null;
@@ -441,6 +443,7 @@ export interface GearReservation {
   gearItemId: string;
   userId: string;
   campaignId: string | null;
+  campaignName?: string | null;
   startDate: string;
   endDate: string;
   status: ReservationStatus;
