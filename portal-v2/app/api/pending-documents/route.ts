@@ -8,7 +8,7 @@ import type { CampaignVendorStatus } from "@/types/domain";
 // (plus campaign info) for the current Producer/Admin.
 export async function GET() {
   try {
-    await requireRole(["Producer"]);
+    await requireRole(["Producer", "Admin"]);
     const user = await getAuthUser();
     const db = createAdminClient();
 

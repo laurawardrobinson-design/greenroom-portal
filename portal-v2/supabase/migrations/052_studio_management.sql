@@ -106,11 +106,7 @@ create policy "space_reservations_read" on space_reservations
   for select to authenticated using (true);
 create policy "space_reservations_write" on space_reservations
   for all to authenticated using (
-    exists (
-      select 1 from profiles
-      where profiles.id = auth.uid()
-      and profiles.role in ('Admin', 'Producer', 'Studio')
-    )
+    get_my_role() in ('Admin', 'Producer', 'Studio')
   );
 
 -- shoot_meals: all authenticated can read; studio/producer/admin can write
@@ -119,11 +115,7 @@ create policy "shoot_meals_read" on shoot_meals
   for select to authenticated using (true);
 create policy "shoot_meals_write" on shoot_meals
   for all to authenticated using (
-    exists (
-      select 1 from profiles
-      where profiles.id = auth.uid()
-      and profiles.role in ('Admin', 'Producer', 'Studio')
-    )
+    get_my_role() in ('Admin', 'Producer', 'Studio')
   );
 
 -- ─────────────────────────────────────────────

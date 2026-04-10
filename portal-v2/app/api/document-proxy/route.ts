@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAuthUser, authErrorResponse } from "@/lib/auth/guards";
 
 function isPrivateHostname(hostname: string): boolean {
   const host = hostname.toLowerCase();
@@ -7,6 +8,8 @@ function isPrivateHostname(hostname: string): boolean {
   if (/^10\./.test(host)) return true;
   if (/^192\.168\./.test(host)) return true;
   if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(host)) return true;
+  if (/^169\.254\./.test(host)) return true; // link-local / cloud metadata (AWS IMDS, GCP, Azure)
+  if (host === "0.0.0.0") return true;
   return false;
 }
 
@@ -30,6 +33,7 @@ function isAllowedRemoteHost(hostname: string): boolean {
 
 export async function GET(request: Request) {
   try {
+    await getAuthUser();
     const { searchParams } = new URL(request.url);
     const rawUrl = searchParams.get("url");
     if (!rawUrl) {
@@ -73,8 +77,8 @@ export async function GET(request: Request) {
     if (contentDisposition) headers.set("Content-Disposition", contentDisposition);
 
     return new NextResponse(upstream.body, { status: 200, headers });
-  } catch {
-    return NextResponse.json({ error: "Proxy failed" }, { status: 500 });
+  } catch (error) {
+    return authErrorResponse(error);
   }
 }
 

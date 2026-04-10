@@ -19,13 +19,13 @@ BEGIN
   FROM public.campaigns c
   WHERE
     lower(c.name) = lower('Spring Produce Hero Shoot')
-    OR c.wf_number IN ('WF24017', 'WF-24017')
+    OR c.wf_number = 'WF24017'
     OR lower(c.name) = lower('Organic Produce Campaign')
     OR c.wf_number = 'WF210501'
   ORDER BY
     CASE
       WHEN lower(c.name) = lower('Spring Produce Hero Shoot') THEN 1
-      WHEN c.wf_number IN ('WF24017', 'WF-24017') THEN 2
+      WHEN c.wf_number = 'WF24017' THEN 2
       WHEN lower(c.name) = lower('Organic Produce Campaign') THEN 3
       ELSE 4
     END,

@@ -8,7 +8,7 @@ import type { CampaignVendorStatus } from "@/types/domain";
 // ordered by most recently updated, limit 30.
 export async function GET() {
   try {
-    await requireRole(["Producer"]);
+    await requireRole(["Producer", "Admin"]);
     const db = createAdminClient();
 
     const { data, error } = await db
