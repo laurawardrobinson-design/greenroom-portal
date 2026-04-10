@@ -10,8 +10,9 @@ import { useToast } from "@/components/ui/toast";
 import { generateOverlayPng } from "@/lib/utils/overlay-generator";
 import { CHANNEL_TEMPLATES, SPEC_DIMENSIONS } from "@/lib/constants/channels";
 import type { ChannelTemplate } from "@/lib/constants/channels";
-import type { ShotListSetup, ShotListShot, CampaignDeliverable, CampaignStatus, CampaignProduct } from "@/types/domain";
+import type { ShotListSetup, ShotListShot, CampaignDeliverable, CampaignStatus, CampaignProduct, Product } from "@/types/domain";
 import { ProductDetailModal } from "@/components/campaigns/product-detail-modal";
+import { ProductDrawer } from "@/components/products/product-drawer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -758,6 +759,293 @@ function SetupHeaderRow({ setup, canEdit, onMutate }: {
   );
 }
 
+// ─── Product cell (search inventory + free-text) ──────────────────────────────
+function ProductCell({
+  shot,
+  campaignId,
+  campaignProducts,
+  canEdit,
+  onMutate,
+  onViewProduct,
+}: {
+  shot: ShotListShot;
+  campaignId: string;
+  campaignProducts: CampaignProduct[];
+  canEdit: boolean;
+  onMutate: () => void;
+  onViewProduct: (id: string) => void;
+}) {
+  const { toast } = useToast();
+  const { anchorRef, panelStyle, open, toggle, close } = usePortalPanel<HTMLDivElement>();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Product[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [showNewProductModal, setShowNewProductModal] = useState(false);
+
+  // Existing product links resolved against campaignProducts
+  const linked = (shot.productLinks || [])
+    .map((lnk) => {
+      const cp = campaignProducts.find((p) => p.id === lnk.campaignProductId);
+      return cp ? { lnk, cp } : null;
+    })
+    .filter(Boolean) as { lnk: (typeof shot.productLinks)[0]; cp: CampaignProduct }[];
+
+  const linkedProductIds = new Set(
+    linked.map((l) => l.cp.productId)
+  );
+
+  // Debounced product search
+  useEffect(() => {
+    if (!open) return;
+    const q = query.trim();
+    if (!q) { setResults([]); return; }
+    const id = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(`/api/products?search=${encodeURIComponent(q)}&limit=8`);
+        if (res.ok) setResults(await res.json());
+      } catch { /* ignore */ }
+      finally { setSearching(false); }
+    }, 200);
+    return () => clearTimeout(id);
+  }, [query, open]);
+
+  // Focus input when panel opens
+  useEffect(() => {
+    if (open) { setTimeout(() => inputRef.current?.focus(), 50); }
+    else { setQuery(""); setResults([]); }
+  }, [open]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        anchorRef.current && !anchorRef.current.contains(e.target as Node)
+      ) close();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open, close, anchorRef]);
+
+  async function addProduct(productId?: string, customName?: string) {
+    if (adding) return;
+    setAdding(true);
+    try {
+      // 1. Ensure product is linked to campaign (creates ad-hoc product if name-only)
+      const body = productId ? { productId } : { name: customName };
+      const cpRes = await fetch(`/api/campaigns/${campaignId}/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!cpRes.ok) throw new Error("Failed to link product to campaign");
+      const cp: CampaignProduct = await cpRes.json();
+
+      // 2. Link campaign product to this shot
+      const linkRes = await fetch(`/api/shot-list/shots/${shot.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignProductId: cp.id }),
+      });
+      if (!linkRes.ok) throw new Error("Failed to link product to shot");
+
+      onMutate();
+      setQuery("");
+      setResults([]);
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Failed to add product");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function removeProduct(campaignProductId: string) {
+    try {
+      const res = await fetch(`/api/shot-list/shots/${shot.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignProductId, action: "unlink" }),
+      });
+      if (!res.ok) throw new Error("Failed to remove product");
+      onMutate();
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Failed to remove product");
+    }
+  }
+
+  const trimmedQuery = query.trim();
+  // Show "add custom" option when query is non-empty and doesn't exactly match a result
+  const hasExactMatch = results.some(
+    (r) => r.name.toLowerCase() === trimmedQuery.toLowerCase()
+  );
+  const showCustomOption = trimmedQuery.length > 0 && !hasExactMatch;
+
+  return (
+    <div ref={anchorRef} className="flex flex-wrap items-center gap-1 px-2 py-1.5 min-h-[32px] h-full">
+      {/* Existing product chips */}
+      {linked.map(({ lnk, cp }) => (
+        <span key={lnk.id} className="inline-flex items-center gap-1 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-xs font-medium text-amber-700 max-w-[160px]">
+          <button
+            type="button"
+            onClick={() => cp.product && onViewProduct(cp.product.id)}
+            className="truncate hover:underline cursor-pointer"
+          >
+            {cp.product?.name ?? "Product"}
+          </button>
+          {cp.product?.itemCode && (
+            <span className="text-[10px] opacity-70 shrink-0">{cp.product.itemCode}</span>
+          )}
+          {canEdit && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); removeProduct(cp.id); }}
+              className="shrink-0 ml-0.5 text-amber-500 hover:text-red-500 transition-colors"
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          )}
+        </span>
+      ))}
+
+      {/* Empty state */}
+      {linked.length === 0 && !canEdit && (
+        <span className="text-text-tertiary/40 text-sm">—</span>
+      )}
+
+      {/* Add button — only when canEdit */}
+      {canEdit && (
+        <button
+          type="button"
+          onClick={toggle}
+          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-text-tertiary border border-dashed border-border/70 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50/50 transition-colors"
+        >
+          <Plus className="h-2.5 w-2.5" />
+          {linked.length === 0 && <span>Add</span>}
+        </button>
+      )}
+
+      {/* Search panel */}
+      {open && typeof document !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={close} />
+          <div ref={panelRef} style={{ ...panelStyle, width: 260 }}
+            className="rounded-xl border border-border bg-surface shadow-xl overflow-hidden">
+            {/* Search input */}
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && trimmedQuery && showCustomOption) {
+                    addProduct(undefined, trimmedQuery);
+                    close();
+                  }
+                  if (e.key === "Escape") close();
+                }}
+                placeholder="Search products…"
+                className="flex-1 text-sm bg-transparent outline-none text-text-primary placeholder:text-text-tertiary"
+              />
+              {searching && (
+                <span className="h-3 w-3 rounded-full border border-text-tertiary border-t-transparent animate-spin shrink-0" />
+              )}
+            </div>
+
+            {/* Results */}
+            <div className="max-h-48 overflow-y-auto">
+              {results.length > 0 && (
+                <div className="py-1">
+                  {results.map((product) => {
+                    const alreadyLinked = linkedProductIds.has(product.id);
+                    return (
+                      <button
+                        key={product.id}
+                        type="button"
+                        disabled={alreadyLinked || adding}
+                        onClick={() => { addProduct(product.id); close(); }}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors ${
+                          alreadyLinked
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:bg-surface-secondary"
+                        }`}
+                      >
+                        <span className="text-sm text-text-primary truncate">{product.name}</span>
+                        {product.itemCode ? (
+                          <span className="text-[10px] text-text-tertiary shrink-0 ml-2 font-mono">{product.itemCode}</span>
+                        ) : (
+                          <span className="text-[10px] text-text-tertiary/50 shrink-0 ml-2">no code</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Custom / free-text option */}
+              {showCustomOption && (
+                <button
+                  type="button"
+                  disabled={adding}
+                  onClick={() => { addProduct(undefined, trimmedQuery); close(); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-amber-50 transition-colors border-t border-border/60"
+                >
+                  <Plus className="h-3 w-3 text-amber-500 shrink-0" />
+                  <span className="text-sm text-amber-700">Add &ldquo;{trimmedQuery}&rdquo;</span>
+                </button>
+              )}
+
+              {/* Empty state */}
+              {!searching && trimmedQuery && results.length === 0 && !showCustomOption && (
+                <p className="px-3 py-3 text-xs text-text-tertiary text-center">No inventory match — press Enter to add as custom</p>
+              )}
+
+              {!trimmedQuery && (
+                <p className="px-3 py-3 text-xs text-text-tertiary text-center">Type to search inventory</p>
+              )}
+            </div>
+
+            {/* Add new product to inventory */}
+            <div className="border-t border-border/60">
+              <button
+                type="button"
+                onClick={() => { close(); setShowNewProductModal(true); }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-surface-secondary transition-colors"
+              >
+                <Plus className="h-3 w-3 text-text-tertiary shrink-0" />
+                <span className="text-xs text-text-secondary">Add new product to inventory</span>
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+
+      {/* New product modal — full ProductDrawer, portaled to body to escape table DOM */}
+      {showNewProductModal && typeof document !== "undefined" && createPortal(
+        <ProductDrawer
+          product={null}
+          canEdit={true}
+          onClose={() => setShowNewProductModal(false)}
+          onSaved={async (saved) => {
+            setShowNewProductModal(false);
+            if (saved) {
+              // Auto-link the new product to campaign + shot
+              await addProduct(saved.id);
+            }
+          }}
+          onDeleted={() => setShowNewProductModal(false)}
+        />,
+        document.body
+      )}
+    </div>
+  );
+}
+
 // ─── Saved shot row ───────────────────────────────────────────────────────────
 function ShotRow({ shot, deliverables, campaignProducts, campaignId, wfNumber, shotIndex, canEdit, canComplete, onMutate,
   isDragOver, onDragStart, onDragOver, onDrop, onDragEnd,
@@ -793,12 +1081,13 @@ function ShotRow({ shot, deliverables, campaignProducts, campaignId, wfNumber, s
 
   return (
     <>
-      {viewProductId && (
+      {viewProductId && typeof document !== "undefined" && createPortal(
         <ProductDetailModal
           productId={viewProductId}
           open={!!viewProductId}
           onClose={() => setViewProductId(null)}
-        />
+        />,
+        document.body
       )}
     <tr
       draggable={canEdit}
@@ -828,25 +1117,14 @@ function ShotRow({ shot, deliverables, campaignProducts, campaignId, wfNumber, s
         <Cell value={shot.description} placeholder="Description…" onSave={(v) => patch({ description: v })} />
       </td>
       <td className="border border-border/60 p-0 w-40">
-        <div className="flex flex-wrap items-center gap-1 px-2 py-1.5 min-h-[32px]">
-          {(shot.productLinks || []).map((lnk) => {
-            const cp = campaignProducts.find((p) => p.id === lnk.campaignProductId);
-            if (!cp?.product) return null;
-            return (
-              <button key={lnk.id} type="button"
-                onClick={() => setViewProductId(cp.product!.id)}
-                className="inline-flex items-center gap-1 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-colors cursor-pointer max-w-[160px]">
-                <span className="truncate">{cp.product.name}</span>
-                {cp.product.itemCode && (
-                  <span className="text-[10px] opacity-70 shrink-0">{cp.product.itemCode}</span>
-                )}
-              </button>
-            );
-          })}
-          {(shot.productLinks || []).length === 0 && (
-            <span className="text-text-tertiary/40 text-sm">—</span>
-          )}
-        </div>
+        <ProductCell
+          shot={shot}
+          campaignId={campaignId}
+          campaignProducts={campaignProducts}
+          canEdit={canEdit}
+          onMutate={onMutate}
+          onViewProduct={(id) => setViewProductId(id)}
+        />
       </td>
       <td className="border border-border/60 p-0 w-12">
         <RefCell shotId={shot.id} campaignId={campaignId} value={shot.referenceImageUrl} canEdit={canEdit} onMutate={onMutate} />
