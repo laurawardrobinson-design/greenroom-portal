@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ShoppingBasket, Package, Wrench, Plus } from "lucide-react";
-import type { CampaignProduct, CampaignGearLink } from "@/types/domain";
+import type { CampaignProduct, CampaignGearLink, Product } from "@/types/domain";
+import { ProductDrawer } from "@/components/products/product-drawer";
 
 interface Props {
   campaignProducts: CampaignProduct[];
@@ -17,6 +18,7 @@ type Tab = "products" | "props" | "gear";
 
 export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddProduct, onAddProps, onAddGear }: Props) {
   const [tab, setTab] = useState<Tab>("products");
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
 
   const props = campaignGear.filter((cg) => cg.gearItem?.section === "Props");
   const gear = campaignGear.filter((cg) => cg.gearItem?.section !== "Props");
@@ -59,7 +61,12 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
               <p className="text-sm text-text-tertiary py-1">No products added.</p>
             ) : (
               campaignProducts.map((cp) => (
-                <div key={cp.id} className="flex items-start gap-2 rounded-md border border-border bg-surface-secondary/40 px-2.5 py-2">
+                <button
+                  key={cp.id}
+                  type="button"
+                  onClick={() => cp.product && setViewProduct(cp.product)}
+                  className="w-full flex items-start gap-2 rounded-md border border-border bg-surface-secondary/40 px-2.5 py-2 text-left hover:bg-surface-secondary transition-colors"
+                >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-text-primary truncate">{cp.product?.name || "Unknown product"}</p>
                     {cp.product?.department && (
@@ -69,7 +76,7 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
                       <p className="text-[10px] text-text-secondary mt-0.5">{cp.notes}</p>
                     )}
                   </div>
-                </div>
+                </button>
               ))
             )}
             {canEdit && (
@@ -143,6 +150,16 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
           </div>
         )}
       </div>
+
+      {viewProduct && (
+        <ProductDrawer
+          product={viewProduct}
+          canEdit={false}
+          onClose={() => setViewProduct(null)}
+          onSaved={() => setViewProduct(null)}
+          onDeleted={() => setViewProduct(null)}
+        />
+      )}
     </div>
   );
 }

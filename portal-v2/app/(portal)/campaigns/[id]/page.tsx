@@ -527,6 +527,7 @@ export default function CampaignDetailPage({
         canEdit={canEdit}
         campaignId={id}
         sameCrew={sameCrew}
+        sameLocation={sameLocation}
         campaignPeople={[...producers, ...(artDirector ? [artDirector] : []), ...vendorUsers]}
         campaignVendors={vendors}
         producerRoles={campaign.producerRoles ?? {}}

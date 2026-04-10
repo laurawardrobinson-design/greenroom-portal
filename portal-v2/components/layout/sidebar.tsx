@@ -97,7 +97,7 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["Admin", "Producer", "Studio", "Art Director"],
   },
   {
-    label: "Food Products",
+    label: "Products",
     href: "/food",
     icon: Utensils,
     roles: ["Admin", "Producer", "Studio", "Art Director"],

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import useSWR from "swr";
+import { useRouter } from "next/navigation";
 import type { Shoot, ShootCrew, AppUser, StudioSpace, SpaceReservation, CampaignVendor } from "@/types/domain";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Modal } from "@/components/ui/modal";
@@ -66,6 +67,7 @@ interface Props {
   canEdit: boolean;
   campaignId: string;
   sameCrew: boolean;
+  sameLocation?: boolean;
   campaignPeople: AppUser[];
   campaignVendors: CampaignVendor[];
   producerRoles?: Record<string, string | null>;
@@ -82,6 +84,7 @@ export function ShootDayModal({
   producerRoles,
   campaignId,
   sameCrew,
+  sameLocation,
   campaignPeople,
   campaignVendors,
   onClose,
@@ -252,6 +255,10 @@ export function ShootDayModal({
               date={date}
               canEdit={canEdit}
               campaignId={campaignId}
+              sameLocation={sameLocation}
+              otherDates={allShoots
+                .filter((s) => s.id !== shoot!.id && s.dates.length > 0)
+                .map((s) => s.dates[0])}
               onMutate={onMutate}
             />
           </div>
@@ -355,14 +362,19 @@ function ShootDateDetail({
   date,
   canEdit,
   campaignId,
+  sameLocation,
+  otherDates,
   onMutate,
 }: {
   date: { id: string; shootDate: string; callTime: string | null; location: string };
   canEdit: boolean;
   campaignId: string;
+  sameLocation?: boolean;
+  otherDates?: Array<{ id: string; shootDate: string; callTime: string | null; location: string }>;
   onMutate: () => void;
 }) {
   const { toast } = useToast();
+  const router = useRouter();
   const parsed = parseTime(date.callTime);
   const [editingTime, setEditingTime] = useState(!!date.callTime);
   const [timeVal, setTimeVal] = useState(parsed.time);
@@ -412,13 +424,49 @@ function ShootDateDetail({
     try {
       if (existing) {
         await fetch(`/api/studio/reservations?id=${existing.id}`, { method: "DELETE" });
-      } else {
-        await fetch("/api/studio/reservations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ campaignId, spaceId, reservedDate: date.shootDate }),
-        });
+        mutateReservations();
+        return;
       }
+
+      // Book this date
+      const res = await fetch("/api/studio/reservations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId, spaceId, reservedDate: date.shootDate }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast("error", data.error || "Failed to reserve space", {
+          label: "View Studio",
+          onClick: () => router.push("/studio"),
+        });
+        return;
+      }
+
+      // If sameLocation, also try to book the same space on all other shoot dates
+      if (sameLocation && otherDates && otherDates.length > 0) {
+        const conflictDates: string[] = [];
+        await Promise.allSettled(
+          otherDates.map(async (d) => {
+            const r = await fetch("/api/studio/reservations", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ campaignId, spaceId, reservedDate: d.shootDate }),
+            });
+            if (!r.ok) {
+              conflictDates.push(format(parseISO(d.shootDate), "MMM d"));
+            }
+          })
+        );
+        if (conflictDates.length > 0) {
+          toast(
+            "warning",
+            `Booking conflict on ${conflictDates.join(", ")} — that space is taken by another shoot.`,
+            { label: "View Studio", onClick: () => router.push("/studio") }
+          );
+        }
+      }
+
       mutateReservations();
     } catch {
       toast("error", "Failed to update space reservation");
