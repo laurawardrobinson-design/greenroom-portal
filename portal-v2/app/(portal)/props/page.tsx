@@ -321,52 +321,47 @@ export default function PropsPage() {
               }
             />
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {items.map((item) => (
-                <Card
+                <button
                   key={item.id}
-                  hover
-                  padding="md"
                   onClick={() => setDetailItem(item)}
-                  className="cursor-pointer"
+                  className="flex flex-col rounded-xl border border-border bg-surface p-4 text-left hover:bg-surface-secondary transition-colors"
                 >
-                  {item.imageUrl ? (
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="h-28 w-full rounded-lg object-cover mb-3"
-                    />
-                  ) : null}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
+                  <div className="flex items-start gap-3">
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="h-14 w-14 rounded-lg object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-surface-tertiary shrink-0">
+                        <Package className="h-6 w-6 text-text-tertiary" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-text-primary truncate">{item.name}</p>
-                      <p className="text-xs text-text-tertiary mt-0.5">{item.category}</p>
+                      <p className="text-[10px] text-text-tertiary leading-tight mt-0.5">{item.category}</p>
+                      <Badge variant="custom" className={`mt-1 ${STATUS_BADGE[item.status] || ""}`}>
+                        {item.status}
+                      </Badge>
                     </div>
-                    <Badge variant="custom" className={STATUS_BADGE[item.status] || ""}>
-                      {item.status}
-                    </Badge>
                   </div>
-                  {canEdit && item.status === "Available" && (
-                    <div className="mt-3 pt-3 border-t border-border-light">
+                  {canEdit && (item.status === "Available" || item.status === "Checked Out") && (
+                    <div className="mt-2 pt-2 border-t border-border-light w-full">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setCheckoutItem(item); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          item.status === "Available" ? setCheckoutItem(item) : setCheckinItem(item);
+                        }}
                         className="text-xs text-primary hover:underline"
                       >
-                        Check Out
+                        {item.status === "Available" ? "Check Out" : "Check In"}
                       </button>
                     </div>
                   )}
-                  {canEdit && item.status === "Checked Out" && (
-                    <div className="mt-3 pt-3 border-t border-border-light">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setCheckinItem(item); }}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        Check In
-                      </button>
-                    </div>
-                  )}
-                </Card>
+                </button>
               ))}
             </div>
           ) : (
