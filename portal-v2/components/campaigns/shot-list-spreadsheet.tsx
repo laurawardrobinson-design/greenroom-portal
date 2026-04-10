@@ -1025,8 +1025,8 @@ function ProductCell({
         document.body
       )}
 
-      {/* New product modal — full ProductDrawer */}
-      {showNewProductModal && (
+      {/* New product modal — full ProductDrawer, portaled to body to escape table DOM */}
+      {showNewProductModal && typeof document !== "undefined" && createPortal(
         <ProductDrawer
           product={null}
           canEdit={true}
@@ -1039,7 +1039,8 @@ function ProductCell({
             }
           }}
           onDeleted={() => setShowNewProductModal(false)}
-        />
+        />,
+        document.body
       )}
     </div>
   );
@@ -1080,12 +1081,13 @@ function ShotRow({ shot, deliverables, campaignProducts, campaignId, wfNumber, s
 
   return (
     <>
-      {viewProductId && (
+      {viewProductId && typeof document !== "undefined" && createPortal(
         <ProductDetailModal
           productId={viewProductId}
           open={!!viewProductId}
           onClose={() => setViewProductId(null)}
-        />
+        />,
+        document.body
       )}
     <tr
       draggable={canEdit}
