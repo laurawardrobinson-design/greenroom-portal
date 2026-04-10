@@ -426,7 +426,7 @@ function SpacesView({ userRole, userId }: SpacesViewProps) {
   }, [monthStart, monthEnd]);
 
   return (
-    <div className="grid gap-6 items-start" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,2fr)" }}>
+    <div className="grid gap-6 items-start" style={{ gridTemplateColumns: "360px 600px" }}>
 
       {/* ── Left: Calendar + Shoots (1/3) ──────────────────────────────────── */}
       <div className="flex flex-col gap-4 min-w-0">
