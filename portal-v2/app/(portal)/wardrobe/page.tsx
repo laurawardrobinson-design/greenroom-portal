@@ -48,6 +48,7 @@ import {
   StopCircle,
   ChevronRight,
   AlertTriangle,
+  Link as LinkIcon,
 } from "lucide-react";
 
 const fetcher = (url: string) =>
@@ -873,24 +874,41 @@ function JobClassesTab({ canEdit, allItems }: { canEdit: boolean; allItems: Ward
   const classes = Array.isArray(rawClasses) ? rawClasses : [];
   const [selectedClass, setSelectedClass] = useState<JobClass | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+
+  // Create form state
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [newStandards, setNewStandards] = useState("");
+  const [newReferenceUrl, setNewReferenceUrl] = useState("");
   const [saving, setSaving] = useState(false);
+
+  function handleOpenAdd() {
+    setNewName(""); setNewDescription(""); setNewStandards(""); setNewReferenceUrl("");
+    setShowAdd(true);
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!newName.trim()) { toast("error", "Name required"); return; }
+    if (!newName.trim()) { toast("error", "Role name required"); return; }
     setSaving(true);
     try {
       const res = await fetch("/api/job-classes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim(), description: newDescription }),
+        body: JSON.stringify({
+          name: newName.trim(),
+          description: newDescription.trim(),
+          standards: newStandards.trim(),
+          referenceUrl: newReferenceUrl.trim() || null,
+        }),
       });
       if (!res.ok) throw new Error();
+      const created: JobClass = await res.json();
       toast("success", "Job class created");
-      setShowAdd(false); setNewName(""); setNewDescription("");
-      mutate();
+      setShowAdd(false);
+      await mutate();
+      // Open the new class drawer immediately
+      setSelectedClass(created);
     } catch { toast("error", "Failed to create"); }
     finally { setSaving(false); }
   }
@@ -901,11 +919,11 @@ function JobClassesTab({ canEdit, allItems }: { canEdit: boolean; allItems: Ward
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-text-secondary">{classes.length} job class{classes.length !== 1 ? "es" : ""}</p>
-        {canEdit && <Button size="sm" onClick={() => setShowAdd(true)}><Plus className="h-3.5 w-3.5" />Add Job Class</Button>}
+        {canEdit && <Button size="sm" onClick={handleOpenAdd}><Plus className="h-3.5 w-3.5" />Add Job Class</Button>}
       </div>
 
       {classes.length === 0 ? (
-        <EmptyState icon={<Users className="h-5 w-5" />} title="No job classes yet" description='Create job classes like "Grocery Clerk" to define uniform standards per role.' action={canEdit ? <Button size="sm" onClick={() => setShowAdd(true)}><Plus className="h-3.5 w-3.5" />Add Job Class</Button> : undefined} />
+        <EmptyState icon={<Users className="h-5 w-5" />} title="No job classes yet" description='Create job classes like "Grocery Clerk" to define uniform standards per role.' action={canEdit ? <Button size="sm" onClick={handleOpenAdd}><Plus className="h-3.5 w-3.5" />Add Job Class</Button> : undefined} />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {classes.map((jc) => (
@@ -918,22 +936,76 @@ function JobClassesTab({ canEdit, allItems }: { canEdit: boolean; allItems: Ward
                 <ChevronRight className="h-4 w-4 text-text-tertiary shrink-0" />
               </div>
               {jc.description && <p className="text-xs text-text-secondary line-clamp-2">{jc.description}</p>}
+              {jc.referenceUrl && (
+                <span className="flex items-center gap-1 text-[10px] text-primary/70 truncate max-w-full">
+                  <LinkIcon className="h-3 w-3 shrink-0" />
+                  <span className="truncate">Dress code linked</span>
+                </span>
+              )}
             </button>
           ))}
         </div>
       )}
 
+      {/* ── Comprehensive Create Modal ── */}
       {showAdd && (
-        <Modal open={true} onClose={() => setShowAdd(false)} title="New Job Class" size="sm">
-          <form onSubmit={handleCreate} className="space-y-4">
-            <Input label="Role Name" placeholder="e.g., Grocery Clerk, Bakery Associate" value={newName} onChange={(e) => setNewName(e.target.value)} />
+        <Modal open={true} onClose={() => setShowAdd(false)} title="New Job Class" size="lg">
+          <form onSubmit={handleCreate} className="space-y-5">
+            {/* Role Name */}
+            <Input
+              label="Role Name"
+              placeholder="e.g., Grocery Clerk, Bakery Associate, Deli Team Member"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              autoFocus
+            />
+
+            {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1.5">Description (optional)</label>
-              <textarea value={newDescription} onChange={(e) => setNewDescription(e.target.value)} placeholder="Brief description of this role..." rows={2} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+              <label className="block text-sm font-medium text-text-primary mb-1.5">Description</label>
+              <textarea
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                placeholder="Brief description of this role and when these standards apply..."
+                rows={2}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+              />
             </div>
+
+            {/* Dress Code Reference URL */}
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1.5">
+                Dress Code Reference URL
+              </label>
+              <div className="flex items-center gap-2">
+                <LinkIcon className="h-4 w-4 shrink-0 text-text-tertiary" />
+                <input
+                  type="url"
+                  value={newReferenceUrl}
+                  onChange={(e) => setNewReferenceUrl(e.target.value)}
+                  placeholder="https://www.publix.org/dress-code/..."
+                  className="h-9 flex-1 rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                />
+              </div>
+              <p className="mt-1 text-[11px] text-text-tertiary">Link to the official Publix dress code page for this role</p>
+            </div>
+
+            {/* Role Standards */}
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1.5">Role Standards</label>
+              <textarea
+                value={newStandards}
+                onChange={(e) => setNewStandards(e.target.value)}
+                placeholder="Uniform requirements, presentation expectations, approved variations, items that must be worn together..."
+                rows={5}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+              />
+              <p className="mt-1 text-[11px] text-text-tertiary">You can add wardrobe items and shoot notes after creating the role.</p>
+            </div>
+
             <ModalFooter>
               <Button type="button" variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Button>
-              <Button type="submit" loading={saving}>Create</Button>
+              <Button type="submit" loading={saving}>Create Role</Button>
             </ModalFooter>
           </form>
         </Modal>
@@ -976,10 +1048,12 @@ function JobClassDrawer({ jobClassId, onClose, canEdit, allItems }: {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(jc?.name || "");
   const [description, setDescription] = useState(jc?.description || "");
+  const [referenceUrl, setReferenceUrl] = useState(jc?.referenceUrl || "");
 
   // Sync state when data loads
   if (jc && standards === "" && jc.standards) setStandards(jc.standards);
   if (jc && name === "" && jc.name) setName(jc.name);
+  if (jc && referenceUrl === "" && jc.referenceUrl) setReferenceUrl(jc.referenceUrl);
 
   const linkedIds = new Set(items.map((i) => i.wardrobeItemId));
   const availableToAdd = allItems.filter((i) => !linkedIds.has(i.id));
@@ -1005,7 +1079,7 @@ function JobClassDrawer({ jobClassId, onClose, canEdit, allItems }: {
       await fetch(`/api/job-classes/${jobClassId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), description }),
+        body: JSON.stringify({ name: name.trim(), description, referenceUrl: referenceUrl.trim() || null }),
       });
       toast("success", "Saved");
       setEditingName(false);
@@ -1090,13 +1164,26 @@ function JobClassDrawer({ jobClassId, onClose, canEdit, allItems }: {
     <Drawer open={true} onClose={onClose} title={jc.name} size="lg">
       <div className="space-y-6">
 
-        {/* Name / description */}
+        {/* Name / description / reference url */}
         {editingName ? (
           <div className="space-y-3">
             <Input label="Role Name" value={name} onChange={(e) => setName(e.target.value)} />
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1.5">Description</label>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1.5">Dress Code Reference URL</label>
+              <div className="flex items-center gap-2">
+                <LinkIcon className="h-4 w-4 shrink-0 text-text-tertiary" />
+                <input
+                  type="url"
+                  value={referenceUrl}
+                  onChange={(e) => setReferenceUrl(e.target.value)}
+                  placeholder="https://www.publix.org/dress-code/..."
+                  className="h-9 flex-1 rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                />
+              </div>
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" onClick={() => setEditingName(false)}>Cancel</Button>
@@ -1105,8 +1192,20 @@ function JobClassDrawer({ jobClassId, onClose, canEdit, allItems }: {
           </div>
         ) : (
           <div className="flex items-start justify-between gap-2">
-            <div>
+            <div className="space-y-1.5 min-w-0">
               {jc.description && <p className="text-sm text-text-secondary">{jc.description}</p>}
+              {jc.referenceUrl && (
+                <a
+                  href={jc.referenceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                >
+                  <LinkIcon className="h-3.5 w-3.5 shrink-0" />
+                  <span>Publix Dress Code Reference</span>
+                  <ExternalLink className="h-3 w-3 shrink-0" />
+                </a>
+              )}
             </div>
             {canEdit && <button onClick={() => setEditingName(true)} className="shrink-0 text-xs text-text-tertiary hover:text-text-secondary transition-colors"><Edit2 className="h-3.5 w-3.5" /></button>}
           </div>

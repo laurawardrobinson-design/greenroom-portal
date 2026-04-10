@@ -692,6 +692,7 @@ export interface JobClass {
   name: string;
   description: string;
   standards: string;
+  referenceUrl: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;

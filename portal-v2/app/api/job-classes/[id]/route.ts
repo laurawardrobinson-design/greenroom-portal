@@ -25,7 +25,12 @@ export async function PATCH(
     await requireRole(["Admin", "Producer", "Art Director", "Studio"]);
     const { id } = await params;
     const body = await request.json();
-    const jc = await updateJobClass(id, body);
+    const jc = await updateJobClass(id, {
+      name: body.name,
+      description: body.description,
+      standards: body.standards,
+      referenceUrl: body.referenceUrl,
+    });
     return NextResponse.json(jc);
   } catch (error) {
     return authErrorResponse(error);
