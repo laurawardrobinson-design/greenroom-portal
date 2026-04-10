@@ -62,7 +62,7 @@ export function SendPoModal({
   // Field positions — defaults match where they sit in the generated PO template
   const [fieldPositions, setFieldPositions] = useState<FieldPositions>({
     signatureFieldX: 10,
-    signatureFieldY: 76,
+    signatureFieldY: 68,
     poNumberFieldX: 62,
     poNumberFieldY: 8,
   });

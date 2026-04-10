@@ -70,15 +70,18 @@ export default function PoPage({
 
   // Field positions (percentages of PO_DOC_REF_HEIGHT / doc width)
   const sigX: number = cv.signature_field_x ?? 10;
-  const sigY: number = cv.signature_field_y ?? 76;
+  const sigY: number = cv.signature_field_y ?? 68;
 
   // Convert Y percentage → pixel offset within the ref-height document
   const sigTopPx = (sigY / 100) * PO_DOC_REF_HEIGHT;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div
+      className="bg-white"
+      style={isPlacement ? { height: `${PO_DOC_REF_HEIGHT}px`, overflow: "hidden" } : { minHeight: "100vh" }}
+    >
       {/* Print toolbar */}
-      <div className="print:hidden flex items-center justify-between px-8 py-3 border-b border-gray-100 bg-gray-50">
+      <div className={`print:hidden flex items-center justify-between px-8 py-3 border-b border-gray-100 bg-gray-50${isPlacement ? " hidden" : ""}`}>
         <span className="text-xs text-gray-400 font-medium tracking-wide uppercase">
           Purchase Order
         </span>

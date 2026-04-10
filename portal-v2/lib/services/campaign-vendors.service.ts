@@ -28,7 +28,7 @@ function toCampaignVendor(row: Record<string, unknown>): CampaignVendor {
     signedIp: (row.signed_ip as string) || null,
     signatureTimestamp: (row.signature_timestamp as string) || null,
     signatureFieldX: row.signature_field_x != null ? Number(row.signature_field_x) : 10,
-    signatureFieldY: row.signature_field_y != null ? Number(row.signature_field_y) : 76,
+    signatureFieldY: row.signature_field_y != null ? Number(row.signature_field_y) : 68,
     poNumberFieldX: row.po_number_field_x != null ? Number(row.po_number_field_x) : 62,
     poNumberFieldY: row.po_number_field_y != null ? Number(row.po_number_field_y) : 8,
     poAuthorizedBy: (row.po_authorized_by as string) || null,

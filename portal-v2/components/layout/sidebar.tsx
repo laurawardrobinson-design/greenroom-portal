@@ -33,7 +33,6 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   roles: UserRole[];
-  adminLabel?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -80,11 +79,10 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["Art Director"],
   },
   {
-    label: "Studio",
+    label: "Studio Management",
     href: "/studio",
     icon: Building2,
     roles: ["Admin", "Producer", "Studio"],
-    adminLabel: "Studio Management",
   },
   {
     label: "Gear",
@@ -111,8 +109,7 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["Admin", "Producer", "Studio", "Art Director"],
   },
   {
-    label: "Goals",
-    adminLabel: "Team Goals",
+    label: "Team Goals",
     href: "/goals",
     icon: Compass,
     roles: ["Admin", "Producer", "Studio"],
@@ -218,9 +215,9 @@ export function Sidebar({
                   isActive ? "text-primary" : "text-[#D9E4D6]/40 group-hover:text-[#D9E4D6]/60"
                 }`}
               />
-              {((userRole === "Admin" || userRole === "Studio") && item.adminLabel) ? item.adminLabel : item.label}
+              <span className="whitespace-nowrap">{item.label}</span>
               {isActive && (
-                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
+                <span className="ml-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
               )}
             </Link>
           );
@@ -254,7 +251,7 @@ export function Sidebar({
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-60 lg:flex-col">
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-[245px] lg:flex-col">
         {sidebarContent}
       </aside>
 

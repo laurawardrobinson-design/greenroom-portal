@@ -232,7 +232,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
   const placementRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
   const [dragOff, setDragOff] = useState({ x: 0, y: 0 });
-  const [sigPos, setSigPos] = useState({ x: cv.signatureFieldX ?? 10, y: cv.signatureFieldY ?? 76 });
+  const [sigPos, setSigPos] = useState({ x: cv.signatureFieldX ?? 10, y: cv.signatureFieldY ?? 68 });
 
   // Sync local status when parent prop changes (e.g. external refresh)
   useEffect(() => { setLocalStatus(cv.status); }, [cv.status]);
