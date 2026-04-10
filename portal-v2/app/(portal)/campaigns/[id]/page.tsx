@@ -514,6 +514,7 @@ export default function CampaignDetailPage({
             onAddProduct={() => setShowAddProduct(true)}
             onAddProps={() => setShowAddProps(true)}
             onAddGear={() => setShowAddGear(true)}
+            onMutate={mutate}
           />
         )}
       </div>

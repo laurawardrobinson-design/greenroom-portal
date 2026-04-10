@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingBasket, Package, Wrench, Plus } from "lucide-react";
+import { ShoppingBasket, Package, Wrench, Plus, X } from "lucide-react";
 import type { CampaignProduct, CampaignGearLink, Product } from "@/types/domain";
 import { ProductDrawer } from "@/components/products/product-drawer";
+import { useToast } from "@/components/ui/toast";
 
 interface Props {
   campaignProducts: CampaignProduct[];
@@ -12,13 +13,25 @@ interface Props {
   onAddProduct: () => void;
   onAddProps: () => void;
   onAddGear: () => void;
+  onMutate?: () => void;
 }
 
 type Tab = "products" | "props" | "gear";
 
-export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddProduct, onAddProps, onAddGear }: Props) {
+export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddProduct, onAddProps, onAddGear, onMutate }: Props) {
   const [tab, setTab] = useState<Tab>("products");
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
+  const { toast } = useToast();
+
+  async function removeProp(id: string) {
+    try {
+      const res = await fetch(`/api/campaign-gear?id=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove");
+      onMutate?.();
+    } catch {
+      toast("error", "Failed to remove prop");
+    }
+  }
 
   const props = campaignGear.filter((cg) => cg.gearItem?.section === "Props");
   const gear = campaignGear.filter((cg) => cg.gearItem?.section !== "Props");
@@ -98,13 +111,23 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
               <p className="text-sm text-text-tertiary py-1">No props added.</p>
             ) : (
               props.map((cg) => (
-                <div key={cg.id} className="flex items-start gap-2 rounded-md border border-border bg-surface-secondary/40 px-2.5 py-2">
+                <div key={cg.id} className="flex items-center gap-2 rounded-md border border-border bg-surface-secondary/40 px-2.5 py-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-text-primary truncate">{cg.gearItem?.name || "Unknown"}</p>
                     {cg.gearItem?.category && (
                       <p className="text-[10px] text-text-tertiary">{cg.gearItem.category}</p>
                     )}
                   </div>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => removeProp(cg.id)}
+                      className="shrink-0 rounded p-0.5 text-text-tertiary/40 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      title="Remove prop"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               ))
             )}
