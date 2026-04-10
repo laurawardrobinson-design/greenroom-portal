@@ -21,6 +21,7 @@ import {
   ClipboardCheck,
   FileText,
   Building2,
+  DollarSign,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -66,6 +67,12 @@ const NAV_ITEMS: NavItem[] = [
     href: "/pre-production",
     icon: ClipboardList,
     roles: ["Admin", "Producer"],
+  },
+  {
+    label: "Budget",
+    href: "/budget",
+    icon: DollarSign,
+    roles: ["Admin"],
   },
   {
     label: "Estimates & Invoices",
@@ -116,7 +123,7 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["Admin", "Producer", "Studio", "Art Director"],
   },
   {
-    label: "Team Goals",
+    label: "Goals",
     href: "/goals",
     icon: Compass,
     roles: ["Admin", "Producer", "Studio"],

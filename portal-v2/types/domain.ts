@@ -636,6 +636,9 @@ export type WardrobeCategory =
   | "Accessories"
   | "Other";
 
+export type WardrobeStatus = "Available" | "Reserved" | "Checked Out";
+export type WardrobeCondition = "Excellent" | "Good" | "Fair" | "Poor" | "Damaged";
+
 export interface WardrobeItem {
   id: string;
   name: string;
@@ -645,9 +648,74 @@ export interface WardrobeItem {
   restrictions: string;
   guideUrl: string | null;
   imageUrl: string | null;
+  status: WardrobeStatus;
+  condition: WardrobeCondition;
+  qrCode: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WardrobeCheckout {
+  id: string;
+  wardrobeItemId: string;
+  userId: string | null;
+  campaignId: string | null;
+  checkedOutAt: string;
+  checkedInAt: string | null;
+  dueDate: string | null;
+  conditionOut: WardrobeCondition;
+  conditionIn: WardrobeCondition | null;
+  notes: string;
+  createdAt: string;
+  wardrobeItem?: WardrobeItem;
+  userName?: string;
+}
+
+export interface WardrobeReservation {
+  id: string;
+  wardrobeItemId: string;
+  userId: string | null;
+  campaignId: string | null;
+  startDate: string;
+  endDate: string;
+  status: "Confirmed" | "Cancelled" | "Checked Out" | "Completed";
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  wardrobeItem?: WardrobeItem;
+}
+
+// --- Job Classes ---
+export interface JobClass {
+  id: string;
+  name: string;
+  description: string;
+  standards: string;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items?: JobClassItem[];
+}
+
+export interface JobClassItem {
+  id: string;
+  jobClassId: string;
+  wardrobeItemId: string;
+  notes: string;
+  sortOrder: number;
+  createdAt: string;
+  wardrobeItem?: WardrobeItem;
+}
+
+export interface JobClassNote {
+  id: string;
+  jobClassId: string;
+  text: string;
+  authorId: string | null;
+  authorName: string;
+  campaignId: string | null;
+  createdAt: string;
 }
 
 // --- Campaign Gear ---

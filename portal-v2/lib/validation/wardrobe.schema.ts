@@ -19,6 +19,7 @@ export const createWardrobeSchema = z.object({
   restrictions: z.string().default(""),
   guideUrl: z.string().url().nullable().default(null),
   imageUrl: z.string().url().nullable().default(null),
+  qrCode: z.string().nullable().default(null),
 });
 
 export const updateWardrobeSchema = createWardrobeSchema.partial();
