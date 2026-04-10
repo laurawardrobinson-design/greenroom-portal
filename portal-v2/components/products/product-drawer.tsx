@@ -103,6 +103,20 @@ export function ProductDrawer({
   const imageFileRef = useRef<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDeptDropdown, setShowDeptDropdown] = useState(false);
+  const deptDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dept dropdown on outside click
+  useEffect(() => {
+    if (!showDeptDropdown) return;
+    function handler(e: MouseEvent) {
+      if (deptDropdownRef.current && !deptDropdownRef.current.contains(e.target as Node)) {
+        setShowDeptDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showDeptDropdown]);
 
   // Pcom import
   const [pcomUrl, setPcomUrl] = useState("");
@@ -252,6 +266,25 @@ export function ProductDrawer({
     }
   }
 
+  async function saveDepartment(dept: ProductDepartment) {
+    setDepartment(dept);
+    setShowDeptDropdown(false);
+    if (!current) return; // new product — just update local state
+    try {
+      const res = await fetch(`/api/products/${current.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ department: dept }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const saved: Product = await res.json();
+      setCurrent(saved);
+      onSaved(saved);
+    } catch {
+      toast("error", "Failed to update department");
+    }
+  }
+
   async function handlePcomImport() {
     if (!pcomUrl.trim()) return;
     setPcomFetching(true);
@@ -296,17 +329,33 @@ export function ProductDrawer({
           className={`text-lg font-semibold text-text-primary bg-transparent flex-1 min-w-0 focus:outline-none ${editMode ? "border-b border-transparent hover:border-border focus:border-primary pb-0.5" : "pointer-events-none truncate"}`}
         />
         <div className="flex items-center gap-1 shrink-0">
-          <span
-            className={`text-xs font-medium rounded-full px-2 py-0.5 inline-flex items-center ${editMode ? "cursor-pointer ring-1 ring-primary/30" : ""} ${department ? (DEPT_COLORS[department] || DEPT_COLORS.Other) : "bg-surface-secondary text-text-tertiary"}`}
-            onClick={editMode ? () => {
-              const depts = ["", ...PRODUCT_DEPARTMENTS];
-              const idx = depts.indexOf(department);
-              setDepartment(depts[(idx + 1) % depts.length] as ProductDepartment);
-            } : undefined}
-            title={editMode ? "Click to change department" : undefined}
-          >
-            {department || "No dept"}
-          </span>
+          <div ref={deptDropdownRef} className="relative">
+            <button
+              type="button"
+              onClick={() => !isNew && setShowDeptDropdown((v) => !v)}
+              className={`text-xs font-medium rounded-full px-2 py-0.5 inline-flex items-center gap-1 transition-opacity hover:opacity-80 ${department ? (DEPT_COLORS[department] || DEPT_COLORS.Other) : "bg-surface-secondary text-text-tertiary"}`}
+              title="Change department"
+            >
+              {department || "No dept"}
+              <svg className="h-2.5 w-2.5 opacity-60" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M1 1l4 4 4-4"/></svg>
+            </button>
+            {showDeptDropdown && (
+              <div className="absolute left-0 top-full mt-1 z-50 min-w-[140px] rounded-lg border border-border bg-surface shadow-lg py-1">
+                {PRODUCT_DEPARTMENTS.map((dept) => (
+                  <button
+                    key={dept}
+                    type="button"
+                    onClick={() => saveDepartment(dept as ProductDepartment)}
+                    className={`w-full text-left px-3 py-1.5 text-xs font-medium transition-colors hover:bg-surface-secondary ${department === dept ? "opacity-100" : "opacity-70 hover:opacity-100"}`}
+                  >
+                    <span className={`inline-flex rounded-full px-2 py-0.5 ${DEPT_COLORS[dept] || DEPT_COLORS.Other}`}>
+                      {dept}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <input
             type="text"
             value={itemCode}
