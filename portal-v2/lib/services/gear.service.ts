@@ -195,10 +195,10 @@ export async function updateGearItem(
   if (input.condition !== undefined) updateData.condition = input.condition;
   if (input.notes !== undefined) updateData.notes = input.notes;
   if ("rfidTag" in input) updateData.rfid_tag = input.rfidTag ?? null;
-  if ("imageUrl" in input) updateData.image_url = input.imageUrl ?? null;
+  if ("imageUrl" in input) updateData.image_url = input.imageUrl ?? "";
 
   const { data, error } = await db.from("gear_items").update(updateData).eq("id", id).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return toGearItem(data);
 }
 

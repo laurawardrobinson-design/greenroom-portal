@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { PROPS_CATEGORIES } from "@/lib/constants/categories";
-import type { GearItem, GearCondition } from "@/types/domain";
+import type { GearItem, GearCondition, GearStatus } from "@/types/domain";
 import { Camera, Pencil, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 
@@ -14,6 +14,8 @@ const STATUS_BADGE: Record<string, string> = {
   Available: "bg-emerald-50 text-emerald-700",
   Reserved: "bg-blue-50 text-blue-700",
   "Checked Out": "bg-amber-50 text-amber-700",
+  "Under Maintenance": "bg-purple-50 text-purple-700",
+  "In Repair": "bg-red-50 text-red-600",
 };
 
 const CONDITION_BADGE: Record<string, string> = {
@@ -25,6 +27,14 @@ const CONDITION_BADGE: Record<string, string> = {
 };
 
 const CONDITIONS: GearCondition[] = ["Excellent", "Good", "Fair", "Poor", "Damaged"];
+
+const STATUSES: GearStatus[] = [
+  "Available",
+  "Reserved",
+  "Checked Out",
+  "Under Maintenance",
+  "In Repair",
+];
 
 export function PropDetailModal({
   item,
@@ -46,6 +56,7 @@ export function PropDetailModal({
   const [category, setCategory] = useState("");
   const [brand, setBrand] = useState("");
   const [condition, setCondition] = useState<string>("Good");
+  const [status, setStatus] = useState<string>("Available");
   const [notes, setNotes] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -57,6 +68,7 @@ export function PropDetailModal({
       setCategory(item.category);
       setBrand(item.brand);
       setCondition(item.condition);
+      setStatus(item.status);
       setNotes(item.notes || "");
       setPurchasePrice(item.purchasePrice > 0 ? String(item.purchasePrice) : "");
       setImageUrl(item.imageUrl || null);
@@ -97,6 +109,7 @@ export function PropDetailModal({
           category,
           brand,
           condition,
+          status,
           notes,
           purchasePrice: purchasePrice ? parseFloat(purchasePrice) : 0,
           imageUrl: finalImageUrl,
@@ -114,13 +127,13 @@ export function PropDetailModal({
     }
   }
 
-
   function handleCancel() {
     if (item) {
       setName(item.name);
       setCategory(item.category);
       setBrand(item.brand);
       setCondition(item.condition);
+      setStatus(item.status);
       setNotes(item.notes || "");
       setPurchasePrice(item.purchasePrice > 0 ? String(item.purchasePrice) : "");
       setImageUrl(item.imageUrl || null);
@@ -141,14 +154,10 @@ export function PropDetailModal({
       </button>
 
       <form onSubmit={handleSave} className="space-y-4">
-        {/* ── Image ── always h-40, edit mode adds click-to-change overlay */}
+        {/* ── Image ── */}
         <div className="relative">
           {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={item.name}
-              className="h-40 w-full rounded-xl object-cover"
-            />
+            <img src={imageUrl} alt={item.name} className="h-40 w-full rounded-xl object-cover" />
           ) : (
             <div className="flex h-40 w-full items-center justify-center rounded-xl bg-surface-tertiary">
               <Camera className="h-8 w-8 text-text-tertiary" />
@@ -184,13 +193,25 @@ export function PropDetailModal({
           )}
         </div>
 
-        {/* ── Status / condition / category row ── always same layout */}
+        {/* ── Status / condition / category row ── */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Status — always read-only */}
-          <Badge variant="custom" className={STATUS_BADGE[item.status] || ""}>
-            {item.status}
-          </Badge>
-          {/* Condition — badge in view, badge-styled select in edit */}
+          {/* Status */}
+          {editMode ? (
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className={`appearance-none cursor-pointer rounded-full px-2.5 py-0.5 text-xs font-medium outline-none ${STATUS_BADGE[status] || "bg-surface-secondary text-text-secondary"}`}
+            >
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          ) : (
+            <Badge variant="custom" className={STATUS_BADGE[status] || ""}>
+              {status}
+            </Badge>
+          )}
+          {/* Condition */}
           {editMode ? (
             <select
               value={condition}
@@ -202,11 +223,11 @@ export function PropDetailModal({
               ))}
             </select>
           ) : (
-            <Badge variant="custom" className={CONDITION_BADGE[item.condition] || ""}>
-              {item.condition}
+            <Badge variant="custom" className={CONDITION_BADGE[condition] || ""}>
+              {condition}
             </Badge>
           )}
-          {/* Category — badge in view, badge-styled select in edit */}
+          {/* Category */}
           {editMode ? (
             <select
               value={category}
@@ -218,13 +239,12 @@ export function PropDetailModal({
               ))}
             </select>
           ) : (
-            <Badge variant="default">{item.category}</Badge>
+            <Badge variant="default">{category}</Badge>
           )}
         </div>
 
-        {/* ── Detail grid — always same elements, readOnly toggles ── */}
+        {/* ── Detail grid ── */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-          {/* Name */}
           <div className="col-span-2">
             <p className="text-text-tertiary text-xs mb-0.5">Name</p>
             <input
@@ -235,8 +255,6 @@ export function PropDetailModal({
               className={`w-full bg-transparent text-text-primary font-medium text-sm p-0 outline-none border-b ${editMode ? "border-dashed border-border focus:border-primary" : "border-transparent cursor-default"}`}
             />
           </div>
-
-          {/* Brand / Source */}
           <div className="col-span-2">
             <p className="text-text-tertiary text-xs mb-0.5">Brand / Source</p>
             <input
@@ -246,8 +264,6 @@ export function PropDetailModal({
               className={`w-full bg-transparent text-text-primary font-medium text-sm p-0 outline-none border-b ${editMode ? "border-dashed border-border focus:border-primary" : "border-transparent cursor-default"}`}
             />
           </div>
-
-          {/* Purchase Price */}
           <div>
             <p className="text-text-tertiary text-xs mb-0.5">Value</p>
             <input
@@ -260,7 +276,7 @@ export function PropDetailModal({
           </div>
         </div>
 
-        {/* ── Notes — always a textarea, readOnly toggles ── */}
+        {/* ── Notes ── */}
         <div>
           <p className="text-text-tertiary text-xs mb-0.5">Notes</p>
           <textarea
@@ -275,12 +291,10 @@ export function PropDetailModal({
         {/* ── Footer ── */}
         <ModalFooter>
           {editMode ? (
-            <>
-              <div className="flex gap-2 ml-auto">
-                <Button type="button" variant="ghost" onClick={handleCancel}>Cancel</Button>
-                <Button type="submit" loading={saving}>Save Changes</Button>
-              </div>
-            </>
+            <div className="flex gap-2 ml-auto">
+              <Button type="button" variant="ghost" onClick={handleCancel}>Cancel</Button>
+              <Button type="submit" loading={saving}>Save Changes</Button>
+            </div>
           ) : (
             onSaved && (
               <Button type="button" size="sm" onClick={() => setEditMode(true)}>

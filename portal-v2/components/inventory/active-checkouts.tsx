@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import type { GearCheckout } from "@/types/domain";
+import type { GearCheckout, GearItem } from "@/types/domain";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -11,7 +11,11 @@ import { formatDistanceToNow, parseISO, format, isBefore, startOfDay } from "dat
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function ActiveCheckouts() {
+export function ActiveCheckouts({
+  onLoadToCart,
+}: {
+  onLoadToCart?: (items: GearItem[]) => void;
+}) {
   const { toast } = useToast();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: checkouts = [], mutate } = useSWR<GearCheckout[]>(
@@ -48,6 +52,13 @@ export function ActiveCheckouts() {
     }
   }
 
+  function handleLoadAll() {
+    const items = checkouts
+      .map((co) => co.gearItem)
+      .filter((item): item is GearItem => !!item);
+    if (items.length > 0) onLoadToCart?.(items);
+  }
+
   if (checkouts.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-surface p-5">
@@ -72,6 +83,15 @@ export function ActiveCheckouts() {
           CURRENTLY CHECKED OUT
         </h3>
         <Badge variant="default">{checkouts.length}</Badge>
+        {onLoadToCart && (
+          <button
+            onClick={handleLoadAll}
+            className="ml-auto flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+          >
+            <ArrowDownToLine className="h-3 w-3" />
+            Load all for check-in
+          </button>
+        )}
       </div>
       <div className="divide-y divide-border-light max-h-72 overflow-y-auto">
         {checkouts.map((co) => (

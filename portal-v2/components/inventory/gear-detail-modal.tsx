@@ -11,8 +11,8 @@ import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { RfidScanner } from "@/components/ui/rfid-scanner";
 import { GEAR_CATEGORIES } from "@/lib/constants/categories";
-import type { GearItem, GearCondition, GearMaintenance } from "@/types/domain";
-import { Camera, QrCode, Printer, X, Pencil, Radio, MessageSquare, Send, Wrench } from "lucide-react";
+import type { GearItem, GearCondition, GearStatus, GearMaintenance } from "@/types/domain";
+import { Camera, QrCode, Printer, X, Pencil, Radio, MessageSquare, Send, Wrench, Activity } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import { formatDistanceToNow, parseISO, format } from "date-fns";
 
@@ -49,6 +49,14 @@ const CONDITIONS: GearCondition[] = [
   "Fair",
   "Poor",
   "Damaged",
+];
+
+const STATUSES: GearStatus[] = [
+  "Available",
+  "Reserved",
+  "Checked Out",
+  "Under Maintenance",
+  "In Repair",
 ];
 
 export function GearDetailModal({
@@ -118,6 +126,7 @@ export function GearDetailModal({
   const [qrCode, setQrCode] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [condition, setCondition] = useState<string>("Good");
+  const [status, setStatus] = useState<string>("Available");
   const [notes, setNotes] = useState("");
   const [rfidTag, setRfidTag] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -138,6 +147,7 @@ export function GearDetailModal({
       setQrCode(item.qrCode);
       setPurchasePrice(item.purchasePrice > 0 ? String(item.purchasePrice) : "");
       setCondition(item.condition);
+      setStatus(item.status);
       setNotes(item.notes || "");
       setRfidTag(item.rfidTag ?? null);
       setImageUrl(item.imageUrl || null);
@@ -157,6 +167,7 @@ export function GearDetailModal({
     setQrCode(item.qrCode);
     setPurchasePrice(item.purchasePrice > 0 ? String(item.purchasePrice) : "");
     setCondition(item.condition);
+    setStatus(item.status);
     setNotes(item.notes || "");
     setRfidTag(item.rfidTag ?? null);
     setImageUrl(item.imageUrl || null);
@@ -200,6 +211,7 @@ export function GearDetailModal({
           qrCode,
           purchasePrice: purchasePrice ? parseFloat(purchasePrice) : 0,
           condition,
+          status,
           notes,
           imageUrl: finalImageUrl,
         }),
@@ -319,10 +331,22 @@ export function GearDetailModal({
 
         {/* ── Status / condition / category row ── always same layout */}
         <div className="flex items-center gap-2">
-          {/* Status — always read-only */}
-          <Badge variant="custom" className={STATUS_BADGE[item.status] || ""}>
-            {item.status}
-          </Badge>
+          {/* Status — read-only in view, editable select in edit */}
+          {editMode ? (
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className={`appearance-none cursor-pointer rounded-full px-2.5 py-0.5 text-xs font-medium outline-none ${STATUS_BADGE[status] || "bg-surface-secondary text-text-secondary"}`}
+            >
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          ) : (
+            <Badge variant="custom" className={STATUS_BADGE[status] || ""}>
+              {status}
+            </Badge>
+          )}
           {/* Condition — badge in view, badge-styled select in edit */}
           {editMode ? (
             <select
@@ -335,8 +359,8 @@ export function GearDetailModal({
               ))}
             </select>
           ) : (
-            <Badge variant="custom" className={CONDITION_BADGE[item.condition] || ""}>
-              {item.condition}
+            <Badge variant="custom" className={CONDITION_BADGE[condition] || ""}>
+              {condition}
             </Badge>
           )}
           {/* Category — badge in view, badge-styled select in edit */}
@@ -351,7 +375,7 @@ export function GearDetailModal({
               ))}
             </select>
           ) : (
-            <Badge variant="default">{item.category}</Badge>
+            <Badge variant="default">{category}</Badge>
           )}
         </div>
 

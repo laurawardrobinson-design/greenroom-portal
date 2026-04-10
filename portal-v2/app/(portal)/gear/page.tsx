@@ -1196,7 +1196,13 @@ export default function InventoryPage() {
           />
 
           {/* Active checkouts */}
-          <ActiveCheckouts />
+          <ActiveCheckouts
+            onLoadToCart={(items) => {
+              const newItems = items.filter((item) => !cartItems.some((c) => c.id === item.id));
+              setCartItems((prev) => [...prev, ...newItems]);
+              setCartMode("checkin");
+            }}
+          />
         </div>
       </Modal>
 

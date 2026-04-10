@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { useSearchParams } from "next/navigation";
 import type { GearItem, GearStatus, GearCondition } from "@/types/domain";
 import { PROPS_CATEGORIES } from "@/lib/constants/categories";
@@ -31,6 +31,7 @@ import {
   ScanLine,
   QrCode,
   Package,
+  StopCircle,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -50,6 +51,7 @@ type Tab = "items" | "reservations";
 
 export default function PropsPage() {
   const { toast } = useToast();
+  const { mutate: globalMutate } = useSWRConfig();
   const { user } = useCurrentUser();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>("items");
@@ -65,10 +67,13 @@ export default function PropsPage() {
   const [showScanner, setShowScanner] = useState(false);
   const [scannerActive, setScannerActive] = useState(false);
   const [cartItems, setCartItems] = useState<GearItem[]>([]);
+  const [cartMode, setCartMode] = useState<"checkout" | "checkin" | null>(null);
   const [processing, setProcessing] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const cartRef = useRef<GearItem[]>([]);
   cartRef.current = cartItems;
+  const cartModeRef = useRef<"checkout" | "checkin" | null>(null);
+  cartModeRef.current = cartMode;
 
   const params = new URLSearchParams({ section: "Props" });
   if (search) params.set("search", search);
@@ -103,7 +108,6 @@ export default function PropsPage() {
     if (!normalized) return;
 
     if (cartRef.current.some((i) => i.qrCode.trim().toLowerCase() === normalized.toLowerCase())) {
-      toast("info", "Item already scanned");
       return;
     }
     try {
@@ -113,6 +117,14 @@ export default function PropsPage() {
         throw new Error(data.error || "Item not found");
       }
       const item: GearItem = await res.json();
+      if (item.section !== "Props") {
+        toast("error", `${item.name} is a Gear item — scan Props QR codes here`);
+        return;
+      }
+      const itemMode = item.status === "Checked Out" ? "checkin" : "checkout";
+      if (cartModeRef.current === null) {
+        setCartMode(itemMode);
+      }
       setCartItems((prev) => {
         if (prev.some((i) => i.id === item.id)) return prev;
         return [...prev, item];
@@ -153,7 +165,9 @@ export default function PropsPage() {
       if (!res.ok) throw new Error(data.error || "Checkout failed");
       toast("success", `Checked out ${eligible.length} item(s)`);
       setCartItems([]);
+      setCartMode(null);
       mutate();
+      globalMutate("/api/gear/checkouts");
     } catch (err) {
       toast("error", err instanceof Error ? err.message : "Checkout failed");
     } finally {
@@ -179,7 +193,9 @@ export default function PropsPage() {
       if (!res.ok) throw new Error(data.error || "Check-in failed");
       toast("success", `Checked in ${eligible.length} item(s)`);
       setCartItems([]);
+      setCartMode(null);
       mutate();
+      globalMutate("/api/gear/checkouts");
     } catch (err) {
       toast("error", err instanceof Error ? err.message : "Check-in failed");
     } finally {
@@ -405,7 +421,7 @@ export default function PropsPage() {
         item={detailItem}
         open={!!detailItem}
         onClose={() => setDetailItem(null)}
-        onSaved={() => { setDetailItem(null); mutate(); }}
+        onSaved={() => { mutate(); }}
       />
       {checkoutItem && (
         <CheckoutModal
@@ -433,18 +449,46 @@ export default function PropsPage() {
         <div className="space-y-4">
           {/* Scanner tile */}
           <div className="rounded-xl border border-border bg-surface overflow-hidden">
-            <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
-              <QrCode className="h-4 w-4 shrink-0 text-primary" />
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
-                SCAN ITEMS
-              </h3>
+            <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
+              <div className="flex items-center gap-2">
+                <QrCode className="h-4 w-4 shrink-0 text-primary" />
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+                  SCAN ITEMS
+                </h3>
+              </div>
+              {scannerActive ? (
+                <button
+                  onClick={() => setScannerActive(false)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  <StopCircle className="h-3.5 w-3.5" />
+                  Stop scanning
+                </button>
+              ) : (
+                <button
+                  onClick={() => setScannerActive(true)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                >
+                  <ScanLine className="h-3.5 w-3.5" />
+                  Start scanning
+                </button>
+              )}
             </div>
             <div className="p-4">
-              <QrScanner
-                active={scannerActive && showScanner}
-                onScan={handleScan}
-                onError={(err) => toast("error", err)}
-              />
+              {scannerActive ? (
+                <QrScanner
+                  active={scannerActive && showScanner}
+                  onScan={handleScan}
+                  onError={(err) => toast("error", err)}
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-surface-secondary/50 p-6 text-center">
+                  <QrCode className="h-5 w-5 text-text-tertiary" />
+                  <p className="text-sm text-text-secondary">
+                    Camera stopped. Tap <strong>Start scanning</strong> to resume.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -474,15 +518,22 @@ export default function PropsPage() {
           {/* Scanned items cart */}
           <BatchCart
             items={cartItems}
+            cartMode={cartMode}
             onRemove={(id) => setCartItems((prev) => prev.filter((i) => i.id !== id))}
             onCheckOutAll={handleBatchCheckout}
             onCheckInAll={handleBatchCheckin}
-            onClear={() => setCartItems([])}
+            onClear={() => { setCartItems([]); setCartMode(null); }}
             processing={processing}
           />
 
           {/* Active checkouts */}
-          <ActiveCheckouts />
+          <ActiveCheckouts
+            onLoadToCart={(items) => {
+              const newItems = items.filter((item) => !cartItems.some((c) => c.id === item.id));
+              setCartItems((prev) => [...prev, ...newItems]);
+              setCartMode("checkin");
+            }}
+          />
         </div>
       </Modal>
     </div>

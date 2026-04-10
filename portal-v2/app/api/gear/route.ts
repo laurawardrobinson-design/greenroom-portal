@@ -117,6 +117,7 @@ export async function POST(request: Request) {
         model: body.model,
         serialNumber: body.serialNumber,
         condition: body.condition,
+        status: body.status,
         notes: body.notes,
         imageUrl: body.imageUrl,
       });
