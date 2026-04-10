@@ -20,6 +20,7 @@ interface Props {
   currentAd: AppUser | null;
   producers: AppUser[];
   allUsers: AppUser[];
+  excludeUserId?: string;
   onAddProducer: (userId: string) => Promise<void>;
   onRemoveProducer: (userId: string) => Promise<void>;
   onAssignAD: (userId: string | null) => Promise<void>;
@@ -32,6 +33,7 @@ export function PeopleTile({
   currentAd,
   producers,
   allUsers,
+  excludeUserId,
   onAddProducer,
   onRemoveProducer,
   onAssignAD,
@@ -58,6 +60,7 @@ export function PeopleTile({
             producers={producers}
             allUsers={allUsers}
             canEdit={canEdit}
+            excludeUserId={excludeUserId}
             onAddProducer={onAddProducer}
             onRemoveProducer={onRemoveProducer}
             onAssignAD={onAssignAD}
@@ -82,6 +85,7 @@ function InternalTab({
   producers,
   allUsers,
   canEdit,
+  excludeUserId,
   onAddProducer,
   onRemoveProducer,
   onAssignAD,
@@ -90,6 +94,7 @@ function InternalTab({
   producers: AppUser[];
   allUsers: AppUser[];
   canEdit: boolean;
+  excludeUserId?: string;
   onAddProducer: (userId: string) => Promise<void>;
   onRemoveProducer: (userId: string) => Promise<void>;
   onAssignAD: (userId: string | null) => Promise<void>;
@@ -111,7 +116,10 @@ function InternalTab({
 
   const assignedIds = [...producers.map((p) => p.id), currentAd?.id].filter(Boolean) as string[];
   const available = allUsers.filter(
-    (u) => (u.role === "Producer" || u.role === "Art Director") && !assignedIds.includes(u.id)
+    (u) =>
+      (u.role === "Producer" || u.role === "Art Director") &&
+      !assignedIds.includes(u.id) &&
+      u.id !== excludeUserId
   );
 
   async function assign(user: AppUser) {

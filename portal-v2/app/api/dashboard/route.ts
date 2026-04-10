@@ -20,7 +20,7 @@ export async function GET(request: Request) {
         { data: shootsThisWeek },
         { data: pools },
       ] = await Promise.all([
-        db.from("campaigns").select("production_budget").neq("status", "Complete").neq("status", "Cancelled"),
+        db.from("campaigns").select("production_budget").neq("status", "Complete").neq("status", "Cancelled").is("deleted_at", null),
         db.from("budget_requests").select("id").eq("status", "Pending"),
         db.from("campaign_vendors").select("id").eq("status", "Invoice Pre-Approved"),
         db.from("shoot_dates").select("id").gte("shoot_date", today).lte("shoot_date", weekEnd),
@@ -48,6 +48,7 @@ export async function GET(request: Request) {
         .select("id, name, wf_number, status")
         .neq("status", "Complete")
         .neq("status", "Cancelled")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (!showAll) {
@@ -173,7 +174,8 @@ export async function GET(request: Request) {
         .select("id, name, wf_number, status, assets_delivery_date")
         .eq("art_director_id", user.id)
         .neq("status", "Complete")
-        .neq("status", "Cancelled");
+        .neq("status", "Cancelled")
+        .is("deleted_at", null);
 
       const adCampaigns = (adCampaignRows || []).filter(
         (c: any) => !bookingCampaignIds.has(c.id as string)
