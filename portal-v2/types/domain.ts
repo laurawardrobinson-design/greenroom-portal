@@ -625,6 +625,31 @@ export interface CampaignProduct {
   product?: Product;
 }
 
+// --- Wardrobe ---
+export type WardrobeCategory =
+  | "Tops"
+  | "Aprons"
+  | "Headwear"
+  | "Bottoms"
+  | "Outerwear"
+  | "Footwear"
+  | "Accessories"
+  | "Other";
+
+export interface WardrobeItem {
+  id: string;
+  name: string;
+  category: WardrobeCategory;
+  description: string;
+  shootingNotes: string;
+  restrictions: string;
+  guideUrl: string | null;
+  imageUrl: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // --- Campaign Gear ---
 export interface CampaignGearLink {
   id: string;

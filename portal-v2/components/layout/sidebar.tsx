@@ -11,6 +11,7 @@ import {
   Package,
   Boxes,
   Utensils,
+  Shirt,
   Settings,
   LogOut,
   X,
@@ -100,6 +101,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Products",
     href: "/food",
     icon: Utensils,
+    roles: ["Admin", "Producer", "Studio", "Art Director"],
+  },
+  {
+    label: "Wardrobe",
+    href: "/wardrobe",
+    icon: Shirt,
     roles: ["Admin", "Producer", "Studio", "Art Director"],
   },
   {

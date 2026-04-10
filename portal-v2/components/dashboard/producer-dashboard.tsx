@@ -511,7 +511,7 @@ export function ProducerDashboard({ user }: Props) {
           colorText="text-blue-600"
           colorBg="bg-blue-50"
         >
-          {stats?.activeCampaignsList.map((c) => (
+          {stats?.activeCampaignsList?.map((c) => (
             <Link
               key={c.id}
               href={`/campaigns/${c.id}`}
@@ -534,7 +534,7 @@ export function ProducerDashboard({ user }: Props) {
           colorText="text-amber-600"
           colorBg="bg-amber-50"
         >
-          {stats?.pendingTasksList.map((t) => (
+          {stats?.pendingTasksList?.map((t) => (
             <Link
               key={t.id}
               href={taskHref(t.type, t.campaignId)}
@@ -560,7 +560,7 @@ export function ProducerDashboard({ user }: Props) {
           colorText="text-purple-600"
           colorBg="bg-purple-50"
         >
-          {stats?.shootsThisWeekList.map((s) => (
+          {stats?.shootsThisWeekList?.map((s) => (
             <Link
               key={s.id}
               href={`/campaigns/${s.campaignId}`}
