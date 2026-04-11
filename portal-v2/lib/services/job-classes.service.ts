@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { JobClass, JobClassItem, JobClassNote, WardrobeItem, WardrobeCategory, WardrobeCondition } from "@/types/domain";
+import type { JobClass, JobClassItem, JobClassNote, JobClassItemGender, WardrobeItem, WardrobeCategory, WardrobeCondition } from "@/types/domain";
 
 // ── Mapping helpers ───────────────────────────────────────────────────────────
 
@@ -30,6 +30,9 @@ function toJobClassItem(row: Record<string, unknown>): JobClassItem {
     wardrobeItemId: row.wardrobe_item_id as string,
     notes: (row.notes as string) || "",
     sortOrder: Number(row.sort_order) || 0,
+    gender: ((row.gender as string) || "All") as JobClassItemGender,
+    optionGroup: (row.option_group as string) || null,
+    required: row.required !== false, // default true
     createdAt: row.created_at as string,
     wardrobeItem: itemData ? toWardrobeItem(itemData) : undefined,
   };
@@ -155,7 +158,12 @@ export async function listJobClassItems(jobClassId: string): Promise<JobClassIte
 export async function addItemToJobClass(
   jobClassId: string,
   wardrobeItemId: string,
-  notes = ""
+  options: {
+    notes?: string;
+    gender?: JobClassItemGender;
+    optionGroup?: string | null;
+    required?: boolean;
+  } = {}
 ): Promise<JobClassItem> {
   const db = createAdminClient();
 
@@ -170,8 +178,11 @@ export async function addItemToJobClass(
     .insert({
       job_class_id: jobClassId,
       wardrobe_item_id: wardrobeItemId,
-      notes,
+      notes: options.notes ?? "",
       sort_order: count ?? 0,
+      gender: options.gender ?? "All",
+      option_group: options.optionGroup ?? null,
+      required: options.required ?? true,
     })
     .select("*, wardrobe_items(*)")
     .single();
@@ -183,11 +194,25 @@ export async function addItemToJobClass(
   return toJobClassItem(data as Record<string, unknown>);
 }
 
-export async function updateJobClassItem(id: string, notes: string): Promise<JobClassItem> {
+export async function updateJobClassItem(
+  id: string,
+  input: {
+    notes?: string;
+    gender?: JobClassItemGender;
+    optionGroup?: string | null;
+    required?: boolean;
+  }
+): Promise<JobClassItem> {
   const db = createAdminClient();
+  const update: Record<string, unknown> = {};
+  if (input.notes !== undefined) update.notes = input.notes;
+  if (input.gender !== undefined) update.gender = input.gender;
+  if (input.optionGroup !== undefined) update.option_group = input.optionGroup;
+  if (input.required !== undefined) update.required = input.required;
+
   const { data, error } = await db
     .from("job_class_items")
-    .update({ notes })
+    .update(update)
     .eq("id", id)
     .select("*, wardrobe_items(*)")
     .single();

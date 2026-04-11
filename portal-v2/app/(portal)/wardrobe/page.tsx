@@ -9,11 +9,15 @@ import type {
   WardrobeCondition,
   WardrobeCheckout,
   WardrobeReservation,
+  WardrobeUnit,
+  UnitSize,
+  UnitGender,
   JobClass,
   JobClassItem,
   JobClassNote,
+  JobClassItemGender,
 } from "@/types/domain";
-import { WARDROBE_CATEGORIES } from "@/lib/validation/wardrobe.schema";
+import { WARDROBE_CATEGORIES, UNIT_SIZES, UNIT_GENDERS } from "@/lib/validation/wardrobe.schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -49,6 +53,9 @@ import {
   ChevronRight,
   AlertTriangle,
   Link as LinkIcon,
+  Archive,
+  ChevronDown,
+  Hash,
 } from "lucide-react";
 
 const fetcher = (url: string) =>
@@ -76,15 +83,24 @@ const STATUS_COLORS: Record<string, string> = {
 
 const CONDITIONS: WardrobeCondition[] = ["Excellent", "Good", "Fair", "Poor", "Damaged"];
 
-type Tab = "items" | "reservations" | "job-classes";
+type Tab = "job-classes" | "items" | "backstock" | "reservations";
 const NEW_ITEM = "NEW" as const;
+
+const GENDER_COLORS: Record<string, string> = {
+  "Men's":   "bg-sky-50 text-sky-700",
+  "Women's": "bg-fuchsia-50 text-fuchsia-700",
+  "Unisex":  "bg-slate-100 text-slate-600",
+  "All":     "bg-slate-100 text-slate-600",
+};
+
+const SIZE_ORDER = ["XS","S","M","L","XL","2XL","3XL","One Size","Other"] as const;
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function WardrobePage() {
   const { user } = useCurrentUser();
   const { mutate: globalMutate } = useSWRConfig();
-  const [tab, setTab] = useState<Tab>("items");
+  const [tab, setTab] = useState<Tab>("job-classes");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<WardrobeCategory | "">("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -196,21 +212,19 @@ export default function WardrobePage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-text-primary">Wardrobe</h2>
-          <p className="text-sm text-text-secondary">
-            {items.length} item{items.length !== 1 ? "s" : ""}
-          </p>
+          <p className="text-sm text-text-secondary">Uniform planning and physical backstock</p>
         </div>
-        {tab === "items" && (
+        {tab === "backstock" && (
           <Button variant="secondary" onClick={() => { setShowScanner(true); setScannerActive(true); }}>
             <ScanLine className="h-4 w-4" />
-            Scan Items
+            Scan Units
           </Button>
         )}
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
-        {(["items", "reservations", "job-classes"] as Tab[]).map((t) => (
+        {(["job-classes", "items", "backstock", "reservations"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -220,12 +234,17 @@ export default function WardrobePage() {
                 : "border-transparent text-text-secondary hover:text-text-primary hover:border-border"
             }`}
           >
-            {t === "items" ? "Items" : t === "reservations" ? "Reservations" : "Job Classes"}
+            {t === "job-classes" ? "Job Classes" : t === "items" ? "Uniform Items" : t === "backstock" ? "Backstock" : "Reservations"}
           </button>
         ))}
       </div>
 
-      {/* ── Items Tab ── */}
+      {/* ── Job Classes Tab ── */}
+      {tab === "job-classes" && (
+        <JobClassesTab canEdit={canEdit} allItems={items} />
+      )}
+
+      {/* ── Uniform Items Tab ── */}
       {tab === "items" && (
         <>
           <div className="space-y-2">
@@ -291,21 +310,10 @@ export default function WardrobePage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-text-primary truncate">{item.name}</p>
                       <Badge variant="custom" className={`mt-1 ${CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Other}`}>{item.category}</Badge>
-                      <Badge variant="custom" className={`mt-1 ml-1 ${STATUS_COLORS[item.status] || ""}`}>{item.status}</Badge>
                     </div>
                   </div>
                   {item.shootingNotes && <p className="mt-2 text-xs text-text-secondary line-clamp-2">{item.shootingNotes}</p>}
-                  {item.restrictions && <p className="mt-1 text-xs text-orange-700 font-medium">{item.restrictions}</p>}
-                  {canEdit && (item.status === "Available" || item.status === "Checked Out") && (
-                    <div className="mt-2 pt-2 border-t border-border-light w-full">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); item.status === "Available" ? setCheckoutItem(item) : setCheckinItem(item); }}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        {item.status === "Available" ? "Check Out" : "Check In"}
-                      </button>
-                    </div>
-                  )}
+                  {item.restrictions && <p className="mt-1 text-xs text-orange-700 font-medium line-clamp-1">{item.restrictions}</p>}
                 </button>
               ))}
             </div>
@@ -330,14 +338,14 @@ export default function WardrobePage() {
         </>
       )}
 
+      {/* ── Backstock Tab ── */}
+      {tab === "backstock" && (
+        <BackstockTab items={items} canEdit={canEdit} />
+      )}
+
       {/* ── Reservations Tab ── */}
       {tab === "reservations" && (
         <ReservationsTab items={items} canEdit={canEdit} onMutate={mutate} />
-      )}
-
-      {/* ── Job Classes Tab ── */}
-      {tab === "job-classes" && (
-        <JobClassesTab canEdit={canEdit} allItems={items} />
       )}
 
       {/* ── Modals & Drawers ── */}
@@ -519,7 +527,6 @@ function WardrobeDrawer({ item, onClose, onSaved, onDeleted, canEdit }: {
             <textarea value={restrictions} onChange={(e) => setRestrictions(e.target.value)} placeholder="Seasonal use, sizing, special handling..." rows={2} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
           </div>
           <Input label="Brand Guide URL" placeholder="https://..." value={guideUrl} onChange={(e) => setGuideUrl(e.target.value)} />
-          <Input label="QR Code (optional)" placeholder="Unique code for scanning" value={qrCode} onChange={(e) => setQrCode(e.target.value)} />
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={() => item ? setEditing(false) : onClose()} className="flex-1">Cancel</Button>
             <Button type="submit" loading={saving} className="flex-1">{item ? "Save Changes" : "Add Item"}</Button>
@@ -538,11 +545,8 @@ function WardrobeDrawer({ item, onClose, onSaved, onDeleted, canEdit }: {
             <div className="space-y-1">
               <div className="flex flex-wrap gap-1">
                 <Badge variant="custom" className={CATEGORY_COLORS[item!.category] || CATEGORY_COLORS.Other}>{item!.category}</Badge>
-                <Badge variant="custom" className={STATUS_COLORS[item!.status] || ""}>{item!.status}</Badge>
-                <Badge variant="custom" className="bg-surface-secondary text-text-secondary">{item!.condition}</Badge>
               </div>
               {item?.description && <p className="text-sm text-text-secondary">{item.description}</p>}
-              {item?.qrCode && <p className="text-[10px] text-text-tertiary font-mono">QR: {item.qrCode}</p>}
             </div>
           </div>
           {item?.shootingNotes && (
@@ -1093,6 +1097,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
   const [name, setName] = useState(jc?.name || "");
   const [description, setDescription] = useState(jc?.description || "");
   const [referenceUrl, setReferenceUrl] = useState(jc?.referenceUrl || "");
+  const [genderFilter, setGenderFilter] = useState<JobClassItemGender>("All");
 
   // Sync state when data loads
   if (jc && standards === "" && jc.standards) setStandards(jc.standards);
@@ -1165,7 +1170,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
       await fetch(`/api/job-classes/${jobClassId}/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "update_notes", jobClassItemId, notes: itemNotes }),
+        body: JSON.stringify({ action: "update_item", jobClassItemId, notes: itemNotes }),
       });
       mutate();
     } catch { toast("error", "Failed to save notes"); }
@@ -1273,18 +1278,86 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
             )}
           </div>
 
+          {/* Gender toggle — only show if any item has a gender tag */}
+          {items.some((ji) => ji.gender !== "All") && (
+            <div className="flex items-center gap-1 px-3.5 py-2.5 border-b border-border bg-surface-secondary">
+              {(["All", "Men's", "Women's"] as JobClassItemGender[]).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setGenderFilter(g)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    genderFilter === g
+                      ? g === "Men's"
+                        ? "bg-sky-100 text-sky-700"
+                        : g === "Women's"
+                        ? "bg-fuchsia-100 text-fuchsia-700"
+                        : "bg-primary text-white"
+                      : "text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary"
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          )}
+
           {items.length === 0 ? (
             <div className="p-4 text-center">
               <p className="text-sm text-text-tertiary">No items linked yet.</p>
               {canEdit && <button onClick={() => setShowAddItem(true)} className="mt-1 text-xs text-primary hover:underline">Add an item</button>}
             </div>
-          ) : (
-            <div className="divide-y divide-border-light">
-              {items.map((ji) => (
-                <JobClassItemRow key={ji.id} ji={ji} canEdit={canEdit} onRemove={() => handleRemoveItem(ji.id)} onSaveNotes={(n) => handleUpdateItemNotes(ji.id, n)} />
-              ))}
-            </div>
-          )}
+          ) : (() => {
+            // Filter by gender: always show "All" items; show gendered items only in their view
+            const filtered = items.filter((ji) =>
+              ji.gender === "All" || ji.gender === genderFilter
+            );
+            if (filtered.length === 0) {
+              return (
+                <div className="p-4 text-center">
+                  <p className="text-sm text-text-tertiary">No items for {genderFilter} view.</p>
+                </div>
+              );
+            }
+            // Group into rows: items with the same optionGroup are alternatives ("OR"), solo items render normally
+            type RowGroup = { type: "single"; item: JobClassItem } | { type: "or-group"; key: string; items: JobClassItem[] };
+            const rows: RowGroup[] = [];
+            const seen = new Set<string>();
+            for (const ji of filtered) {
+              if (!ji.optionGroup) {
+                rows.push({ type: "single", item: ji });
+              } else if (!seen.has(ji.optionGroup)) {
+                seen.add(ji.optionGroup);
+                rows.push({ type: "or-group", key: ji.optionGroup, items: filtered.filter((x) => x.optionGroup === ji.optionGroup) });
+              }
+            }
+            return (
+              <div className="divide-y divide-border-light">
+                {rows.map((row, idx) => {
+                  if (row.type === "single") {
+                    return <JobClassItemRow key={row.item.id} ji={row.item} canEdit={canEdit} onRemove={() => handleRemoveItem(row.item.id)} onSaveNotes={(n) => handleUpdateItemNotes(row.item.id, n)} />;
+                  }
+                  // OR group
+                  return (
+                    <div key={row.key} className="px-4 py-3 space-y-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">Pick one</p>
+                      {row.items.map((ji, i) => (
+                        <div key={ji.id}>
+                          <JobClassItemRow ji={ji} canEdit={canEdit} onRemove={() => handleRemoveItem(ji.id)} onSaveNotes={(n) => handleUpdateItemNotes(ji.id, n)} compact />
+                          {i < row.items.length - 1 && (
+                            <div className="flex items-center gap-2 my-1 pl-12">
+                              <div className="flex-1 h-px bg-border-light" />
+                              <span className="text-[10px] font-semibold text-text-tertiary uppercase tracking-widest">or</span>
+                              <div className="flex-1 h-px bg-border-light" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {showAddItem && availableToAdd.length > 0 && (
             <div className="flex gap-2 p-3.5 border-t border-border">
@@ -1383,18 +1456,19 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
 
 // ── Job Class Item Row ────────────────────────────────────────────────────────
 
-function JobClassItemRow({ ji, canEdit, onRemove, onSaveNotes }: {
+function JobClassItemRow({ ji, canEdit, onRemove, onSaveNotes, compact = false }: {
   ji: JobClassItem;
   canEdit: boolean;
   onRemove: () => void;
   onSaveNotes: (notes: string) => void;
+  compact?: boolean;
 }) {
   const item = ji.wardrobeItem;
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState(ji.notes);
 
   return (
-    <div className="px-4 py-3 space-y-2">
+    <div className={`${compact ? "py-1.5" : "px-4 py-3"} space-y-2`}>
       <div className="flex items-start gap-3">
         {item?.imageUrl ? (
           <img src={item.imageUrl} alt={item.name} className="h-10 w-10 rounded-lg object-cover shrink-0" />
@@ -1404,11 +1478,16 @@ function JobClassItemRow({ ji, canEdit, onRemove, onSaveNotes }: {
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-semibold text-text-primary truncate">{item?.name || "Unknown item"}</p>
-            {item && <Badge variant="custom" className={`text-[10px] ${STATUS_COLORS[item.status] || ""}`}>{item.status}</Badge>}
+            {!ji.required && <span className="text-[10px] font-medium text-text-tertiary italic">optional</span>}
           </div>
-          {item && <Badge variant="custom" className={`text-[10px] mt-0.5 ${CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Other}`}>{item.category}</Badge>}
+          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+            {item && <Badge variant="custom" className={`text-[10px] ${CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Other}`}>{item.category}</Badge>}
+            {ji.gender !== "All" && (
+              <Badge variant="custom" className={`text-[10px] ${GENDER_COLORS[ji.gender] || ""}`}>{ji.gender}</Badge>
+            )}
+          </div>
         </div>
         {canEdit && (
           <button onClick={onRemove} className="shrink-0 rounded p-1 text-text-tertiary hover:text-red-600 transition-colors"><X className="h-3.5 w-3.5" /></button>
@@ -1438,5 +1517,353 @@ function JobClassItemRow({ ji, canEdit, onRemove, onSaveNotes }: {
         </button>
       )}
     </div>
+  );
+}
+
+// ── Backstock Tab ─────────────────────────────────────────────────────────────
+
+function BackstockTab({ items, canEdit }: { items: WardrobeItem[]; canEdit: boolean }) {
+  const { toast } = useToast();
+  const { data: rawUnits, isLoading, mutate } = useSWR<WardrobeUnit[]>("/api/wardrobe/units", fetcher);
+  const units = Array.isArray(rawUnits) ? rawUnits : [];
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [addUnitFor, setAddUnitFor] = useState<WardrobeItem | null>(null);
+  const [editUnit, setEditUnit] = useState<WardrobeUnit | null>(null);
+
+  // Group units by wardrobe_item_id
+  const unitsByItem = new Map<string, WardrobeUnit[]>();
+  for (const unit of units) {
+    const list = unitsByItem.get(unit.wardrobeItemId) ?? [];
+    list.push(unit);
+    unitsByItem.set(unit.wardrobeItemId, list);
+  }
+
+  function toggleExpand(id: string) {
+    setExpandedItems((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  async function handleDeleteUnit(unit: WardrobeUnit) {
+    try {
+      await fetch(`/api/wardrobe/units/${unit.id}`, { method: "DELETE" });
+      toast("success", "Unit removed");
+      mutate();
+    } catch { toast("error", "Failed to remove unit"); }
+  }
+
+  // Items that have units + items that don't (show all item types)
+  const itemsWithUnits = items.filter((i) => unitsByItem.has(i.id));
+  const itemsWithoutUnits = items.filter((i) => !unitsByItem.has(i.id));
+  const allItemsSorted = [...itemsWithUnits, ...itemsWithoutUnits];
+
+  if (isLoading) return <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)}</div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-text-secondary">{units.length} unit{units.length !== 1 ? "s" : ""} across {itemsWithUnits.length} item type{itemsWithUnits.length !== 1 ? "s" : ""}</p>
+        {canEdit && items.length > 0 && (
+          <Button size="sm" onClick={() => setAddUnitFor(items[0])}>
+            <Plus className="h-3.5 w-3.5" />Add Units
+          </Button>
+        )}
+      </div>
+
+      {allItemsSorted.length === 0 ? (
+        <EmptyState icon={<Archive className="h-5 w-5" />} title="No uniform items yet" description="Add uniform item types in the Uniform Items tab first, then add physical units here." />
+      ) : (
+        <div className="space-y-2">
+          {allItemsSorted.map((item) => {
+            const itemUnits = unitsByItem.get(item.id) ?? [];
+            const available = itemUnits.filter((u) => u.status === "Available").length;
+            const isExpanded = expandedItems.has(item.id);
+
+            return (
+              <div key={item.id} className="rounded-xl border border-border bg-surface overflow-hidden">
+                {/* Section header */}
+                <button
+                  onClick={() => toggleExpand(item.id)}
+                  className="flex items-center justify-between w-full px-4 py-3 hover:bg-surface-secondary transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.name} className="h-8 w-8 rounded-lg object-cover shrink-0" />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-tertiary shrink-0">
+                        <Shirt className="h-3.5 w-3.5 text-text-tertiary" />
+                      </div>
+                    )}
+                    <div className="text-left">
+                      <p className="text-sm font-semibold text-text-primary">{item.name}</p>
+                      <p className="text-[10px] text-text-tertiary">
+                        {itemUnits.length === 0 ? "No units yet" : `${itemUnits.length} unit${itemUnits.length !== 1 ? "s" : ""} — ${available} available`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="custom" className={CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Other}>{item.category}</Badge>
+                    {canEdit && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setAddUnitFor(item); }}
+                        className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />Add
+                      </button>
+                    )}
+                    <ChevronDown className={`h-4 w-4 text-text-tertiary transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                  </div>
+                </button>
+
+                {/* Units list */}
+                {isExpanded && (
+                  <div className="border-t border-border">
+                    {itemUnits.length === 0 ? (
+                      <div className="px-4 py-4 text-center">
+                        <p className="text-sm text-text-tertiary">No physical units logged yet.</p>
+                        {canEdit && (
+                          <button onClick={() => setAddUnitFor(item)} className="mt-1 text-xs text-primary hover:underline">
+                            Add first unit
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border-light">
+                        {/* Column headers */}
+                        <div className="hidden sm:grid grid-cols-[80px_100px_120px_120px_1fr_80px] px-4 py-2 bg-surface-secondary text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+                          <div>Size</div><div>Gender</div><div>Status</div><div>Condition</div><div>Notes</div><div></div>
+                        </div>
+                        {itemUnits.map((unit) => (
+                          <div key={unit.id} className="grid grid-cols-1 sm:grid-cols-[80px_100px_120px_120px_1fr_80px] items-center px-4 py-2.5 gap-2">
+                            <span className="text-sm font-medium text-text-primary">{unit.size}</span>
+                            <Badge variant="custom" className={`text-[10px] w-fit ${GENDER_COLORS[unit.gender] || ""}`}>{unit.gender}</Badge>
+                            <Badge variant="custom" className={`text-[10px] w-fit ${STATUS_COLORS[unit.status] || ""}`}>{unit.status}</Badge>
+                            <span className="text-xs text-text-secondary">{unit.condition}</span>
+                            <span className="text-xs text-text-tertiary truncate">{unit.qrCode ? `QR: ${unit.qrCode}` : unit.notes || "—"}</span>
+                            {canEdit && (
+                              <div className="flex items-center gap-1 justify-end">
+                                <button onClick={() => setEditUnit(unit)} className="rounded p-1 text-text-tertiary hover:text-text-secondary transition-colors"><Edit2 className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => handleDeleteUnit(unit)} className="rounded p-1 text-text-tertiary hover:text-red-600 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {addUnitFor && (
+        <AddUnitModal
+          item={addUnitFor}
+          allItems={items}
+          onClose={() => setAddUnitFor(null)}
+          onSaved={() => { setAddUnitFor(null); mutate(); }}
+        />
+      )}
+      {editUnit && (
+        <EditUnitModal
+          unit={editUnit}
+          onClose={() => setEditUnit(null)}
+          onSaved={() => { setEditUnit(null); mutate(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Add Unit Modal ────────────────────────────────────────────────────────────
+
+function AddUnitModal({ item, allItems, onClose, onSaved }: {
+  item: WardrobeItem;
+  allItems: WardrobeItem[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [itemId, setItemId] = useState(item.id);
+  const [size, setSize] = useState<UnitSize>("One Size");
+  const [gender, setGender] = useState<UnitGender>("Unisex");
+  const [condition, setCondition] = useState("Good");
+  const [qrCode, setQrCode] = useState("");
+  const [notes, setNotes] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await fetch("/api/wardrobe/units", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wardrobeItemId: itemId,
+          size, gender, condition,
+          qrCode: qrCode.trim() || null,
+          notes: notes.trim(),
+          quantity,
+        }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
+      toast("success", `${quantity} unit${quantity !== 1 ? "s" : ""} added`);
+      onSaved();
+    } catch (err) { toast("error", err instanceof Error ? err.message : "Failed to add unit"); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <Modal open={true} onClose={onClose} title="Add Backstock Units" size="md">
+      <form onSubmit={handleSave} className="space-y-4">
+        {/* Item type selector */}
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-1.5">Uniform Item Type</label>
+          <select value={itemId} onChange={(e) => setItemId(e.target.value)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            {allItems.map((i) => <option key={i.id} value={i.id}>{i.name} — {i.category}</option>)}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {/* Size */}
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">Size</label>
+            <select value={size} onChange={(e) => setSize(e.target.value as UnitSize)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+              {UNIT_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          {/* Gender */}
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">Gender Cut</label>
+            <select value={gender} onChange={(e) => setGender(e.target.value as UnitGender)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+              {UNIT_GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {/* Condition */}
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">Condition</label>
+            <select value={condition} onChange={(e) => setCondition(e.target.value)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+              {CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          {/* Quantity */}
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">Quantity</label>
+            <input
+              type="number"
+              min={1}
+              max={50}
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))}
+              className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+        </div>
+
+        {quantity === 1 && (
+          <Input label="QR Code (optional)" placeholder="Unique code for this unit" value={qrCode} onChange={(e) => setQrCode(e.target.value)} />
+        )}
+
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-1.5">Notes (optional)</label>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Any unit-specific notes..." className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+        </div>
+
+        {quantity > 1 && (
+          <p className="text-[11px] text-text-tertiary">Adding {quantity} identical units — QR codes can be assigned individually after creation.</p>
+        )}
+
+        <ModalFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="submit" loading={saving}>Add {quantity > 1 ? `${quantity} Units` : "Unit"}</Button>
+        </ModalFooter>
+      </form>
+    </Modal>
+  );
+}
+
+// ── Edit Unit Modal ───────────────────────────────────────────────────────────
+
+function EditUnitModal({ unit, onClose, onSaved }: {
+  unit: WardrobeUnit;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [size, setSize] = useState<UnitSize>(unit.size);
+  const [gender, setGender] = useState<UnitGender>(unit.gender);
+  const [condition, setCondition] = useState(unit.condition);
+  const [status, setStatus] = useState(unit.status);
+  const [qrCode, setQrCode] = useState(unit.qrCode ?? "");
+  const [notes, setNotes] = useState(unit.notes);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/wardrobe/units/${unit.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ size, gender, condition, status, qrCode: qrCode.trim() || null, notes }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
+      toast("success", "Unit updated");
+      onSaved();
+    } catch (err) { toast("error", err instanceof Error ? err.message : "Failed to update unit"); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <Modal open={true} onClose={onClose} title={`Edit Unit — ${unit.wardrobeItem?.name ?? "Unit"}`} size="md">
+      <form onSubmit={handleSave} className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">Size</label>
+            <select value={size} onChange={(e) => setSize(e.target.value as UnitSize)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+              {UNIT_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">Gender Cut</label>
+            <select value={gender} onChange={(e) => setGender(e.target.value as UnitGender)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+              {UNIT_GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">Condition</label>
+            <select value={condition} onChange={(e) => setCondition(e.target.value as WardrobeCondition)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+              {CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">Status</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value as WardrobeUnit["status"])} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+              <option>Available</option>
+              <option>Reserved</option>
+              <option>Checked Out</option>
+            </select>
+          </div>
+        </div>
+        <Input label="QR Code (optional)" placeholder="Unique code for scanning" value={qrCode} onChange={(e) => setQrCode(e.target.value)} />
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-1.5">Notes</label>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+        </div>
+        <ModalFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="submit" loading={saving}>Save Changes</Button>
+        </ModalFooter>
+      </form>
+    </Modal>
   );
 }

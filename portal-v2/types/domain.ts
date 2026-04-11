@@ -686,6 +686,26 @@ export interface WardrobeReservation {
   wardrobeItem?: WardrobeItem;
 }
 
+// --- Wardrobe Units (physical backstock) ---
+export type UnitSize = "XS" | "S" | "M" | "L" | "XL" | "2XL" | "3XL" | "One Size" | "Other";
+export type UnitGender = "Men's" | "Women's" | "Unisex";
+export type JobClassItemGender = "All" | "Men's" | "Women's";
+
+export interface WardrobeUnit {
+  id: string;
+  wardrobeItemId: string;
+  size: UnitSize;
+  gender: UnitGender;
+  status: WardrobeStatus;
+  condition: WardrobeCondition;
+  qrCode: string | null;
+  notes: string;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  wardrobeItem?: WardrobeItem;
+}
+
 // --- Job Classes ---
 export interface JobClass {
   id: string;
@@ -705,6 +725,9 @@ export interface JobClassItem {
   wardrobeItemId: string;
   notes: string;
   sortOrder: number;
+  gender: JobClassItemGender;
+  optionGroup: string | null;
+  required: boolean;
   createdAt: string;
   wardrobeItem?: WardrobeItem;
 }

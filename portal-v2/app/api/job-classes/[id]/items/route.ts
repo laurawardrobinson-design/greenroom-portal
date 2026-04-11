@@ -35,15 +35,31 @@ export async function POST(
       return NextResponse.json({ success: true });
     }
 
+    if (body.action === "update_item") {
+      const item = await updateJobClassItem(body.jobClassItemId, {
+        notes: body.notes,
+        gender: body.gender,
+        optionGroup: body.optionGroup,
+        required: body.required,
+      });
+      return NextResponse.json(item);
+    }
+
+    // Legacy action name kept for backward compat
     if (body.action === "update_notes") {
-      const item = await updateJobClassItem(body.jobClassItemId, body.notes ?? "");
+      const item = await updateJobClassItem(body.jobClassItemId, { notes: body.notes ?? "" });
       return NextResponse.json(item);
     }
 
     if (!body.wardrobeItemId) {
       return NextResponse.json({ error: "wardrobeItemId required" }, { status: 400 });
     }
-    const item = await addItemToJobClass(id, body.wardrobeItemId, body.notes ?? "");
+    const item = await addItemToJobClass(id, body.wardrobeItemId, {
+      notes: body.notes,
+      gender: body.gender,
+      optionGroup: body.optionGroup,
+      required: body.required,
+    });
     return NextResponse.json(item, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message.includes("already in")) {
