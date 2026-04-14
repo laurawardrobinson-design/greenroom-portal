@@ -255,8 +255,8 @@ export default function LoginPage() {
           </p>
         )}
       </div>
-      <p className="absolute bottom-4 text-xs text-white/40">
-        Designed by Laura Robinson — contact with feature requests or questions
+      <p className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-medium tracking-widest text-white/55">
+        Designed by Laura Robinson · Powered by LaurAI
       </p>
     </div>
   );
