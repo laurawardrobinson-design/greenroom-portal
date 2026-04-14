@@ -1313,30 +1313,30 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
             )}
           </div>
 
+          {items.length > 0 && (
+            <div className="flex items-center gap-1 px-3.5 py-2.5 border-b border-border bg-surface-secondary">
+              {(["All", "Men's", "Women's"] as JobClassItemGender[]).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setGenderFilter(g)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    genderFilter === g
+                      ? g === "Men's"
+                        ? "bg-sky-100 text-sky-700"
+                        : g === "Women's"
+                        ? "bg-fuchsia-100 text-fuchsia-700"
+                        : "bg-primary text-white"
+                      : "text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary"
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex">
             {/* Items list */}
             <div className="flex-1 min-w-0">
-              {items.length > 0 && (
-                <div className="flex items-center gap-1 px-3.5 py-2.5 border-b border-border bg-surface-secondary">
-                  {(["All", "Men's", "Women's"] as JobClassItemGender[]).map((g) => (
-                    <button
-                      key={g}
-                      onClick={() => setGenderFilter(g)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                        genderFilter === g
-                          ? g === "Men's"
-                            ? "bg-sky-100 text-sky-700"
-                            : g === "Women's"
-                            ? "bg-fuchsia-100 text-fuchsia-700"
-                            : "bg-primary text-white"
-                          : "text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary"
-                      }`}
-                    >
-                      {g}
-                    </button>
-                  ))}
-                </div>
-              )}
 
               {items.length === 0 ? (
                 <div className="p-4 text-center">
@@ -1409,7 +1409,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
             </div>
 
             {/* Photo column */}
-            <div className="w-[300px] shrink-0 border-l border-border bg-white flex flex-col items-center justify-center p-4">
+            <div className="w-[250px] shrink-0 border-l border-border bg-white flex flex-col items-center justify-center p-4">
               <button
                 type="button"
                 onClick={() => canEdit && photoInputRef.current?.click()}
