@@ -1248,26 +1248,20 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
   );
 
   return (
-    <Modal open={true} onClose={onClose} size="3xl">
+    <Modal open={true} onClose={onClose} size="2xl">
       <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoUpload} />
 
       {/* Title row */}
-      <div className="flex items-center justify-between gap-2 mb-4">
-        <h2 className="text-lg font-semibold text-text-primary truncate">{jc.name}</h2>
-        <div className="flex items-center gap-0.5 shrink-0">
-          {jc.referenceUrl && !editingName && (
-            <a href={jc.referenceUrl} target="_blank" rel="noopener noreferrer" title="Dress code reference"
-               className="rounded-lg p-1.5 text-text-tertiary hover:text-primary hover:bg-surface-secondary transition-colors">
-              <LinkIcon className="h-4 w-4" />
-            </a>
-          )}
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <h2 className="text-xl font-bold text-text-primary tracking-tight truncate">{jc.name}</h2>
+        <div className="flex items-center gap-1 shrink-0">
           {canEdit && !editingName && (
             <button onClick={() => setEditingName(true)}
-               className="rounded-lg p-1.5 text-text-tertiary hover:text-text-secondary hover:bg-surface-secondary transition-colors">
+               className="rounded-lg p-2 text-text-tertiary hover:text-text-primary hover:bg-surface-secondary transition-colors">
               <Edit2 className="h-3.5 w-3.5" />
             </button>
           )}
-          <button onClick={onClose} className="rounded-lg p-1.5 text-text-tertiary hover:text-text-secondary hover:bg-surface-secondary transition-colors ml-1">
+          <button onClick={onClose} className="rounded-lg p-2 text-text-tertiary hover:text-text-primary hover:bg-surface-secondary transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1312,33 +1306,42 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
             </div>
           </div>
 
-          {items.length > 0 && (
-            <div className="flex items-center gap-1 px-3.5 py-2.5 border-b border-border bg-surface-secondary">
-              {(["All", "Men's", "Women's"] as JobClassItemGender[]).map((g) => (
-                <button
-                  key={g}
-                  onClick={() => setGenderFilter(g)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    genderFilter === g
-                      ? g === "Men's"
-                        ? "bg-sky-100 text-sky-700"
-                        : g === "Women's"
-                        ? "bg-fuchsia-100 text-fuchsia-700"
-                        : "bg-primary text-white"
-                      : "text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary"
-                  }`}
-                >
-                  {g}
-                </button>
-              ))}
+          {(items.length > 0 || jc.referenceUrl) && (
+            <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 border-b border-border bg-surface-secondary/60">
+              <div className="flex items-center gap-1.5">
+                {(["All", "Men's", "Women's"] as JobClassItemGender[]).map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setGenderFilter(g)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                      genderFilter === g
+                        ? g === "Men's"
+                          ? "bg-sky-100 text-sky-700"
+                          : g === "Women's"
+                          ? "bg-fuchsia-100 text-fuchsia-700"
+                          : "bg-primary text-white"
+                        : "text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+              {jc.referenceUrl && (
+                <a href={jc.referenceUrl} target="_blank" rel="noopener noreferrer"
+                   className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors shrink-0">
+                  <LinkIcon className="h-3 w-3" />Dress Code
+                </a>
+              )}
             </div>
           )}
-          <div className="flex">
+          <div className="flex min-h-[200px]">
             {/* Items list */}
             <div className="flex-1 min-w-0">
 
               {items.length === 0 ? (
-                <div className="p-4 text-center">
+                <div className="p-6 text-center">
+                  <Shirt className="h-6 w-6 text-text-tertiary/30 mx-auto mb-2" />
                   <p className="text-sm text-text-tertiary">No items linked yet.</p>
                 </div>
               ) : (() => {
@@ -1347,7 +1350,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
                 );
                 if (filtered.length === 0) {
                   return (
-                    <div className="p-4 text-center">
+                    <div className="p-6 text-center">
                       <p className="text-sm text-text-tertiary">No items for {genderFilter} view.</p>
                     </div>
                   );
@@ -1364,17 +1367,17 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
                   }
                 }
                 return (
-                  <div className="p-3 space-y-2">
+                  <div className="p-4 space-y-2.5">
                     {rows.map((row) => {
                       if (row.type === "single") {
                         return (
-                          <div key={row.item.id} className="rounded-lg border border-border bg-white overflow-hidden">
+                          <div key={row.item.id} className="rounded-xl border border-border bg-surface overflow-hidden shadow-sm">
                             <JobClassItemRow ji={row.item} canEdit={canEdit} onRemove={() => handleRemoveItem(row.item.id)} onSaveNotes={(n) => handleUpdateItemNotes(row.item.id, n)} onSaveItem={(u) => handleUpdateItem(row.item.id, u)} />
                           </div>
                         );
                       }
                       return (
-                        <div key={row.key} className="rounded-lg border border-border bg-white overflow-hidden">
+                        <div key={row.key} className="rounded-xl border border-border bg-surface overflow-hidden shadow-sm">
                           <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary px-4 pt-3 pb-1">Pick one</p>
                           {row.items.map((ji, i) => (
                             <div key={ji.id}>
@@ -1396,8 +1399,8 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
               })()}
 
               {showAddItem && availableToAdd.length > 0 && (
-                <div className="flex gap-2 p-3 border-t border-border">
-                  <select value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value)} className="flex-1 rounded-lg border border-border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+                <div className="flex gap-2 px-4 pb-4 pt-1">
+                  <select value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value)} className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
                     <option value="">Select an item...</option>
                     {availableToAdd.map((i) => <option key={i.id} value={i.id}>{i.name} — {i.category}</option>)}
                   </select>
@@ -1406,49 +1409,50 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
                 </div>
               )}
               {showAddItem && availableToAdd.length === 0 && (
-                <p className="p-4 text-sm text-text-tertiary text-center">All wardrobe items are already linked.</p>
+                <p className="px-4 pb-4 text-sm text-text-tertiary text-center">All wardrobe items are already linked.</p>
               )}
               {canEdit && !showAddItem && (
-                <button onClick={() => setShowAddItem(true)} className="flex items-center gap-1 px-3 pb-3 pt-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors">
-                  <Plus className="h-3.5 w-3.5" />Add item
+                <button onClick={() => setShowAddItem(true)} className="flex items-center gap-1.5 px-4 pb-4 pt-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors">
+                  <Plus className="h-3.5 w-3.5" />Add Item
                 </button>
               )}
             </div>
 
             {/* Photo column */}
-            <div className="w-[250px] shrink-0 bg-white flex flex-col items-center justify-center p-4">
+            <div className="w-[220px] shrink-0 flex flex-col items-center justify-start p-4 bg-surface-secondary/40">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-3 self-start">Reference Photo</p>
               <button
                 type="button"
                 onClick={() => canEdit && photoInputRef.current?.click()}
-                className={`relative group w-full aspect-[3/4] rounded-lg overflow-hidden ${canEdit ? "cursor-pointer" : "cursor-default"}`}
+                className={`relative group w-full aspect-[3/4] rounded-xl overflow-hidden ${canEdit ? "cursor-pointer" : "cursor-default"}`}
               >
                 {jc.imageUrl ? (
                   <>
-                    <img src={jc.imageUrl} alt="Uniform photo" className="w-full h-full object-contain bg-white" />
+                    <img src={jc.imageUrl} alt="Uniform photo" className="w-full h-full object-contain bg-white rounded-xl" />
                     {canEdit && (
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                        <span className="text-white text-xs font-medium bg-black/50 px-3 py-1.5 rounded-lg">Replace</span>
-                        <button type="button" onClick={handleRemovePhoto} className="text-white/80 text-[10px] hover:text-white transition-colors">Remove</button>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 rounded-xl">
+                        <span className="text-white text-xs font-semibold bg-black/60 px-3 py-1.5 rounded-lg">Replace Photo</span>
+                        <button type="button" onClick={handleRemovePhoto} className="text-white/70 text-[10px] font-medium hover:text-white transition-colors">Remove</button>
                       </div>
                     )}
                   </>
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-border bg-surface-secondary">
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors bg-white">
                     {canEdit ? (
                       <>
-                        <Camera className="h-5 w-5 text-text-tertiary/50" />
-                        <span className="text-[10px] text-text-tertiary text-center leading-tight">Add<br/>photo</span>
+                        <Camera className="h-6 w-6 text-text-tertiary/40" />
+                        <span className="text-[10px] font-medium text-text-tertiary text-center leading-relaxed">Add reference<br/>photo</span>
                       </>
                     ) : (
                       <>
-                        <Users className="h-5 w-5 text-text-tertiary/40" />
+                        <Users className="h-6 w-6 text-text-tertiary/30" />
                         <span className="text-[10px] text-text-tertiary/50">No photo</span>
                       </>
                     )}
                   </div>
                 )}
                 {photoUploading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-lg">
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-xl">
                     <span className="text-[10px] text-text-secondary">Uploading…</span>
                   </div>
                 )}
@@ -1468,7 +1472,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
               <button onClick={() => setEditingStandards(true)} className="text-xs text-text-tertiary hover:text-text-secondary transition-colors"><Edit2 className="h-3.5 w-3.5" /></button>
             )}
           </div>
-          <div className="p-4">
+          <div className="px-4 py-3.5">
             {editingStandards ? (
               <div className="space-y-3">
                 <textarea value={standards} onChange={(e) => setStandards(e.target.value)} rows={4} placeholder="General uniform standards for this role — what's required, presentation expectations, approved variations..." className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
@@ -1478,9 +1482,9 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
                 </div>
               </div>
             ) : jc.standards ? (
-              <p className="text-sm text-text-primary whitespace-pre-wrap">{jc.standards}</p>
+              <p className="text-sm text-text-primary whitespace-pre-wrap leading-relaxed">{jc.standards}</p>
             ) : (
-              <p className="text-sm text-text-tertiary italic">No standards defined yet.{canEdit ? " Click edit to add." : ""}</p>
+              <p className="text-sm text-text-tertiary/70 italic">No standards defined yet.{canEdit ? " Click the edit icon to add." : ""}</p>
             )}
           </div>
         </div>
@@ -1493,24 +1497,24 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
           </div>
           <div className="divide-y divide-border-light">
             {notes.map((note) => (
-              <div key={note.id} className="flex items-start gap-3 px-4 py-3">
+              <div key={note.id} className="flex items-start gap-3 px-4 py-3.5">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-text-primary">{note.text}</p>
-                  <p className="text-[10px] text-text-tertiary mt-1">
+                  <p className="text-sm text-text-primary leading-relaxed">{note.text}</p>
+                  <p className="text-[10px] text-text-tertiary mt-1.5 font-medium">
                     {note.authorName} · {formatDistanceToNow(parseISO(note.createdAt), { addSuffix: true })}
                   </p>
                 </div>
                 {canEdit && (
-                  <button onClick={() => handleDeleteNote(note.id)} className="shrink-0 rounded p-1 text-text-tertiary hover:text-red-600 transition-colors"><X className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => handleDeleteNote(note.id)} className="shrink-0 rounded-lg p-1.5 text-text-tertiary hover:text-red-500 hover:bg-red-50 transition-colors"><X className="h-3.5 w-3.5" /></button>
                 )}
               </div>
             ))}
             {notes.length === 0 && (
-              <p className="px-4 py-3 text-sm text-text-tertiary">No notes yet. Add observations from recent shoots.</p>
+              <p className="px-4 py-4 text-sm text-text-tertiary/70 italic">No notes yet. Add observations from recent shoots.</p>
             )}
           </div>
           {canEdit && (
-            <div className="flex gap-2 p-3.5 border-t border-border">
+            <div className="flex gap-2 px-4 py-3.5 border-t border-border bg-surface-secondary/40">
               <input
                 type="text"
                 value={newNote}
@@ -1524,14 +1528,15 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
           )}
         </div>
 
-        {/* Delete */}
-        {canEdit && (
-          <div className="pt-2 border-t border-border">
-            <Button variant="danger" onClick={handleDeleteClass} className="w-full">
-              <Trash2 className="h-3.5 w-3.5" />Delete Job Class
-            </Button>
-          </div>
-        )}
+        {/* Footer */}
+        <div className="pt-3 mt-1 border-t border-border flex items-center justify-between">
+          {canEdit ? (
+            <button onClick={handleDeleteClass} title="Delete job class" className="rounded-lg p-1.5 text-text-tertiary hover:text-red-500 hover:bg-surface-secondary transition-colors">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          ) : <span />}
+          <Button size="sm" variant="secondary" onClick={onClose}>Done</Button>
+        </div>
       </div>
     </Modal>
   );
@@ -1570,21 +1575,21 @@ function JobClassItemRow({ ji, canEdit, onRemove, onSaveNotes, onSaveItem, compa
   }
 
   return (
-    <div className={`${compact ? "py-1.5" : "px-4 py-3"} space-y-2`}>
-      <div className="flex items-start gap-3">
+    <div className={`${compact ? "px-3 py-2" : "px-4 py-3.5"} space-y-2`}>
+      <div className="flex items-center gap-3">
         {item?.imageUrl ? (
-          <img src={item.imageUrl} alt={item.name} className="h-10 w-10 rounded-lg object-cover shrink-0" />
+          <img src={item.imageUrl} alt={item.name} className="h-12 w-12 rounded-lg object-cover shrink-0 bg-surface-secondary" />
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-tertiary shrink-0">
-            <Shirt className="h-4 w-4 text-text-tertiary" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-surface-secondary shrink-0">
+            <Shirt className="h-5 w-5 text-text-tertiary/50" />
           </div>
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-semibold text-text-primary truncate">{item?.name || "Unknown item"}</p>
-            {!ji.required && <span className="text-[10px] font-medium text-text-tertiary italic">optional</span>}
+            {!ji.required && <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">optional</span>}
           </div>
-          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
             {item && <Badge variant="custom" className={`text-[10px] ${CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Other}`}>{item.category}</Badge>}
             {ji.gender !== "All" && (
               <Badge variant="custom" className={`text-[10px] ${GENDER_COLORS[ji.gender] || ""}`}>{ji.gender}</Badge>
@@ -1592,22 +1597,13 @@ function JobClassItemRow({ ji, canEdit, onRemove, onSaveNotes, onSaveItem, compa
           </div>
         </div>
         {canEdit && (
-          <div className="flex items-center gap-1 shrink-0">
-            <button onClick={() => setEditing(true)} className="rounded p-1 text-text-tertiary hover:text-text-secondary transition-colors"><Edit2 className="h-3.5 w-3.5" /></button>
-            <button onClick={onRemove} className="rounded p-1 text-text-tertiary hover:text-red-600 transition-colors"><X className="h-3.5 w-3.5" /></button>
+          <div className="flex items-center gap-0.5 shrink-0">
+            <button onClick={() => setEditing(true)} className="rounded-lg p-1.5 text-text-tertiary hover:text-text-primary hover:bg-surface-secondary transition-colors"><Edit2 className="h-3.5 w-3.5" /></button>
+            <button onClick={onRemove} className="rounded-lg p-1.5 text-text-tertiary hover:text-red-500 hover:bg-red-50 transition-colors"><X className="h-3.5 w-3.5" /></button>
           </div>
         )}
       </div>
 
-      {/* Notes display (when not editing) */}
-      {!editing && (
-        <button
-          onClick={() => canEdit && setEditing(true)}
-          className={`w-full text-left text-xs rounded px-2 py-1.5 transition-colors ${ji.notes ? "text-text-secondary bg-surface-secondary hover:bg-surface-tertiary" : "text-text-tertiary italic hover:bg-surface-secondary"} ${!canEdit ? "pointer-events-none" : ""}`}
-        >
-          {ji.notes || (canEdit ? "Add role-specific notes…" : "No notes")}
-        </button>
-      )}
 
       {/* Edit panel */}
       {editing && (
