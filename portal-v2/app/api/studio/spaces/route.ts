@@ -4,7 +4,7 @@ import { listSpaces } from "@/lib/services/studio.service";
 
 export async function GET() {
   try {
-    await requireRole(["Admin", "Producer", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const spaces = await listSpaces();
     return NextResponse.json(spaces);
   } catch (error) {

@@ -22,7 +22,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio"]);
     const { id } = await params;
     const body = await request.json();
     const jc = await updateJobClass(id, {
@@ -43,7 +43,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const { id } = await params;
     await deleteJobClass(id);
     return NextResponse.json({ success: true });

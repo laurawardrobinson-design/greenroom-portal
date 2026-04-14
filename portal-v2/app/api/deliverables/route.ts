@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
     const body = await request.json();
     const db = createAdminClient();
 

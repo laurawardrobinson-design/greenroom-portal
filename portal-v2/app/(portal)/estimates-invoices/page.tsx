@@ -146,7 +146,7 @@ export default function EstimatesInvoicesPage() {
   const [poTab, setPoTab] = useState<"active" | "past">("active");
   const [invoiceTab, setInvoiceTab] = useState<"active" | "past">("active");
 
-  const canAccess = user?.role === "Producer";
+  const canAccess = user?.role === "Producer" || user?.role === "Post Producer";
 
   const { data: pending = [], isLoading: loadingPending, mutate: mutatePending } = useSWR<PendingRow[]>(
     canAccess ? "/api/pending-documents" : null,

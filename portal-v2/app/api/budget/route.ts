@@ -5,7 +5,7 @@ import { listAllCrewBookings } from "@/lib/services/crew-bookings.service";
 
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const { searchParams } = new URL(request.url);
 
     if (searchParams.get("type") === "spending") {

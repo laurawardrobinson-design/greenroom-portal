@@ -4,7 +4,7 @@ import { getActiveCheckouts, getRecentActivity } from "@/lib/services/gear.servi
 
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId") || undefined;
     const recent = searchParams.get("recent") === "true";

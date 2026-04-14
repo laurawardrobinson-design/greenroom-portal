@@ -5,7 +5,7 @@ import { createSetupSchema } from "@/lib/validation/shot-list.schema";
 
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director", "Studio", "Vendor"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio", "Vendor"]);
     const { searchParams } = new URL(request.url);
     const campaignId = searchParams.get("campaignId");
     if (!campaignId) {
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
     const body = await request.json();
     const parsed = createSetupSchema.parse(body);
     const setup = await createSetup(parsed);

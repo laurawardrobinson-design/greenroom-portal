@@ -11,7 +11,7 @@ import {
 // GET /api/shot-list/talent?campaignId=xxx
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio"]);
     const { searchParams } = new URL(request.url);
     const campaignId = searchParams.get("campaignId");
     if (!campaignId) {
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 // POST /api/shot-list/talent — add talent to shot
 export async function POST(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
     const body = await request.json();
     const { shotId, campaignId, talentNumber, ...fields } = body;
     if (!shotId || !campaignId) {
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 // PATCH /api/shot-list/talent — update talent entry
 export async function PATCH(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
     const body = await request.json();
     const { id, ...fields } = body;
     if (!id) {
@@ -61,7 +61,7 @@ export async function PATCH(request: Request) {
 // DELETE /api/shot-list/talent?id=xxx
 export async function DELETE(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) {

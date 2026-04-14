@@ -79,7 +79,7 @@ export async function requireCampaignAccess(
   user: AppUser,
   campaignId: string
 ): Promise<void> {
-  if (user.role === "Admin" || user.role === "Producer" || user.role === "Art Director" || user.role === "Studio") {
+  if (user.role === "Admin" || user.role === "Producer" || user.role === "Post Producer" || user.role === "Art Director" || user.role === "Studio") {
     return; // Full access
   }
 
@@ -107,7 +107,7 @@ export async function requireVendorOwnership(
   user: AppUser,
   campaignVendorId: string
 ): Promise<void> {
-  if (user.role === "Admin" || user.role === "Producer") {
+  if (user.role === "Admin" || user.role === "Producer" || user.role === "Post Producer") {
     return;
   }
 

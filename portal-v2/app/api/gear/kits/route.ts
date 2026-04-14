@@ -6,7 +6,7 @@ import type { GearCondition } from "@/types/domain";
 // GET /api/gear/kits
 export async function GET() {
   try {
-    await requireRole(["Admin", "Producer", "Studio", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio", "Art Director"]);
     const kits = await listKits();
     return NextResponse.json(kits);
   } catch (error) {

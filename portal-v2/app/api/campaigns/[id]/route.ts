@@ -63,7 +63,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Art Director"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
     const { id } = await params;
     const body = await request.json();
 
@@ -128,7 +128,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireRole(["Admin", "Producer"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer"]);
     const { id } = await params;
     const newCampaign = await duplicateCampaign(id, user.id);
     return NextResponse.json(newCampaign, { status: 201 });
@@ -143,7 +143,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const { id } = await params;
     const result = await deleteCampaign(id);
     return NextResponse.json({ success: true, ...result });

@@ -209,7 +209,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
   const { user } = useCurrentUser();
   const { toast } = useToast();
   const isVendor = user?.role === "Vendor";
-  const isProducer = user?.role === "Producer" || user?.role === "Admin";
+  const isProducer = user?.role === "Producer" || user?.role === "Post Producer" || user?.role === "Admin";
   const isHop = user?.role === "Admin";
 
   // Local status so the modal stays open and advances steps after transitions

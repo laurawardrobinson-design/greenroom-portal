@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 // POST /api/crew — add crew member to a shoot
 export async function POST(request: Request) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const body = await request.json();
     const { shootId, userId, roleOnShoot, notes } = body;
     if (!shootId || !userId) {
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 // DELETE /api/crew?id=xxx
 export async function DELETE(request: Request) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) {

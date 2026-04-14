@@ -59,7 +59,7 @@ export default function ProductDirectoryPage() {
 
   const canEdit =
     user?.role === "Admin" ||
-    user?.role === "Producer" ||
+    user?.role === "Producer" || user?.role === "Post Producer" ||
     user?.role === "Art Director" ||
     user?.role === "Studio";
 

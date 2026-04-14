@@ -86,7 +86,7 @@ export default function PropsPage() {
   );
   const items: GearItem[] = Array.isArray(rawItems) ? rawItems : [];
 
-  const canEdit = user?.role === "Admin" || user?.role === "Producer" || user?.role === "Studio";
+  const canEdit = user?.role === "Admin" || user?.role === "Producer" || user?.role === "Post Producer" || user?.role === "Studio";
 
   const availableCount = items.filter((i) => i.status === "Available").length;
 

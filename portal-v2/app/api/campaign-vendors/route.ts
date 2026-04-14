@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 // POST /api/campaign-vendors — assign vendor to campaign
 export async function POST(request: Request) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const { campaignId, vendorId } = await request.json();
 
     if (!campaignId || !vendorId) {

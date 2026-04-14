@@ -4,7 +4,7 @@ import { listGearItems, createGearItem, checkoutGear, checkinGear, getGearItemBy
 import type { GearCategory, GearCondition } from "@/types/domain";
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Studio", "Vendor", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director"]);
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category") as GearCategory | null;
     const status = searchParams.get("status") as string | null;
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Studio"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const body = await request.json();
 
     if (body.action === "checkout") {

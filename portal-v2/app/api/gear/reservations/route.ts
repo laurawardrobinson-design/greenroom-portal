@@ -5,7 +5,7 @@ import { createReservation, listReservations } from "@/lib/services/gear.service
 // GET /api/gear/reservations?gearItemId=xxx&userId=xxx&upcoming=true
 export async function GET(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Studio"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const { searchParams } = new URL(request.url);
     const reservations = await listReservations({
       gearItemId: searchParams.get("gearItemId") || undefined,
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 // POST /api/gear/reservations
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Studio"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const body = await request.json();
     const { gearItemId, campaignId, startDate, endDate, notes } = body;
 

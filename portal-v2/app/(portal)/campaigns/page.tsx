@@ -47,7 +47,7 @@ export default function CampaignsPage() {
     search: debouncedSearch || undefined,
   });
 
-  const canCreate = user?.role === "Admin" || user?.role === "Producer";
+  const canCreate = user?.role === "Admin" || user?.role === "Producer" || user?.role === "Post Producer";
 
   // Default to "My Campaigns" — toggle to show all
   const displayedCampaigns = !showAll && user

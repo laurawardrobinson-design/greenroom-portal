@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 // POST /api/crew-bookings
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer"]);
     const body = await request.json();
 
     const { campaignId, vendorId, userId, role, dayRate, classification, dates, notes } = body;

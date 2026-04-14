@@ -117,7 +117,7 @@ function InternalTab({
   const assignedIds = [...producers.map((p) => p.id), currentAd?.id].filter(Boolean) as string[];
   const available = allUsers.filter(
     (u) =>
-      (u.role === "Producer" || u.role === "Art Director") &&
+      (u.role === "Producer" || u.role === "Post Producer" || u.role === "Art Director") &&
       !assignedIds.includes(u.id) &&
       u.id !== excludeUserId
   );
@@ -125,7 +125,7 @@ function InternalTab({
   async function assign(user: AppUser) {
     setSaving(user.id);
     setPickerOpen(false);
-    if (user.role === "Producer") await onAddProducer(user.id);
+    if (user.role === "Producer" || user.role === "Post Producer") await onAddProducer(user.id);
     else await onAssignAD(user.id);
     setSaving(null);
   }

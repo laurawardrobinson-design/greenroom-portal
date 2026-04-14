@@ -3,7 +3,7 @@
 // ============================================================
 
 // --- Roles ---
-export type UserRole = "Admin" | "Producer" | "Studio" | "Vendor" | "Art Director";
+export type UserRole = "Admin" | "Producer" | "Studio" | "Vendor" | "Art Director" | "Post Producer";
 
 export interface AppUser {
   id: string;
@@ -1029,4 +1029,135 @@ export interface OnboardingChecklist {
   notes: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// ============================================================
+// Post Workflow — Edit Rooms & Hard Drive Management
+// ============================================================
+
+// --- Edit Rooms ---
+
+export interface EditRoom {
+  id: string;
+  name: string;
+  notes: string | null;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface EditRoomReservation {
+  id: string;
+  roomId: string;
+  roomName?: string;
+  campaignId: string | null;
+  campaignWfNumber?: string | null;
+  campaignName?: string | null;
+  editorName: string;
+  editorUserId: string | null;
+  reservedDate: string;
+  groupId: string;
+  status: "confirmed" | "cancelled" | "completed";
+  notes: string | null;
+  reservedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- Hard Drives ---
+
+export type DriveCondition = "Good" | "Fair" | "Poor" | "Damaged";
+export type DriveStatus = "Available" | "Reserved" | "Checked Out" | "Pending Backup/Wipe" | "Retired";
+export type DriveLocation = "Corporate" | "With Editor" | "On Set" | "Other";
+export type DriveType = "HDD" | "HDD - Superspeed" | "Portable SSD";
+export type CheckoutRole = "shooter" | "media_manager";
+export type DriveCheckoutSessionStatus = "active" | "pending_backup" | "partial_return" | "completed";
+
+export interface MediaDrive {
+  id: string;
+  brand: string;
+  model: string | null;
+  storageSize: string;
+  driveType: DriveType;
+  purchaseDate: string | null;
+  retirementDate: string | null;
+  condition: DriveCondition;
+  status: DriveStatus;
+  location: DriveLocation;
+  assignedToUserId: string | null;
+  assignedToUserName?: string | null;
+  isPermanentlyAssigned: boolean;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  /** true if retirement_date is within 90 days from today */
+  nearingRetirement?: boolean;
+  /** true if retirement_date is in the past */
+  pastRetirement?: boolean;
+}
+
+export interface DriveCheckoutItem {
+  id: string;
+  sessionId: string;
+  driveId: string;
+  drive?: MediaDrive;
+  checkoutRole: CheckoutRole;
+  conditionOut: DriveCondition | null;
+  conditionIn: DriveCondition | null;
+  actualReturnDate: string | null;
+  dataOffloadedBackedUp: boolean;
+  backupLocation: string | null;
+  driveWiped: boolean;
+  clearForReuse: boolean;
+  returnedAt: string | null;
+  notes: string | null;
+}
+
+export interface DriveCheckoutSession {
+  id: string;
+  campaignId: string | null;
+  projectDisplayName: string | null;
+  shootDate: string | null;
+  checkoutDate: string;
+  expectedReturnDate: string | null;
+  checkedOutBy: string | null;
+  checkedOutByName?: string | null;
+  status: DriveCheckoutSessionStatus;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items?: DriveCheckoutItem[];
+  campaign?: {
+    id: string;
+    wfNumber: string;
+    name: string;
+    brand: string | null;
+  } | null;
+}
+
+export interface DriveReservation {
+  id: string;
+  driveId: string;
+  drive?: MediaDrive;
+  campaignId: string;
+  shootDate: string;
+  reservedBy: string | null;
+  status: "reserved" | "cancelled" | "converted_to_checkout";
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface PostWorkflowSummary {
+  editRoomsBookedToday: number;
+  drivesCheckedOut: number;
+  drivesPendingBackup: number;
+  drivesNearingRetirement: number;
+  drivesPastRetirement: number;
+  retirementAlerts: Array<{
+    id: string;
+    brand: string;
+    model: string | null;
+    storageSize: string;
+    retirementDate: string;
+    pastRetirement: boolean;
+  }>;
 }

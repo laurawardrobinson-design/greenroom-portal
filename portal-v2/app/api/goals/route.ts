@@ -18,7 +18,7 @@ export async function GET() {
     const { data: users, error: usersError } = await supabase
       .from("users")
       .select("id, name, role, title, favorite_publix_product, active")
-      .in("role", ["Admin", "Producer", "Studio", "Art Director"])
+      .in("role", ["Admin", "Producer", "Post Producer", "Studio", "Art Director"])
       .eq("active", true)
       .order("name");
 

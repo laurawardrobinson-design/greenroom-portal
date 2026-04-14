@@ -103,11 +103,11 @@ export default function CampaignDetailPage({
 
 
   // Permissions
-  const canEdit = user?.role === "Admin" || user?.role === "Producer";
+  const canEdit = user?.role === "Admin" || user?.role === "Producer" || user?.role === "Post Producer";
   const canEditShots = canEdit || user?.role === "Art Director";
   const canCompleteShots = canEdit || user?.role === "Art Director" || user?.role === "Studio";
   const isAdmin = user?.role === "Admin";
-  const canDelete = user?.role === "Admin" || user?.role === "Producer";
+  const canDelete = user?.role === "Admin" || user?.role === "Producer" || user?.role === "Post Producer";
   const isVendor = user?.role === "Vendor";
   const isArtDirector = user?.role === "Art Director";
   const showFinancials = !isVendor && !isArtDirector;

@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director", "Studio", "Vendor"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio", "Vendor"]);
     const { id } = await params;
     const item = await getWardrobeItem(id);
     if (!item) {
@@ -25,7 +25,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio"]);
     const { id } = await params;
     const body = await request.json();
     const parsed = updateWardrobeSchema.parse(body);
@@ -44,7 +44,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const { id } = await params;
     await deleteWardrobeItem(id);
     return NextResponse.json({ success: true });

@@ -5,7 +5,7 @@ import { linkGearToCampaignSchema } from "@/lib/validation/products.schema";
 
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const { searchParams } = new URL(request.url);
     const campaignId = searchParams.get("campaignId");
     if (!campaignId) {
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const body = await request.json();
     const parsed = linkGearToCampaignSchema.parse(body);
     const link = await linkGearToCampaign(parsed.campaignId, parsed.gearItemId, parsed.notes);
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) {

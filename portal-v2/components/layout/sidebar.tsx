@@ -22,6 +22,7 @@ import {
   FileText,
   Building2,
   DollarSign,
+  Clapperboard,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -42,7 +43,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["Admin", "Producer", "Studio", "Vendor", "Art Director"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director"],
   },
   {
     label: "Approvals",
@@ -54,7 +55,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Campaigns",
     href: "/campaigns",
     icon: Film,
-    roles: ["Admin", "Producer", "Studio", "Vendor", "Art Director"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director"],
   },
   {
     label: "Estimates & Invoices",
@@ -66,7 +67,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Pre Production",
     href: "/pre-production",
     icon: ClipboardList,
-    roles: ["Admin", "Producer"],
+    roles: ["Admin", "Producer", "Post Producer"],
   },
   {
     label: "Budget",
@@ -78,7 +79,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Estimates & Invoices",
     href: "/estimates-invoices",
     icon: FileText,
-    roles: ["Producer"],
+    roles: ["Producer", "Post Producer"],
   },
   {
     label: "Shot List",
@@ -90,49 +91,55 @@ const NAV_ITEMS: NavItem[] = [
     label: "Studio Management",
     href: "/studio",
     icon: Building2,
-    roles: ["Admin", "Producer", "Studio"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio"],
+  },
+  {
+    label: "Post Workflow",
+    href: "/post-workflow",
+    icon: Clapperboard,
+    roles: ["Admin", "Producer", "Post Producer"],
   },
   {
     label: "Gear",
     href: "/gear",
     icon: Package,
-    roles: ["Admin", "Producer", "Studio"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio"],
   },
   {
     label: "Props",
     href: "/props",
     icon: Boxes,
-    roles: ["Admin", "Producer", "Studio", "Art Director"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director"],
   },
   {
     label: "Products",
     href: "/food",
     icon: Utensils,
-    roles: ["Admin", "Producer", "Studio", "Art Director"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director"],
   },
   {
     label: "Wardrobe",
     href: "/wardrobe",
     icon: Shirt,
-    roles: ["Admin", "Producer", "Studio", "Art Director"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director"],
   },
   {
     label: "Contacts",
     href: "/contacts",
     icon: Contact,
-    roles: ["Admin", "Producer", "Studio", "Art Director"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director"],
   },
   {
     label: "Goals",
     href: "/goals",
     icon: Compass,
-    roles: ["Admin", "Producer", "Studio"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio"],
   },
   {
     label: "Settings",
     href: "/settings",
     icon: Settings,
-    roles: ["Admin", "Producer", "Studio", "Vendor", "Art Director"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director"],
   },
 ];
 

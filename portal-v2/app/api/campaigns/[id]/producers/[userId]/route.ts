@@ -7,7 +7,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -31,7 +31,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

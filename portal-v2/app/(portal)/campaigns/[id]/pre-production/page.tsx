@@ -1470,7 +1470,7 @@ export default function PreProductionWorkspacePage({
 
   const canAccess =
     user?.role === "Admin" ||
-    user?.role === "Producer" ||
+    user?.role === "Producer" || user?.role === "Post Producer" ||
     user?.role === "Art Director";
 
   if (!canAccess) {
@@ -1483,7 +1483,7 @@ export default function PreProductionWorkspacePage({
   }
 
   const isArtDirector = user?.role === "Art Director";
-  const canManagePeople = user?.role === "Admin" || user?.role === "Producer";
+  const canManagePeople = user?.role === "Admin" || user?.role === "Producer" || user?.role === "Post Producer";
   const visibleTabs = isArtDirector
     ? TABS.filter((t) => t.id === "schedule" || t.id === "people")
     : TABS;

@@ -54,7 +54,7 @@ export async function PATCH(
       if (user.role === "Vendor") {
         await requireVendorOwnership(user, id);
       } else {
-        await requireRole(["Admin", "Producer"]);
+        await requireRole(["Admin", "Producer", "Post Producer"]);
       }
 
       const parsed = submitEstimateSchema.parse({
@@ -98,7 +98,7 @@ export async function PATCH(
           await requireVendorOwnership(user, id);
         }
       } else if (producerActions.includes(targetStatus)) {
-        await requireRole(["Admin", "Producer"]);
+        await requireRole(["Admin", "Producer", "Post Producer"]);
       } else if (hopActions.includes(targetStatus)) {
         await requireRole(["Admin"]);
       }
@@ -109,7 +109,7 @@ export async function PATCH(
 
     // Update estimate items (producer correction)
     if (body.action === "update_estimate_items") {
-      await requireRole(["Admin", "Producer"]);
+      await requireRole(["Admin", "Producer", "Post Producer"]);
       await updateEstimateItems(id, body.items);
       const [cv, estimateItems] = await Promise.all([getCampaignVendor(id), getEstimateItems(id)]);
       return NextResponse.json({ ...cv, estimateItems });
@@ -117,7 +117,7 @@ export async function PATCH(
 
     // Update campaign-level role override
     if (body.action === "update_campaign_role") {
-      await requireRole(["Admin", "Producer"]);
+      await requireRole(["Admin", "Producer", "Post Producer"]);
       const { createAdminClient } = await import("@/lib/supabase/admin");
       const db = createAdminClient();
       const { error } = await db
@@ -143,7 +143,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const { id } = await params;
     await removeVendorFromCampaign(id);
     return NextResponse.json({ success: true });

@@ -68,11 +68,11 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
   const isProducerApproved = !!invoice?.producerApprovedAt;
   const isHopApproved = !!invoice?.hopApprovedAt;
   const canApproveEstimate =
-    status === "Estimate Submitted" && (user?.role === "Producer" || user?.role === "Admin");
+    status === "Estimate Submitted" && (user?.role === "Producer" || user?.role === "Post Producer" || user?.role === "Admin");
   const canApproveInvoiceProducer =
     status === "Invoice Submitted" &&
     !isProducerApproved &&
-    (user?.role === "Producer" || user?.role === "Admin");
+    (user?.role === "Producer" || user?.role === "Post Producer" || user?.role === "Admin");
   const canApproveInvoiceHop =
     status === "Invoice Pre-Approved" && !isHopApproved && user?.role === "Admin";
   const canSendBack =

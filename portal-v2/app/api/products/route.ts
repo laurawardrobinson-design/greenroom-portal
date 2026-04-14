@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Art Director", "Studio"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio"]);
     const body = await request.json();
     const parsed = createProductSchema.parse(body);
     const product = await createProduct(parsed, user.id);

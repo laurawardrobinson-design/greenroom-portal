@@ -14,7 +14,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Art Director", "Studio"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio"]);
     const body = await request.json();
     if (!body.name?.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });

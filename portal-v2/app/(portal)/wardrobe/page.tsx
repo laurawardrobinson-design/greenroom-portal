@@ -136,7 +136,7 @@ export default function WardrobePage() {
   const items: WardrobeItem[] = Array.isArray(rawItems) ? rawItems : [];
 
   const canEdit =
-    user?.role === "Admin" || user?.role === "Producer" ||
+    user?.role === "Admin" || user?.role === "Producer" || user?.role === "Post Producer" ||
     user?.role === "Art Director" || user?.role === "Studio";
 
   // ── Scan handlers ──────────────────────────────────────────────────────────

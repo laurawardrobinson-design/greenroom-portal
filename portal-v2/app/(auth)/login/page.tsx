@@ -11,6 +11,7 @@ const DEV_ROLES = [
   { key: "studio", label: "Studio", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
   { key: "vendor", label: "Vendor", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
   { key: "artdirector", label: "Art Director", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
+  { key: "postproducer", label: "Post Producer", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
 ];
 
 interface Vendor {
@@ -111,7 +112,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-sidebar px-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-sidebar px-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-10 text-center">
@@ -242,12 +243,20 @@ export default function LoginPage() {
           )}
         </div>
 
+        <div className="mt-4 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400/70 mb-1">April 14, 2026</p>
+          <p className="text-sm font-medium text-emerald-300">New feature in progress! Post production workflow under construction.</p>
+        </div>
+
         <p className="mt-6 text-center text-xs text-white/30">
           {DEV_AUTH
             ? "Development mode — click any role to sign in instantly"
             : "Access is restricted to authorized team members and vendors"}
         </p>
       </div>
+      <p className="absolute bottom-4 text-xs text-white/40">
+        Designed by Laura Robinson — contact for feature requests or questions
+      </p>
     </div>
   );
 }

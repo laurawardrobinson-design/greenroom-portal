@@ -6,7 +6,7 @@ import { parseCSV } from "@/lib/utils/csv-parser";
 // POST /api/campaigns/import — bulk import from CSV
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer"]);
     const formData = await request.formData();
     const file = formData.get("file") as File;
 

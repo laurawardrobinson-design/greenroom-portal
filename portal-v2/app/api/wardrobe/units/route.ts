@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Studio"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const body = await request.json();
     const parsed = createUnitSchema.safeParse(body);
     if (!parsed.success) {

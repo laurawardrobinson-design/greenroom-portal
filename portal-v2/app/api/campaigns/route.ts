@@ -32,7 +32,7 @@ export async function GET(request: Request) {
 // POST /api/campaigns — create a campaign
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer"]);
     const body = await request.json();
     const parsed = createCampaignSchema.parse(body);
     const campaign = await createCampaign(parsed, user.id);

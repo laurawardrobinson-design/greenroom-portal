@@ -13,7 +13,7 @@ export async function PATCH(
 ) {
   try {
     // Studio can mark shots complete, Producers and ADs can edit everything
-    const user = await requireRole(["Admin", "Producer", "Art Director", "Studio"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio"]);
     const { id } = await params;
     const body = await request.json();
     const parsed = updateShotSchema.parse(body);
@@ -32,7 +32,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
     const { id } = await params;
     await deleteShot(id);
     return NextResponse.json({ success: true });
@@ -47,7 +47,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
     const { id: shotId } = await params;
     const body = await request.json();
 

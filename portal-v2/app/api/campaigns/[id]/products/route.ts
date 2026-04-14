@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio"]);
     const { id: campaignId } = await params;
     const products = await listCampaignProducts(campaignId);
     return NextResponse.json(products);
@@ -26,7 +26,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Art Director", "Studio"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio"]);
     const { id: campaignId } = await params;
     const body = await request.json();
 

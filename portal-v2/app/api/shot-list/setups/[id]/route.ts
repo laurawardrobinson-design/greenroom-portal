@@ -8,7 +8,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
     const { id } = await params;
     const body = await request.json();
     const parsed = updateSetupSchema.parse(body);
@@ -27,7 +27,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
     const { id } = await params;
     await deleteSetup(id);
     return NextResponse.json({ success: true });

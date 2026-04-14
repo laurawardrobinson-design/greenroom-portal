@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     if (user.role === "Vendor") {
       await requireVendorOwnership(user, campaignVendorId);
     } else {
-      await requireRole(["Admin", "Producer"]);
+      await requireRole(["Admin", "Producer", "Post Producer"]);
     }
     const result = await getInvoiceForCampaignVendor(campaignVendorId);
     return NextResponse.json(result || { invoice: null, items: [] });

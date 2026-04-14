@@ -5,7 +5,7 @@ import { listMaintenance, createMaintenance, updateMaintenance } from "@/lib/ser
 // GET /api/gear/maintenance?gearItemId=xxx
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const { searchParams } = new URL(request.url);
     const gearItemId = searchParams.get("gearItemId") || undefined;
     const records = await listMaintenance(gearItemId);

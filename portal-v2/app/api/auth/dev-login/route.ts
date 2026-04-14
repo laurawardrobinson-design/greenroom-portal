@@ -15,6 +15,7 @@ const TEST_USERS: Record<
   studio: { email: "studio@test.local", name: "Astasia", role: "Studio" },
   vendor: { email: "vendor@test.local", name: "Sam", role: "Vendor" },
   artdirector: { email: "artdirector@test.local", name: "Alex Rivera", role: "Art Director" },
+  postproducer: { email: "postproducer@test.local", name: "Jessica", role: "Post Producer" },
 };
 
 const TEST_PASSWORD = "testpass123456";

@@ -5,7 +5,7 @@ import { createShotSchema } from "@/lib/validation/shot-list.schema";
 
 export async function POST(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
     const body = await request.json();
     const parsed = createShotSchema.parse(body);
     const shot = await createShot(parsed);

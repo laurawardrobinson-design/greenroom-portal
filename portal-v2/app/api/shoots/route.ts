@@ -6,7 +6,7 @@ import { createShootSchema } from "@/lib/validation/campaigns.schema";
 // POST /api/shoots — create a shoot under a campaign
 export async function POST(request: Request) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const body = await request.json();
     const parsed = createShootSchema.parse(body);
     const shoot = await createShoot(parsed);

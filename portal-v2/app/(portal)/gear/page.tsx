@@ -205,7 +205,7 @@ export default function InventoryPage() {
   const [editKit, setEditKit] = useState<GearKit | null>(null);
   const [expandedKit, setExpandedKit] = useState<string | null>(null);
 
-  const canEdit = user?.role === "Admin" || user?.role === "Studio" || user?.role === "Producer";
+  const canEdit = user?.role === "Admin" || user?.role === "Studio" || user?.role === "Producer" || user?.role === "Post Producer";
 
   // Auto-open scanner drawer when ?scan=true
   useEffect(() => {

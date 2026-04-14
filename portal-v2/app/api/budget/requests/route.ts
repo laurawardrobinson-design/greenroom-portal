@@ -4,7 +4,7 @@ import { listBudgetRequests, createBudgetRequest } from "@/lib/services/budget.s
 
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") || undefined;
     const campaignId = searchParams.get("campaignId") || undefined;
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer"]);
     const body = await request.json();
     await createBudgetRequest({
       campaignId: body.campaignId,

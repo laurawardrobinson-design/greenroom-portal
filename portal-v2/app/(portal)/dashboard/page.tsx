@@ -7,6 +7,7 @@ import { ProducerDashboard } from "@/components/dashboard/producer-dashboard";
 import { StudioDashboard } from "@/components/dashboard/studio-dashboard";
 import { VendorDashboard } from "@/components/dashboard/vendor-dashboard";
 import { ArtDirectorDashboard } from "@/components/dashboard/art-director-dashboard";
+import { PostProducerDashboard } from "@/components/dashboard/post-producer-dashboard";
 
 export default function DashboardPage() {
   const { user, isLoading } = useCurrentUser();
@@ -24,6 +25,8 @@ export default function DashboardPage() {
       return <VendorDashboard user={user} />;
     case "Art Director":
       return <ArtDirectorDashboard user={user} />;
+    case "Post Producer":
+      return <PostProducerDashboard user={user} />;
     default:
       return <DashboardSkeleton />;
   }

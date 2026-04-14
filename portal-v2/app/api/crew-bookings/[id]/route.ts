@@ -40,7 +40,7 @@ export async function PATCH(
 
     // Action: confirm days worked (and optionally submit for payment)
     if (body.action === "confirm_days") {
-      await requireRole(["Admin", "Producer"]);
+      await requireRole(["Admin", "Producer", "Post Producer"]);
       const booking = await confirmBookingDates(
         id,
         body.confirmations,
@@ -84,20 +84,20 @@ export async function PATCH(
 
     // Action: cancel booking
     if (body.action === "cancel") {
-      await requireRole(["Admin", "Producer"]);
+      await requireRole(["Admin", "Producer", "Post Producer"]);
       const booking = await updateCrewBooking(id, { status: "Cancelled" });
       return NextResponse.json(booking);
     }
 
     // Action: mark completed
     if (body.action === "complete") {
-      await requireRole(["Admin", "Producer"]);
+      await requireRole(["Admin", "Producer", "Post Producer"]);
       const booking = await updateCrewBooking(id, { status: "Completed" });
       return NextResponse.json(booking);
     }
 
     // General update (role, rate, notes, classification)
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const booking = await updateCrewBooking(id, {
       role: body.role,
       dayRate: body.dayRate !== undefined ? Number(body.dayRate) : undefined,
@@ -117,7 +117,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const { id } = await params;
     await deleteCrewBooking(id);
     return NextResponse.json({ success: true });

@@ -385,7 +385,7 @@ function CampaignBudgetsTab() {
     "/api/users?roles=Admin,Producer",
     fetcher
   );
-  const producers = (allUsers || []).filter((u) => u.role === "Admin" || u.role === "Producer");
+  const producers = (allUsers || []).filter((u) => u.role === "Admin" || u.role === "Producer" || u.role === "Post Producer");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [editAll, setEditAll] = useState(false);

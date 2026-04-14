@@ -10,7 +10,7 @@ import {
 // GET /api/rate-cards
 export async function GET() {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const cards = await listRateCards();
     return NextResponse.json(cards);
   } catch (error) {

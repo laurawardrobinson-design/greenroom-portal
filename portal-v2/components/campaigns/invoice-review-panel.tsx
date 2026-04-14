@@ -171,7 +171,7 @@ export function InvoiceReviewPanel({
               Approved
             </div>
           )}
-          {!isProducerApproved && !sendingBack && (user?.role === "Producer" || user?.role === "Admin") && (
+          {!isProducerApproved && !sendingBack && (user?.role === "Producer" || user?.role === "Post Producer" || user?.role === "Admin") && (
             <>
               <button
                 onClick={() => setSendingBack(true)}

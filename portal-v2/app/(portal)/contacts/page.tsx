@@ -64,7 +64,7 @@ export default function ContactsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [showAddVendor, setShowAddVendor] = useState(false);
-  const canEdit = user?.role === "Admin" || user?.role === "Producer";
+  const canEdit = user?.role === "Admin" || user?.role === "Producer" || user?.role === "Post Producer";
 
   function switchTab(t: Tab) {
     setTab(t);

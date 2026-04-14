@@ -7,7 +7,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const { id } = await params;
     const db = createAdminClient();
     const { error } = await db.from("gear_items").delete().eq("id", id);

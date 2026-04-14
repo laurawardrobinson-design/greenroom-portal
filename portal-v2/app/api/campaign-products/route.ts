@@ -5,7 +5,7 @@ import { linkProductToCampaignSchema } from "@/lib/validation/products.schema";
 
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director", "Studio", "Vendor"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio", "Vendor"]);
     const { searchParams } = new URL(request.url);
     const campaignId = searchParams.get("campaignId");
     if (!campaignId) {
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio"]);
     const body = await request.json();
     const parsed = linkProductToCampaignSchema.parse(body);
     const link = await linkProductToCampaign(
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) {

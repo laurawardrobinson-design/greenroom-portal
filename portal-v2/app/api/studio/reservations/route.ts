@@ -9,7 +9,7 @@ import {
 
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const { searchParams } = new URL(request.url);
     const reservations = await listReservations({
       campaignId: searchParams.get("campaignId") ?? undefined,
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Studio"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const body = await request.json();
     const { campaignId, spaceId, reservedDate, startTime, endTime, notes } = body;
 
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) {

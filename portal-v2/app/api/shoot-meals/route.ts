@@ -10,7 +10,7 @@ import type { MealType, MealLocation, MealHandlerRole } from "@/types/domain";
 
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const { searchParams } = new URL(request.url);
     const meals = await listMeals({
       campaignId:  searchParams.get("campaignId") ?? undefined,
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Studio"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const body = await request.json();
     const { campaignId, shootDate, mealType, location, handlerRole, ...rest } = body;
 
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const body = await request.json();
     const { id, ...patch } = body;
     if (!id) {
@@ -76,7 +76,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio"]);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) {

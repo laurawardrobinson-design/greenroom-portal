@@ -7,7 +7,7 @@ import {
 
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio"]);
     const { searchParams } = new URL(request.url);
     const wardrobeItemId = searchParams.get("wardrobeItemId") || undefined;
     const upcoming = searchParams.get("upcoming") === "true";
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Art Director", "Studio"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio"]);
     const body = await request.json();
 
     if (!body.wardrobeItemId || !body.startDate || !body.endDate) {

@@ -12,7 +12,7 @@ export async function GET(
   { params }: { params: Promise<{ vendorId: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const { vendorId } = await params;
     const items = await getVendorOnboarding(vendorId);
     const status = await getOnboardingStatus(vendorId);
@@ -28,7 +28,7 @@ export async function PATCH(
   { params }: { params: Promise<{ vendorId: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     await params; // vendorId not needed for update (we use itemId)
     const body = await request.json();
     // body: { itemId, completed, completedDate?, expiresAt?, notes? }

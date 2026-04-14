@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Studio", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Studio", "Art Director"]);
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;

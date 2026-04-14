@@ -79,7 +79,7 @@ export function ShootsSection({ campaignId, campaignName, shoots, onMutate }: Pr
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState("Photo");
   const [saving, setSaving] = useState(false);
-  const canEdit = user?.role === "Admin" || user?.role === "Producer";
+  const canEdit = user?.role === "Admin" || user?.role === "Producer" || user?.role === "Post Producer";
 
   async function handleCreateShoot() {
     setSaving(true);

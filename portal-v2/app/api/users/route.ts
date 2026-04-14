@@ -5,7 +5,7 @@ import { listUsers, createUser, updateUser } from "@/lib/services/crew.service";
 // GET /api/users?roles=Admin,Producer,Studio
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
     const { searchParams } = new URL(request.url);
     const rolesParam = searchParams.get("roles");
     const roles = rolesParam ? rolesParam.split(",") : undefined;
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 // POST /api/users — create a team member (contact-only, no auth account)
 export async function POST(request: Request) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const body = await request.json();
     const user = await createUser(body);
     return NextResponse.json(user, { status: 201 });
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 // PATCH /api/users — update user fields (Admin or Producer)
 export async function PATCH(request: Request) {
   try {
-    await requireRole(["Admin", "Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const body = await request.json();
     const { id, ...updates } = body;
     if (!id) {

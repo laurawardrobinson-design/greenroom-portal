@@ -976,7 +976,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
 ];
 
 function getDefaultTab(role: string): Tab {
-  if (role === "Producer") return "spaces";
+  if (role === "Producer" || role === "Post Producer") return "spaces";
   return "today"; // Studio + Admin default to Today
 }
 
