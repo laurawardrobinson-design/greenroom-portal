@@ -959,23 +959,25 @@ function JobClassesTab({ canEdit, allItems }: { canEdit: boolean; allItems: Ward
       {classes.length === 0 ? (
         <EmptyState icon={<Users className="h-5 w-5" />} title="No job classes yet" description='Create job classes like "Grocery Clerk" to define uniform standards per role.' action={canEdit ? <Button size="sm" onClick={handleOpenAdd}><Plus className="h-3.5 w-3.5" />Add Job Class</Button> : undefined} />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {classes.map((jc) => (
-            <button key={jc.id} onClick={() => setSelectedId(jc.id)} className="flex flex-col items-start gap-2 rounded-xl border border-border bg-surface p-4 text-left hover:bg-surface-secondary transition-colors">
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 shrink-0 text-primary" />
-                  <p className="text-sm font-semibold text-text-primary truncate">{jc.name}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-text-tertiary shrink-0" />
+            <button key={jc.id} onClick={() => setSelectedId(jc.id)} className="flex flex-col rounded-xl border border-border bg-surface text-left hover:bg-surface-secondary transition-colors overflow-hidden group">
+              {/* Uniform photo */}
+              <div className="w-full aspect-[4/3] bg-white flex flex-col items-center justify-center border-b border-border relative overflow-hidden">
+                {jc.name === "Bakery Clerk" ? (
+                  <img src="/job-class-images/bakery-clerk.jpg" alt="Bakery Clerk uniform" className="w-full h-full object-contain" />
+                ) : (
+                  <>
+                    <Users className="h-10 w-10 text-text-tertiary/40" />
+                    <span className="mt-1.5 text-[10px] text-text-tertiary/50">No photo</span>
+                  </>
+                )}
               </div>
-              {jc.description && <p className="text-xs text-text-secondary line-clamp-2">{jc.description}</p>}
-              {jc.referenceUrl && (
-                <span className="flex items-center gap-1 text-[10px] text-primary/70 truncate max-w-full">
-                  <LinkIcon className="h-3 w-3 shrink-0" />
-                  <span className="truncate">Dress code linked</span>
-                </span>
-              )}
+              {/* Name row */}
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <p className="text-sm font-semibold text-text-primary truncate">{jc.name}</p>
+                <ChevronRight className="h-3.5 w-3.5 text-text-tertiary shrink-0 ml-1" />
+              </div>
             </button>
           ))}
         </div>
@@ -1166,14 +1168,18 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
   }
 
   async function handleUpdateItemNotes(jobClassItemId: string, itemNotes: string) {
+    await handleUpdateItem(jobClassItemId, { notes: itemNotes });
+  }
+
+  async function handleUpdateItem(jobClassItemId: string, updates: { notes?: string; gender?: JobClassItemGender; required?: boolean }) {
     try {
       await fetch(`/api/job-classes/${jobClassId}/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "update_item", jobClassItemId, notes: itemNotes }),
+        body: JSON.stringify({ action: "update_item", jobClassItemId, ...updates }),
       });
       mutate();
-    } catch { toast("error", "Failed to save notes"); }
+    } catch { toast("error", "Failed to save"); }
   }
 
   async function handleAddNote() {
@@ -1278,8 +1284,8 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
             )}
           </div>
 
-          {/* Gender toggle — only show if any item has a gender tag */}
-          {items.some((ji) => ji.gender !== "All") && (
+          {/* Gender toggle — always visible when there are items */}
+          {items.length > 0 && (
             <div className="flex items-center gap-1 px-3.5 py-2.5 border-b border-border bg-surface-secondary">
               {(["All", "Men's", "Women's"] as JobClassItemGender[]).map((g) => (
                 <button
@@ -1334,7 +1340,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
               <div className="divide-y divide-border-light">
                 {rows.map((row, idx) => {
                   if (row.type === "single") {
-                    return <JobClassItemRow key={row.item.id} ji={row.item} canEdit={canEdit} onRemove={() => handleRemoveItem(row.item.id)} onSaveNotes={(n) => handleUpdateItemNotes(row.item.id, n)} />;
+                    return <JobClassItemRow key={row.item.id} ji={row.item} canEdit={canEdit} onRemove={() => handleRemoveItem(row.item.id)} onSaveNotes={(n) => handleUpdateItemNotes(row.item.id, n)} onSaveItem={(u) => handleUpdateItem(row.item.id, u)} />;
                   }
                   // OR group
                   return (
@@ -1342,7 +1348,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">Pick one</p>
                       {row.items.map((ji, i) => (
                         <div key={ji.id}>
-                          <JobClassItemRow ji={ji} canEdit={canEdit} onRemove={() => handleRemoveItem(ji.id)} onSaveNotes={(n) => handleUpdateItemNotes(ji.id, n)} compact />
+                          <JobClassItemRow ji={ji} canEdit={canEdit} onRemove={() => handleRemoveItem(ji.id)} onSaveNotes={(n) => handleUpdateItemNotes(ji.id, n)} onSaveItem={(u) => handleUpdateItem(ji.id, u)} compact />
                           {i < row.items.length - 1 && (
                             <div className="flex items-center gap-2 my-1 pl-12">
                               <div className="flex-1 h-px bg-border-light" />
@@ -1456,16 +1462,35 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
 
 // ── Job Class Item Row ────────────────────────────────────────────────────────
 
-function JobClassItemRow({ ji, canEdit, onRemove, onSaveNotes, compact = false }: {
+function JobClassItemRow({ ji, canEdit, onRemove, onSaveNotes, onSaveItem, compact = false }: {
   ji: JobClassItem;
   canEdit: boolean;
   onRemove: () => void;
   onSaveNotes: (notes: string) => void;
+  onSaveItem?: (updates: { notes?: string; gender?: JobClassItemGender; required?: boolean }) => void;
   compact?: boolean;
 }) {
   const item = ji.wardrobeItem;
-  const [editingNotes, setEditingNotes] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [notes, setNotes] = useState(ji.notes);
+  const [gender, setGender] = useState<JobClassItemGender>(ji.gender);
+  const [required, setRequired] = useState(ji.required);
+
+  function handleSave() {
+    if (onSaveItem) {
+      onSaveItem({ notes, gender, required });
+    } else {
+      onSaveNotes(notes);
+    }
+    setEditing(false);
+  }
+
+  function handleCancel() {
+    setNotes(ji.notes);
+    setGender(ji.gender);
+    setRequired(ji.required);
+    setEditing(false);
+  }
 
   return (
     <div className={`${compact ? "py-1.5" : "px-4 py-3"} space-y-2`}>
@@ -1490,31 +1515,67 @@ function JobClassItemRow({ ji, canEdit, onRemove, onSaveNotes, compact = false }
           </div>
         </div>
         {canEdit && (
-          <button onClick={onRemove} className="shrink-0 rounded p-1 text-text-tertiary hover:text-red-600 transition-colors"><X className="h-3.5 w-3.5" /></button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => setEditing(true)} className="rounded p-1 text-text-tertiary hover:text-text-secondary transition-colors"><Edit2 className="h-3.5 w-3.5" /></button>
+            <button onClick={onRemove} className="rounded p-1 text-text-tertiary hover:text-red-600 transition-colors"><X className="h-3.5 w-3.5" /></button>
+          </div>
         )}
       </div>
 
-      {/* Per-item role notes */}
-      {editingNotes ? (
-        <div className="flex gap-2">
+      {/* Notes display (when not editing) */}
+      {!editing && (
+        <button
+          onClick={() => canEdit && setEditing(true)}
+          className={`w-full text-left text-xs rounded px-2 py-1.5 transition-colors ${ji.notes ? "text-text-secondary bg-surface-secondary hover:bg-surface-tertiary" : "text-text-tertiary italic hover:bg-surface-secondary"} ${!canEdit ? "pointer-events-none" : ""}`}
+        >
+          {ji.notes || (canEdit ? "Add role-specific notes…" : "No notes")}
+        </button>
+      )}
+
+      {/* Edit panel */}
+      {editing && (
+        <div className="space-y-2.5 rounded-lg border border-border bg-surface-secondary p-3">
+          {/* Notes */}
           <input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Role-specific notes for this item..."
-            className="h-8 flex-1 rounded-lg border border-border bg-surface pl-3 pr-3 text-xs text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
-            onKeyDown={(e) => { if (e.key === "Enter") { onSaveNotes(notes); setEditingNotes(false); } if (e.key === "Escape") { setNotes(ji.notes); setEditingNotes(false); } }}
+            placeholder="Role-specific notes for this item…"
+            className="h-8 w-full rounded-lg border border-border bg-surface pl-3 pr-3 text-xs text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+            onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") handleCancel(); }}
             autoFocus
           />
-          <Button size="sm" onClick={() => { onSaveNotes(notes); setEditingNotes(false); }}>Save</Button>
+          {/* Gender + Required row */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1">
+              {(["All", "Men's", "Women's"] as JobClassItemGender[]).map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGender(g)}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
+                    gender === g
+                      ? g === "Men's" ? "bg-sky-100 text-sky-700" : g === "Women's" ? "bg-fuchsia-100 text-fuchsia-700" : "bg-slate-200 text-slate-700"
+                      : "text-text-tertiary hover:bg-surface-tertiary"
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setRequired((r) => !r)}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${required ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+            >
+              {required ? "Required" : "Optional"}
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={handleCancel}>Cancel</Button>
+            <Button size="sm" onClick={handleSave}>Save</Button>
+          </div>
         </div>
-      ) : (
-        <button
-          onClick={() => canEdit && setEditingNotes(true)}
-          className={`w-full text-left text-xs rounded px-2 py-1.5 transition-colors ${notes ? "text-text-secondary bg-surface-secondary hover:bg-surface-tertiary" : "text-text-tertiary italic hover:bg-surface-secondary"} ${!canEdit ? "pointer-events-none" : ""}`}
-        >
-          {notes || (canEdit ? "Add role-specific notes for this item..." : "No notes")}
-        </button>
       )}
     </div>
   );
