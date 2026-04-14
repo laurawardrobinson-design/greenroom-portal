@@ -255,7 +255,7 @@ export default function LoginPage() {
           </p>
         )}
       </div>
-      <p className="absolute bottom-4 text-sm text-white/40">
+      <p className="absolute bottom-4 text-xs text-white/40">
         Designed by Laura Robinson — contact with feature requests or questions
       </p>
     </div>
