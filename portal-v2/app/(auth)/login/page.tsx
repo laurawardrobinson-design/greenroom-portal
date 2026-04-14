@@ -145,6 +145,7 @@ export default function LoginPage() {
                 </span>
                 <div className="h-px flex-1 bg-white/15" />
               </div>
+              <p className="-mt-3 mb-4 text-center text-xs text-white/30">Click any role to sign in instantly</p>
 
               {/* Vendor selector (shown when vendor is selected) */}
               {selectedRole === "vendor" ? (
@@ -248,14 +249,14 @@ export default function LoginPage() {
           <p className="text-sm font-medium text-white/50">New feature in progress! Post production workflow under construction.</p>
         </div>
 
-        <p className="mt-6 text-center text-xs text-white/30">
-          {DEV_AUTH
-            ? "Development mode — click any role to sign in instantly"
-            : "Access is restricted to authorized team members and vendors"}
-        </p>
+        {!DEV_AUTH && (
+          <p className="mt-6 text-center text-xs text-white/30">
+            Access is restricted to authorized team members and vendors
+          </p>
+        )}
       </div>
-      <p className="absolute bottom-4 text-xs text-white/40">
-        Designed by Laura Robinson — contact for feature requests or questions
+      <p className="absolute bottom-4 text-sm text-white/40">
+        Designed by Laura Robinson — contact with feature requests
       </p>
     </div>
   );
