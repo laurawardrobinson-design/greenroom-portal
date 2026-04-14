@@ -1331,7 +1331,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
           )}
           <div className="flex">
             {/* Items list */}
-            <div className="flex-1 min-w-0 bg-surface-secondary">
+            <div className="flex-1 min-w-0">
 
               {items.length === 0 ? (
                 <div className="p-4 text-center">
