@@ -1248,12 +1248,35 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
   );
 
   return (
-    <Modal open={true} onClose={onClose} title={jc.name} size="3xl">
+    <Modal open={true} onClose={onClose} size="3xl">
       <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoUpload} />
-      <div className="space-y-6">
 
-        {/* Name / description / reference url */}
-        {editingName ? (
+      {/* Title row */}
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <h2 className="text-lg font-semibold text-text-primary truncate">{jc.name}</h2>
+        <div className="flex items-center gap-0.5 shrink-0">
+          {jc.referenceUrl && !editingName && (
+            <a href={jc.referenceUrl} target="_blank" rel="noopener noreferrer" title="Dress code reference"
+               className="rounded-lg p-1.5 text-text-tertiary hover:text-primary hover:bg-surface-secondary transition-colors">
+              <LinkIcon className="h-4 w-4" />
+            </a>
+          )}
+          {canEdit && !editingName && (
+            <button onClick={() => setEditingName(true)}
+               className="rounded-lg p-1.5 text-text-tertiary hover:text-text-secondary hover:bg-surface-secondary transition-colors">
+              <Edit2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button onClick={onClose} className="rounded-lg p-1.5 text-text-tertiary hover:text-text-secondary hover:bg-surface-secondary transition-colors ml-1">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+
+        {/* Name / description / reference url — editing form only */}
+        {editingName && (
           <div className="space-y-3">
             <Input label="Role Name" value={name} onChange={(e) => setName(e.target.value)} />
             <div>
@@ -1277,25 +1300,6 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
               <Button size="sm" variant="ghost" onClick={() => setEditingName(false)}>Cancel</Button>
               <Button size="sm" onClick={handleSaveName}>Save</Button>
             </div>
-          </div>
-        ) : (
-          <div className="flex items-start justify-between gap-2">
-            <div className="space-y-1.5 min-w-0">
-              {jc.description && <p className="text-sm text-text-secondary">{jc.description}</p>}
-              {jc.referenceUrl && (
-                <a
-                  href={jc.referenceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-                >
-                  <LinkIcon className="h-3.5 w-3.5 shrink-0" />
-                  <span>Publix Dress Code Reference</span>
-                  <ExternalLink className="h-3 w-3 shrink-0" />
-                </a>
-              )}
-            </div>
-            {canEdit && <button onClick={() => setEditingName(true)} className="shrink-0 text-xs text-text-tertiary hover:text-text-secondary transition-colors"><Edit2 className="h-3.5 w-3.5" /></button>}
           </div>
         )}
 

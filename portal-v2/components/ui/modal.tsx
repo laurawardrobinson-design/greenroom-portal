@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, type ReactNode } from "react";
+import { X } from "lucide-react";
 
 interface ModalProps {
   open: boolean;
@@ -113,16 +114,14 @@ export function Modal({
         `}
       >
         {title && (
-          <div className="mb-4">
-            <h2
-              id="modal-title"
-              className="text-lg font-semibold text-text-primary"
-            >
-              {title}
-            </h2>
-            {description && (
-              <p className="mt-1 text-sm text-text-secondary">{description}</p>
-            )}
+          <div className="flex items-start justify-between gap-2 mb-4">
+            <div>
+              <h2 id="modal-title" className="text-lg font-semibold text-text-primary">{title}</h2>
+              {description && <p className="mt-1 text-sm text-text-secondary">{description}</p>}
+            </div>
+            <button onClick={onClose} className="shrink-0 rounded-lg p-1 -mt-0.5 -mr-0.5 text-text-tertiary hover:text-text-secondary hover:bg-surface-secondary transition-colors">
+              <X className="h-4 w-4" />
+            </button>
           </div>
         )}
         {children}
