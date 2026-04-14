@@ -110,7 +110,7 @@ export default function CampaignDetailPage({
   const canDelete = user?.role === "Admin" || user?.role === "Producer";
   const isVendor = user?.role === "Vendor";
   const isArtDirector = user?.role === "Art Director";
-  const showFinancials = !isVendor;
+  const showFinancials = !isVendor && !isArtDirector;
 
   // Fetch users for producer name + AD picker (needed for non-vendor roles)
   const { data: allUsers = [] } = useSWR<AppUser[]>(
