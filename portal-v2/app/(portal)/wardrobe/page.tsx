@@ -1409,7 +1409,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
             </div>
 
             {/* Photo column */}
-            <div className="w-36 shrink-0 border-l border-border bg-white flex flex-col items-center justify-center p-3">
+            <div className="w-[300px] shrink-0 border-l border-border bg-white flex flex-col items-center justify-center p-4">
               <button
                 type="button"
                 onClick={() => canEdit && photoInputRef.current?.click()}
