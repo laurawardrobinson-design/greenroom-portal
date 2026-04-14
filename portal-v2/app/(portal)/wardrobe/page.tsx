@@ -1301,16 +1301,11 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
 
         {/* ── Uniform Items ── */}
         <div className="rounded-xl border border-border overflow-hidden">
-          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
+          <div className="flex items-center px-3.5 py-2.5 border-b border-border">
             <div className="flex items-center gap-2">
               <Shirt className="h-4 w-4 shrink-0 text-primary" />
               <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">UNIFORM ITEMS</h3>
             </div>
-            {canEdit && (
-              <button onClick={() => setShowAddItem(true)} className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors">
-                <Plus className="h-3.5 w-3.5" />Add item
-              </button>
-            )}
           </div>
 
           {items.length > 0 && (
@@ -1405,6 +1400,11 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
               )}
               {showAddItem && availableToAdd.length === 0 && (
                 <p className="p-4 text-sm text-text-tertiary text-center">All wardrobe items are already linked.</p>
+              )}
+              {canEdit && !showAddItem && (
+                <button onClick={() => setShowAddItem(true)} className="flex items-center gap-1.5 w-full px-3.5 py-2.5 border-t border-border text-xs font-medium text-text-tertiary hover:text-primary hover:bg-surface-secondary transition-colors">
+                  <Plus className="h-3.5 w-3.5" />Add item
+                </button>
               )}
             </div>
 
