@@ -1405,14 +1405,14 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
                 <p className="p-4 text-sm text-text-tertiary text-center">All wardrobe items are already linked.</p>
               )}
               {canEdit && !showAddItem && (
-                <button onClick={() => setShowAddItem(true)} className="flex items-center gap-1.5 w-full px-3.5 py-2.5 border-t border-border text-xs font-medium text-text-tertiary hover:text-primary hover:bg-surface-tertiary transition-colors">
+                <button onClick={() => setShowAddItem(true)} className="flex items-center gap-1 px-3 pb-3 pt-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors">
                   <Plus className="h-3.5 w-3.5" />Add item
                 </button>
               )}
             </div>
 
             {/* Photo column */}
-            <div className="w-[250px] shrink-0 border-l border-border bg-white flex flex-col items-center justify-center p-4">
+            <div className="w-[250px] shrink-0 bg-white flex flex-col items-center justify-center p-4">
               <button
                 type="button"
                 onClick={() => canEdit && photoInputRef.current?.click()}
