@@ -243,9 +243,9 @@ export default function LoginPage() {
           )}
         </div>
 
-        <div className="mt-4 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400/70 mb-1">April 14, 2026</p>
-          <p className="text-sm font-medium text-emerald-300">New feature in progress! Post production workflow under construction.</p>
+        <div className="mt-4 rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">April 14, 2026</p>
+          <p className="text-sm font-medium text-white/50">New feature in progress! Post production workflow under construction.</p>
         </div>
 
         <p className="mt-6 text-center text-xs text-white/30">
