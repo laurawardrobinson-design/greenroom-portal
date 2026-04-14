@@ -256,7 +256,7 @@ export default function LoginPage() {
         )}
       </div>
       <p className="absolute bottom-4 text-sm text-white/40">
-        Designed by Laura Robinson — contact with feature requests
+        Designed by Laura Robinson — contact with feature requests or questions
       </p>
     </div>
   );
