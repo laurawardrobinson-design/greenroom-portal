@@ -1250,51 +1250,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
   return (
     <Modal open={true} onClose={onClose} title={jc.name} size="3xl">
       <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoUpload} />
-      <div className="flex gap-6">
-      {/* ── Right: photo panel ── */}
-      <div className="w-44 shrink-0 order-last">
-        <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-text-primary mb-2">
-          <Camera className="h-4 w-4 text-primary" />Photo
-        </p>
-        <button
-          type="button"
-          onClick={() => canEdit && photoInputRef.current?.click()}
-          className={`relative group rounded-xl border border-border overflow-hidden bg-white w-full aspect-[3/4] block ${canEdit ? "cursor-pointer" : "cursor-default"}`}
-        >
-          {jc.imageUrl ? (
-            <>
-              <img src={jc.imageUrl} alt="Uniform photo" className="w-full h-full object-contain" />
-              {canEdit && (
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                  <span className="text-white text-xs font-medium bg-black/50 px-3 py-1.5 rounded-lg">Replace</span>
-                  <button type="button" onClick={handleRemovePhoto} className="text-white/80 text-[10px] hover:text-white transition-colors">Remove</button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-surface-secondary">
-              {canEdit ? (
-                <>
-                  <Camera className="h-7 w-7 text-text-tertiary/50" />
-                  <span className="text-xs text-text-tertiary">Add photo</span>
-                </>
-              ) : (
-                <>
-                  <Users className="h-7 w-7 text-text-tertiary/40" />
-                  <span className="text-xs text-text-tertiary/50">No photo</span>
-                </>
-              )}
-            </div>
-          )}
-          {photoUploading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/80">
-              <span className="text-xs text-text-secondary">Uploading…</span>
-            </div>
-          )}
-        </button>
-      </div>
-      {/* ── Left: main content ── */}
-      <div className="flex-1 min-w-0 space-y-6">
+      <div className="space-y-6">
 
         {/* Name / description / reference url */}
         {editingName ? (
@@ -1357,100 +1313,141 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
             )}
           </div>
 
-          {/* Gender toggle — always visible when there are items */}
-          {items.length > 0 && (
-            <div className="flex items-center gap-1 px-3.5 py-2.5 border-b border-border bg-surface-secondary">
-              {(["All", "Men's", "Women's"] as JobClassItemGender[]).map((g) => (
-                <button
-                  key={g}
-                  onClick={() => setGenderFilter(g)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    genderFilter === g
-                      ? g === "Men's"
-                        ? "bg-sky-100 text-sky-700"
-                        : g === "Women's"
-                        ? "bg-fuchsia-100 text-fuchsia-700"
-                        : "bg-primary text-white"
-                      : "text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary"
-                  }`}
-                >
-                  {g}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {items.length === 0 ? (
-            <div className="p-4 text-center">
-              <p className="text-sm text-text-tertiary">No items linked yet.</p>
-              {canEdit && <button onClick={() => setShowAddItem(true)} className="mt-1 text-xs text-primary hover:underline">Add an item</button>}
-            </div>
-          ) : (() => {
-            // Filter by gender: always show "All" items; show gendered items only in their view
-            const filtered = items.filter((ji) =>
-              ji.gender === "All" || ji.gender === genderFilter
-            );
-            if (filtered.length === 0) {
-              return (
-                <div className="p-4 text-center">
-                  <p className="text-sm text-text-tertiary">No items for {genderFilter} view.</p>
+          <div className="flex">
+            {/* Items list */}
+            <div className="flex-1 min-w-0">
+              {items.length > 0 && (
+                <div className="flex items-center gap-1 px-3.5 py-2.5 border-b border-border bg-surface-secondary">
+                  {(["All", "Men's", "Women's"] as JobClassItemGender[]).map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setGenderFilter(g)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                        genderFilter === g
+                          ? g === "Men's"
+                            ? "bg-sky-100 text-sky-700"
+                            : g === "Women's"
+                            ? "bg-fuchsia-100 text-fuchsia-700"
+                            : "bg-primary text-white"
+                          : "text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary"
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  ))}
                 </div>
-              );
-            }
-            // Group into rows: items with the same optionGroup are alternatives ("OR"), solo items render normally
-            type RowGroup = { type: "single"; item: JobClassItem } | { type: "or-group"; key: string; items: JobClassItem[] };
-            const rows: RowGroup[] = [];
-            const seen = new Set<string>();
-            for (const ji of filtered) {
-              if (!ji.optionGroup) {
-                rows.push({ type: "single", item: ji });
-              } else if (!seen.has(ji.optionGroup)) {
-                seen.add(ji.optionGroup);
-                rows.push({ type: "or-group", key: ji.optionGroup, items: filtered.filter((x) => x.optionGroup === ji.optionGroup) });
-              }
-            }
-            return (
-              <div className="divide-y divide-border-light">
-                {rows.map((row, idx) => {
-                  if (row.type === "single") {
-                    return <JobClassItemRow key={row.item.id} ji={row.item} canEdit={canEdit} onRemove={() => handleRemoveItem(row.item.id)} onSaveNotes={(n) => handleUpdateItemNotes(row.item.id, n)} onSaveItem={(u) => handleUpdateItem(row.item.id, u)} />;
-                  }
-                  // OR group
+              )}
+
+              {items.length === 0 ? (
+                <div className="p-4 text-center">
+                  <p className="text-sm text-text-tertiary">No items linked yet.</p>
+                  {canEdit && <button onClick={() => setShowAddItem(true)} className="mt-1 text-xs text-primary hover:underline">Add an item</button>}
+                </div>
+              ) : (() => {
+                const filtered = items.filter((ji) =>
+                  ji.gender === "All" || ji.gender === genderFilter
+                );
+                if (filtered.length === 0) {
                   return (
-                    <div key={row.key} className="px-4 py-3 space-y-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">Pick one</p>
-                      {row.items.map((ji, i) => (
-                        <div key={ji.id}>
-                          <JobClassItemRow ji={ji} canEdit={canEdit} onRemove={() => handleRemoveItem(ji.id)} onSaveNotes={(n) => handleUpdateItemNotes(ji.id, n)} onSaveItem={(u) => handleUpdateItem(ji.id, u)} compact />
-                          {i < row.items.length - 1 && (
-                            <div className="flex items-center gap-2 my-1 pl-12">
-                              <div className="flex-1 h-px bg-border-light" />
-                              <span className="text-[10px] font-semibold text-text-tertiary uppercase tracking-widest">or</span>
-                              <div className="flex-1 h-px bg-border-light" />
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                    <div className="p-4 text-center">
+                      <p className="text-sm text-text-tertiary">No items for {genderFilter} view.</p>
                     </div>
                   );
-                })}
-              </div>
-            );
-          })()}
+                }
+                type RowGroup = { type: "single"; item: JobClassItem } | { type: "or-group"; key: string; items: JobClassItem[] };
+                const rows: RowGroup[] = [];
+                const seen = new Set<string>();
+                for (const ji of filtered) {
+                  if (!ji.optionGroup) {
+                    rows.push({ type: "single", item: ji });
+                  } else if (!seen.has(ji.optionGroup)) {
+                    seen.add(ji.optionGroup);
+                    rows.push({ type: "or-group", key: ji.optionGroup, items: filtered.filter((x) => x.optionGroup === ji.optionGroup) });
+                  }
+                }
+                return (
+                  <div className="divide-y divide-border-light">
+                    {rows.map((row, idx) => {
+                      if (row.type === "single") {
+                        return <JobClassItemRow key={row.item.id} ji={row.item} canEdit={canEdit} onRemove={() => handleRemoveItem(row.item.id)} onSaveNotes={(n) => handleUpdateItemNotes(row.item.id, n)} onSaveItem={(u) => handleUpdateItem(row.item.id, u)} />;
+                      }
+                      return (
+                        <div key={row.key} className="px-4 py-3 space-y-1">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">Pick one</p>
+                          {row.items.map((ji, i) => (
+                            <div key={ji.id}>
+                              <JobClassItemRow ji={ji} canEdit={canEdit} onRemove={() => handleRemoveItem(ji.id)} onSaveNotes={(n) => handleUpdateItemNotes(ji.id, n)} onSaveItem={(u) => handleUpdateItem(ji.id, u)} compact />
+                              {i < row.items.length - 1 && (
+                                <div className="flex items-center gap-2 my-1 pl-12">
+                                  <div className="flex-1 h-px bg-border-light" />
+                                  <span className="text-[10px] font-semibold text-text-tertiary uppercase tracking-widest">or</span>
+                                  <div className="flex-1 h-px bg-border-light" />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
-          {showAddItem && availableToAdd.length > 0 && (
-            <div className="flex gap-2 p-3.5 border-t border-border">
-              <select value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value)} className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
-                <option value="">Select an item...</option>
-                {availableToAdd.map((i) => <option key={i.id} value={i.id}>{i.name} — {i.category}</option>)}
-              </select>
-              <Button size="sm" onClick={handleAddItem} loading={addingItem}>Add</Button>
-              <Button size="sm" variant="ghost" onClick={() => setShowAddItem(false)}>Cancel</Button>
+              {showAddItem && availableToAdd.length > 0 && (
+                <div className="flex gap-2 p-3.5 border-t border-border">
+                  <select value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value)} className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+                    <option value="">Select an item...</option>
+                    {availableToAdd.map((i) => <option key={i.id} value={i.id}>{i.name} — {i.category}</option>)}
+                  </select>
+                  <Button size="sm" onClick={handleAddItem} loading={addingItem}>Add</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowAddItem(false)}>Cancel</Button>
+                </div>
+              )}
+              {showAddItem && availableToAdd.length === 0 && (
+                <p className="p-4 text-sm text-text-tertiary text-center">All wardrobe items are already linked.</p>
+              )}
             </div>
-          )}
-          {showAddItem && availableToAdd.length === 0 && (
-            <p className="p-4 text-sm text-text-tertiary text-center">All wardrobe items are already linked.</p>
-          )}
+
+            {/* Photo column */}
+            <div className="w-36 shrink-0 border-l border-border bg-white flex flex-col items-center justify-center p-3">
+              <button
+                type="button"
+                onClick={() => canEdit && photoInputRef.current?.click()}
+                className={`relative group w-full aspect-[3/4] rounded-lg overflow-hidden ${canEdit ? "cursor-pointer" : "cursor-default"}`}
+              >
+                {jc.imageUrl ? (
+                  <>
+                    <img src={jc.imageUrl} alt="Uniform photo" className="w-full h-full object-contain bg-white" />
+                    {canEdit && (
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                        <span className="text-white text-xs font-medium bg-black/50 px-3 py-1.5 rounded-lg">Replace</span>
+                        <button type="button" onClick={handleRemovePhoto} className="text-white/80 text-[10px] hover:text-white transition-colors">Remove</button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-border bg-surface-secondary">
+                    {canEdit ? (
+                      <>
+                        <Camera className="h-5 w-5 text-text-tertiary/50" />
+                        <span className="text-[10px] text-text-tertiary text-center leading-tight">Add<br/>photo</span>
+                      </>
+                    ) : (
+                      <>
+                        <Users className="h-5 w-5 text-text-tertiary/40" />
+                        <span className="text-[10px] text-text-tertiary/50">No photo</span>
+                      </>
+                    )}
+                  </div>
+                )}
+                {photoUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-lg">
+                    <span className="text-[10px] text-text-secondary">Uploading…</span>
+                  </div>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* ── Standards ── */}
@@ -1528,8 +1525,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
             </Button>
           </div>
         )}
-      </div>{/* end left column */}
-      </div>{/* end flex row */}
+      </div>
     </Modal>
   );
 }
