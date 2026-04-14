@@ -18,6 +18,8 @@ import type {
   JobClassItemGender,
 } from "@/types/domain";
 import { WARDROBE_CATEGORIES, UNIT_SIZES, UNIT_GENDERS } from "@/lib/validation/wardrobe.schema";
+import { PRODUCT_DEPARTMENTS } from "@/lib/validation/products.schema";
+import { DEPT_COLORS } from "@/components/products/product-drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -57,6 +59,7 @@ import {
   ChevronDown,
   Hash,
   Camera,
+  ShieldAlert,
 } from "lucide-react";
 
 const fetcher = (url: string) =>
@@ -882,15 +885,19 @@ function JobClassesTab({ canEdit, allItems }: { canEdit: boolean; allItems: Ward
 
   // Create form state
   const [newName, setNewName] = useState("");
-  const [newDescription, setNewDescription] = useState("");
+  const [newDepartment, setNewDepartment] = useState("Other");
   const [newStandards, setNewStandards] = useState("");
+  const [newRestrictions, setNewRestrictions] = useState("");
   const [newReferenceUrl, setNewReferenceUrl] = useState("");
+  const newImageFileRef = useRef<File | null>(null);
+  const [showDeptDropdown, setShowDeptDropdown] = useState(false);
+  const deptDropdownRef = useRef<HTMLDivElement>(null);
   const [scraping, setScraping] = useState(false);
   const [scraped, setScraped] = useState(false);
   const [saving, setSaving] = useState(false);
 
   function handleOpenAdd() {
-    setNewName(""); setNewDescription(""); setNewStandards(""); setNewReferenceUrl("");
+    setNewName(""); setNewDepartment("Other"); setNewStandards(""); setNewRestrictions(""); setNewReferenceUrl("");
     setScraped(false);
     setShowAdd(true);
   }
@@ -912,7 +919,6 @@ function JobClassesTab({ canEdit, allItems }: { canEdit: boolean; allItems: Ward
         return;
       }
       if (data.name && !newName.trim()) setNewName(data.name);
-      if (data.description && !newDescription.trim()) setNewDescription(data.description);
       if (data.standards && !newStandards.trim()) setNewStandards(data.standards);
       setScraped(true);
       toast("success", "Info pulled from page");
@@ -933,13 +939,21 @@ function JobClassesTab({ canEdit, allItems }: { canEdit: boolean; allItems: Ward
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newName.trim(),
-          description: newDescription.trim(),
+          department: newDepartment,
           standards: newStandards.trim(),
+          restrictions: newRestrictions.trim(),
           referenceUrl: newReferenceUrl.trim() || null,
         }),
       });
       if (!res.ok) throw new Error();
       const created: JobClass = await res.json();
+      // Upload image if one was selected
+      if (newImageFileRef.current) {
+        const form = new FormData();
+        form.append("file", newImageFileRef.current);
+        await fetch(`/api/job-classes/${created.id}/image`, { method: "POST", body: form });
+        newImageFileRef.current = null;
+      }
       toast("success", "Job class created");
       setShowAdd(false);
       await mutate();
@@ -986,72 +1000,113 @@ function JobClassesTab({ canEdit, allItems }: { canEdit: boolean; allItems: Ward
 
       {/* ── Create Modal ── */}
       {showAdd && (
-        <Modal open={true} onClose={() => setShowAdd(false)} title="New Job Class" size="2xl">
-          <form onSubmit={handleCreate} className="space-y-5">
+        <Modal open={true} onClose={() => { setShowAdd(false); newImageFileRef.current = null; }} size="2xl">
+          <form onSubmit={handleCreate} className="space-y-2">
 
-            {/* Dress Code URL — first so the pull action populates fields below */}
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1.5">
-                Dress Code Reference URL
-              </label>
-              <div className="flex gap-2">
-                <div className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-surface px-3 focus-within:ring-1 focus-within:ring-primary focus-within:border-primary">
-                  <LinkIcon className="h-4 w-4 shrink-0 text-text-tertiary" />
-                  <input
-                    type="url"
-                    value={newReferenceUrl}
-                    onChange={(e) => { setNewReferenceUrl(e.target.value); setScraped(false); }}
-                    placeholder="https://www.publix.org/dress-code/…"
-                    className="h-9 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+            {/* Header row: role name + dept dropdown + X */}
+            <div className="flex items-center gap-2 pb-1.5 border-b border-border">
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Role name…"
+                autoFocus
+                className="flex-1 min-w-0 w-0 text-base font-semibold text-text-primary placeholder:text-text-tertiary bg-transparent focus:outline-none truncate"
+              />
+              <div ref={deptDropdownRef} className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowDeptDropdown((v) => !v)}
+                  className={`text-xs font-medium rounded-full px-2.5 py-1 inline-flex items-center gap-1 transition-opacity hover:opacity-80 ${DEPT_COLORS[newDepartment] || DEPT_COLORS.Other}`}
+                >
+                  {newDepartment}
+                  <svg className="h-2.5 w-2.5 opacity-60" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M1 1l4 4 4-4"/></svg>
+                </button>
+                {showDeptDropdown && (
+                  <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-lg border border-border bg-surface shadow-lg py-1">
+                    {PRODUCT_DEPARTMENTS.map((dept) => (
+                      <button
+                        key={dept}
+                        type="button"
+                        onClick={() => { setNewDepartment(dept); setShowDeptDropdown(false); }}
+                        className="w-full text-left px-3 py-1.5 text-xs font-medium transition-colors hover:bg-surface-secondary"
+                      >
+                        <span className={`inline-flex rounded-full px-2 py-0.5 ${DEPT_COLORS[dept] || DEPT_COLORS.Other}`}>{dept}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button type="button" onClick={() => setShowAdd(false)} className="shrink-0 rounded-lg p-1.5 text-text-tertiary hover:text-text-secondary hover:bg-surface-secondary transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Two-column: text fields left, reference photo right */}
+            <div className="flex gap-4 items-start">
+              {/* Left column: URL + Description + Standards */}
+              <div className="flex-1 space-y-2">
+
+                {/* Dress Code URL */}
+                <div>
+                  <label className="block mt-px text-sm font-medium text-text-primary mb-1">Dress Code Reference URL</label>
+                  <div className="flex gap-2">
+                    <div className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-surface px-3 focus-within:ring-1 focus-within:ring-primary focus-within:border-primary">
+                      <LinkIcon className="h-4 w-4 shrink-0 text-text-tertiary" />
+                      <input
+                        type="url"
+                        value={newReferenceUrl}
+                        onChange={(e) => { setNewReferenceUrl(e.target.value); setScraped(false); }}
+                        placeholder="https://www.publix.org/dress-code/…"
+                        className="h-8 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant={scraped ? "ghost" : "secondary"}
+                      size="sm"
+                      disabled={!newReferenceUrl.trim() || scraping}
+                      loading={scraping}
+                      onClick={handlePullFromUrl}
+                    >
+                      {scraped ? "✓ Pulled" : "Pull info"}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Role Standards */}
+                <div>
+                  <label className="block mt-px text-sm font-medium text-text-primary mb-1">Role Description</label>
+                  <textarea
+                    value={newStandards}
+                    onChange={(e) => setNewStandards(e.target.value)}
+                    placeholder="Job duties, uniform requirements, presentation expectations…"
+                    className="w-full h-16 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none overflow-y-auto"
                   />
                 </div>
-                <Button
-                  type="button"
-                  variant={scraped ? "ghost" : "secondary"}
-                  size="sm"
-                  disabled={!newReferenceUrl.trim() || scraping}
-                  loading={scraping}
-                  onClick={handlePullFromUrl}
-                >
-                  {scraped ? "✓ Pulled" : "Pull info"}
-                </Button>
+
+                {/* Restrictions */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Restrictions</label>
+                  <textarea
+                    value={newRestrictions}
+                    onChange={(e) => setNewRestrictions(e.target.value)}
+                    placeholder="Items that must not be worn, brand restrictions, safety requirements…"
+                    className="w-full h-16 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none overflow-y-auto"
+                  />
+                  <p className="mt-1 text-xs text-text-tertiary">Wardrobe items and shoot notes can be added after creating.</p>
+                </div>
               </div>
-              <p className="mt-1 text-[11px] text-text-tertiary">
-                Paste the Publix dress code URL and click <strong>Pull info</strong> to auto-fill the fields below.
-              </p>
-            </div>
 
-            {/* Role Name */}
-            <Input
-              label="Role Name"
-              placeholder="e.g., Grocery Clerk, Bakery Associate, Deli Team Member"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-            />
-
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1.5">Description</label>
-              <textarea
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                placeholder="Brief description of this role and when these standards apply..."
-                rows={2}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-              />
-            </div>
-
-            {/* Role Standards */}
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1.5">Role Standards</label>
-              <textarea
-                value={newStandards}
-                onChange={(e) => setNewStandards(e.target.value)}
-                placeholder="Uniform requirements, presentation expectations, approved variations, items that must be worn together..."
-                rows={6}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-              />
-              <p className="mt-1 text-[11px] text-text-tertiary">Wardrobe items and shoot notes can be added after creating the role.</p>
+              {/* Right column: Reference Photo */}
+              <div className="shrink-0">
+                <label className="block mt-px text-sm font-medium text-text-primary mb-1">Reference Photo</label>
+                <ImageUpload
+                  value={null}
+                  onFileSelected={(f) => { newImageFileRef.current = f; }}
+                  onRemove={() => { newImageFileRef.current = null; }}
+                />
+              </div>
             </div>
 
             <ModalFooter>
@@ -1091,6 +1146,9 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
   const [editingStandards, setEditingStandards] = useState(false);
   const [standards, setStandards] = useState(jc?.standards || "");
   const [savingStandards, setSavingStandards] = useState(false);
+  const [editingRestrictions, setEditingRestrictions] = useState(false);
+  const [restrictions, setRestrictions] = useState(jc?.restrictions || "");
+  const [savingRestrictions, setSavingRestrictions] = useState(false);
   const [showAddItem, setShowAddItem] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState("");
   const [addingItem, setAddingItem] = useState(false);
@@ -1098,7 +1156,6 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
   const [savingNote, setSavingNote] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(jc?.name || "");
-  const [description, setDescription] = useState(jc?.description || "");
   const [referenceUrl, setReferenceUrl] = useState(jc?.referenceUrl || "");
   const [genderFilter, setGenderFilter] = useState<JobClassItemGender>("All");
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -1106,6 +1163,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
 
   // Sync state when data loads
   if (jc && standards === "" && jc.standards) setStandards(jc.standards);
+  if (jc && restrictions === "" && jc.restrictions) setRestrictions(jc.restrictions);
   if (jc && name === "" && jc.name) setName(jc.name);
   if (jc && referenceUrl === "" && jc.referenceUrl) setReferenceUrl(jc.referenceUrl);
 
@@ -1127,13 +1185,28 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
     finally { setSavingStandards(false); }
   }
 
+  async function handleSaveRestrictions() {
+    setSavingRestrictions(true);
+    try {
+      await fetch(`/api/job-classes/${jobClassId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restrictions }),
+      });
+      toast("success", "Restrictions saved");
+      setEditingRestrictions(false);
+      mutate();
+    } catch { toast("error", "Failed to save"); }
+    finally { setSavingRestrictions(false); }
+  }
+
   async function handleSaveName() {
     if (!name.trim()) return;
     try {
       await fetch(`/api/job-classes/${jobClassId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), description, referenceUrl: referenceUrl.trim() || null }),
+        body: JSON.stringify({ name: name.trim(), referenceUrl: referenceUrl.trim() || null }),
       });
       toast("success", "Saved");
       setEditingName(false);
@@ -1269,14 +1342,10 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
 
       <div className="space-y-4">
 
-        {/* Name / description / reference url — editing form only */}
+        {/* Name / reference url — editing form only */}
         {editingName && (
           <div className="space-y-3">
             <Input label="Role Name" value={name} onChange={(e) => setName(e.target.value)} />
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1.5">Description</label>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
-            </div>
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1.5">Dress Code Reference URL</label>
               <div className="flex items-center gap-2">
@@ -1485,6 +1554,34 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
               <p className="text-sm text-text-primary whitespace-pre-wrap leading-relaxed">{jc.standards}</p>
             ) : (
               <p className="text-sm text-text-tertiary/70 italic">No standards defined yet.{canEdit ? " Click the edit icon to add." : ""}</p>
+            )}
+          </div>
+        </div>
+
+        {/* ── Restrictions ── */}
+        <div className="rounded-xl border border-border overflow-hidden">
+          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 shrink-0 text-primary" />
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">RESTRICTIONS</h3>
+            </div>
+            {canEdit && !editingRestrictions && (
+              <button onClick={() => setEditingRestrictions(true)} className="text-xs text-text-tertiary hover:text-text-secondary transition-colors"><Edit2 className="h-3.5 w-3.5" /></button>
+            )}
+          </div>
+          <div className="px-4 py-3.5">
+            {editingRestrictions ? (
+              <div className="space-y-3">
+                <textarea value={restrictions} onChange={(e) => setRestrictions(e.target.value)} rows={3} placeholder="Items that must not be worn, brand restrictions, safety requirements…" className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => { setEditingRestrictions(false); setRestrictions(jc.restrictions); }}>Cancel</Button>
+                  <Button size="sm" onClick={handleSaveRestrictions} loading={savingRestrictions}>Save</Button>
+                </div>
+              </div>
+            ) : jc.restrictions ? (
+              <p className="text-sm text-amber-700 font-medium whitespace-pre-wrap leading-relaxed">{jc.restrictions}</p>
+            ) : (
+              <p className="text-sm text-text-tertiary/70 italic">No restrictions defined.{canEdit ? " Click edit to add." : ""}</p>
             )}
           </div>
         </div>

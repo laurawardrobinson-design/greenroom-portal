@@ -710,8 +710,9 @@ export interface WardrobeUnit {
 export interface JobClass {
   id: string;
   name: string;
-  description: string;
+  department: string;
   standards: string;
+  restrictions: string;
   referenceUrl: string | null;
   imageUrl: string | null;
   createdBy: string | null;

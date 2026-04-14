@@ -27,8 +27,9 @@ export async function PATCH(
     const body = await request.json();
     const jc = await updateJobClass(id, {
       name: body.name,
-      description: body.description,
+      department: body.department,
       standards: body.standards,
+      restrictions: body.restrictions,
       referenceUrl: body.referenceUrl,
     });
     return NextResponse.json(jc);

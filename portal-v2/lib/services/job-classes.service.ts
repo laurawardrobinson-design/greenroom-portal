@@ -42,8 +42,9 @@ function toJobClass(row: Record<string, unknown>, items?: JobClassItem[]): JobCl
   return {
     id: row.id as string,
     name: row.name as string,
-    description: (row.description as string) || "",
+    department: (row.department as string) || "Other",
     standards: (row.standards as string) || "",
+    restrictions: (row.restrictions as string) || "",
     referenceUrl: (row.reference_url as string) || null,
     imageUrl: (row.image_url as string) || null,
     createdBy: (row.created_by as string) || null,
@@ -94,8 +95,9 @@ export async function getJobClass(id: string): Promise<JobClass | null> {
 
 export async function createJobClass(input: {
   name: string;
-  description?: string;
+  department?: string;
   standards?: string;
+  restrictions?: string;
   referenceUrl?: string | null;
 }, userId: string): Promise<JobClass> {
   const db = createAdminClient();
@@ -103,8 +105,9 @@ export async function createJobClass(input: {
     .from("job_classes")
     .insert({
       name: input.name,
-      description: input.description ?? "",
+      department: input.department ?? "Other",
       standards: input.standards ?? "",
+      restrictions: input.restrictions ?? "",
       reference_url: input.referenceUrl ?? null,
       created_by: userId,
     })
@@ -116,16 +119,18 @@ export async function createJobClass(input: {
 
 export async function updateJobClass(id: string, input: {
   name?: string;
-  description?: string;
+  department?: string;
   standards?: string;
+  restrictions?: string;
   referenceUrl?: string | null;
   imageUrl?: string | null;
 }): Promise<JobClass> {
   const db = createAdminClient();
   const update: Record<string, unknown> = {};
   if (input.name !== undefined) update.name = input.name;
-  if (input.description !== undefined) update.description = input.description;
+  if (input.department !== undefined) update.department = input.department;
   if (input.standards !== undefined) update.standards = input.standards;
+  if (input.restrictions !== undefined) update.restrictions = input.restrictions;
   if (input.referenceUrl !== undefined) update.reference_url = input.referenceUrl;
   if (input.imageUrl !== undefined) update.image_url = input.imageUrl;
 

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
     const jc = await createJobClass(
-      { name: body.name.trim(), description: body.description, standards: body.standards, referenceUrl: body.referenceUrl ?? null },
+      { name: body.name.trim(), department: body.department, standards: body.standards, restrictions: body.restrictions, referenceUrl: body.referenceUrl ?? null },
       user.id
     );
     return NextResponse.json(jc, { status: 201 });
