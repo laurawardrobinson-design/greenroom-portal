@@ -56,6 +56,7 @@ import {
   Archive,
   ChevronDown,
   Hash,
+  Camera,
 } from "lucide-react";
 
 const fetcher = (url: string) =>
@@ -964,8 +965,8 @@ function JobClassesTab({ canEdit, allItems }: { canEdit: boolean; allItems: Ward
             <button key={jc.id} onClick={() => setSelectedId(jc.id)} className="flex flex-col rounded-xl border border-border bg-surface text-left hover:bg-surface-secondary transition-colors overflow-hidden group">
               {/* Uniform photo */}
               <div className="w-full aspect-[4/3] bg-white flex flex-col items-center justify-center border-b border-border relative overflow-hidden">
-                {jc.name === "Bakery Clerk" ? (
-                  <img src="/job-class-images/bakery-clerk.jpg" alt="Bakery Clerk uniform" className="w-full h-full object-contain" />
+                {jc.imageUrl ? (
+                  <img src={jc.imageUrl} alt={`${jc.name} uniform`} className="w-full h-full object-contain" />
                 ) : (
                   <>
                     <Users className="h-10 w-10 text-text-tertiary/40" />
@@ -1100,6 +1101,8 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
   const [description, setDescription] = useState(jc?.description || "");
   const [referenceUrl, setReferenceUrl] = useState(jc?.referenceUrl || "");
   const [genderFilter, setGenderFilter] = useState<JobClassItemGender>("All");
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Sync state when data loads
   if (jc && standards === "" && jc.standards) setStandards(jc.standards);
@@ -1213,6 +1216,31 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
     } catch { toast("error", "Failed to delete"); }
   }
 
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setPhotoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/job-classes/${jobClassId}/image`, { method: "POST", body: fd });
+      if (!res.ok) throw new Error();
+      mutate();
+      toast("success", "Photo updated");
+    } catch { toast("error", "Failed to upload photo"); }
+    finally { setPhotoUploading(false); }
+  }
+
+  async function handleRemovePhoto(e: React.MouseEvent) {
+    e.stopPropagation();
+    try {
+      await fetch(`/api/job-classes/${jobClassId}/image`, { method: "DELETE" });
+      mutate();
+      toast("success", "Photo removed");
+    } catch { toast("error", "Failed to remove photo"); }
+  }
+
   if (!jc) return (
     <Modal open={true} onClose={onClose} size="3xl">
       <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={i} />)}</div>
@@ -1221,7 +1249,52 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
 
   return (
     <Modal open={true} onClose={onClose} title={jc.name} size="3xl">
-      <div className="space-y-6">
+      <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoUpload} />
+      <div className="flex gap-6">
+      {/* ── Right: photo panel ── */}
+      <div className="w-44 shrink-0 order-last">
+        <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-text-primary mb-2">
+          <Camera className="h-4 w-4 text-primary" />Photo
+        </p>
+        <button
+          type="button"
+          onClick={() => canEdit && photoInputRef.current?.click()}
+          className={`relative group rounded-xl border border-border overflow-hidden bg-white w-full aspect-[3/4] block ${canEdit ? "cursor-pointer" : "cursor-default"}`}
+        >
+          {jc.imageUrl ? (
+            <>
+              <img src={jc.imageUrl} alt="Uniform photo" className="w-full h-full object-contain" />
+              {canEdit && (
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                  <span className="text-white text-xs font-medium bg-black/50 px-3 py-1.5 rounded-lg">Replace</span>
+                  <button type="button" onClick={handleRemovePhoto} className="text-white/80 text-[10px] hover:text-white transition-colors">Remove</button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-surface-secondary">
+              {canEdit ? (
+                <>
+                  <Camera className="h-7 w-7 text-text-tertiary/50" />
+                  <span className="text-xs text-text-tertiary">Add photo</span>
+                </>
+              ) : (
+                <>
+                  <Users className="h-7 w-7 text-text-tertiary/40" />
+                  <span className="text-xs text-text-tertiary/50">No photo</span>
+                </>
+              )}
+            </div>
+          )}
+          {photoUploading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+              <span className="text-xs text-text-secondary">Uploading…</span>
+            </div>
+          )}
+        </button>
+      </div>
+      {/* ── Left: main content ── */}
+      <div className="flex-1 min-w-0 space-y-6">
 
         {/* Name / description / reference url */}
         {editingName ? (
@@ -1455,7 +1528,8 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
             </Button>
           </div>
         )}
-      </div>
+      </div>{/* end left column */}
+      </div>{/* end flex row */}
     </Modal>
   );
 }

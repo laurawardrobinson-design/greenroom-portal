@@ -713,6 +713,7 @@ export interface JobClass {
   description: string;
   standards: string;
   referenceUrl: string | null;
+  imageUrl: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;

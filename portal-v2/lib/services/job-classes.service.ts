@@ -45,6 +45,7 @@ function toJobClass(row: Record<string, unknown>, items?: JobClassItem[]): JobCl
     description: (row.description as string) || "",
     standards: (row.standards as string) || "",
     referenceUrl: (row.reference_url as string) || null,
+    imageUrl: (row.image_url as string) || null,
     createdBy: (row.created_by as string) || null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -118,6 +119,7 @@ export async function updateJobClass(id: string, input: {
   description?: string;
   standards?: string;
   referenceUrl?: string | null;
+  imageUrl?: string | null;
 }): Promise<JobClass> {
   const db = createAdminClient();
   const update: Record<string, unknown> = {};
@@ -125,6 +127,7 @@ export async function updateJobClass(id: string, input: {
   if (input.description !== undefined) update.description = input.description;
   if (input.standards !== undefined) update.standards = input.standards;
   if (input.referenceUrl !== undefined) update.reference_url = input.referenceUrl;
+  if (input.imageUrl !== undefined) update.image_url = input.imageUrl;
 
   const { data, error } = await db
     .from("job_classes")
