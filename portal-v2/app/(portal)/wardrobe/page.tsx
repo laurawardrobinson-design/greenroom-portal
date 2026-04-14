@@ -1331,12 +1331,11 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
           )}
           <div className="flex">
             {/* Items list */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 bg-surface-secondary">
 
               {items.length === 0 ? (
                 <div className="p-4 text-center">
                   <p className="text-sm text-text-tertiary">No items linked yet.</p>
-                  {canEdit && <button onClick={() => setShowAddItem(true)} className="mt-1 text-xs text-primary hover:underline">Add an item</button>}
                 </div>
               ) : (() => {
                 const filtered = items.filter((ji) =>
@@ -1361,14 +1360,18 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
                   }
                 }
                 return (
-                  <div className="divide-y divide-border-light">
-                    {rows.map((row, idx) => {
+                  <div className="p-3 space-y-2">
+                    {rows.map((row) => {
                       if (row.type === "single") {
-                        return <JobClassItemRow key={row.item.id} ji={row.item} canEdit={canEdit} onRemove={() => handleRemoveItem(row.item.id)} onSaveNotes={(n) => handleUpdateItemNotes(row.item.id, n)} onSaveItem={(u) => handleUpdateItem(row.item.id, u)} />;
+                        return (
+                          <div key={row.item.id} className="rounded-lg border border-border bg-white overflow-hidden">
+                            <JobClassItemRow ji={row.item} canEdit={canEdit} onRemove={() => handleRemoveItem(row.item.id)} onSaveNotes={(n) => handleUpdateItemNotes(row.item.id, n)} onSaveItem={(u) => handleUpdateItem(row.item.id, u)} />
+                          </div>
+                        );
                       }
                       return (
-                        <div key={row.key} className="px-4 py-3 space-y-1">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">Pick one</p>
+                        <div key={row.key} className="rounded-lg border border-border bg-white overflow-hidden">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary px-4 pt-3 pb-1">Pick one</p>
                           {row.items.map((ji, i) => (
                             <div key={ji.id}>
                               <JobClassItemRow ji={ji} canEdit={canEdit} onRemove={() => handleRemoveItem(ji.id)} onSaveNotes={(n) => handleUpdateItemNotes(ji.id, n)} onSaveItem={(u) => handleUpdateItem(ji.id, u)} compact />
@@ -1389,8 +1392,8 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
               })()}
 
               {showAddItem && availableToAdd.length > 0 && (
-                <div className="flex gap-2 p-3.5 border-t border-border">
-                  <select value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value)} className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+                <div className="flex gap-2 p-3 border-t border-border">
+                  <select value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value)} className="flex-1 rounded-lg border border-border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
                     <option value="">Select an item...</option>
                     {availableToAdd.map((i) => <option key={i.id} value={i.id}>{i.name} — {i.category}</option>)}
                   </select>
@@ -1402,7 +1405,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
                 <p className="p-4 text-sm text-text-tertiary text-center">All wardrobe items are already linked.</p>
               )}
               {canEdit && !showAddItem && (
-                <button onClick={() => setShowAddItem(true)} className="flex items-center gap-1.5 w-full px-3.5 py-2.5 border-t border-border text-xs font-medium text-text-tertiary hover:text-primary hover:bg-surface-secondary transition-colors">
+                <button onClick={() => setShowAddItem(true)} className="flex items-center gap-1.5 w-full px-3.5 py-2.5 border-t border-border text-xs font-medium text-text-tertiary hover:text-primary hover:bg-surface-tertiary transition-colors">
                   <Plus className="h-3.5 w-3.5" />Add item
                 </button>
               )}
