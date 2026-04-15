@@ -112,7 +112,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-sidebar px-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-sidebar px-4 pb-12">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 text-center">
@@ -255,7 +255,7 @@ export default function LoginPage() {
           </p>
         )}
       </div>
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+      <div className="mt-8 flex flex-col items-center gap-2">
         <div className="h-px w-16 bg-white/20" />
         <p className="whitespace-nowrap text-xs font-medium tracking-wide text-white/90">
           Experience by{" "}
