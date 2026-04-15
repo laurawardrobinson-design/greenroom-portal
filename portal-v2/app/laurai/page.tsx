@@ -117,9 +117,10 @@ export default function LaurAIPage() {
       <button
         onClick={() => router.back()}
         aria-label="Go back"
-        className="absolute bottom-6 left-6 text-white/40 hover:text-white/80 transition-colors duration-300"
+        className="absolute bottom-6 left-6 flex items-center gap-1.5 text-white/50 hover:text-white/90 transition-colors duration-300"
       >
-        <ChevronLeft className="h-6 w-6" />
+        <ChevronLeft className="h-5 w-5" />
+        <span className="text-xs font-medium tracking-wide">Back</span>
       </button>
     </div>
   );
