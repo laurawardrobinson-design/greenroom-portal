@@ -115,8 +115,8 @@ export default function LoginPage() {
     <div className="flex min-h-dvh flex-col items-center justify-center bg-sidebar px-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="mb-10 text-center">
-          <div className="mx-auto mb-6 max-w-[260px]">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-8 max-w-[260px]">
             <img
               src="/greenroom-logo.png"
               alt="Greenroom — Publix Creative Studio"
@@ -124,7 +124,7 @@ export default function LoginPage() {
             />
           </div>
           <p className="text-sm text-white/50">
-            Sign in to manage campaigns, vendors, and gear
+            A smarter way to run production.
           </p>
         </div>
 
@@ -245,8 +245,8 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-4 rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">April 14, 2026</p>
-          <p className="text-sm font-medium text-white/50">New feature — post production workflow under construction.</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#69A925] mb-1">April 14, 2026</p>
+          <p className="text-sm font-medium text-white/50">New feature — post production workflow is under construction.</p>
         </div>
 
         {!DEV_AUTH && (
@@ -256,7 +256,7 @@ export default function LoginPage() {
         )}
       </div>
       <p className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-medium tracking-widest text-white/55">
-        Designed by Laura Robinson · Powered by LaurAI
+        Powered by LaurAI
       </p>
     </div>
   );

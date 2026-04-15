@@ -215,7 +215,7 @@ export function HopDashboard({ user }: Props) {
           accent="bg-purple-50 text-purple-600"
         />
         <StatCard
-          label="Post Workflow"
+          label="Post Production"
           value={postStats ? `${postStats.drivesCheckedOut} out` : "—"}
           icon={Clapperboard}
           accent={postStats && (postStats.drivesPastRetirement > 0)

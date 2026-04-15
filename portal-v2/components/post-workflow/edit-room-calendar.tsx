@@ -4,34 +4,38 @@ import { useState, useMemo } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import {
   format,
-  startOfWeek,
-  addDays,
-  addWeeks,
-  subWeeks,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  getISODay,
+  addMonths,
+  subMonths,
   parseISO,
-  isSameDay,
   isToday,
+  isSameDay,
+  isSameMonth,
 } from "date-fns";
 import type { AppUser, EditRoom, EditRoomReservation } from "@/types/domain";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ReserveRoomModal } from "./reserve-room-modal";
-import { getRoomColor } from "@/lib/constants/edit-rooms";
+import { EditRoomMap } from "./edit-room-map";
 import {
   Clapperboard,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Plus,
   X,
-  CalendarDays,
-  Pencil,
   Trash2,
+  Monitor,
 } from "lucide-react";
 
-const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
-
-const DAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const fetcher = (url: string) =>
+  fetch(url).then((r) => {
+    if (!r.ok) throw new Error("Request failed");
+    return r.json();
+  });
 
 interface Props {
   user: AppUser;
@@ -50,22 +54,24 @@ export function EditRoomCalendar({ user }: Props) {
   const { toast } = useToast();
   const { mutate } = useSWRConfig();
 
-  const [weekStart, setWeekStart] = useState(() =>
-    startOfWeek(new Date(), { weekStartsOn: 1 })
-  );
+  const today = useMemo(() => new Date(), []);
+
+  const [selectedDate, setSelectedDate] = useState<Date>(today);
+  const [calMonth, setCalMonth] = useState<Date>(today);
+
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [defaultDate, setDefaultDate] = useState<string | undefined>();
   const [defaultRoomId, setDefaultRoomId] = useState<string | undefined>();
   const [detail, setDetail] = useState<DetailPanel | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const fromStr = format(weekStart, "yyyy-MM-dd");
-  const toStr = format(addDays(weekStart, 6), "yyyy-MM-dd");
+  const monthStart = startOfMonth(calMonth);
+  const monthEnd = endOfMonth(calMonth);
+  const selectedStr = format(selectedDate, "yyyy-MM-dd");
 
   const { data: rooms } = useSWR<EditRoom[]>("/api/post-workflow/edit-rooms", fetcher);
-  const { data: reservationsRaw, isLoading } = useSWR<EditRoomReservation[]>(
-    `/api/post-workflow/edit-room-reservations?from=${fromStr}&to=${toStr}`,
+  const { data: reservationsRaw, mutate: refreshRes } = useSWR<EditRoomReservation[]>(
+    `/api/post-workflow/edit-room-reservations?from=${format(monthStart, "yyyy-MM-dd")}&to=${format(monthEnd, "yyyy-MM-dd")}`,
     fetcher
   );
   const { data: campaigns } = useSWR<any[]>("/api/campaigns", fetcher);
@@ -73,7 +79,11 @@ export function EditRoomCalendar({ user }: Props) {
   const roomList = Array.isArray(rooms) ? rooms : [];
   const reservations = Array.isArray(reservationsRaw) ? reservationsRaw : [];
   const campaignList = Array.isArray(campaigns)
-    ? campaigns.map((c: any) => ({ id: c.id, wfNumber: c.wfNumber ?? c.wf_number, name: c.name }))
+    ? campaigns.map((c: any) => ({
+        id: c.id,
+        wfNumber: c.wfNumber ?? c.wf_number,
+        name: c.name,
+      }))
     : [];
 
   // Map: roomId → { dateStr → reservation }
@@ -86,7 +96,7 @@ export function EditRoomCalendar({ user }: Props) {
     return map;
   }, [reservations]);
 
-  // Map: groupId → all dates in this week for that group
+  // Map: groupId → all dates in this month for that group
   const groupDatesMap = useMemo(() => {
     const map = new Map<string, string[]>();
     for (const r of reservations) {
@@ -96,9 +106,50 @@ export function EditRoomCalendar({ user }: Props) {
     return map;
   }, [reservations]);
 
-  // Room color by sort_order index
-  function roomColor(roomIndex: number) {
-    return getRoomColor(roomIndex);
+  // Days in this month that have any bookings → calendar dots
+  const bookedDays = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of reservations) set.add(r.reservedDate);
+    return set;
+  }, [reservations]);
+
+  // roomId → reservation for the selected date
+  const reservationsByRoom = useMemo(() => {
+    const map = new Map<string, EditRoomReservation>();
+    for (const [roomId, dateMap] of reservationMap) {
+      const res = dateMap.get(selectedStr);
+      if (res) map.set(roomId, res);
+    }
+    return map;
+  }, [reservationMap, selectedStr]);
+
+  // Calendar grid with leading nulls for Mon offset
+  const calDays = useMemo(() => {
+    const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    const offset = getISODay(monthStart) - 1;
+    return [...Array<null>(offset).fill(null), ...days];
+  }, [monthStart, monthEnd]);
+
+  function selectDay(day: Date) {
+    setSelectedDate(day);
+    if (!isSameMonth(day, calMonth)) setCalMonth(day);
+  }
+
+  function navMonth(dir: 1 | -1) {
+    const newMonth = dir === 1 ? addMonths(calMonth, 1) : subMonths(calMonth, 1);
+    const newSelected = isSameMonth(newMonth, today) ? today : startOfMonth(newMonth);
+    setCalMonth(newMonth);
+    setSelectedDate(newSelected);
+  }
+
+  function handleMapRoomClick(room: EditRoom, reservation: EditRoomReservation | null) {
+    if (reservation) {
+      openDetail(reservation, room.name);
+    } else if (canWrite) {
+      setDefaultRoomId(room.id);
+      setDefaultDate(selectedStr);
+      setShowReserveModal(true);
+    }
   }
 
   function openDetail(r: EditRoomReservation, roomName: string) {
@@ -117,59 +168,158 @@ export function EditRoomCalendar({ user }: Props) {
   async function handleCancel(groupId: string) {
     setCancelling(true);
     try {
-      const res = await fetch(`/api/post-workflow/edit-room-reservations/group/${groupId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/post-workflow/edit-room-reservations/group/${groupId}`,
+        { method: "DELETE" }
+      );
       if (!res.ok) {
         toast("error", "Failed to cancel booking.");
         return;
       }
       toast("success", "Booking cancelled.");
       setDetail(null);
-      mutate(`/api/post-workflow/edit-room-reservations?from=${fromStr}&to=${toStr}`);
+      refreshRes();
     } finally {
       setCancelling(false);
     }
   }
 
   const canWrite = ["Admin", "Producer", "Post Producer"].includes(user.role);
+  const dayResCount = reservationsByRoom.size;
 
   return (
-    <div className="space-y-4">
-      <Card padding="none">
+    <div className="grid gap-6 items-start" style={{ gridTemplateColumns: "360px 1fr" }}>
+
+      {/* ── Left: Month calendar ───────────────────────────────────────────── */}
+      <div className="rounded-xl border border-border bg-surface overflow-hidden">
+
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
+        <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
           <div className="flex items-center gap-2">
-            <Clapperboard className="h-4 w-4 shrink-0 text-primary" />
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
-              Edit Room Schedule
-            </h3>
+            <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+              {format(calMonth, "MMMM yyyy")}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={() => setWeekStart(subWeeks(weekStart, 1))}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="min-w-[160px] text-center text-sm font-medium text-text-primary">
-                {format(weekStart, "MMM d")} – {format(addDays(weekStart, 6), "MMM d, yyyy")}
-              </span>
-              <Button variant="ghost" size="sm" onClick={() => setWeekStart(addWeeks(weekStart, 1))}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}
-              className="text-xs"
+          <div className="flex items-center gap-1">
+            {!isSameMonth(today, calMonth) && (
+              <button
+                onClick={() => { setCalMonth(today); setSelectedDate(today); }}
+                className="rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] font-semibold text-text-secondary hover:bg-surface-secondary transition-colors"
+              >
+                Today
+              </button>
+            )}
+            <button
+              onClick={() => navMonth(-1)}
+              className="rounded-md p-1 text-text-secondary hover:bg-surface-secondary transition-colors"
             >
-              Today
-            </Button>
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => navMonth(1)}
+              className="rounded-md p-1 text-text-secondary hover:bg-surface-secondary transition-colors"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Day-of-week header */}
+        <div className="grid grid-cols-7 border-b border-border">
+          {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d) => (
+            <div
+              key={d}
+              className="py-2 text-center text-[10px] font-semibold uppercase tracking-wider text-text-tertiary"
+            >
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Day cells */}
+        <div className="grid grid-cols-7 p-2 gap-1">
+          {calDays.map((day, i) => {
+            if (!day) return <div key={`empty-${i}`} />;
+            const ds = format(day, "yyyy-MM-dd");
+            const isSelected = isSameDay(day, selectedDate);
+            const isTodayDay = isToday(day);
+            const hasBookings = bookedDays.has(ds);
+
+            return (
+              <button
+                key={ds}
+                onClick={() => selectDay(day)}
+                className={`flex flex-col items-center justify-center rounded-lg py-2 transition-all ${
+                  isSelected && isTodayDay
+                    ? "bg-primary text-white font-semibold"
+                    : isSelected
+                    ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/25"
+                    : isTodayDay
+                    ? "text-primary font-semibold"
+                    : "text-text-secondary hover:bg-surface-secondary"
+                }`}
+              >
+                <span className="text-sm leading-none">{format(day, "d")}</span>
+                <div className="flex gap-0.5 mt-1 h-1.5 items-center">
+                  {hasBookings && (
+                    <span
+                      className={`h-1 w-1 rounded-full ${
+                        isSelected && isTodayDay ? "bg-white" : "bg-primary"
+                      }`}
+                    />
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Legend + viewing footer */}
+        <div className="border-t border-border">
+          <div className="flex gap-4 px-3.5 py-2">
+            <span className="flex items-center gap-1.5 text-[10px] text-text-tertiary">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+              Edit room booked
+            </span>
+          </div>
+          <div className="border-t border-border px-3.5 py-2">
+            <p className="text-[10px] text-text-tertiary">
+              Viewing{" "}
+              <span className={`font-semibold ${isToday(selectedDate) ? "text-primary" : "text-text-primary"}`}>
+                {isToday(selectedDate) ? "Today" : format(selectedDate, "EEE, MMM d")}
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Right: Edit room map ───────────────────────────────────────────── */}
+      <div className="rounded-xl border border-border bg-surface overflow-hidden">
+
+        {/* Tile header */}
+        <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Monitor className="h-4 w-4 shrink-0 text-primary" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+              Edit Rooms
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-text-tertiary">
+              {dayResCount > 0
+                ? `${dayResCount} room${dayResCount !== 1 ? "s" : ""} booked`
+                : "All rooms available"}
+            </span>
             {canWrite && (
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => { setDefaultRoomId(undefined); setDefaultDate(undefined); setShowReserveModal(true); }}
+                onClick={() => {
+                  setDefaultRoomId(undefined);
+                  setDefaultDate(selectedStr);
+                  setShowReserveModal(true);
+                }}
               >
                 <Plus className="h-4 w-4" />
                 Reserve Room
@@ -178,129 +328,22 @@ export function EditRoomCalendar({ user }: Props) {
           </div>
         </div>
 
-        {/* Grid */}
-        <div className={`overflow-x-auto transition-opacity ${isLoading ? "opacity-40" : ""}`}>
-          <table className="w-full min-w-[700px] border-collapse">
-            <thead>
-              <tr>
-                {/* Room label column */}
-                <th className="w-32 border-b border-r border-border bg-surface-secondary px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-text-tertiary" />
-                {weekDays.map((day, i) => {
-                  const today = isToday(day);
-                  return (
-                    <th
-                      key={i}
-                      className={`border-b border-r border-border px-2 py-2 text-center text-[11px] font-medium uppercase tracking-wide ${
-                        today ? "bg-primary/5 text-primary" : "bg-surface-secondary text-text-tertiary"
-                      }`}
-                    >
-                      <div>{DAY_LABELS[i]}</div>
-                      <div
-                        className={`mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-xs ${
-                          today ? "bg-primary font-bold text-white" : "text-text-secondary"
-                        }`}
-                      >
-                        {format(day, "d")}
-                      </div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {roomList.map((room, roomIdx) => {
-                const color = roomColor(roomIdx);
-                const roomReservations = reservationMap.get(room.id) ?? new Map();
-
-                return (
-                  <tr key={room.id} className="group">
-                    {/* Room name */}
-                    <td className="border-b border-r border-border-light bg-surface-secondary px-3 py-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${color.bg}`} />
-                        <span className="text-xs font-medium text-text-primary leading-tight">
-                          {room.name}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Day cells */}
-                    {weekDays.map((day, dayIdx) => {
-                      const dateStr = format(day, "yyyy-MM-dd");
-                      const reservation = roomReservations.get(dateStr);
-                      const today = isToday(day);
-
-                      // Determine visual block edges within the week
-                      const prevDateStr = dayIdx > 0 ? format(addDays(day, -1), "yyyy-MM-dd") : null;
-                      const nextDateStr = dayIdx < 6 ? format(addDays(day, 1), "yyyy-MM-dd") : null;
-                      const hasPrev = reservation && prevDateStr
-                        ? roomReservations.get(prevDateStr)?.groupId === reservation.groupId
-                        : false;
-                      const hasNext = reservation && nextDateStr
-                        ? roomReservations.get(nextDateStr)?.groupId === reservation.groupId
-                        : false;
-
-                      return (
-                        <td
-                          key={dayIdx}
-                          className={`relative border-b border-r border-border-light p-1 ${
-                            today ? "bg-primary/3" : ""
-                          }`}
-                          style={{ minWidth: 90, height: 52 }}
-                        >
-                          {reservation ? (
-                            <button
-                              onClick={() => openDetail(reservation, room.name)}
-                              className={`
-                                flex h-full w-full cursor-pointer items-center px-2 text-left transition-opacity hover:opacity-80
-                                ${color.light}
-                                ${!hasPrev ? "rounded-l-md border-l border-t border-b" : "border-t border-b"}
-                                ${!hasNext ? "rounded-r-md border-r" : ""}
-                                border-opacity-50
-                              `}
-                            >
-                              {!hasPrev && (
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-[11px] font-semibold leading-tight">
-                                    {reservation.editorName}
-                                  </p>
-                                  {reservation.campaignWfNumber && (
-                                    <p className="truncate text-[10px] opacity-70">
-                                      {reservation.campaignWfNumber}
-                                    </p>
-                                  )}
-                                </div>
-                              )}
-                            </button>
-                          ) : canWrite ? (
-                            <button
-                              onClick={() => {
-                                setDefaultRoomId(room.id);
-                                setDefaultDate(dateStr);
-                                setShowReserveModal(true);
-                              }}
-                              className="flex h-full w-full items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-surface-secondary group-hover:opacity-100"
-                              title="Add booking"
-                            >
-                              <Plus className="h-3.5 w-3.5 text-text-tertiary" />
-                            </button>
-                          ) : null}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        {/* Map */}
+        <div className="p-3">
+          {roomList.length > 0 ? (
+            <EditRoomMap
+              rooms={roomList}
+              reservationsByRoom={reservationsByRoom}
+              onRoomClick={handleMapRoomClick}
+              canWrite={canWrite}
+            />
+          ) : (
+            <div className="flex h-64 items-center justify-center">
+              <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            </div>
+          )}
         </div>
-
-        {roomList.length === 0 && !isLoading && (
-          <div className="py-10 text-center text-sm text-text-tertiary">
-            No edit rooms configured.
-          </div>
-        )}
-      </Card>
+      </div>
 
       {/* Detail panel overlay */}
       {detail && (

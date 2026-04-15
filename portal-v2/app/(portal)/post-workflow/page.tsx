@@ -44,7 +44,7 @@ export default function PostWorkflowPage() {
     return (
       <EmptyState
         title="Access restricted"
-        description="You don't have permission to view Post Workflow."
+        description="You don't have permission to view Post Production."
       />
     );
   }
@@ -53,7 +53,7 @@ export default function PostWorkflowPage() {
     <div className="space-y-5">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">Post Workflow</h1>
+        <h1 className="text-2xl font-bold text-text-primary">Post Production</h1>
         <p className="text-sm text-text-secondary">
           Edit room reservations and hard drive management
         </p>

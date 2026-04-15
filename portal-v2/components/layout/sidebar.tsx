@@ -94,7 +94,7 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["Admin", "Producer", "Post Producer", "Studio"],
   },
   {
-    label: "Post Workflow",
+    label: "Post Production",
     href: "/post-workflow",
     icon: Clapperboard,
     roles: ["Admin", "Producer", "Post Producer"],
