@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 
 const DRIFT_SPEED = 0.4;
 
 export default function LaurAIPage() {
   const router = useRouter();
   const [textVisible, setTextVisible] = useState(false);
-  const [dotVisible, setDotVisible] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -21,11 +21,9 @@ export default function LaurAIPage() {
   useEffect(() => {
     const fadeIn = setTimeout(() => setTextVisible(true), 800);
     const fadeOut = setTimeout(() => setTextVisible(false), 5000);
-    const dotTimer = setTimeout(() => setDotVisible(true), 6500);
     return () => {
       clearTimeout(fadeIn);
       clearTimeout(fadeOut);
-      clearTimeout(dotTimer);
     };
   }, []);
 
@@ -117,12 +115,12 @@ export default function LaurAIPage() {
       </div>
 
       <button
-        onClick={() => router.push("/login")}
-        aria-label="Back to login"
-        className="absolute bottom-7 left-1/2 -translate-x-1/2 transition-opacity duration-[1000ms] ease-in-out"
-        style={{ opacity: dotVisible ? 1 : 0 }}
+        onClick={() => router.back()}
+        aria-label="Go back"
+        className="absolute bottom-6 left-6 flex items-center gap-1.5 text-white/50 hover:text-white/90 transition-colors duration-300"
       >
-        <span className="block h-2 w-2 rounded-full bg-white/40 hover:bg-white/70 transition-colors duration-300" />
+        <ChevronLeft className="h-5 w-5" />
+        <span className="text-xs font-medium tracking-wide">Back</span>
       </button>
     </div>
   );
