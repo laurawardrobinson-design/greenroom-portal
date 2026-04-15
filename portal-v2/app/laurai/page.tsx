@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-const DRIFT_SPEED = 0.4; // px per frame (~24px/sec at 60fps)
+const DRIFT_SPEED = 0.4;
 
 export default function LaurAIPage() {
   const router = useRouter();
