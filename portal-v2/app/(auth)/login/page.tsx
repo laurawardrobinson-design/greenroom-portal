@@ -123,8 +123,8 @@ export default function LoginPage() {
               className="w-full"
             />
           </div>
-          <p className="text-sm text-white/50">
-            A smarter way to run production.
+          <p className="text-sm font-medium tracking-wide text-white/60">
+            The smarter way to run production.
           </p>
         </div>
 
@@ -140,12 +140,12 @@ export default function LoginPage() {
             <>
               <div className="my-5 flex items-center gap-3">
                 <div className="h-px flex-1 bg-white/15" />
-                <span className="text-[10px] font-medium uppercase tracking-widest text-white/30">
+                <span className="text-[10px] font-medium uppercase tracking-widest text-white/50">
                   Dev Mode
                 </span>
                 <div className="h-px flex-1 bg-white/15" />
               </div>
-              <p className="-mt-3 mb-4 text-center text-xs text-white/30">Click any role to sign in instantly</p>
+              <p className="-mt-3 mb-4 text-center text-xs text-white/50">Click any role to sign in instantly</p>
 
               {/* Vendor selector (shown when vendor is selected) */}
               {selectedRole === "vendor" ? (
@@ -255,9 +255,17 @@ export default function LoginPage() {
           </p>
         )}
       </div>
-      <p className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-medium tracking-widest text-white/55">
-        Powered by LaurAI
-      </p>
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+        <div className="h-px w-16 bg-white/20" />
+        <p className="whitespace-nowrap text-xs font-medium tracking-wide text-white/90">
+          Experience by{" "}
+          <span
+            onClick={() => window.location.href = "/laurai"}
+            style={{ color: "#00B4D8", fontSize: "11px" }}
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+          >LaurAI</span>
+        </p>
+      </div>
     </div>
   );
 }
