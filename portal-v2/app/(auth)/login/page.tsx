@@ -261,7 +261,7 @@ export default function LoginPage() {
           Experience by{" "}
           <span
             onClick={() => window.location.href = "/laurai"}
-            style={{ color: "#00B4D8", fontSize: "11px" }}
+            style={{ color: "#00B4D8" }}
             className="cursor-pointer hover:opacity-80 transition-opacity"
           >LaurAI</span>
         </p>
