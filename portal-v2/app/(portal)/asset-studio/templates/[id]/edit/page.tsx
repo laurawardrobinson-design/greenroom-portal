@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR, { mutate } from "swr";
@@ -23,6 +23,8 @@ import {
   Trash2,
   Lock,
   Unlock,
+  Maximize2,
+  Minimize2,
   Type as TypeIcon,
   Image as ImageIcon,
   Square as ShapeIcon,
@@ -75,39 +77,107 @@ export default function TemplateEditPage({
   const selectedLayer = layers.find((l) => l.id === selectedLayerId) ?? null;
 
   return (
-    <div className="space-y-4" data-area="asset-studio">
-      <TemplateHeader template={data} mutateUrl={url} />
+    <TemplateEditShell
+      template={data}
+      url={url}
+      layers={layers}
+      selectedLayer={selectedLayer}
+      selectedLayerId={selectedLayerId}
+      setSelectedLayerId={setSelectedLayerId}
+      templateId={id}
+    />
+  );
+}
 
-      <div className="grid grid-cols-12 gap-4">
-        {/* Left: layer tree */}
-        <div className="col-span-12 lg:col-span-3">
-          <LayerTree
-            templateId={id}
-            layers={layers}
-            selectedId={selectedLayerId}
-            onSelect={setSelectedLayerId}
-            mutateUrl={url}
-          />
-        </div>
+// Separated shell so we can mount `fixed inset-0` wrapper when the designer
+// flips into fullscreen. Same layout either way — the wrapper just decides
+// whether the app chrome (sidebar + topbar + page padding) is covered.
+function TemplateEditShell({
+  template,
+  url,
+  layers,
+  selectedLayer,
+  selectedLayerId,
+  setSelectedLayerId,
+  templateId,
+}: {
+  template: AssetTemplate;
+  url: string;
+  layers: TemplateLayer[];
+  selectedLayer: TemplateLayer | null;
+  selectedLayerId: string | null;
+  setSelectedLayerId: (id: string | null) => void;
+  templateId: string;
+}) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-        {/* Center: canvas preview */}
-        <div className="col-span-12 lg:col-span-6">
-          <CanvasPreview
-            template={data}
-            layers={layers}
-            selectedId={selectedLayerId}
-            onSelect={setSelectedLayerId}
-          />
-        </div>
+  // Escape exits fullscreen. Cmd/Ctrl+. toggles it — keeping it off common
+  // browser shortcuts so we don't fight Cmd+F (find) or F11 (browser FS).
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && isFullscreen) {
+        setIsFullscreen(false);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === ".") {
+        e.preventDefault();
+        setIsFullscreen((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isFullscreen]);
 
-        {/* Right: properties + output specs */}
-        <div className="col-span-12 space-y-4 lg:col-span-3">
-          <PropertiesPanel layer={selectedLayer} mutateUrl={url} />
-          <OutputSpecsPanel template={data} mutateUrl={url} />
+  const content = (
+    <div
+      className={
+        isFullscreen
+          ? "fixed inset-0 z-50 overflow-y-auto bg-[var(--as-canvas-bg)] p-4"
+          : "space-y-4"
+      }
+      data-area="asset-studio"
+    >
+      <div className={isFullscreen ? "space-y-4" : ""}>
+        <TemplateHeader
+          template={template}
+          mutateUrl={url}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={() => setIsFullscreen((v) => !v)}
+        />
+
+        <div className="grid grid-cols-12 gap-4">
+          {/* Left: layer tree */}
+          <div className="col-span-12 lg:col-span-3">
+            <LayerTree
+              templateId={templateId}
+              layers={layers}
+              selectedId={selectedLayerId}
+              onSelect={setSelectedLayerId}
+              mutateUrl={url}
+            />
+          </div>
+
+          {/* Center: canvas preview */}
+          <div className="col-span-12 lg:col-span-6">
+            <CanvasPreview
+              template={template}
+              layers={layers}
+              selectedId={selectedLayerId}
+              onSelect={setSelectedLayerId}
+            />
+          </div>
+
+          {/* Right: properties + output specs */}
+          <div className="col-span-12 space-y-4 lg:col-span-3">
+            <PropertiesPanel layer={selectedLayer} mutateUrl={url} />
+            <OutputSpecsPanel template={template} mutateUrl={url} />
+          </div>
         </div>
       </div>
     </div>
   );
+
+  return content;
 }
 
 // ─── Header ──────────────────────────────────────────────────────────────────
@@ -115,9 +185,13 @@ export default function TemplateEditPage({
 function TemplateHeader({
   template,
   mutateUrl,
+  isFullscreen,
+  onToggleFullscreen,
 }: {
   template: AssetTemplate;
   mutateUrl: string;
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -180,6 +254,26 @@ function TemplateHeader({
             New run
           </Button>
         </Link>
+        <button
+          type="button"
+          onClick={onToggleFullscreen}
+          className="inline-flex items-center gap-1.5 rounded-md border border-[var(--as-border)] bg-[var(--as-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--as-text-muted)] transition-colors hover:bg-[var(--as-surface-2)] hover:text-[var(--as-text)]"
+          aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+          title={
+            isFullscreen
+              ? "Exit fullscreen (Esc or \u2318.)"
+              : "Fullscreen (\u2318.)"
+          }
+        >
+          {isFullscreen ? (
+            <Minimize2 className="h-3.5 w-3.5" />
+          ) : (
+            <Maximize2 className="h-3.5 w-3.5" />
+          )}
+          <span className="hidden sm:inline">
+            {isFullscreen ? "Exit" : "Fullscreen"}
+          </span>
+        </button>
       </div>
     </div>
   );
