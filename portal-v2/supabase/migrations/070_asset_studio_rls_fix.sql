@@ -29,10 +29,11 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
+  -- role is a user_role enum — cast to text so ANY(text[]) matches.
   SELECT EXISTS (
     SELECT 1 FROM public.users
     WHERE id = auth.uid()
-      AND role = ANY (allowed)
+      AND role::text = ANY (allowed)
       AND active
   );
 $$;
