@@ -33,6 +33,7 @@ import {
   Package,
   StopCircle,
 } from "lucide-react";
+import { PageTabs } from "@/components/ui/page-tabs";
 import { PageHeader } from "@/components/ui/page-header";
 
 const fetcher = (url: string) =>
@@ -205,32 +206,26 @@ export default function PropsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <PageHeader
-        title="Props"
-        actions={
-          <Button variant="secondary" onClick={() => setShowScanner(true)}>
-            <ScanLine className="h-4 w-4" />
-            Scan Props
-          </Button>
-        }
-      />
+      <div className="space-y-0">
+        {/* Header */}
+        <PageHeader
+          title="Props"
+          actions={
+            <Button variant="secondary" onClick={() => setShowScanner(true)}>
+              <ScanLine className="h-4 w-4" />
+              Scan Props
+            </Button>
+          }
+        />
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
-        {(["items", "reservations"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${
-              tab === t
-                ? "border-primary text-primary"
-                : "border-transparent text-text-secondary hover:text-text-primary hover:border-border"
-            }`}
-          >
-            {t === "items" ? "Items" : "Reservations"}
-          </button>
-        ))}
+        <PageTabs
+          tabs={[
+            { key: "items", label: "Items", icon: Boxes },
+            { key: "reservations", label: "Reservations", icon: Calendar },
+          ]}
+          activeTab={tab}
+          onTabChange={(key) => setTab(key as Tab)}
+        />
       </div>
 
       {tab === "items" && (

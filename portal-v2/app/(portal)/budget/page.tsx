@@ -48,6 +48,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { VendorFinancialsTab } from "@/components/budget/vendor-financials-tab";
+import { ApprovalsTab } from "@/components/budget/approvals-tab";
+import { PageTabs } from "@/components/ui/page-tabs";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -55,36 +57,52 @@ const fetcher = (url: string) =>
     return r.json();
   });
 
-type Tab = "overview" | "budgets" | "analysis" | "approvals" | "spending";
+type Tab = "overview" | "budgets" | "analysis" | "approvals" | "spending" | "vendors" | "onboarding";
 
-const TABS: { key: Tab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
+const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "overview", label: "Budget Pools", icon: DollarSign },
-  { key: "budgets", label: "Campaign Budgets", icon: LayoutList, adminOnly: true },
-  { key: "analysis", label: "Analysis", icon: Activity, adminOnly: true },
-  { key: "approvals", label: "Approvals", icon: ShieldCheck, adminOnly: true },
+  { key: "budgets", label: "Campaigns", icon: LayoutList },
+  { key: "approvals", label: "Approvals", icon: ShieldCheck },
+  { key: "analysis", label: "Analysis", icon: Activity },
   { key: "spending", label: "Spending", icon: BarChart3 },
+  { key: "vendors", label: "Vendors", icon: Receipt },
+  { key: "onboarding", label: "Onboarding", icon: UserCheck },
 ];
 
 export default function BudgetPage() {
   const { user } = useCurrentUser();
   const isAdmin = user?.role === "Admin";
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
+
+  if (!isAdmin) {
+    return (
+      <div className="space-y-6">
+        <div className="pb-4 border-b border-border">
+          <h2 className="text-2xl font-bold text-text-primary">Budget</h2>
+        </div>
+        <VendorFinancialsTab />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-text-primary">Budget</h2>
-        <p className="text-sm text-text-secondary">
-          {isAdmin ? "Production budget pools, approvals, and spending analysis" : "Vendor estimates and invoices"}
-        </p>
+      <div className="space-y-0">
+        <div className="pb-4 border-b border-border">
+          <h2 className="text-2xl font-bold text-text-primary">Budget</h2>
+        </div>
+
+        <PageTabs tabs={TABS} activeTab={activeTab} onTabChange={(key) => setActiveTab(key as Tab)} />
       </div>
 
-      {isAdmin && <BudgetPoolsTab isAdmin={isAdmin} />}
-      {isAdmin && <CampaignBudgetsTab />}
-      {isAdmin && <AnalysisTab />}
-      {isAdmin && <ApprovalsTab />}
-      {isAdmin && <OnboardingTab />}
-      <VendorFinancialsTab />
-      {isAdmin && <SpendingTab />}
+      {/* Tab content */}
+      {activeTab === "overview" && <BudgetPoolsTab isAdmin={isAdmin} />}
+      {activeTab === "budgets" && <CampaignBudgetsTab />}
+      {activeTab === "approvals" && <ApprovalsTab />}
+      {activeTab === "analysis" && <AnalysisTab />}
+      {activeTab === "spending" && <SpendingTab />}
+      {activeTab === "vendors" && <VendorFinancialsTab />}
+      {activeTab === "onboarding" && <OnboardingTab />}
     </div>
   );
 }
@@ -184,34 +202,22 @@ function PoolDetailModal({
           </ModalFooter>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-4">
           {/* Summary stats */}
           <div>
-            <p className="text-xs text-text-tertiary mb-3">
-              {pool.periodStart} — {pool.periodEnd}
-            </p>
-            <div className="mb-3">
-              <div className="flex justify-between text-xs mb-1.5">
-                <span className="text-text-secondary">{formatCurrency(pool.allocated)} allocated</span>
-                <span className="text-text-tertiary">{formatCurrency(pool.totalAmount)} total</span>
+            <div className="mb-2.5">
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-text-secondary">{formatCurrency(pool.allocated)} of {formatCurrency(pool.totalAmount)}</span>
+                <span className="font-medium text-text-primary">{pctUsed}%</span>
               </div>
-              <div className="h-2 rounded-full bg-surface-tertiary overflow-hidden">
+              <div className="h-1.5 rounded-full bg-surface-tertiary overflow-hidden">
                 <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(pctUsed, 100)}%` }} />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Allocated</p>
-                <p className="text-sm font-semibold text-text-primary">{formatCurrency(pool.allocated)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Remaining</p>
-                <p className="text-sm font-semibold text-emerald-600">{formatCurrency(pool.remaining)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Used</p>
-                <p className="text-sm font-semibold text-text-primary">{pctUsed}%</p>
-              </div>
+            <div className="flex items-center gap-4 text-xs">
+              <span className="text-text-tertiary">Remaining <span className="font-semibold text-emerald-600">{formatCurrency(pool.remaining)}</span></span>
+              <span className="text-text-tertiary">Committed <span className="font-semibold text-text-primary">{formatCurrency(pool.committed)}</span></span>
+              <span className="text-text-tertiary">Spent <span className="font-semibold text-text-primary">{formatCurrency(pool.spent)}</span></span>
             </div>
           </div>
 
@@ -296,59 +302,40 @@ function BudgetPoolsTab({ isAdmin }: { isAdmin: boolean }) {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {pools.map((pool) => {
             const pctUsed =
               pool.totalAmount > 0
                 ? Math.round((pool.allocated / pool.totalAmount) * 100)
                 : 0;
+            const fmtPeriod = (d: string) => {
+              const [y, m, day] = d.split("-");
+              const dt = new Date(Number(y), Number(m) - 1, Number(day));
+              return dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+            };
 
             return (
-              <Card key={pool.id} className="cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all" onClick={() => setSelectedPool(pool)}>
-                <CardHeader>
-                  <CardTitle>{pool.name}</CardTitle>
-                </CardHeader>
-                <p className="text-xs text-text-tertiary mb-4">
-                  {pool.periodStart} — {pool.periodEnd}
-                </p>
-                <div className="mb-4">
-                  <div className="flex justify-between text-xs mb-1.5">
-                    <span className="text-text-secondary">
-                      {formatCurrency(pool.allocated)} allocated
-                    </span>
-                    <span className="text-text-tertiary">
-                      {formatCurrency(pool.totalAmount)} total
-                    </span>
-                  </div>
-                  <div className="h-2 rounded-full bg-surface-tertiary overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${Math.min(pctUsed, 100)}%` }}
-                    />
+              <Card key={pool.id} padding="none" className="cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all" onClick={() => setSelectedPool(pool)}>
+                <div className="px-3.5 py-2.5 border-b border-border">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-text-primary">{pool.name}</p>
+                    <span className="text-[10px] text-text-tertiary">{fmtPeriod(pool.periodStart)} — {fmtPeriod(pool.periodEnd)}</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="px-3.5 py-3 space-y-2.5">
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
-                      Allocated
-                    </p>
-                    <p className="text-sm font-semibold text-text-primary">
-                      {formatCurrency(pool.allocated)}
-                    </p>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-text-secondary">{formatCurrency(pool.allocated)} of {formatCurrency(pool.totalAmount)}</span>
+                      <span className="font-medium text-text-primary">{pctUsed}%</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-surface-tertiary overflow-hidden">
+                      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(pctUsed, 100)}%` }} />
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
-                      Remaining
-                    </p>
-                    <p className="text-sm font-semibold text-emerald-600">
-                      {formatCurrency(pool.remaining)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
-                      Used
-                    </p>
-                    <p className="text-sm font-semibold text-text-primary">{pctUsed}%</p>
+                  <div className="flex items-center gap-4 text-xs">
+                    <span className="text-text-tertiary">Remaining <span className="font-semibold text-emerald-600">{formatCurrency(pool.remaining)}</span></span>
+                    <span className="text-text-tertiary">Committed <span className="font-semibold text-text-primary">{formatCurrency(pool.committed)}</span></span>
+                    <span className="text-text-tertiary">Spent <span className="font-semibold text-text-primary">{formatCurrency(pool.spent)}</span></span>
                   </div>
                 </div>
               </Card>
@@ -543,66 +530,70 @@ function CampaignBudgetsTab() {
       ) : (
         <div className="rounded-2xl overflow-hidden bg-surface border border-border shadow-xs">
           {/* Table header */}
-          <div className="flex items-center gap-3 px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border">
-            <div className="w-20 shrink-0">WF#</div>
+          <div className="flex items-center gap-2 px-3.5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border">
+            <div className="w-[72px] shrink-0">WF#</div>
             <div className="flex-1">Campaign</div>
-            <div className="w-28 shrink-0">Producer</div>
-            <div className="w-24 shrink-0">Status</div>
-            <div className="w-24 shrink-0 text-right">Committed</div>
-            <div className="w-32 shrink-0 text-right">Budget</div>
-            <div className="w-28 shrink-0 text-right">Add&apos;l Funds</div>
-            {!editAll && <div className="w-16 shrink-0" />}
+            <div className="w-[72px] shrink-0 text-right">Committed</div>
+            <div className="w-24 shrink-0 text-right">Budget</div>
+            {!editAll && <div className="w-8 shrink-0" />}
           </div>
 
           {/* Table rows */}
           {activeCampaigns.map((c) => {
             const isEditing = editAll || editingId === c.id;
             const currentValue = editAll ? (bulkValues[c.id] ?? String(c.productionBudget)) : editValue;
+            const producerName = producers.find((p) => p.id === c.producerId)?.name;
             return (
               <div
                 key={c.id}
-                className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-secondary/50 transition-colors"
+                className="group flex items-center gap-2 px-3.5 py-2 border-b border-border last:border-b-0 hover:bg-surface-secondary/50 transition-colors"
               >
-                <div className="w-20 shrink-0 text-xs text-text-tertiary">
+                <div className="w-[72px] shrink-0 text-xs text-text-tertiary">
                   {c.wfNumber}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/campaigns/${c.id}`}
-                    className="text-sm font-medium text-text-primary hover:text-primary transition-colors truncate block"
-                  >
-                    {c.name}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/campaigns/${c.id}`}
+                      className="text-sm font-medium text-text-primary hover:text-primary transition-colors truncate"
+                    >
+                      {c.name}
+                    </Link>
+                    <Badge
+                      variant={
+                        c.status === "In Production"
+                          ? "success"
+                          : c.status === "Post"
+                          ? "info"
+                          : "default"
+                      }
+                    >
+                      {c.status}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <select
+                      value={c.producerId || ""}
+                      onChange={(e) => { e.stopPropagation(); changeProducer(c.id, e.target.value); }}
+                      className="h-5 rounded border-0 bg-transparent px-0 text-xs text-text-tertiary focus:outline-none focus:ring-0 cursor-pointer hover:text-text-primary"
+                    >
+                      <option value="">Unassigned</option>
+                      {producers.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                    {c.additionalFundsRequested > 0 && (
+                      <span className="text-[10px] font-medium text-amber-600">+{formatCurrency(c.additionalFundsRequested)} pending</span>
+                    )}
+                    {c.additionalFundsApproved > 0 && (
+                      <span className="text-[10px] font-medium text-emerald-600">+{formatCurrency(c.additionalFundsApproved)} approved</span>
+                    )}
+                  </div>
                 </div>
-                <div className="w-28 shrink-0">
-                  <select
-                    value={c.producerId || ""}
-                    onChange={(e) => changeProducer(c.id, e.target.value)}
-                    className="h-7 w-full rounded border border-border bg-surface px-1.5 text-xs font-medium text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                  >
-                    <option value="">Unassigned</option>
-                    {producers.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="w-24 shrink-0">
-                  <Badge
-                    variant={
-                      c.status === "In Production"
-                        ? "success"
-                        : c.status === "Post"
-                        ? "info"
-                        : "default"
-                    }
-                  >
-                    {c.status}
-                  </Badge>
-                </div>
-                <div className="w-24 shrink-0 text-right text-sm text-text-secondary">
+                <div className="w-[72px] shrink-0 text-right text-xs text-text-secondary tabular-nums">
                   {formatCurrency(c.committed || 0)}
                 </div>
-                <div className="w-32 shrink-0 text-right">
+                <div className="w-24 shrink-0 text-right">
                   {isEditing ? (
                     <input
                       type="number"
@@ -621,60 +612,29 @@ function CampaignBudgetsTab() {
                         }
                       }}
                       autoFocus={!editAll && editingId === c.id}
-                      className="w-full rounded-lg border border-primary bg-surface px-3 py-1.5 text-sm text-right text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-primary bg-surface px-2 py-1 text-sm text-right text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   ) : (
-                    <span className="text-sm font-semibold text-text-primary">
+                    <span className="text-sm font-semibold text-text-primary tabular-nums">
                       {formatCurrency(c.productionBudget)}
                     </span>
                   )}
                 </div>
-                <div className="w-28 shrink-0 text-right">
-                  {(c.additionalFundsRequested > 0 || c.additionalFundsApproved > 0) ? (
-                    <div className="space-y-0.5">
-                      {c.additionalFundsRequested > 0 && (
-                        <span className="text-xs font-medium text-amber-600 block">
-                          {formatCurrency(c.additionalFundsRequested)} pending
-                        </span>
-                      )}
-                      {c.additionalFundsApproved > 0 && (
-                        <span className="text-xs font-medium text-emerald-600 block">
-                          +{formatCurrency(c.additionalFundsApproved)} approved
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-xs text-text-tertiary">—</span>
-                  )}
-                </div>
                 {!editAll && (
-                  <div className="w-16 shrink-0 flex justify-end">
+                  <div className="w-8 shrink-0 flex justify-end">
                     {editingId === c.id ? (
                       <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={cancelEdit}
-                          disabled={saving}
-                        >
+                        <button onClick={cancelEdit} disabled={saving} className="text-text-tertiary hover:text-text-primary">
                           <X className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => saveBudget(c.id)}
-                          loading={saving}
-                        >
+                        </button>
+                        <button onClick={() => saveBudget(c.id)} className="text-primary hover:text-primary/80">
                           <Check className="h-3.5 w-3.5" />
-                        </Button>
+                        </button>
                       </div>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => startEdit(c)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
+                      <button onClick={() => startEdit(c)} className="text-text-tertiary hover:text-text-primary opacity-0 group-hover:opacity-100">
+                        <Pencil className="h-3 w-3" />
+                      </button>
                     )}
                   </div>
                 )}
@@ -1555,380 +1515,6 @@ function TransactionDrilldownModal({
   );
 }
 
-// ─── Approvals Tab ───
-interface ApprovalData {
-  budgetRequests: Array<{
-    id: string;
-    campaignId: string;
-    amount: number;
-    rationale: string;
-    status: string;
-    createdAt: string;
-    reviewedAt?: string;
-    reviewNotes?: string;
-    campaign?: { name: string; wfNumber: string };
-    requester?: { name: string };
-  }>;
-  pendingInvoices: Array<{
-    id: string;
-    campaignId: string;
-    vendorName: string;
-    campaignName: string;
-    wfNumber: string;
-    estimateTotal: number;
-    invoiceTotal: number;
-    status: string;
-    updatedAt: string;
-  }>;
-  resolvedRequests: Array<{
-    id: string;
-    campaignId: string;
-    amount: number;
-    rationale: string;
-    status: string;
-    createdAt: string;
-    reviewedAt?: string;
-    reviewNotes?: string;
-    campaign?: { name: string; wfNumber: string };
-    requester?: { name: string };
-  }>;
-  resolvedInvoices: Array<{
-    id: string;
-    campaignId: string;
-    vendorName: string;
-    campaignName: string;
-    wfNumber: string;
-    estimateTotal: number;
-    invoiceTotal: number;
-    status: string;
-    updatedAt: string;
-  }>;
-}
-
-function ApprovalsTab() {
-  const { toast } = useToast();
-  const { data, mutate } = useSWR<ApprovalData>("/api/approvals", fetcher);
-
-  const budgetRequests = data?.budgetRequests || [];
-  const pendingInvoices = data?.pendingInvoices || [];
-  const resolvedRequests = data?.resolvedRequests || [];
-  const resolvedInvoices = data?.resolvedInvoices || [];
-  const totalPending = budgetRequests.length + pendingInvoices.length;
-  const totalResolved = resolvedRequests.length + resolvedInvoices.length;
-
-  async function handleBudgetDecision(id: string, approved: boolean) {
-    try {
-      await fetch(`/api/budget/requests/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approved, notes: "" }),
-      });
-      toast(
-        "success",
-        approved ? "Budget request approved" : "Budget request declined"
-      );
-      mutate();
-    } catch {
-      toast("error", "Failed to process request");
-    }
-  }
-
-  async function handleInvoiceApproval(cvId: string) {
-    try {
-      await fetch(`/api/campaign-vendors/${cvId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "transition",
-          targetStatus: "Invoice Approved",
-        }),
-      });
-      toast("success", "Invoice approved");
-      mutate();
-    } catch {
-      toast("error", "Failed to approve invoice");
-    }
-  }
-
-  async function handleRevertBudgetRequest(id: string) {
-    try {
-      await fetch(`/api/budget/requests/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "revert" }),
-      });
-      toast("success", "Budget request reverted to pending");
-      mutate();
-    } catch {
-      toast("error", "Failed to revert request");
-    }
-  }
-
-  function formatDate(dateStr?: string) {
-    if (!dateStr) return "—";
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  }
-
-  return (
-    <div className="space-y-6">
-      <p className="text-sm text-text-secondary">
-        {totalPending} item{totalPending !== 1 ? "s" : ""} pending your review
-      </p>
-
-      {/* Budget Requests */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-text-tertiary" />
-            Budget Requests
-            {budgetRequests.length > 0 && (
-              <Badge variant="warning">{budgetRequests.length}</Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        {budgetRequests.length === 0 ? (
-          <EmptyState
-            title="No pending requests"
-            description="Budget and overage requests will appear here."
-          />
-        ) : (
-          <div className="space-y-3">
-            {budgetRequests.map((req) => (
-              <div
-                key={req.id}
-                className="rounded-lg border border-border p-4"
-              >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <Link
-                      href={`/campaigns/${req.campaignId}`}
-                      className="text-sm font-semibold text-text-primary hover:text-primary"
-                    >
-                      {req.campaign?.name || "Unknown Campaign"}
-                    </Link>
-                    <p className="text-xs text-text-tertiary">
-                      {req.campaign?.wfNumber} — requested by{" "}
-                      {req.requester?.name || "Unknown"}
-                    </p>
-                  </div>
-                  <span className="text-lg font-semibold text-text-primary">
-                    {formatCurrency(req.amount)}
-                  </span>
-                </div>
-                <p className="text-sm text-text-secondary mb-3">
-                  {req.rationale}
-                </p>
-                <div className="flex gap-2 justify-end">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleBudgetDecision(req.id, false)}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    Decline
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleBudgetDecision(req.id, true)}
-                  >
-                    <Check className="h-3.5 w-3.5" />
-                    Approve
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {/* Pending Invoices */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-text-tertiary" />
-            Invoice Approvals
-            {pendingInvoices.length > 0 && (
-              <Badge variant="warning">{pendingInvoices.length}</Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        {pendingInvoices.length === 0 ? (
-          <EmptyState
-            title="No pending invoices"
-            description="Pre-approved invoices awaiting your final sign-off will appear here."
-          />
-        ) : (
-          <div className="space-y-3">
-            {pendingInvoices.map((inv) => (
-              <div
-                key={inv.id}
-                className="rounded-lg border border-border p-4"
-              >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <Link
-                      href={`/campaigns/${inv.campaignId}`}
-                      className="text-sm font-semibold text-text-primary hover:text-primary"
-                    >
-                      {inv.campaignName}
-                    </Link>
-                    <p className="text-xs text-text-tertiary">
-                      {inv.wfNumber} — {inv.vendorName}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-4 text-xs mb-3">
-                  <span className="text-text-tertiary">
-                    Estimate:{" "}
-                    <span className="font-medium text-text-primary">
-                      {formatCurrency(inv.estimateTotal)}
-                    </span>
-                  </span>
-                  <span className="text-text-tertiary">
-                    Invoice:{" "}
-                    <span className="font-medium text-text-primary">
-                      {formatCurrency(inv.invoiceTotal)}
-                    </span>
-                  </span>
-                  {inv.invoiceTotal > inv.estimateTotal && (
-                    <Badge variant="error">Over estimate</Badge>
-                  )}
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button
-                    size="sm"
-                    onClick={() => handleInvoiceApproval(inv.id)}
-                  >
-                    <Check className="h-3.5 w-3.5" />
-                    Final Approve
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {/* ─── History ─── */}
-      {totalResolved > 0 && (
-        <>
-          <div className="flex items-center gap-3 pt-2">
-            <div className="h-px flex-1 bg-border" />
-            <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-text-tertiary">
-              <Clock className="h-3.5 w-3.5" />
-              History
-            </span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-
-          {/* Resolved Budget Requests */}
-          {resolvedRequests.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-text-tertiary" />
-                  Past Budget Requests
-                  <span className="text-xs font-normal text-text-tertiary">
-                    ({resolvedRequests.length})
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <div className="space-y-1">
-                {resolvedRequests.map((req) => (
-                  <div
-                    key={req.id}
-                    className="flex items-center gap-4 px-4 py-2.5 rounded-lg hover:bg-surface-secondary/50 transition-colors"
-                  >
-                    <Badge
-                      variant={req.status === "Approved" ? "success" : "error"}
-                    >
-                      {req.status}
-                    </Badge>
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        href={`/campaigns/${req.campaignId}`}
-                        className="text-sm font-medium text-text-primary hover:text-primary transition-colors"
-                      >
-                        {req.campaign?.name || "Unknown Campaign"}
-                      </Link>
-                      <p className="text-xs text-text-tertiary truncate">
-                        {req.campaign?.wfNumber} — {req.requester?.name || "Unknown"}
-                      </p>
-                    </div>
-                    <span className="shrink-0 text-sm font-semibold text-text-primary">
-                      {formatCurrency(req.amount)}
-                    </span>
-                    <span className="shrink-0 text-xs text-text-tertiary w-24 text-right">
-                      {formatDate(req.reviewedAt)}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleRevertBudgetRequest(req.id)}
-                      className="shrink-0 text-xs"
-                    >
-                      <Undo2 className="h-3.5 w-3.5" />
-                      Undo
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {/* Resolved Invoices */}
-          {resolvedInvoices.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-text-tertiary" />
-                  Past Invoice Approvals
-                  <span className="text-xs font-normal text-text-tertiary">
-                    ({resolvedInvoices.length})
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <div className="space-y-1">
-                {resolvedInvoices.map((inv) => (
-                  <div
-                    key={inv.id}
-                    className="flex items-center gap-4 px-4 py-2.5 rounded-lg hover:bg-surface-secondary/50 transition-colors"
-                  >
-                    <Badge variant={inv.status === "Paid" ? "default" : "success"}>
-                      {inv.status}
-                    </Badge>
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        href={`/campaigns/${inv.campaignId}`}
-                        className="text-sm font-medium text-text-primary hover:text-primary transition-colors"
-                      >
-                        {inv.campaignName}
-                      </Link>
-                      <p className="text-xs text-text-tertiary truncate">
-                        {inv.wfNumber} — {inv.vendorName}
-                      </p>
-                    </div>
-                    <span className="shrink-0 text-sm font-semibold text-text-primary">
-                      {formatCurrency(inv.invoiceTotal)}
-                    </span>
-                    <span className="shrink-0 text-xs text-text-tertiary w-24 text-right">
-                      {formatDate(inv.updatedAt)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
 // ─── Spending Tab ───
 const PAYMENT_STATUS_COLOR: Record<string, string> = {
   "Pending Approval": "text-amber-600 bg-amber-50",
@@ -2259,33 +1845,24 @@ function SpendingTab() {
       </Modal>
 
       {/* Individual crew deal memos */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <HardHat className="h-4 w-4 text-text-tertiary" />
-            Crew Deal Memos
-          </CardTitle>
-        </CardHeader>
+      <Card padding="none">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+          <HardHat className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Crew Deal Memos</span>
+        </div>
 
         {crewLoading ? (
-          <div className="h-24 animate-pulse rounded-lg bg-surface-secondary mx-3 mb-3" />
+          <div className="h-16 animate-pulse rounded-lg bg-surface-secondary m-3" />
         ) : crewBookings.length === 0 ? (
-          <EmptyState
-            icon={<HardHat className="h-5 w-5" />}
-            title="No crew booked"
-            description="Crew bookings will appear here once added to campaigns."
-          />
+          <div className="px-3.5 py-6">
+            <EmptyState
+              icon={<HardHat className="h-5 w-5" />}
+              title="No crew booked"
+              description="Crew bookings will appear here once added to campaigns."
+            />
+          </div>
         ) : (
           <div className="divide-y divide-border">
-            {/* Header */}
-            <div className="grid grid-cols-12 gap-3 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
-              <div className="col-span-3">Person</div>
-              <div className="col-span-2">Campaign</div>
-              <div className="col-span-2">Role</div>
-              <div className="col-span-1 text-center">Days</div>
-              <div className="col-span-2 text-right">Amount</div>
-              <div className="col-span-2 text-right">Status</div>
-            </div>
             {crewBookings.map((booking) => {
               const personName = booking.vendor
                 ? booking.vendor.contactName || booking.vendor.companyName
@@ -2301,37 +1878,23 @@ function SpendingTab() {
               return (
                 <div
                   key={booking.id}
-                  className={`group grid grid-cols-12 gap-3 items-center px-3.5 py-2.5 transition-colors ${locked ? "" : "hover:bg-surface-secondary cursor-pointer"}`}
+                  className={`group px-3.5 py-2 space-y-0.5 transition-colors ${locked ? "" : "hover:bg-surface-secondary cursor-pointer"}`}
                   onClick={() => !locked && startEdit(booking)}
                 >
-                  <div className="col-span-3 min-w-0">
-                    <p className="text-sm font-medium text-text-primary truncate">{personName}</p>
-                    <p className="text-[10px] text-text-tertiary">{booking.classification}</p>
-                  </div>
-                  <div className="col-span-2 min-w-0" onClick={(e) => e.stopPropagation()}>
-                    <Link href={`/campaigns/${booking.campaignId}`} className="text-xs text-text-secondary hover:text-primary transition-colors truncate block">
-                      {booking.wfNumber}
-                    </Link>
-                    <p className="text-[10px] text-text-tertiary truncate">{booking.campaignName}</p>
-                  </div>
-                  <div className="col-span-2 min-w-0">
-                    <p className="text-xs text-text-primary truncate">{booking.role}</p>
-                    <p className="text-[10px] text-text-tertiary">{formatCurrency(booking.dayRate)}/day</p>
-                  </div>
-                  <div className="col-span-1 text-center">
-                    <p className="text-sm text-text-primary">{days}</p>
-                  </div>
-                  <div className="col-span-2 text-right">
-                    <p className="text-sm font-medium text-text-primary">{formatCurrency(amount)}</p>
-                  </div>
-                  <div className="col-span-2 flex items-center justify-end gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-text-primary">{personName}</span>
+                    <span className="text-xs text-text-tertiary">{booking.role}</span>
+                    <span className="text-sm font-bold text-text-primary tabular-nums">{formatCurrency(amount)}</span>
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusClass}`}>
                       {statusLabel}
                     </span>
                     {!locked && (
-                      <Pencil className="h-3 w-3 text-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                      <Pencil className="h-3 w-3 text-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity" />
                     )}
                   </div>
+                  <p className="text-xs text-text-tertiary" onClick={(e) => e.stopPropagation()}>
+                    {booking.classification} &middot; <Link href={`/campaigns/${booking.campaignId}`} className="hover:text-primary transition-colors">{booking.wfNumber}</Link> &middot; {formatCurrency(booking.dayRate)}/day &times; {days} day{days !== 1 ? "s" : ""}
+                  </p>
                 </div>
               );
             })}
@@ -2339,91 +1902,44 @@ function SpendingTab() {
         )}
       </Card>
 
-      {/* Summary cards */}
-      {hasData && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Card>
-            <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
-              Total Spent
-            </p>
-            <p className="mt-1 text-lg font-semibold text-text-primary">
-              {formatCurrency(totalSpent)}
-            </p>
-          </Card>
-          <Card>
-            <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
-              Categories
-            </p>
-            <p className="mt-1 text-lg font-semibold text-text-primary">
-              {spending.length}
-            </p>
-          </Card>
-          <Card>
-            <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
-              Largest Category
-            </p>
-            <p className="mt-1 text-lg font-semibold text-text-primary">
-              {spending[0]?.category || "—"}
-            </p>
-          </Card>
-          <Card>
-            <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
-              Largest Amount
-            </p>
-            <p className="mt-1 text-lg font-semibold text-text-primary">
-              {spending[0] ? formatCurrency(spending[0].total) : "—"}
-            </p>
-          </Card>
+      {/* Summary + Category breakdown */}
+      <Card padding="none">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+          <BarChart3 className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Spending by Category</span>
+          {hasData && (
+            <span className="ml-auto text-xs text-text-tertiary">Total <span className="font-semibold text-text-primary">{formatCurrency(totalSpent)}</span> across {spending.length} categories</span>
+          )}
         </div>
-      )}
-
-      {/* Category breakdown */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-text-tertiary" />
-            Spending by Category
-          </CardTitle>
-        </CardHeader>
         {isLoading ? (
-          <div className="h-48 animate-pulse rounded-lg bg-surface-secondary" />
+          <div className="h-24 animate-pulse rounded-lg bg-surface-secondary m-3" />
         ) : !hasData ? (
-          <EmptyState
-            icon={<BarChart3 className="h-5 w-5" />}
-            title="No spending data yet"
-            description="Crew labor and vendor spending by category will appear here as bookings and invoices are processed."
-          />
+          <div className="px-3.5 py-6">
+            <EmptyState
+              icon={<BarChart3 className="h-5 w-5" />}
+              title="No spending data yet"
+              description="Crew labor and vendor spending by category will appear here as bookings and invoices are processed."
+            />
+          </div>
         ) : (
-          <div className="space-y-3">
+          <div className="px-3.5 py-3 space-y-2">
             {spending.map((cat) => {
               const pct = totalSpent > 0 ? (cat.total / totalSpent) * 100 : 0;
               const color = CATEGORY_COLORS[cat.category] || CATEGORY_COLORS.Other;
               return (
                 <div key={cat.category}>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: color }}
-                      />
-                      <span className="font-medium text-text-primary">
-                        {cat.category}
-                      </span>
+                  <div className="flex items-center justify-between text-xs mb-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                      <span className="font-medium text-text-primary">{cat.category}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-text-tertiary">
-                        {pct.toFixed(1)}%
-                      </span>
-                      <span className="font-medium text-text-primary">
-                        {formatCurrency(cat.total)}
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-text-tertiary">{pct.toFixed(0)}%</span>
+                      <span className="font-semibold text-text-primary tabular-nums">{formatCurrency(cat.total)}</span>
                     </div>
                   </div>
-                  <div className="h-2 rounded-full bg-surface-tertiary overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, backgroundColor: color }}
-                    />
+                  <div className="h-1.5 rounded-full bg-surface-tertiary overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
                   </div>
                 </div>
               );

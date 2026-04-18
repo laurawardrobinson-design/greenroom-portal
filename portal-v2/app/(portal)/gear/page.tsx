@@ -55,6 +55,7 @@ import {
   Star,
   ChevronDown,
 } from "lucide-react";
+import { PageTabs } from "@/components/ui/page-tabs";
 import {
   format,
   parseISO,
@@ -412,42 +413,26 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
+      <div className="space-y-0">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4 pb-4 border-b border-border">
           <h2 className="text-2xl font-bold text-text-primary">Gear</h2>
-          <p className="text-sm text-text-secondary">
-            {items.length} item{items.length !== 1 ? "s" : ""} · {availableCount} available
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={() => setShowScanner(true)}>
             <ScanLine className="h-4 w-4" />
             Scan Gear
           </Button>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
-        {([
-          { key: "items" as Tab, label: "Items" },
-          { key: "kits" as Tab, label: "Kits" },
-          { key: "reservations" as Tab, label: "Reservations" },
-          { key: "maintenance" as Tab, label: "Maintenance" },
-        ]).map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === t.key
-                ? "border-primary text-primary"
-                : "border-transparent text-text-secondary hover:text-text-primary hover:border-border"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+        <PageTabs
+          tabs={[
+            { key: "items", label: "Items", icon: Package },
+            { key: "kits", label: "Kits", icon: Layers },
+            { key: "reservations", label: "Reservations", icon: CalendarRange },
+            { key: "maintenance", label: "Maintenance", icon: Wrench },
+          ]}
+          activeTab={tab}
+          onTabChange={(key) => setTab(key as Tab)}
+        />
       </div>
 
       {/* Items tab */}

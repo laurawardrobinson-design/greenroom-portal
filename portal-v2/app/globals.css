@@ -417,3 +417,54 @@ textarea {
 .preserve-3d {
   transform-style: preserve-3d;
 }
+
+/* ============================================================
+   Asset Studio — scoped tokens for the Storyteq-style module
+   ============================================================ */
+
+[data-area="asset-studio"] {
+  /* Surface system — slightly cooler than the campaigns module so the
+     module reads as "creative tooling" rather than "production ops". */
+  --as-bg:           #FAFBFA;
+  --as-surface:      #FFFFFF;
+  --as-surface-2:    #F1F4F1;
+  --as-border:       #E5E7E5;
+  --as-border-strong:#D1D5D1;
+
+  /* Text */
+  --as-text:         #1F1F1F;
+  --as-text-muted:   #6B7280;
+  --as-text-subtle:  #9CA3AF;
+
+  /* Accent — leans on Greenroom primary but introduces a "design tool" hue */
+  --as-accent:       #69A925;
+  --as-accent-hover: #5a9420;
+  --as-accent-soft:  #E8F5E0;
+  --as-accent-ring:  rgba(105, 169, 37, 0.35);
+
+  /* Layer-tree highlights */
+  --as-layer-hover:  #F5F7F5;
+  --as-layer-active: #E8F5E0;
+  --as-layer-locked: #FEF3C7;
+
+  /* Status pills (borrowed from main palette but indirected) */
+  --as-status-draft:     #6B7280;
+  --as-status-published: #059669;
+  --as-status-archived:  #9CA3AF;
+  --as-status-queued:    #2563EB;
+  --as-status-rendering: #d97706;
+  --as-status-completed: #059669;
+  --as-status-failed:    #dc2626;
+  --as-status-cancelled: #6B7280;
+  --as-status-pending:   #6B7280;
+  --as-status-rendered:  #2563EB;
+  --as-status-approved:  #059669;
+  --as-status-rejected:  #dc2626;
+
+  /* Canvas / preview chrome */
+  --as-canvas-bg:      #2A2A2A;
+  --as-canvas-grid:    rgba(255, 255, 255, 0.06);
+  --as-handle-color:   #69A925;
+  --as-handle-locked:  #F59E0B;
+}
+

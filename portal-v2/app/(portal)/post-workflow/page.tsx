@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EditRoomCalendar } from "@/components/post-workflow/edit-room-calendar";
 import { DriveInventory } from "@/components/post-workflow/drive-inventory";
 import { Clapperboard, HardDrive } from "lucide-react";
+import { PageTabs } from "@/components/ui/page-tabs";
 
 type Tab = "edit-rooms" | "drives";
 
@@ -50,33 +51,18 @@ export default function PostWorkflowPage() {
   }
 
   return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">Post Production</h1>
-        <p className="text-sm text-text-secondary">
-          Edit room reservations and hard drive management
-        </p>
-      </div>
+    <div className="space-y-6">
+      <div className="space-y-0">
+        {/* Page header */}
+        <div className="pb-4 border-b border-border">
+          <h1 className="text-2xl font-bold text-text-primary">Post Production</h1>
+        </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 rounded-lg border border-border bg-surface-secondary p-1 w-fit">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => switchTab(id)}
-            className={`
-              flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all
-              ${activeTab === id
-                ? "bg-surface text-text-primary shadow-sm"
-                : "text-text-secondary hover:text-text-primary"
-              }
-            `}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </button>
-        ))}
+        <PageTabs
+          tabs={TABS.map(({ id, label, icon }) => ({ key: id, label, icon }))}
+          activeTab={activeTab}
+          onTabChange={(key) => switchTab(key as Tab)}
+        />
       </div>
 
       {/* Tab content */}

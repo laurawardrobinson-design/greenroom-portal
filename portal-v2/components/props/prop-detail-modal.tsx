@@ -148,6 +148,7 @@ export function PropDetailModal({
 
   async function handleDelete() {
     if (!item) return;
+    if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/gear/${item.id}`, { method: "DELETE" });

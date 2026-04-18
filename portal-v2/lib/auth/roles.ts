@@ -32,22 +32,36 @@ export const PERMISSIONS = {
   approvals: {
     view: ["Admin"] as UserRole[],
   },
+  // Asset Studio — Storyteq-style versioning module
+  assetStudio: {
+    // Browse the module + see templates / variants
+    view: ["Admin", "Producer", "Post Producer", "Designer", "Art Director"] as UserRole[],
+    // Create / edit / publish templates
+    manageTemplates: ["Admin", "Producer", "Post Producer", "Designer"] as UserRole[],
+    // Manage versioned brand_tokens
+    manageBrand: ["Admin", "Designer"] as UserRole[],
+    // Kick off a variant run
+    runVariants: ["Admin", "Producer", "Post Producer", "Designer"] as UserRole[],
+    // Approve or reject rendered variants
+    approveVariants: ["Admin", "Producer", "Post Producer"] as UserRole[],
+  },
 } as const;
 
 // Route-level access control
 export const ROUTE_ROLES: Record<string, UserRole[]> = {
-  "/dashboard": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director"],
-  "/campaigns": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director"],
+  "/dashboard": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Designer"],
+  "/campaigns": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Designer"],
   "/vendors": ["Admin", "Producer", "Post Producer"],
   "/vendors/portal": ["Vendor"],
   "/inventory": ["Admin", "Producer", "Post Producer", "Studio"],
   "/calendar": ["Admin", "Producer", "Post Producer", "Studio"],
   "/approvals": ["Admin"],
   "/budget": ["Admin", "Producer", "Post Producer"],
-  "/contacts": ["Admin", "Producer", "Post Producer", "Studio", "Art Director"],
+  "/contacts": ["Admin", "Producer", "Post Producer", "Studio", "Art Director", "Designer"],
   "/props": ["Admin", "Producer", "Post Producer", "Studio", "Art Director"],
   "/goals": ["Admin", "Producer", "Post Producer", "Studio"],
-  "/settings": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director"],
+  "/settings": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Designer"],
+  "/asset-studio": ["Admin", "Producer", "Post Producer", "Designer", "Art Director"],
 };
 
 export function hasPermission(

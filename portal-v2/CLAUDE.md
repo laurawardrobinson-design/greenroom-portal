@@ -1,5 +1,10 @@
 @AGENTS.md
 
+## Release Workflow
+
+For any shipping/release/deploy task, follow [`RELEASE_PLAYBOOK.md`](./RELEASE_PLAYBOOK.md).
+When preparing a PR, use the checklist in [`.github/pull_request_template.md`](./.github/pull_request_template.md).
+
 The Greenroom logo is an IMAGE (`/greenroom-logo.png`), not styled text.
 Do not create or adjust text-based logo treatments with letter-spacing/tracking.
 

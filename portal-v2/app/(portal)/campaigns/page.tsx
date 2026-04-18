@@ -62,11 +62,8 @@ export default function CampaignsPage() {
   return (
     <div className="space-y-5">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">Campaigns</h1>
-            <p className="text-sm text-text-secondary mt-1">Manage and track all production projects.</p>
-          </div>
+        <div className="flex items-center justify-between gap-4 pb-4 border-b border-border">
+          <h1 className="text-2xl font-bold text-text-primary">Campaigns</h1>
           {canCreate && (
             <div className="flex gap-2">
               <Button variant="secondary" onClick={() => setShowImport(true)}>

@@ -38,6 +38,7 @@ import {
   Compass,
   Pencil,
 } from "lucide-react";
+import { PageTabs } from "@/components/ui/page-tabs";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -75,29 +76,20 @@ export default function ContactsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-text-primary">Contacts</h2>
-        <p className="text-sm text-text-secondary">
-          {tab === "team" ? "Internal team members" : "External vendors and partners"}
-        </p>
-      </div>
+      <div className="space-y-0">
+        {/* Header */}
+        <div className="pb-4 border-b border-border">
+          <h2 className="text-2xl font-bold text-text-primary">Contacts</h2>
+        </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
-        {(["team", "vendors"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => switchTab(t)}
-            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${
-              tab === t
-                ? "border-primary text-primary"
-                : "border-transparent text-text-secondary hover:text-text-primary hover:border-border"
-            }`}
-          >
-            {t === "team" ? "Internal Team" : "External Vendors"}
-          </button>
-        ))}
+        <PageTabs
+          tabs={[
+            { key: "team", label: "Internal Team", icon: Users },
+            { key: "vendors", label: "External Vendors", icon: Building2 },
+          ]}
+          activeTab={tab}
+          onTabChange={(key) => switchTab(key as Tab)}
+        />
       </div>
 
       {/* Search + filter bar */}
@@ -234,7 +226,7 @@ function TeamSection({
   const { data: rawAllUsers, isLoading, mutate } = useSWR<AppUser[]>(
     "/api/users?roles=Admin,Producer,Studio",
     fetcher,
-    { revalidateOnMount: true, dedupingInterval: 0 }
+    { revalidateOnFocus: false }
   );
   const allUsers: AppUser[] = Array.isArray(rawAllUsers) ? rawAllUsers : [];
   const [detailPerson, setDetailPerson] = useState<AppUser | null>(null);
@@ -360,7 +352,10 @@ function TeamSection({
           {filtered.map((person) => (
             <div
               key={person.id}
+              role="button"
+              tabIndex={0}
               onClick={() => setDetailPerson(person)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDetailPerson(person); } }}
               className="grid grid-cols-1 sm:grid-cols-[1fr_120px_1fr_140px] gap-0 px-4 py-3 border-b border-border-light last:border-b-0 hover:bg-surface-secondary transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -517,6 +512,7 @@ function ContactDetailModal({
 
   async function handleDeleteNote(noteId: string) {
     if (!person) return;
+    if (!confirm("Delete this note?")) return;
     try {
       await fetch(`/api/users/${person.id}/notes/${noteId}`, { method: "DELETE" });
       mutateNotes();
@@ -1184,6 +1180,7 @@ function VendorDetailModal({
   }
 
   async function handleDeleteNote(noteId: string) {
+    if (!confirm("Delete this note?")) return;
     try {
       await fetch(`/api/vendors/${vendor.id}/notes/${noteId}`, { method: "DELETE" });
       mutateNotes();

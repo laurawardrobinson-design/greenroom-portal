@@ -19,12 +19,7 @@ import {
   Star,
   UserCircle,
   AlertTriangle,
-  Camera,
-  ChefHat,
-  Shirt,
   Package,
-  Layers,
-  Box,
   Plus,
   X,
   Utensils,
@@ -37,6 +32,8 @@ import { useToast } from "@/components/ui/toast";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { ScheduleTab } from "@/components/pre-production/schedule-tab";
 import { VendorAssignmentPanel } from "@/components/campaigns/vendor-assignment-panel";
+import { SpacePickerModal } from "@/components/studio/space-picker-modal";
+import { SPACE_TYPE_ICON, SPACE_TYPE_COLOR } from "@/lib/constants/studio";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
 
@@ -90,147 +87,6 @@ function PlaceholderTab({
         ))}
       </div>
     </div>
-  );
-}
-
-// ─── Space icon + color maps (mirrored from Studio page) ─────────────────────
-
-const SPACE_TYPE_ICON: Record<string, React.ElementType> = {
-  shooting_bay:      Camera,
-  set_kitchen:       ChefHat,
-  prep_kitchen:      ChefHat,
-  wardrobe:          Shirt,
-  multipurpose:      Layers,
-  conference:        Users,
-  equipment_storage: Package,
-  prop_storage:      Box,
-};
-
-const SPACE_TYPE_COLOR: Record<string, string> = {
-  shooting_bay:      "bg-slate-100 text-slate-700 border-slate-200",
-  set_kitchen:       "bg-stone-100 text-stone-700 border-stone-200",
-  prep_kitchen:      "bg-stone-100 text-stone-700 border-stone-200",
-  wardrobe:          "bg-slate-100 text-slate-700 border-slate-200",
-  multipurpose:      "bg-slate-100 text-slate-700 border-slate-200",
-  conference:        "bg-slate-100 text-slate-700 border-slate-200",
-  equipment_storage: "bg-slate-50 text-slate-500 border-slate-200",
-  prop_storage:      "bg-slate-50 text-slate-500 border-slate-200",
-};
-
-// ─── Space picker modal ───────────────────────────────────────────────────────
-
-function SpacePickerModal({
-  campaignId,
-  date,
-  spaces,
-  reservations,
-  onClose,
-  onSaved,
-}: {
-  campaignId: string;
-  date: string;
-  spaces: StudioSpace[];
-  reservations: SpaceReservation[];
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const { toast } = useToast();
-  const [saving, setSaving] = useState<string | null>(null);
-
-  const takenByOther = new Set(
-    reservations.filter((r) => r.campaignId !== campaignId).map((r) => r.spaceId)
-  );
-  const takenByUs = new Set(
-    reservations.filter((r) => r.campaignId === campaignId).map((r) => r.spaceId)
-  );
-
-  async function claim(spaceId: string) {
-    setSaving(spaceId);
-    try {
-      const res = await fetch("/api/studio/reservations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaignId, spaceId, reservedDate: date }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Failed");
-      }
-      toast("success", "Space reserved");
-      onSaved();
-    } catch (err: unknown) {
-      toast("error", err instanceof Error ? err.message : "Failed to reserve");
-    } finally {
-      setSaving(null);
-    }
-  }
-
-  async function release(spaceId: string) {
-    const res = reservations.find((r) => r.campaignId === campaignId && r.spaceId === spaceId);
-    if (!res) return;
-    setSaving(spaceId);
-    try {
-      const r = await fetch(`/api/studio/reservations?id=${res.id}`, { method: "DELETE" });
-      if (!r.ok) throw new Error("Failed");
-      toast("success", "Reservation released");
-      onSaved();
-    } catch {
-      toast("error", "Failed to release");
-    } finally {
-      setSaving(null);
-    }
-  }
-
-  return (
-    <Modal open onClose={onClose} title={`Spaces — ${format(parseISO(date), "EEE, MMM d")}`}>
-      <div className="space-y-2">
-        {spaces.map((space) => {
-          const Icon = SPACE_TYPE_ICON[space.type] ?? Building2;
-          const color = SPACE_TYPE_COLOR[space.type] ?? "bg-surface-secondary text-text-secondary border-border";
-          const ours = takenByUs.has(space.id);
-          const taken = takenByOther.has(space.id);
-          const busy = saving === space.id;
-
-          return (
-            <div
-              key={space.id}
-              className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
-                ours ? "border-primary/30 bg-primary/5" : taken ? "border-border opacity-50" : "border-border bg-surface"
-              }`}
-            >
-              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded border ${color}`}>
-                <Icon className="h-3.5 w-3.5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text-primary">{space.name}</p>
-                {taken && (
-                  <p className="text-[10px] text-text-tertiary">Reserved by another campaign</p>
-                )}
-                {space.capacity && !taken && (
-                  <p className="text-[10px] text-text-tertiary">Seats {space.capacity}</p>
-                )}
-              </div>
-              {!taken && (
-                <button
-                  onClick={() => ours ? release(space.id) : claim(space.id)}
-                  disabled={busy}
-                  className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                    ours
-                      ? "border-primary/30 bg-primary/10 text-primary hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-                      : "border-border text-text-secondary hover:border-primary/40 hover:text-primary"
-                  }`}
-                >
-                  {busy ? "..." : ours ? "Release" : "Reserve"}
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <ModalFooter>
-        <Button variant="ghost" onClick={onClose}>Done</Button>
-      </ModalFooter>
-    </Modal>
   );
 }
 
@@ -350,7 +206,7 @@ function LogisticsTab({ campaignId, shoots }: { campaignId: string; shoots: Shoo
         <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
           <Utensils className="h-4 w-4 shrink-0 text-primary" />
           <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Food & Crafty</span>
-          <Link href="/food-crafty" className="ml-auto flex items-center gap-1 text-xs text-text-tertiary hover:text-primary transition-colors">
+          <Link href="/studio?tab=food" className="ml-auto flex items-center gap-1 text-xs text-text-tertiary hover:text-primary transition-colors">
             Open full view
             <ExternalLink className="h-3 w-3" />
           </Link>
@@ -386,7 +242,7 @@ function LogisticsTab({ campaignId, shoots }: { campaignId: string; shoots: Shoo
                   )}
                 </div>
                 <Link
-                  href="/food-crafty"
+                  href="/studio?tab=food"
                   className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs text-text-secondary hover:border-primary/40 hover:text-primary transition-colors"
                 >
                   {dayMeals.length > 0 ? "Edit" : "Add"}
@@ -401,11 +257,11 @@ function LogisticsTab({ campaignId, shoots }: { campaignId: string; shoots: Shoo
       {spaceModal && spaces && (
         <SpacePickerModal
           campaignId={campaignId}
-          date={spaceModal}
+          date={parseISO(spaceModal)}
           spaces={spaces}
           reservations={allResOnDate ?? []}
           onClose={() => setSpaceModal(null)}
-          onSaved={() => refreshRes()}
+          onChanged={() => refreshRes()}
         />
       )}
     </div>
