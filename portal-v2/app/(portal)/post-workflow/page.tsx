@@ -51,20 +51,19 @@ export default function PostWorkflowPage() {
   }
 
   return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">Post Production</h1>
-        <p className="text-sm text-text-secondary">
-          Edit room reservations and hard drive management
-        </p>
-      </div>
+    <div className="space-y-6">
+      <div className="space-y-0">
+        {/* Page header */}
+        <div className="pb-4 border-b border-border">
+          <h1 className="text-2xl font-bold text-text-primary">Post Production</h1>
+        </div>
 
-      <PageTabs
-        tabs={TABS.map(({ id, label, icon }) => ({ key: id, label, icon }))}
-        activeTab={activeTab}
-        onTabChange={(key) => switchTab(key as Tab)}
-      />
+        <PageTabs
+          tabs={TABS.map(({ id, label, icon }) => ({ key: id, label, icon }))}
+          activeTab={activeTab}
+          onTabChange={(key) => switchTab(key as Tab)}
+        />
+      </div>
 
       {/* Tab content */}
       {activeTab === "edit-rooms" && <EditRoomCalendar user={user} />}

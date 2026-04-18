@@ -14,7 +14,7 @@ import { OneLinerView } from "./one-liner-view";
 import { DayByDayView } from "./day-by-day-view";
 import { CallSheetBuilder } from "./call-sheet-builder";
 
-// ─── Sub-nav pill config ─────────────────────────────────────────────────────
+// ─── Sub-nav config ──────────────────────────────────────────────────────────
 const SUB_VIEWS = [
   { id: "shot-list", label: "Shot List", icon: List },
   { id: "one-liner", label: "One-Liner", icon: AlignJustify },
@@ -61,8 +61,8 @@ export function ScheduleTab({
 
   return (
     <div className="space-y-4">
-      {/* Pill sub-navigation */}
-      <div className="flex items-center gap-2">
+      {/* Sub-navigation — compact pills, nested under main Schedule tab */}
+      <div className="flex items-center gap-1.5">
         {visibleViews.map(({ id, label, icon: Icon }) => {
           const active = activeView === id;
           return (
@@ -73,8 +73,8 @@ export function ScheduleTab({
               className={`
                 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors
                 ${active
-                  ? "bg-text-primary text-white"
-                  : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
+                  ? "bg-primary/10 text-primary"
+                  : "text-text-tertiary hover:text-text-secondary hover:bg-surface-secondary"
                 }
               `}
             >

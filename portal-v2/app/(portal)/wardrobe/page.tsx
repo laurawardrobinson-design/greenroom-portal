@@ -213,30 +213,29 @@ export default function WardrobePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
+      <div className="space-y-0">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4 pb-4 border-b border-border">
           <h2 className="text-2xl font-bold text-text-primary">Wardrobe</h2>
-          <p className="text-sm text-text-secondary">Uniform planning and physical backstock</p>
+          {tab === "backstock" && (
+            <Button variant="secondary" onClick={() => { setShowScanner(true); setScannerActive(true); }}>
+              <ScanLine className="h-4 w-4" />
+              Scan Units
+            </Button>
+          )}
         </div>
-        {tab === "backstock" && (
-          <Button variant="secondary" onClick={() => { setShowScanner(true); setScannerActive(true); }}>
-            <ScanLine className="h-4 w-4" />
-            Scan Units
-          </Button>
-        )}
-      </div>
 
-      <PageTabs
-        tabs={[
-          { key: "job-classes", label: "Job Classes", icon: Users },
-          { key: "items", label: "Uniform Items", icon: Shirt },
-          { key: "backstock", label: "Backstock", icon: Archive },
-          { key: "reservations", label: "Reservations", icon: Calendar },
-        ]}
-        activeTab={tab}
-        onTabChange={(key) => setTab(key as Tab)}
-      />
+        <PageTabs
+          tabs={[
+            { key: "job-classes", label: "Job Classes", icon: Users },
+            { key: "items", label: "Uniform Items", icon: Shirt },
+            { key: "backstock", label: "Backstock", icon: Archive },
+            { key: "reservations", label: "Reservations", icon: Calendar },
+          ]}
+          activeTab={tab}
+          onTabChange={(key) => setTab(key as Tab)}
+        />
+      </div>
 
       {/* ── Job Classes Tab ── */}
       {tab === "job-classes" && (

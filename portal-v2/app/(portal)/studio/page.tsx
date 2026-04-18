@@ -865,27 +865,26 @@ export default function StudioManagementPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="space-y-0">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4 border-b border-border">
           <h2 className="text-2xl font-bold text-text-primary">{pageTitle}</h2>
-          <p className="text-sm text-text-secondary">Greenroom building — spaces, prep, and food coordination</p>
+          {user.role === "Studio" && (
+            <Link href="/gear/scan">
+              <Button size="md" variant="secondary">
+                <QrCode className="h-4 w-4" />
+                Scan Gear
+              </Button>
+            </Link>
+          )}
         </div>
-        {user.role === "Studio" && (
-          <Link href="/gear/scan">
-            <Button size="md" variant="secondary">
-              <QrCode className="h-4 w-4" />
-              Scan Gear
-            </Button>
-          </Link>
-        )}
-      </div>
 
-      <PageTabs
-        tabs={TABS.map(({ id, label, icon }) => ({ key: id, label, icon }))}
-        activeTab={tab}
-        onTabChange={(key) => handleTabChange(key as Tab)}
-      />
+        <PageTabs
+          tabs={TABS.map(({ id, label, icon }) => ({ key: id, label, icon }))}
+          activeTab={tab}
+          onTabChange={(key) => handleTabChange(key as Tab)}
+        />
+      </div>
 
       {tab === "today"  && <TodayView userRole={user.role} />}
       {tab === "spaces" && <SpacesView userRole={user.role} userId={user.id} />}

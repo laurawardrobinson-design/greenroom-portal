@@ -413,32 +413,27 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
+      <div className="space-y-0">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4 pb-4 border-b border-border">
           <h2 className="text-2xl font-bold text-text-primary">Gear</h2>
-          <p className="text-sm text-text-secondary">
-            {items.length} item{items.length !== 1 ? "s" : ""} · {availableCount} available
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={() => setShowScanner(true)}>
             <ScanLine className="h-4 w-4" />
             Scan Gear
           </Button>
         </div>
-      </div>
 
-      <PageTabs
-        tabs={[
-          { key: "items", label: "Items", icon: Package },
-          { key: "kits", label: "Kits", icon: Layers },
-          { key: "reservations", label: "Reservations", icon: CalendarRange },
-          { key: "maintenance", label: "Maintenance", icon: Wrench },
-        ]}
-        activeTab={tab}
-        onTabChange={(key) => setTab(key as Tab)}
-      />
+        <PageTabs
+          tabs={[
+            { key: "items", label: "Items", icon: Package },
+            { key: "kits", label: "Kits", icon: Layers },
+            { key: "reservations", label: "Reservations", icon: CalendarRange },
+            { key: "maintenance", label: "Maintenance", icon: Wrench },
+          ]}
+          activeTab={tab}
+          onTabChange={(key) => setTab(key as Tab)}
+        />
+      </div>
 
       {/* Items tab */}
       {tab === "items" && (

@@ -59,24 +59,21 @@ export default function ProductDirectoryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
+      <div className="space-y-0">
+        {/* Header */}
+        <div className="pb-4 border-b border-border">
           <h2 className="text-2xl font-bold text-text-primary">Food</h2>
-          <p className="text-sm text-text-secondary">
-            {products.length} product{products.length !== 1 ? "s" : ""}
-          </p>
         </div>
-      </div>
 
-      <PageTabs
-        tabs={[
-          { key: "items", label: "Items", icon: ShoppingBasket },
-          { key: "product-requests", label: "Product Requests", icon: ClipboardList },
-        ]}
-        activeTab={tab}
-        onTabChange={(key) => setTab(key as Tab)}
-      />
+        <PageTabs
+          tabs={[
+            { key: "items", label: "Items", icon: ShoppingBasket },
+            { key: "product-requests", label: "Product Requests", icon: ClipboardList },
+          ]}
+          activeTab={tab}
+          onTabChange={(key) => setTab(key as Tab)}
+        />
+      </div>
 
       {tab === "items" && (
         <>

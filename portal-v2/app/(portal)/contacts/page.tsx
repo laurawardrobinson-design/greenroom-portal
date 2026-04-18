@@ -76,22 +76,21 @@ export default function ContactsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-text-primary">Contacts</h2>
-        <p className="text-sm text-text-secondary">
-          {tab === "team" ? "Internal team members" : "External vendors and partners"}
-        </p>
-      </div>
+      <div className="space-y-0">
+        {/* Header */}
+        <div className="pb-4 border-b border-border">
+          <h2 className="text-2xl font-bold text-text-primary">Contacts</h2>
+        </div>
 
-      <PageTabs
-        tabs={[
-          { key: "team", label: "Internal Team", icon: Users },
-          { key: "vendors", label: "External Vendors", icon: Building2 },
-        ]}
-        activeTab={tab}
-        onTabChange={(key) => switchTab(key as Tab)}
-      />
+        <PageTabs
+          tabs={[
+            { key: "team", label: "Internal Team", icon: Users },
+            { key: "vendors", label: "External Vendors", icon: Building2 },
+          ]}
+          activeTab={tab}
+          onTabChange={(key) => switchTab(key as Tab)}
+        />
+      </div>
 
       {/* Search + filter bar */}
       <div className="space-y-2">

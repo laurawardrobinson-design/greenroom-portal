@@ -206,25 +206,27 @@ export default function PropsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <PageHeader
-        title="Props"
-        actions={
-          <Button variant="secondary" onClick={() => setShowScanner(true)}>
-            <ScanLine className="h-4 w-4" />
-            Scan Props
-          </Button>
-        }
-      />
+      <div className="space-y-0">
+        {/* Header */}
+        <PageHeader
+          title="Props"
+          actions={
+            <Button variant="secondary" onClick={() => setShowScanner(true)}>
+              <ScanLine className="h-4 w-4" />
+              Scan Props
+            </Button>
+          }
+        />
 
-      <PageTabs
-        tabs={[
-          { key: "items", label: "Items", icon: Boxes },
-          { key: "reservations", label: "Reservations", icon: Calendar },
-        ]}
-        activeTab={tab}
-        onTabChange={(key) => setTab(key as Tab)}
-      />
+        <PageTabs
+          tabs={[
+            { key: "items", label: "Items", icon: Boxes },
+            { key: "reservations", label: "Reservations", icon: Calendar },
+          ]}
+          activeTab={tab}
+          onTabChange={(key) => setTab(key as Tab)}
+        />
+      </div>
 
       {tab === "items" && (
         <>

@@ -77,9 +77,8 @@ export default function BudgetPage() {
   if (!isAdmin) {
     return (
       <div className="space-y-6">
-        <div>
+        <div className="pb-4 border-b border-border">
           <h2 className="text-2xl font-bold text-text-primary">Budget</h2>
-          <p className="text-sm text-text-secondary">Vendor estimates and invoices</p>
         </div>
         <VendorFinancialsTab />
       </div>
@@ -88,14 +87,13 @@ export default function BudgetPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-text-primary">Budget</h2>
-        <p className="text-sm text-text-secondary">
-          Production budget pools, approvals, and spending analysis
-        </p>
-      </div>
+      <div className="space-y-0">
+        <div className="pb-4 border-b border-border">
+          <h2 className="text-2xl font-bold text-text-primary">Budget</h2>
+        </div>
 
-      <PageTabs tabs={TABS} activeTab={activeTab} onTabChange={(key) => setActiveTab(key as Tab)} />
+        <PageTabs tabs={TABS} activeTab={activeTab} onTabChange={(key) => setActiveTab(key as Tab)} />
+      </div>
 
       {/* Tab content */}
       {activeTab === "overview" && <BudgetPoolsTab isAdmin={isAdmin} />}
