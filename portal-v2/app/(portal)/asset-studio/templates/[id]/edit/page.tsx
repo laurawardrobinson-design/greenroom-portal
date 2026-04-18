@@ -360,30 +360,26 @@ function CanvasPreview({
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }) {
-  // Fit canvas inside a max box (640px wide, preserve aspect)
-  const maxWidth = 640;
-  const scale = Math.min(1, maxWidth / template.canvasWidth);
-  const renderWidth = template.canvasWidth * scale;
-  const renderHeight = template.canvasHeight * scale;
+  // Canvas fills whatever width its parent column grants it (up to 640px),
+  // and preserves the template aspect via CSS `aspect-ratio`. Layer
+  // positions are already percentage-based so they scale automatically.
+  // Hard-pinning a pixel width pushed the whole grid off at ~1280px
+  // viewports and clipped the right-hand Properties panel.
+  const aspectRatio = `${template.canvasWidth} / ${template.canvasHeight}`;
 
   return (
     <div className="rounded-xl border border-[var(--as-border)] bg-[var(--as-canvas-bg)] p-6">
-      <div className="mx-auto" style={{ width: renderWidth }}>
+      <div className="mx-auto w-full max-w-[640px]">
         <div
-          className="relative overflow-hidden rounded shadow-lg"
+          className="relative w-full overflow-hidden rounded shadow-lg"
           style={{
-            width: renderWidth,
-            height: renderHeight,
+            aspectRatio,
             background: template.backgroundColor || "#FFFFFF",
           }}
           onClick={() => onSelect(null)}
         >
           {layers.map((l) => {
             const isSelected = l.id === selectedId;
-            const left = (l.xPct / 100) * renderWidth;
-            const top = (l.yPct / 100) * renderHeight;
-            const width = (l.widthPct / 100) * renderWidth;
-            const height = (l.heightPct / 100) * renderHeight;
             return (
               <button
                 key={l.id}
@@ -399,7 +395,12 @@ function CanvasPreview({
                       ? "border-[var(--as-handle-locked)]/40 hover:border-[var(--as-handle-locked)]"
                       : "border-white/40 hover:border-white/80"
                 }`}
-                style={{ left, top, width, height }}
+                style={{
+                  left: `${l.xPct}%`,
+                  top: `${l.yPct}%`,
+                  width: `${l.widthPct}%`,
+                  height: `${l.heightPct}%`,
+                }}
                 aria-label={`Select layer ${l.name}`}
               >
                 <span
@@ -420,7 +421,7 @@ function CanvasPreview({
           })}
         </div>
         <p className="mt-2 text-center text-xs text-white/50">
-          {template.canvasWidth} × {template.canvasHeight}px · {Math.round(scale * 100)}% preview
+          {template.canvasWidth} × {template.canvasHeight}px · fits to column
         </p>
       </div>
     </div>
