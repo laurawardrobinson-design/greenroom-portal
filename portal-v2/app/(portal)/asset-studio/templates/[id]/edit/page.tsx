@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR, { mutate } from "swr";
@@ -31,6 +31,10 @@ import {
   ImagePlus,
   Layers,
   Save,
+  Upload,
+  History,
+  Eye,
+  X,
 } from "lucide-react";
 
 const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer"];
@@ -164,6 +168,7 @@ function TemplateEditShell({
               layers={layers}
               selectedId={selectedLayerId}
               onSelect={setSelectedLayerId}
+              mutateUrl={url}
             />
           </div>
 
@@ -249,6 +254,8 @@ function TemplateHeader({
           <Save className="h-3.5 w-3.5" />
           Save
         </Button>
+        <PreviewButton templateId={template.id} outputSpecs={template.outputSpecs ?? []} />
+        <VersionHistoryButton template={template} mutateUrl={mutateUrl} />
         <Link href={`/asset-studio/runs/new?templateId=${template.id}`}>
           <Button size="sm" variant="outline">
             New run
@@ -275,6 +282,276 @@ function TemplateHeader({
           </span>
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── Live preview ────────────────────────────────────────────────────────────
+
+function PreviewButton({
+  templateId,
+  outputSpecs,
+}: {
+  templateId: string;
+  outputSpecs: TemplateOutputSpec[];
+}) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [specId, setSpecId] = useState<string>(outputSpecs[0]?.id ?? "");
+
+  async function render(sid: string) {
+    setBusy(true);
+    setImageUrl(null);
+    try {
+      const res = await fetch(`/api/asset-studio/templates/${templateId}/preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ specId: sid || undefined }),
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      setImageUrl(URL.createObjectURL(blob));
+    } catch {
+      toast("error", "Preview failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openAndRender() {
+    setOpen(true);
+    await render(specId);
+  }
+
+  // Release the object URL on close so we don't leak memory.
+  useEffect(() => {
+    if (!open && imageUrl) {
+      URL.revokeObjectURL(imageUrl);
+      setImageUrl(null);
+    }
+  }, [open, imageUrl]);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={openAndRender}
+        disabled={outputSpecs.length === 0}
+        title={outputSpecs.length === 0 ? "Add an output size first" : "Render a live preview"}
+        className="inline-flex items-center gap-1.5 rounded-md border border-[var(--as-border)] bg-[var(--as-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--as-text-muted)] transition-colors hover:bg-[var(--as-surface-2)] hover:text-[var(--as-text)] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <Eye className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Preview</span>
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-6"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="flex max-h-[90vh] w-full max-w-3xl flex-col gap-3 overflow-hidden rounded-lg bg-[var(--as-surface)] p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-[var(--as-text)]">
+                Live preview
+              </h3>
+              <div className="flex items-center gap-2">
+                <select
+                  value={specId}
+                  onChange={(e) => {
+                    setSpecId(e.target.value);
+                    void render(e.target.value);
+                  }}
+                  className="rounded-md border border-[var(--as-border)] bg-[var(--as-surface)] px-2 py-1 text-xs"
+                >
+                  {outputSpecs.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label} · {s.width}×{s.height} · {s.format.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="rounded-md p-1.5 text-[var(--as-text-muted)] hover:bg-[var(--as-surface-2)]"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="flex min-h-[320px] flex-1 items-center justify-center overflow-auto rounded-md bg-[var(--as-canvas-bg)] p-4">
+              {busy ? (
+                <p className="text-sm text-white/70">Rendering…</p>
+              ) : imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imageUrl}
+                  alt="Template preview"
+                  className="max-h-[70vh] max-w-full object-contain shadow-lg"
+                />
+              ) : (
+                <p className="text-sm text-white/70">No preview yet</p>
+              )}
+            </div>
+            <p className="text-[11px] text-[var(--as-text-subtle)]">
+              Uses the first campaign-linked product as live data. Real runs use
+              the full per-product fan-out.
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─── Version history ─────────────────────────────────────────────────────────
+
+function VersionHistoryButton({
+  template,
+  mutateUrl,
+}: {
+  template: AssetTemplate;
+  mutateUrl: string;
+}) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const versions = (template.versions ?? []).slice().sort((a, b) => b.version - a.version);
+  const current = versions.find((v) => v.id === template.currentVersionId);
+
+  async function snapshot() {
+    const label = window.prompt("Label for this version (optional):") ?? "";
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/asset-studio/templates/${template.id}/versions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label }),
+      });
+      if (!res.ok) throw new Error();
+      toast("success", "New version saved");
+      await mutate(mutateUrl);
+    } catch {
+      toast("error", "Couldn't save version");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function restore(versionId: string, versionLabel: string) {
+    if (
+      !window.confirm(
+        `Restore to ${versionLabel}? Current edits become a new version first so nothing is lost.`
+      )
+    )
+      return;
+    setBusy(true);
+    try {
+      // Snapshot current state first so the restore is reversible.
+      await fetch(`/api/asset-studio/templates/${template.id}/versions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: "pre-restore autosave" }),
+      });
+      const res = await fetch(
+        `/api/asset-studio/templates/${template.id}/versions/${versionId}/restore`,
+        { method: "POST" }
+      );
+      if (!res.ok) throw new Error();
+      toast("success", `Restored from ${versionLabel}`);
+      await mutate(mutateUrl);
+      setOpen(false);
+    } catch {
+      toast("error", "Couldn't restore");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        disabled={busy}
+        className="inline-flex items-center gap-1.5 rounded-md border border-[var(--as-border)] bg-[var(--as-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--as-text-muted)] transition-colors hover:bg-[var(--as-surface-2)] hover:text-[var(--as-text)] disabled:opacity-50"
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        <History className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">
+          {current ? current.label || `v${current.version}` : "No versions"}
+        </span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-1 w-72 rounded-lg border border-[var(--as-border)] bg-[var(--as-surface)] p-2 shadow-lg">
+          <div className="flex items-center justify-between border-b border-[var(--as-border)] px-2 pb-2">
+            <span className="text-xs font-semibold text-[var(--as-text)]">
+              Version history
+            </span>
+            <button
+              type="button"
+              onClick={snapshot}
+              disabled={busy}
+              className="text-xs font-medium text-[var(--as-accent)] hover:text-[var(--as-accent-hover)]"
+            >
+              + Save as new
+            </button>
+          </div>
+          {versions.length === 0 ? (
+            <p className="p-3 text-center text-xs text-[var(--as-text-muted)]">
+              No versions yet. Publishing creates the first one.
+            </p>
+          ) : (
+            <ul className="max-h-72 overflow-y-auto">
+              {versions.map((v) => {
+                const isCurrent = v.id === template.currentVersionId;
+                return (
+                  <li key={v.id} className="border-b border-[var(--as-border)] last:border-0">
+                    <div className="flex items-center justify-between gap-2 px-2 py-2 text-xs">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium text-[var(--as-text)]">
+                            v{v.version}
+                          </span>
+                          {isCurrent && (
+                            <span className="rounded-full bg-[var(--as-accent-soft)] px-1.5 text-[10px] font-medium text-[var(--as-accent)]">
+                              current
+                            </span>
+                          )}
+                          {v.label && v.label !== `v${v.version}` && (
+                            <span className="truncate text-[var(--as-text-muted)]">
+                              — {v.label}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-[var(--as-text-subtle)]">
+                          {new Date(v.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                      {!isCurrent && (
+                        <button
+                          type="button"
+                          onClick={() => restore(v.id, v.label || `v${v.version}`)}
+                          disabled={busy}
+                          className="rounded-md px-2 py-1 text-[11px] font-medium text-[var(--as-accent)] hover:bg-[var(--as-accent-soft)] disabled:opacity-50"
+                        >
+                          Restore
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -448,24 +725,107 @@ function CanvasPreview({
   layers,
   selectedId,
   onSelect,
+  mutateUrl,
 }: {
   template: AssetTemplate;
   layers: TemplateLayer[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  mutateUrl: string;
 }) {
   // Canvas fills whatever width its parent column grants it (up to 640px),
   // and preserves the template aspect via CSS `aspect-ratio`. Layer
   // positions are already percentage-based so they scale automatically.
-  // Hard-pinning a pixel width pushed the whole grid off at ~1280px
-  // viewports and clipped the right-hand Properties panel.
   const aspectRatio = `${template.canvasWidth} / ${template.canvasHeight}`;
+  const { toast } = useToast();
+
+  // Drag-to-reposition state. `drag` tracks the active drag; `overrides`
+  // mirrors the optimistic xPct/yPct for the layer being dragged so the
+  // render stays in sync with the pointer. We PATCH on pointer-up.
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const [drag, setDrag] = useState<{
+    layerId: string;
+    startX: number;
+    startY: number;
+    origXPct: number;
+    origYPct: number;
+  } | null>(null);
+  const [overrides, setOverrides] = useState<Record<string, { xPct: number; yPct: number }>>({});
+
+  const onPointerDownLayer = useCallback(
+    (e: React.PointerEvent, l: TemplateLayer) => {
+      if (l.isLocked) return;
+      e.stopPropagation();
+      e.preventDefault();
+      onSelect(l.id);
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      setDrag({
+        layerId: l.id,
+        startX: e.clientX,
+        startY: e.clientY,
+        origXPct: l.xPct,
+        origYPct: l.yPct,
+      });
+    },
+    [onSelect]
+  );
+
+  const onPointerMoveLayer = useCallback(
+    (e: React.PointerEvent) => {
+      if (!drag || !canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const dxPct = ((e.clientX - drag.startX) / rect.width) * 100;
+      const dyPct = ((e.clientY - drag.startY) / rect.height) * 100;
+      const nextX = Math.max(0, Math.min(100, drag.origXPct + dxPct));
+      const nextY = Math.max(0, Math.min(100, drag.origYPct + dyPct));
+      setOverrides((o) => ({ ...o, [drag.layerId]: { xPct: nextX, yPct: nextY } }));
+    },
+    [drag]
+  );
+
+  const onPointerUpLayer = useCallback(
+    async (e: React.PointerEvent) => {
+      if (!drag) return;
+      const override = overrides[drag.layerId];
+      setDrag(null);
+      if (!override) return;
+      // Round to one decimal place — the numeric inputs step by 0.5 so tight
+      // precision is unnecessary and makes the DB row noisy.
+      const xPct = Math.round(override.xPct * 10) / 10;
+      const yPct = Math.round(override.yPct * 10) / 10;
+      try {
+        const res = await fetch(
+          `/api/asset-studio/templates/${template.id}/layers/${drag.layerId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ xPct, yPct }),
+          }
+        );
+        if (!res.ok) throw new Error();
+        await mutate(mutateUrl);
+        setOverrides((o) => {
+          const { [drag.layerId]: _, ...rest } = o;
+          return rest;
+        });
+      } catch {
+        toast("error", "Couldn't save position");
+        setOverrides((o) => {
+          const { [drag.layerId]: _, ...rest } = o;
+          return rest;
+        });
+      }
+      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    },
+    [drag, overrides, template.id, mutateUrl, toast]
+  );
 
   return (
     <div className="rounded-xl border border-[var(--as-border)] bg-[var(--as-canvas-bg)] p-6">
       <div className="mx-auto w-full max-w-[640px]">
         <div
-          className="relative w-full overflow-hidden rounded shadow-lg"
+          ref={canvasRef}
+          className="relative w-full overflow-hidden rounded shadow-lg select-none"
           style={{
             aspectRatio,
             background: template.backgroundColor || "#FFFFFF",
@@ -474,15 +834,24 @@ function CanvasPreview({
         >
           {layers.map((l) => {
             const isSelected = l.id === selectedId;
+            const o = overrides[l.id];
+            const x = o ? o.xPct : l.xPct;
+            const y = o ? o.yPct : l.yPct;
             return (
               <button
                 key={l.id}
                 type="button"
+                onPointerDown={(e) => onPointerDownLayer(e, l)}
+                onPointerMove={onPointerMoveLayer}
+                onPointerUp={onPointerUpLayer}
+                onPointerCancel={onPointerUpLayer}
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelect(l.id);
                 }}
                 className={`absolute flex items-center justify-center overflow-hidden border-2 text-[10px] font-medium transition-all ${
+                  l.isLocked ? "cursor-not-allowed" : "cursor-move"
+                } ${
                   isSelected
                     ? "border-[var(--as-handle-color)] bg-[var(--as-accent-soft)]/60"
                     : l.isLocked
@@ -490,10 +859,11 @@ function CanvasPreview({
                       : "border-white/40 hover:border-white/80"
                 }`}
                 style={{
-                  left: `${l.xPct}%`,
-                  top: `${l.yPct}%`,
+                  left: `${x}%`,
+                  top: `${y}%`,
                   width: `${l.widthPct}%`,
                   height: `${l.heightPct}%`,
+                  touchAction: "none",
                 }}
                 aria-label={`Select layer ${l.name}`}
               >
@@ -515,7 +885,7 @@ function CanvasPreview({
           })}
         </div>
         <p className="mt-2 text-center text-xs text-white/50">
-          {template.canvasWidth} × {template.canvasHeight}px · fits to column
+          {template.canvasWidth} × {template.canvasHeight}px · drag to reposition
         </p>
       </div>
     </div>
@@ -611,12 +981,20 @@ function PropertiesPanel({
             placeholder="product.name"
           />
         </Field>
-      ) : (
-        <Field label={isText ? "Text content" : "URL"}>
+      ) : isText ? (
+        <Field label="Text content">
           <Input
             value={layer.staticValue}
             onChange={(e) => patch({ staticValue: e.target.value })}
-            placeholder={isText ? "Type text…" : "/path/to/image.png"}
+            placeholder="Type text…"
+          />
+        </Field>
+      ) : (
+        <Field label="Source">
+          <AssetUrlInput
+            value={layer.staticValue}
+            onChange={(next) => patch({ staticValue: next })}
+            layerType={layer.layerType}
           />
         </Field>
       )}
@@ -696,12 +1074,24 @@ function PropertiesPanel({
             </Field>
           </div>
           <Field label="Color">
-            <Input
-              value={String(layer.props?.color ?? "#1F1F1F")}
-              onChange={(e) =>
-                patch({ props: { ...layer.props, color: e.target.value } })
-              }
-            />
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={String(layer.props?.color ?? "#1F1F1F")}
+                onChange={(e) =>
+                  patch({ props: { ...layer.props, color: e.target.value } })
+                }
+                className="h-9 w-9 shrink-0 cursor-pointer rounded-md border border-[var(--as-border)] bg-[var(--as-surface)] p-0.5"
+                aria-label="Pick color"
+              />
+              <Input
+                value={String(layer.props?.color ?? "#1F1F1F")}
+                onChange={(e) =>
+                  patch({ props: { ...layer.props, color: e.target.value } })
+                }
+                className="flex-1 font-mono text-xs"
+              />
+            </div>
           </Field>
           <Field label="Align">
             <select
@@ -738,6 +1128,80 @@ function PropertiesPanel({
       {busy && (
         <p className="text-[11px] text-[var(--as-text-subtle)]">Saving…</p>
       )}
+    </div>
+  );
+}
+
+// Combined URL + upload input for image / logo layer sources. Lets the
+// designer paste a URL or upload a file; on successful upload we flip
+// the field to the returned public URL.
+function AssetUrlInput({
+  value,
+  onChange,
+  layerType,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  layerType: TemplateLayerType;
+}) {
+  const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("bucket", "brand-assets");
+      fd.append("prefix", layerType === "logo" ? "logos" : "images");
+      const res = await fetch("/api/asset-studio/uploads", {
+        method: "POST",
+        body: fd,
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? "Upload failed");
+      onChange(body.publicUrl);
+      toast("success", "Uploaded");
+    } catch (err) {
+      toast("error", (err as Error).message ?? "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {value ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={value}
+          alt="layer asset preview"
+          className="h-16 w-full rounded border border-[var(--as-border)] bg-[var(--as-surface-2)] object-contain p-1"
+          onError={(e) => (e.currentTarget.style.display = "none")}
+        />
+      ) : null}
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="/path/to/image.png or paste URL"
+      />
+      <label
+        className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--as-border)] bg-[var(--as-surface-2)] px-2 py-1.5 text-xs font-medium text-[var(--as-text-muted)] transition-colors hover:bg-[var(--as-layer-hover)] hover:text-[var(--as-text)] ${
+          uploading ? "pointer-events-none opacity-60" : ""
+        }`}
+      >
+        <Upload className="h-3.5 w-3.5" />
+        {uploading ? "Uploading…" : "Upload file"}
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          className="hidden"
+          onChange={(e) => handleFiles(e.target.files)}
+          disabled={uploading}
+        />
+      </label>
     </div>
   );
 }

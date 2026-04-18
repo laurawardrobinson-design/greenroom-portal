@@ -125,15 +125,35 @@ export async function listTemplates(filters?: {
 
 export async function getTemplate(id: string): Promise<AssetTemplate | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  // Try the full join first — includes versions so the editor can show the
+  // history dropdown. If PostgREST hasn't picked up the template_versions FK
+  // yet (schema-cache lag after a fresh migration), fall back to the layers
+  // + specs join and load versions in a second query.
+  const withVersions = await supabase
     .from("templates")
-    .select(
-      "*, template_layers(*), template_output_specs(*), template_versions(*)"
-    )
+    .select("*, template_layers(*), template_output_specs(*), template_versions(*)")
     .eq("id", id)
     .single();
-  if (error) return null;
-  return toTemplate(data);
+  if (!withVersions.error && withVersions.data) {
+    return toTemplate(withVersions.data);
+  }
+
+  const { data, error } = await supabase
+    .from("templates")
+    .select("*, template_layers(*), template_output_specs(*)")
+    .eq("id", id)
+    .single();
+  if (error || !data) {
+    console.warn("getTemplate: fallback select failed", error);
+    return null;
+  }
+  // Load versions separately (best-effort).
+  const { data: vs } = await supabase
+    .from("template_versions")
+    .select("*")
+    .eq("template_id", id)
+    .order("version", { ascending: false });
+  return toTemplate({ ...data, template_versions: vs ?? [] });
 }
 
 export async function createTemplate(input: {

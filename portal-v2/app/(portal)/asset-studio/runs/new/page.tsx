@@ -27,6 +27,8 @@ import {
   ImageOff,
   PlayCircle,
   Sparkles,
+  MousePointerClick,
+  FileText,
 } from "lucide-react";
 
 const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer"];
@@ -47,6 +49,9 @@ export default function NewRunPage() {
   const [selectedSpecs, setSelectedSpecs] = useState<Set<string>>(new Set());
   const [copyOverrides, setCopyOverrides] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [productPickerMode, setProductPickerMode] = useState<"grid" | "csv">("grid");
+  const [bulkInput, setBulkInput] = useState<string>("");
+  const [bulkError, setBulkError] = useState<string>("");
 
   // ── Data sources ──────────────────────────────────────────────────────────
   const { data: templates } = useSWR<AssetTemplate[]>(
@@ -319,17 +324,47 @@ export default function NewRunPage() {
           <Card padding="lg" className="border-[var(--as-border)] bg-[var(--as-surface)]">
             <div className="flex items-center justify-between">
               <StepHeader n={3} title="Products" />
-              {campaignProducts && campaignProducts.length > 0 && (
-                <button
-                  type="button"
-                  onClick={toggleAllProducts}
-                  className="text-xs font-medium text-[var(--as-text-muted)] hover:text-[var(--as-text)]"
-                >
-                  {selectedProducts.size === campaignProducts.length
-                    ? "Clear selection"
-                    : "Select all"}
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {campaignProducts && campaignProducts.length > 0 && productPickerMode === "grid" && (
+                  <button
+                    type="button"
+                    onClick={toggleAllProducts}
+                    className="text-xs font-medium text-[var(--as-text-muted)] hover:text-[var(--as-text)]"
+                  >
+                    {selectedProducts.size === campaignProducts.length
+                      ? "Clear selection"
+                      : "Select all"}
+                  </button>
+                )}
+                <div className="flex items-center overflow-hidden rounded-md border border-[var(--as-border)] text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setProductPickerMode("grid")}
+                    className={`flex items-center gap-1 px-2 py-1 font-medium ${
+                      productPickerMode === "grid"
+                        ? "bg-[var(--as-accent-soft)] text-[var(--as-accent)]"
+                        : "text-[var(--as-text-muted)] hover:bg-[var(--as-surface-2)]"
+                    }`}
+                    aria-label="Grid picker"
+                  >
+                    <MousePointerClick className="h-3 w-3" />
+                    Grid
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProductPickerMode("csv")}
+                    className={`flex items-center gap-1 px-2 py-1 font-medium ${
+                      productPickerMode === "csv"
+                        ? "bg-[var(--as-accent-soft)] text-[var(--as-accent)]"
+                        : "text-[var(--as-text-muted)] hover:bg-[var(--as-surface-2)]"
+                    }`}
+                    aria-label="Paste list"
+                  >
+                    <FileText className="h-3 w-3" />
+                    Paste list
+                  </button>
+                </div>
+              </div>
             </div>
             {!campaignId ? (
               <p className="text-sm text-[var(--as-text-muted)]">
@@ -342,7 +377,7 @@ export default function NewRunPage() {
                 title="No products linked to this campaign"
                 description="Link products in the campaign's Products tab, then come back to create a run."
               />
-            ) : (
+            ) : productPickerMode === "grid" ? (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
                 {campaignProducts.map((cp) => {
                   const selected = selectedProducts.has(cp.id);
@@ -387,6 +422,70 @@ export default function NewRunPage() {
                     </button>
                   );
                 })}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-[11px] text-[var(--as-text-subtle)]">
+                  Paste one product per line — by SKU/item code, product name, or UUID.
+                  We&apos;ll match each line against this campaign&apos;s linked products.
+                </p>
+                <Textarea
+                  value={bulkInput}
+                  onChange={(e) => {
+                    setBulkInput(e.target.value);
+                    setBulkError("");
+                  }}
+                  placeholder="001234\n001235\nBerry Chantilly Cake\n…"
+                  rows={6}
+                  className="font-mono text-xs"
+                />
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] text-[var(--as-text-subtle)]">
+                    {selectedProducts.size > 0
+                      ? `${selectedProducts.size} matched`
+                      : "No matches yet"}
+                    {bulkError && (
+                      <span className="ml-2 text-[var(--as-status-failed)]">· {bulkError}</span>
+                    )}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const lines = bulkInput
+                        .split(/[\n,]+/)
+                        .map((l) => l.trim())
+                        .filter(Boolean);
+                      if (lines.length === 0) {
+                        setBulkError("Nothing to parse");
+                        return;
+                      }
+                      const matched = new Set<string>();
+                      const missed: string[] = [];
+                      for (const line of lines) {
+                        const lc = line.toLowerCase();
+                        const cp = campaignProducts.find((cp) => {
+                          if (cp.id === line) return true;
+                          const p = cp.product;
+                          if (!p) return false;
+                          if ((p.itemCode ?? "").toLowerCase() === lc) return true;
+                          if ((p.name ?? "").toLowerCase() === lc) return true;
+                          return false;
+                        });
+                        if (cp) matched.add(cp.id);
+                        else missed.push(line);
+                      }
+                      setSelectedProducts(matched);
+                      setBulkError(
+                        missed.length > 0
+                          ? `${missed.length} unmatched (${missed.slice(0, 3).join(", ")}${missed.length > 3 ? ", …" : ""})`
+                          : ""
+                      );
+                    }}
+                  >
+                    Match {bulkInput.trim() ? `(${bulkInput.split(/[\n,]+/).filter((s) => s.trim()).length})` : ""}
+                  </Button>
+                </div>
               </div>
             )}
           </Card>

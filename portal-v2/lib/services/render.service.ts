@@ -390,3 +390,137 @@ export async function renderRun(runId: string): Promise<RenderRunResult> {
 
   return { runId, rendered, failed, skipped };
 }
+
+// ─── On-demand preview (editor) ──────────────────────────────────────────────
+
+/**
+ * Render a single variant for the template editor's "Live preview" button.
+ * Doesn't persist anything — returns the image bytes + content type so the
+ * editor can show them in a modal. If no campaign_product_id is supplied
+ * we pick the first one we can find for rough visual truth; if none exists
+ * we synthesize a stub product so the designer can still see the layout.
+ */
+export async function renderTemplatePreview(input: {
+  templateId: string;
+  specId?: string;
+  campaignProductId?: string;
+  copyOverrides?: Record<string, string>;
+}): Promise<{ buffer: Buffer; contentType: string }> {
+  const admin = createAdminClient();
+
+  const template = await getTemplate(input.templateId);
+  if (!template) throw new Error(`Template ${input.templateId} not found`);
+
+  // Pick the target spec: requested spec, or first by sort order, or a
+  // default 1080² if the template has none.
+  const specs = template.outputSpecs ?? [];
+  const spec =
+    (input.specId ? specs.find((s) => s.id === input.specId) : undefined) ??
+    specs[0] ??
+    null;
+  const width = spec?.width ?? template.canvasWidth ?? 1080;
+  const height = spec?.height ?? template.canvasHeight ?? 1080;
+  const format = spec?.format ?? "png";
+
+  // Pick a product for live binding values.
+  let product: {
+    id?: string;
+    name: string;
+    image_url: string;
+    department?: string;
+    item_code?: string | null;
+  } = {
+    name: "Preview Product",
+    image_url: "",
+    department: "",
+    item_code: null,
+  };
+  let cpId: string | undefined = input.campaignProductId;
+  if (cpId) {
+    const { data } = await admin
+      .from("campaign_products")
+      .select("*, products(*)")
+      .eq("id", cpId)
+      .maybeSingle();
+    if (data?.products) {
+      const p = data.products as Record<string, unknown>;
+      product = {
+        id: p.id as string | undefined,
+        name: (p.name as string) ?? "",
+        image_url: (p.image_url as string) ?? "",
+        department: (p.department as string) ?? "",
+        item_code: (p.item_code as string | null) ?? null,
+      };
+    }
+  } else {
+    // Fall back to any linked campaign product.
+    const { data } = await admin
+      .from("campaign_products")
+      .select("id, products(*)")
+      .limit(1);
+    if (data?.[0]?.products) {
+      cpId = data[0].id as string;
+      const p = data[0].products as unknown as Record<string, unknown>;
+      product = {
+        id: p.id as string | undefined,
+        name: (p.name as string) ?? "",
+        image_url: (p.image_url as string) ?? "",
+        department: (p.department as string) ?? "",
+        item_code: (p.item_code as string | null) ?? null,
+      };
+    }
+  }
+
+  const brand = template.brandTokensId
+    ? await (async () => {
+        const { data } = await admin
+          .from("brand_tokens")
+          .select("*")
+          .eq("id", template.brandTokensId)
+          .maybeSingle();
+        if (!data) return await getActiveBrandTokens();
+        return {
+          id: data.id,
+          brand: data.brand,
+          version: data.version,
+          isActive: Boolean(data.is_active),
+          notes: data.notes ?? "",
+          tokens: data.tokens ?? {},
+          createdBy: data.created_by ?? null,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+        };
+      })()
+    : await getActiveBrandTokens();
+
+  // Synthesize an in-memory Variant so we can reuse renderOneVariant.
+  const transientVariant: Variant = {
+    id: "preview",
+    runId: "preview",
+    templateId: template.id,
+    outputSpecId: spec?.id ?? null,
+    campaignProductId: cpId ?? null,
+    width,
+    height,
+    status: "pending",
+    assetUrl: null,
+    storagePath: null,
+    thumbnailUrl: null,
+    bindings: {
+      product,
+      copy: input.copyOverrides ?? {},
+    },
+    errorMessage: null,
+    approvedBy: null,
+    approvedAt: null,
+    rejectedBy: null,
+    rejectedAt: null,
+    rejectionReason: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    outputSpec: spec ?? null,
+  };
+
+  const buffer = await renderOneVariant(transientVariant, { template, brand });
+  return { buffer, contentType: contentTypeFor(format) };
+}
