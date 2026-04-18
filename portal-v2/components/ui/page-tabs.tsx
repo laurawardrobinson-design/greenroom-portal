@@ -1,11 +1,11 @@
 "use client";
 
-import type { ComponentType } from "react";
+import type { ElementType } from "react";
 
 export interface PageTab {
   key: string;
   label: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: ElementType<{ className?: string }>;
 }
 
 interface PageTabsProps {

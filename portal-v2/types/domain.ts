@@ -3,7 +3,14 @@
 // ============================================================
 
 // --- Roles ---
-export type UserRole = "Admin" | "Producer" | "Studio" | "Vendor" | "Art Director" | "Post Producer";
+export type UserRole =
+  | "Admin"
+  | "Producer"
+  | "Studio"
+  | "Vendor"
+  | "Art Director"
+  | "Post Producer"
+  | "Designer";
 
 export interface AppUser {
   id: string;
@@ -1161,3 +1168,245 @@ export interface PostWorkflowSummary {
     pastRetirement: boolean;
   }>;
 }
+
+// ============================================================
+// Asset Studio — versioned brand tokens, templates, variant runs
+// ============================================================
+
+// --- Brand Tokens ---
+
+export interface BrandTokenColors {
+  primary?: string;
+  primary_hover?: string;
+  primary_light?: string;
+  sidebar?: string;
+  sidebar_hover?: string;
+  surface?: string;
+  surface_secondary?: string;
+  border?: string;
+  text_primary?: string;
+  text_secondary?: string;
+  success?: string;
+  warning?: string;
+  error?: string;
+  [key: string]: string | undefined;
+}
+
+export interface BrandTokenTypography {
+  font_family?: string;
+  scale?: Record<string, number>;
+  weights?: Record<string, number>;
+}
+
+export interface BrandTokenLogo {
+  primary_url?: string;
+  wordmark_only?: boolean;
+  min_width_px?: number;
+  clear_space_pct?: number;
+}
+
+export interface BrandTokenSpacing {
+  base_unit?: number;
+  radius_sm?: number;
+  radius_md?: number;
+  radius_lg?: number;
+}
+
+export interface BrandTokenPayload {
+  colors?: BrandTokenColors;
+  typography?: BrandTokenTypography;
+  logo?: BrandTokenLogo;
+  spacing?: BrandTokenSpacing;
+}
+
+export interface BrandTokenSet {
+  id: string;
+  brand: string;
+  version: number;
+  isActive: boolean;
+  notes: string;
+  tokens: BrandTokenPayload;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- Templates ---
+
+export type TemplateStatus = "draft" | "published" | "archived";
+export type TemplateLayerType = "text" | "image" | "logo" | "shape";
+
+export interface TemplateLayerProps {
+  // Shared
+  fit?: "cover" | "contain" | "fill";
+  // Text-specific
+  font_size?: number;
+  font_weight?: number;
+  font_family?: string;
+  color?: string;
+  align?: "left" | "center" | "right";
+  vertical_align?: "top" | "middle" | "bottom";
+  line_height?: number;
+  letter_spacing?: number;
+  // Shape-specific
+  background_color?: string;
+  border_color?: string;
+  border_width?: number;
+  border_radius?: number;
+  [key: string]: unknown;
+}
+
+export interface TemplateLayer {
+  id: string;
+  templateId: string;
+  name: string;
+  layerType: TemplateLayerType;
+  isDynamic: boolean;
+  isLocked: boolean;
+  dataBinding: string;
+  staticValue: string;
+  xPct: number;
+  yPct: number;
+  widthPct: number;
+  heightPct: number;
+  rotationDeg: number;
+  zIndex: number;
+  sortOrder: number;
+  props: TemplateLayerProps;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TemplateOutputSpec {
+  id: string;
+  templateId: string;
+  label: string;
+  width: number;
+  height: number;
+  channel: string;
+  format: "png" | "jpg" | "webp";
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface AssetTemplate {
+  id: string;
+  name: string;
+  description: string;
+  status: TemplateStatus;
+  category: string;
+  brandTokensId: string | null;
+  thumbnailUrl: string | null;
+  canvasWidth: number;
+  canvasHeight: number;
+  backgroundColor: string;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // Optional joined
+  layers?: TemplateLayer[];
+  outputSpecs?: TemplateOutputSpec[];
+  brandTokens?: BrandTokenSet | null;
+}
+
+// --- Variant Runs ---
+
+export type VariantRunStatus =
+  | "queued"
+  | "rendering"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export interface VariantRunBindings {
+  // The campaign products selected for this run.
+  campaign_product_ids?: string[];
+  // The output spec ids selected for this run (subset of template's specs).
+  output_spec_ids?: string[];
+  // Free-form copy overrides keyed by binding path (e.g. { "product.price": "$3.99" })
+  copy_overrides?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+export interface VariantRun {
+  id: string;
+  templateId: string | null;
+  campaignId: string | null;
+  name: string;
+  status: VariantRunStatus;
+  totalVariants: number;
+  completedVariants: number;
+  failedVariants: number;
+  bindings: VariantRunBindings;
+  notes: string;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  // Joined
+  template?: AssetTemplate | null;
+  campaign?: { id: string; wfNumber: string; name: string; brand: string | null } | null;
+  variants?: Variant[];
+}
+
+// --- Variants ---
+
+export type VariantStatus =
+  | "pending"
+  | "rendering"
+  | "rendered"
+  | "approved"
+  | "rejected"
+  | "failed";
+
+export interface VariantBindings {
+  product?: {
+    id?: string;
+    name?: string;
+    image_url?: string;
+    department?: string;
+    item_code?: string | null;
+  };
+  copy?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+export interface Variant {
+  id: string;
+  runId: string;
+  templateId: string | null;
+  outputSpecId: string | null;
+  campaignProductId: string | null;
+  width: number;
+  height: number;
+  status: VariantStatus;
+  assetUrl: string | null;
+  storagePath: string | null;
+  thumbnailUrl: string | null;
+  bindings: VariantBindings;
+  errorMessage: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  rejectedBy: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string;
+  createdAt: string;
+  updatedAt: string;
+  // Joined
+  outputSpec?: TemplateOutputSpec | null;
+  product?: { id: string; name: string; imageUrl: string | null } | null;
+}
+
+// --- Asset Studio dashboard summary ---
+
+export interface AssetStudioSummary {
+  templateCount: number;
+  publishedTemplateCount: number;
+  activeRunCount: number;
+  variantsThisWeek: number;
+  pendingApprovalCount: number;
+  approvedCount: number;
+  recentRuns: VariantRun[];
+}
+
