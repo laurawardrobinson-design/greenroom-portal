@@ -246,7 +246,16 @@ async function renderOneVariant(variant: Variant, ctx: RenderContext): Promise<B
     canvas = canvas.composite(composites);
   }
 
+  const format = variant.outputSpec?.format ?? "png";
+  if (format === "jpg") return await canvas.jpeg({ quality: 90 }).toBuffer();
+  if (format === "webp") return await canvas.webp({ quality: 92 }).toBuffer();
   return await canvas.png().toBuffer();
+}
+
+function contentTypeFor(format: "png" | "jpg" | "webp"): string {
+  if (format === "jpg") return "image/jpeg";
+  if (format === "webp") return "image/webp";
+  return "image/png";
 }
 
 // ─── Run-level orchestrator ──────────────────────────────────────────────────
@@ -314,11 +323,13 @@ export async function renderRun(runId: string): Promise<RenderRunResult> {
 
       const buffer = await renderOneVariant(variant, { template, brand: brandResolved });
 
-      const path = `${runId}/${variant.id}.png`;
+      const format = variant.outputSpec?.format ?? "png";
+      const ext = format === "jpg" ? "jpg" : format;
+      const path = `${runId}/${variant.id}.${ext}`;
       const { error: uploadErr } = await admin.storage
         .from("variants")
         .upload(path, buffer, {
-          contentType: "image/png",
+          contentType: contentTypeFor(format),
           upsert: true,
           cacheControl: "31536000",
         });

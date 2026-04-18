@@ -65,6 +65,7 @@ function toRun(row: Record<string, unknown>): VariantRun {
   return {
     id: row.id as string,
     templateId: (row.template_id as string | null) ?? null,
+    templateVersionId: (row.template_version_id as string | null) ?? null,
     campaignId: (row.campaign_id as string | null) ?? null,
     name: row.name as string,
     status: row.status as VariantRunStatus,
@@ -185,11 +186,22 @@ export async function createRun(input: {
 
   const totalVariants = cps.length * specs.length;
 
+  // Look up the template's current version so we can pin this run to it.
+  // If the template has never been published, current_version_id is null and
+  // we still let the run proceed — it just won't have a provenance link.
+  const { data: tmplRow } = await supabase
+    .from("templates")
+    .select("current_version_id")
+    .eq("id", input.templateId)
+    .single();
+  const templateVersionId = (tmplRow?.current_version_id as string | null) ?? null;
+
   // Insert the run row first so we can fan out children.
   const { data: runRow, error: runErr } = await supabase
     .from("variant_runs")
     .insert({
       template_id: input.templateId,
+      template_version_id: templateVersionId,
       campaign_id: input.campaignId ?? null,
       name: input.name,
       status: "queued",

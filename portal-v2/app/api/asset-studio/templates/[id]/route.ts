@@ -25,7 +25,7 @@ export async function GET(_request: Request, ctx: RouteCtx) {
 // PATCH /api/asset-studio/templates/:id
 export async function PATCH(request: Request, ctx: RouteCtx) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Designer"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Designer"]);
     const { id } = await ctx.params;
     const body = (await request.json()) as Partial<{
       name: string;
@@ -38,7 +38,7 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
       canvasHeight: number;
       backgroundColor: string;
     }>;
-    const template = await updateTemplate(id, body);
+    const template = await updateTemplate(id, body, { userId: user.id });
     return NextResponse.json(template);
   } catch (error) {
     return authErrorResponse(error);

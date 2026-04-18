@@ -6,6 +6,8 @@ import type {
   TemplateLayerType,
   TemplateOutputSpec,
   TemplateStatus,
+  TemplateVersion,
+  TemplateVersionSnapshot,
 } from "@/types/domain";
 
 // ─── Mappers ─────────────────────────────────────────────────────────────────
@@ -54,6 +56,9 @@ function toTemplate(row: Record<string, unknown>): AssetTemplate {
   const outputSpecs = (row.template_output_specs as Record<string, unknown>[] | undefined)
     ?.map(toOutputSpec)
     .sort((a, b) => a.sortOrder - b.sortOrder);
+  const versions = (row.template_versions as Record<string, unknown>[] | undefined)
+    ?.map(toVersion)
+    .sort((a, b) => b.version - a.version);
   return {
     id: row.id as string,
     name: row.name as string,
@@ -65,11 +70,38 @@ function toTemplate(row: Record<string, unknown>): AssetTemplate {
     canvasWidth: Number(row.canvas_width ?? 1080),
     canvasHeight: Number(row.canvas_height ?? 1080),
     backgroundColor: (row.background_color as string) ?? "#FFFFFF",
+    currentVersionId: (row.current_version_id as string | null) ?? null,
     createdBy: (row.created_by as string | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
     layers,
     outputSpecs,
+    versions,
+  };
+}
+
+function toVersion(row: Record<string, unknown>): TemplateVersion {
+  return {
+    id: row.id as string,
+    templateId: row.template_id as string,
+    version: Number(row.version),
+    label: (row.label as string) ?? "",
+    notes: (row.notes as string) ?? "",
+    snapshot: (row.snapshot as TemplateVersionSnapshot) ?? {
+      template: {
+        name: "",
+        description: "",
+        category: "general",
+        brandTokensId: null,
+        canvasWidth: 1080,
+        canvasHeight: 1080,
+        backgroundColor: "#FFFFFF",
+      },
+      layers: [],
+      outputSpecs: [],
+    },
+    createdBy: (row.created_by as string | null) ?? null,
+    createdAt: row.created_at as string,
   };
 }
 
@@ -95,7 +127,9 @@ export async function getTemplate(id: string): Promise<AssetTemplate | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("templates")
-    .select("*, template_layers(*), template_output_specs(*)")
+    .select(
+      "*, template_layers(*), template_output_specs(*), template_versions(*)"
+    )
     .eq("id", id)
     .single();
   if (error) return null;
@@ -144,9 +178,22 @@ export async function updateTemplate(
     canvasWidth: number;
     canvasHeight: number;
     backgroundColor: string;
-  }>
+  }>,
+  opts?: { userId?: string | null }
 ): Promise<AssetTemplate> {
   const supabase = await createClient();
+
+  // Catch the draft→published transition so we can snapshot a version.
+  let snapshotPublished = false;
+  if (patch.status === "published") {
+    const { data: prior } = await supabase
+      .from("templates")
+      .select("status")
+      .eq("id", id)
+      .single();
+    snapshotPublished = !prior || prior.status !== "published";
+  }
+
   const body: Record<string, unknown> = {};
   if (patch.name !== undefined) body.name = patch.name;
   if (patch.description !== undefined) body.description = patch.description;
@@ -162,10 +209,200 @@ export async function updateTemplate(
     .from("templates")
     .update(body)
     .eq("id", id)
-    .select("*, template_layers(*), template_output_specs(*)")
+    .select("*, template_layers(*), template_output_specs(*), template_versions(*)")
     .single();
   if (error) throw error;
+
+  // If this update crossed the publish boundary, freeze a new version.
+  if (snapshotPublished) {
+    await snapshotTemplateVersion(id, opts?.userId ?? null);
+    const { data: refreshed } = await supabase
+      .from("templates")
+      .select("*, template_layers(*), template_output_specs(*), template_versions(*)")
+      .eq("id", id)
+      .single();
+    if (refreshed) return toTemplate(refreshed);
+  }
+
   return toTemplate(data);
+}
+
+// ─── Versioning ──────────────────────────────────────────────────────────────
+
+/**
+ * Freeze the current state of a template (layers + output specs + canvas
+ * config) into a new `template_versions` row and set it as the template's
+ * current_version_id. Version numbers auto-increment per template.
+ *
+ * Called automatically from updateTemplate when the status flips to
+ * 'published', and exposed directly for explicit "Save as new version"
+ * actions from the UI.
+ */
+export async function snapshotTemplateVersion(
+  templateId: string,
+  createdBy: string | null,
+  opts?: { label?: string; notes?: string }
+): Promise<TemplateVersion> {
+  const supabase = await createClient();
+
+  // Read current template state
+  const { data: tmpl, error: tErr } = await supabase
+    .from("templates")
+    .select("*, template_layers(*), template_output_specs(*)")
+    .eq("id", templateId)
+    .single();
+  if (tErr || !tmpl) throw tErr ?? new Error("Template not found");
+
+  // Next version number
+  const { data: latest } = await supabase
+    .from("template_versions")
+    .select("version")
+    .eq("template_id", templateId)
+    .order("version", { ascending: false })
+    .limit(1);
+  const nextVersion = (latest?.[0]?.version ?? 0) + 1;
+
+  const template = toTemplate(tmpl);
+  const snapshot: TemplateVersionSnapshot = {
+    template: {
+      name: template.name,
+      description: template.description,
+      category: template.category,
+      brandTokensId: template.brandTokensId,
+      canvasWidth: template.canvasWidth,
+      canvasHeight: template.canvasHeight,
+      backgroundColor: template.backgroundColor,
+    },
+    layers: template.layers ?? [],
+    outputSpecs: template.outputSpecs ?? [],
+  };
+
+  const { data: versionRow, error: vErr } = await supabase
+    .from("template_versions")
+    .insert({
+      template_id: templateId,
+      version: nextVersion,
+      label: opts?.label ?? `v${nextVersion}`,
+      notes: opts?.notes ?? "",
+      snapshot,
+      created_by: createdBy,
+    })
+    .select("*")
+    .single();
+  if (vErr) throw vErr;
+
+  // Point template at its new current version
+  await supabase
+    .from("templates")
+    .update({ current_version_id: versionRow.id })
+    .eq("id", templateId);
+
+  return toVersion(versionRow);
+}
+
+export async function listTemplateVersions(templateId: string): Promise<TemplateVersion[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("template_versions")
+    .select("*")
+    .eq("template_id", templateId)
+    .order("version", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(toVersion);
+}
+
+export async function getTemplateVersion(id: string): Promise<TemplateVersion | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("template_versions")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error) return null;
+  return toVersion(data);
+}
+
+/**
+ * Restore a template's layer tree + output specs from a prior version
+ * snapshot. Creates a NEW version on restore so you can undo it; doesn't
+ * mutate history. The template's `status` is left alone — the caller
+ * decides whether to publish after restore.
+ */
+export async function restoreTemplateVersion(
+  templateId: string,
+  versionId: string,
+  userId: string | null
+): Promise<AssetTemplate> {
+  const supabase = await createClient();
+  const version = await getTemplateVersion(versionId);
+  if (!version || version.templateId !== templateId) {
+    throw new Error("Version not found for this template");
+  }
+
+  // Replace template metadata
+  const tmplMeta = version.snapshot.template;
+  await supabase
+    .from("templates")
+    .update({
+      name: tmplMeta.name,
+      description: tmplMeta.description,
+      category: tmplMeta.category,
+      brand_tokens_id: tmplMeta.brandTokensId,
+      canvas_width: tmplMeta.canvasWidth,
+      canvas_height: tmplMeta.canvasHeight,
+      background_color: tmplMeta.backgroundColor,
+    })
+    .eq("id", templateId);
+
+  // Replace layer tree
+  await supabase.from("template_layers").delete().eq("template_id", templateId);
+  if (version.snapshot.layers.length > 0) {
+    await supabase.from("template_layers").insert(
+      version.snapshot.layers.map((l) => ({
+        template_id: templateId,
+        name: l.name,
+        layer_type: l.layerType,
+        is_dynamic: l.isDynamic,
+        is_locked: l.isLocked,
+        data_binding: l.dataBinding,
+        static_value: l.staticValue,
+        x_pct: l.xPct,
+        y_pct: l.yPct,
+        width_pct: l.widthPct,
+        height_pct: l.heightPct,
+        rotation_deg: l.rotationDeg,
+        z_index: l.zIndex,
+        sort_order: l.sortOrder,
+        props: l.props,
+      }))
+    );
+  }
+
+  // Replace output specs
+  await supabase.from("template_output_specs").delete().eq("template_id", templateId);
+  if (version.snapshot.outputSpecs.length > 0) {
+    await supabase.from("template_output_specs").insert(
+      version.snapshot.outputSpecs.map((s) => ({
+        template_id: templateId,
+        label: s.label,
+        width: s.width,
+        height: s.height,
+        channel: s.channel,
+        format: s.format,
+        sort_order: s.sortOrder,
+      }))
+    );
+  }
+
+  // Snapshot the restored state as a new version (so restore is auditable).
+  await snapshotTemplateVersion(templateId, userId, {
+    label: `restored from v${version.version}`,
+    notes: `Restored on ${new Date().toISOString()} from version ${version.version}`,
+  });
+
+  const refreshed = await getTemplate(templateId);
+  if (!refreshed) throw new Error("Template not found after restore");
+  return refreshed;
 }
 
 export async function deleteTemplate(id: string): Promise<void> {

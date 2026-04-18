@@ -1300,6 +1300,7 @@ export interface AssetTemplate {
   canvasWidth: number;
   canvasHeight: number;
   backgroundColor: string;
+  currentVersionId: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1307,6 +1308,35 @@ export interface AssetTemplate {
   layers?: TemplateLayer[];
   outputSpecs?: TemplateOutputSpec[];
   brandTokens?: BrandTokenSet | null;
+  versions?: TemplateVersion[];
+}
+
+// Snapshot of a template at publish time — used to freeze a run's view
+// of the template so subsequent edits don't change already-rendered
+// variants' provenance. Shape matches what's read back from template_versions.snapshot.
+export interface TemplateVersionSnapshot {
+  template: {
+    name: string;
+    description: string;
+    category: string;
+    brandTokensId: string | null;
+    canvasWidth: number;
+    canvasHeight: number;
+    backgroundColor: string;
+  };
+  layers: TemplateLayer[];
+  outputSpecs: TemplateOutputSpec[];
+}
+
+export interface TemplateVersion {
+  id: string;
+  templateId: string;
+  version: number;
+  label: string;
+  notes: string;
+  snapshot: TemplateVersionSnapshot;
+  createdBy: string | null;
+  createdAt: string;
 }
 
 // --- Variant Runs ---
@@ -1331,6 +1361,7 @@ export interface VariantRunBindings {
 export interface VariantRun {
   id: string;
   templateId: string | null;
+  templateVersionId: string | null;
   campaignId: string | null;
   name: string;
   status: VariantRunStatus;
