@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
   Check,
+  Download,
   ImageOff,
   PlayCircle,
   RefreshCw,
@@ -229,6 +230,22 @@ export default function RunDetailPage({
                 <RefreshCw className="h-4 w-4" />
                 Refresh
               </Button>
+              {(() => {
+                const approvedCount = counts.approved;
+                const renderedCount = counts.rendered;
+                const zipStatus = approvedCount > 0 ? "approved" : "rendered";
+                const zipCount = approvedCount > 0 ? approvedCount : renderedCount;
+                if (zipCount === 0) return null;
+                return (
+                  <a
+                    href={`/api/asset-studio/runs/${id}/zip?status=${zipStatus}`}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-[var(--as-border)] bg-[var(--as-surface)] px-3 py-1.5 text-xs font-medium text-[var(--as-text)] hover:bg-[var(--as-surface-2)]"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download zip ({zipCount} {zipStatus})
+                  </a>
+                );
+              })()}
               {(run.status === "queued" || run.status === "failed") && (
                 <Button
                   size="sm"
