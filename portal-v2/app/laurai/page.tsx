@@ -12,6 +12,7 @@ export default function LaurAIPage() {
   const [textVisible, setTextVisible] = useState(false);
   const videoA = useRef<HTMLVideoElement>(null);
   const videoB = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const rafRef = useRef<number>(0);
 
   useEffect(() => {
@@ -20,6 +21,54 @@ export default function LaurAIPage() {
     return () => {
       clearTimeout(fadeIn);
       clearTimeout(fadeOut);
+    };
+  }, []);
+
+  // Ambient audio — start on first user interaction (browser autoplay policy)
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    let started = false;
+    function tryPlay() {
+      if (started) return;
+      started = true;
+      audio!.volume = 0;
+      audio!.play().then(() => {
+        let vol = 0;
+        const fade = setInterval(() => {
+          vol = Math.min(vol + 0.02, 1);
+          audio!.volume = vol;
+          if (vol >= 1) clearInterval(fade);
+        }, 80);
+      }).catch(() => { started = false; });
+      document.removeEventListener("click", tryPlay, true);
+      document.removeEventListener("touchstart", tryPlay, true);
+      document.removeEventListener("keydown", tryPlay, true);
+    }
+
+    // Try immediately (works if navigated via user click)
+    audio.play().then(() => {
+      started = true;
+      audio.volume = 0;
+      let vol = 0;
+      const fade = setInterval(() => {
+        vol = Math.min(vol + 0.02, 1);
+        audio.volume = vol;
+        if (vol >= 1) clearInterval(fade);
+      }, 80);
+    }).catch(() => {
+      // Autoplay blocked — wait for any user gesture
+      document.addEventListener("click", tryPlay, true);
+      document.addEventListener("touchstart", tryPlay, true);
+      document.addEventListener("keydown", tryPlay, true);
+    });
+
+    return () => {
+      audio.pause();
+      document.removeEventListener("click", tryPlay, true);
+      document.removeEventListener("touchstart", tryPlay, true);
+      document.removeEventListener("keydown", tryPlay, true);
     };
   }, []);
 
@@ -74,6 +123,8 @@ export default function LaurAIPage() {
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-black select-none">
+
+      <audio ref={audioRef} src="/laurai-ambient.mp3" loop preload="auto" />
 
       <video
         ref={(el) => { (videoA as any).current = el; initVideo(el); }}

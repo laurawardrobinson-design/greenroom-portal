@@ -38,6 +38,6 @@ export const config = {
      * - favicon.ico
      * - Static assets (images, fonts, manifests, etc.)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|json|webmanifest|pdf|mp4|webm|mov)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|json|webmanifest|pdf|mp4|mp3|webm|mov)$).*)",
   ],
 };

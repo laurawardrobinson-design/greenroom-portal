@@ -20,6 +20,7 @@ import {
   LayoutGrid,
   List,
 } from "lucide-react";
+import { PageTabs } from "@/components/ui/page-tabs";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -68,22 +69,14 @@ export default function ProductDirectoryPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
-        {(["items", "product-requests"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${
-              tab === t
-                ? "border-primary text-primary"
-                : "border-transparent text-text-secondary hover:text-text-primary hover:border-border"
-            }`}
-          >
-            {t === "items" ? "Items" : "Product Requests"}
-          </button>
-        ))}
-      </div>
+      <PageTabs
+        tabs={[
+          { key: "items", label: "Items", icon: ShoppingBasket },
+          { key: "product-requests", label: "Product Requests", icon: ClipboardList },
+        ]}
+        activeTab={tab}
+        onTabChange={(key) => setTab(key as Tab)}
+      />
 
       {tab === "items" && (
         <>

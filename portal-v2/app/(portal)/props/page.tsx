@@ -33,6 +33,7 @@ import {
   Package,
   StopCircle,
 } from "lucide-react";
+import { PageTabs } from "@/components/ui/page-tabs";
 import { PageHeader } from "@/components/ui/page-header";
 
 const fetcher = (url: string) =>
@@ -216,22 +217,14 @@ export default function PropsPage() {
         }
       />
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
-        {(["items", "reservations"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${
-              tab === t
-                ? "border-primary text-primary"
-                : "border-transparent text-text-secondary hover:text-text-primary hover:border-border"
-            }`}
-          >
-            {t === "items" ? "Items" : "Reservations"}
-          </button>
-        ))}
-      </div>
+      <PageTabs
+        tabs={[
+          { key: "items", label: "Items", icon: Boxes },
+          { key: "reservations", label: "Reservations", icon: Calendar },
+        ]}
+        activeTab={tab}
+        onTabChange={(key) => setTab(key as Tab)}
+      />
 
       {tab === "items" && (
         <>

@@ -23,6 +23,13 @@ export async function GET(
   try {
     const user = await getAuthUser();
     const { id } = await params;
+
+    // Validate UUID format to avoid DB errors on invalid IDs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+    }
+
     await requireCampaignAccess(user, id);
 
     const [campaign, shoots, deliverables, financials, setups, campaignProducts, campaignGear, vendors, crewBookings] = await Promise.all([
@@ -65,6 +72,12 @@ export async function PATCH(
   try {
     const user = await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
     const { id } = await params;
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+    }
+
     const body = await request.json();
 
     // Art Directors can only update artDirectorId (self-assign)
@@ -130,6 +143,12 @@ export async function POST(
   try {
     const user = await requireRole(["Admin", "Producer", "Post Producer"]);
     const { id } = await params;
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+    }
+
     const newCampaign = await duplicateCampaign(id, user.id);
     return NextResponse.json(newCampaign, { status: 201 });
   } catch (error) {
@@ -145,6 +164,12 @@ export async function DELETE(
   try {
     await requireRole(["Admin", "Producer", "Post Producer"]);
     const { id } = await params;
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+    }
+
     const result = await deleteCampaign(id);
     return NextResponse.json({ success: true, ...result });
   } catch (error) {

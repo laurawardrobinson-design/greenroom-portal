@@ -55,6 +55,7 @@ import {
   Star,
   ChevronDown,
 } from "lucide-react";
+import { PageTabs } from "@/components/ui/page-tabs";
 import {
   format,
   parseISO,
@@ -428,27 +429,16 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
-        {([
-          { key: "items" as Tab, label: "Items" },
-          { key: "kits" as Tab, label: "Kits" },
-          { key: "reservations" as Tab, label: "Reservations" },
-          { key: "maintenance" as Tab, label: "Maintenance" },
-        ]).map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === t.key
-                ? "border-primary text-primary"
-                : "border-transparent text-text-secondary hover:text-text-primary hover:border-border"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <PageTabs
+        tabs={[
+          { key: "items", label: "Items", icon: Package },
+          { key: "kits", label: "Kits", icon: Layers },
+          { key: "reservations", label: "Reservations", icon: CalendarRange },
+          { key: "maintenance", label: "Maintenance", icon: Wrench },
+        ]}
+        activeTab={tab}
+        onTabChange={(key) => setTab(key as Tab)}
+      />
 
       {/* Items tab */}
       {tab === "items" && (

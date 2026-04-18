@@ -45,7 +45,7 @@ const ROLE_COLORS: Record<string, string> = {
   Vendor: "bg-amber-50 text-amber-700",
 };
 
-const ALL_ROLES = ["Admin", "Producer", "Studio", "Vendor"];
+const ALL_ROLES = ["Admin", "Producer", "Post Producer", "Studio", "Art Director", "Vendor"];
 
 // -------------------------------------------------------
 // Preset chips (local) — toggling for snacks/drinks

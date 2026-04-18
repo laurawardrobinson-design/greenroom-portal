@@ -18,11 +18,11 @@ import {
   ClipboardList,
   Compass,
   List,
-  ClipboardCheck,
   FileText,
   Building2,
   DollarSign,
   Clapperboard,
+  Palette,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -43,19 +43,13 @@ const NAV_ITEMS: NavItem[] = [
     label: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director"],
-  },
-  {
-    label: "Approvals",
-    href: "/approvals",
-    icon: ClipboardCheck,
-    roles: ["Admin"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Designer"],
   },
   {
     label: "Campaigns",
     href: "/campaigns",
     icon: Film,
-    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Designer"],
   },
   {
     label: "Estimates & Invoices",
@@ -79,7 +73,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Estimates & Invoices",
     href: "/estimates-invoices",
     icon: FileText,
-    roles: ["Producer", "Post Producer"],
+    roles: ["Admin", "Producer", "Post Producer"],
   },
   {
     label: "Shot List",
@@ -98,6 +92,12 @@ const NAV_ITEMS: NavItem[] = [
     href: "/post-workflow",
     icon: Clapperboard,
     roles: ["Admin", "Producer", "Post Producer"],
+  },
+  {
+    label: "Asset Studio",
+    href: "/asset-studio",
+    icon: Palette,
+    roles: ["Admin", "Producer", "Post Producer", "Designer", "Art Director"],
   },
   {
     label: "Gear",
@@ -127,7 +127,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Contacts",
     href: "/contacts",
     icon: Contact,
-    roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director", "Designer"],
   },
   {
     label: "Goals",
@@ -139,7 +139,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Settings",
     href: "/settings",
     icon: Settings,
-    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Designer"],
   },
 ];
 
