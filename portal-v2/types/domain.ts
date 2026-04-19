@@ -1273,6 +1273,12 @@ export interface TemplateLayer {
   zIndex: number;
   sortOrder: number;
   props: TemplateLayerProps;
+  /**
+   * Per-locale content overrides for text layers. Empty string or missing
+   * key means "fall back to staticValue / dataBinding resolution."
+   * Shape: { "es-US": "Hola", "fr-CA": "Bonjour" }.
+   */
+  locales: Record<string, string>;
   createdAt: string;
   updatedAt: string;
 }
@@ -1353,8 +1359,18 @@ export interface VariantRunBindings {
   campaign_product_ids?: string[];
   // The output spec ids selected for this run (subset of template's specs).
   output_spec_ids?: string[];
+  // Locales to render this run for. Fan-out count = products × specs × locales.
+  // Defaults server-side to ['en-US'] if omitted. Stored alongside the run row
+  // in variant_runs.locale_codes (not just bindings) for queryability.
+  locale_codes?: string[];
   // Free-form copy overrides keyed by binding path (e.g. { "product.price": "$3.99" })
+  // Applied to every variant in the run unless overridden by copy_overrides_by_product.
   copy_overrides?: Record<string, string>;
+  // Per-campaign-product copy overrides — keyed by campaign_product_id, value is the
+  // same shape as copy_overrides. Merged on top of the global copy_overrides so each
+  // row can carry its own headline / price / badge without affecting its siblings.
+  // This is the Storyteq "Batch Creator" pattern.
+  copy_overrides_by_product?: Record<string, Record<string, string>>;
   [key: string]: unknown;
 }
 
@@ -1368,6 +1384,8 @@ export interface VariantRun {
   totalVariants: number;
   completedVariants: number;
   failedVariants: number;
+  /** Locales this run will fan out across. Server default is ['en-US']. */
+  localeCodes: string[];
   bindings: VariantRunBindings;
   notes: string;
   createdBy: string | null;
@@ -1400,6 +1418,8 @@ export interface VariantBindings {
     item_code?: string | null;
   };
   copy?: Record<string, string>;
+  /** Locale this variant should resolve text layer translations against. */
+  locale?: string;
   [key: string]: unknown;
 }
 
@@ -1415,6 +1435,11 @@ export interface Variant {
   assetUrl: string | null;
   storagePath: string | null;
   thumbnailUrl: string | null;
+  /**
+   * Locale this variant was rendered in. Null on pre-073 variants and on
+   * single-locale runs that never set the column. UI treats null as "default".
+   */
+  localeCode: string | null;
   bindings: VariantBindings;
   errorMessage: string | null;
   approvedBy: string | null;
@@ -1429,6 +1454,309 @@ export interface Variant {
   product?: { id: string; name: string; imageUrl: string | null } | null;
 }
 
+// --- DAM Placeholder (prototype bridge to external DAM) ---
+
+export type DamAssetStatus =
+  | "ingested"
+  | "retouching"
+  | "retouched"
+  | "versioning"
+  | "ready_for_activation"
+  | "archived";
+
+export type DamPhotoshopStatus =
+  | "not_requested"
+  | "requested"
+  | "in_progress"
+  | "completed";
+
+export interface DamAssetVersion {
+  id: string;
+  damAssetId: string;
+  versionNumber: number;
+  label: string;
+  stage: DamAssetStatus;
+  fileUrl: string;
+  metadata: Record<string, unknown>;
+  notes: string;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export type DamSyncStatus =
+  | "pending_sync"
+  | "synced"
+  | "stale"
+  | "error";
+
+export interface DamAssetCampaignRef {
+  id: string;
+  wfNumber: string;
+  name: string;
+  brand: string | null;
+}
+
+export interface DamAsset {
+  id: string;
+  campaignId: string | null;
+  sourceCampaignAssetId: string | null;
+  name: string;
+  fileUrl: string;
+  fileType: string;
+  status: DamAssetStatus;
+  photoshopStatus: DamPhotoshopStatus;
+  photoshopNote: string;
+  lastPhotoshopRequestAt: string | null;
+  retouchingNotes: string;
+  metadata: Record<string, unknown>;
+  externalDamId: string | null;
+  externalDamSystem: string;
+  syncStatus: DamSyncStatus;
+  lastSyncedAt: string | null;
+  syncError: string;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  campaign?: DamAssetCampaignRef | null;
+  campaigns: DamAssetCampaignRef[];
+  versions?: DamAssetVersion[];
+}
+
+export interface DamAssetSource {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  campaignWfNumber: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  category: AssetCategory;
+  createdAt: string;
+  ingested: boolean;
+  damAssetId: string | null;
+}
+
+export interface DamAssetLibraryResponse {
+  assets: DamAsset[];
+  sourceAssets: DamAssetSource[];
+}
+
+export type DamSyncJobStatus =
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "cancelled";
+
+export interface DamSyncJobItem {
+  id: string;
+  jobId: string;
+  damAssetId: string;
+  damAssetVersionId: string;
+  status: DamSyncJobStatus;
+  attempts: number;
+  nextAttemptAt: string | null;
+  externalDamId: string | null;
+  syncedAt: string | null;
+  lastError: string | null;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DamSyncJob {
+  id: string;
+  damAssetId: string;
+  latestVersionId: string | null;
+  idempotencyKey: string;
+  status: DamSyncJobStatus;
+  attempts: number;
+  maxAttempts: number;
+  nextAttemptAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  workerId: string | null;
+  errorMessage: string | null;
+  metadata: Record<string, unknown>;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: DamSyncJobItem[];
+}
+
+export type WorkflowEntityType = "dam_asset";
+
+export type WorkflowTransitionKind = "advance" | "return" | "reject";
+
+export interface WorkflowStage {
+  key: string;
+  label: string;
+  queueRoles: UserRole[];
+}
+
+export interface WorkflowTransition {
+  action: string;
+  label: string;
+  kind: WorkflowTransitionKind;
+  from: string;
+  to: string;
+  roles: UserRole[];
+}
+
+export interface WorkflowDefinition {
+  id: string;
+  key: string;
+  entityType: WorkflowEntityType;
+  name: string;
+  version: number;
+  description: string;
+  initialStage: string;
+  stages: WorkflowStage[];
+  transitions: WorkflowTransition[];
+  isActive: boolean;
+  metadata: Record<string, unknown>;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WorkflowInstanceStatus = "active" | "completed" | "cancelled";
+
+export interface WorkflowInstance {
+  id: string;
+  definitionId: string | null;
+  entityType: WorkflowEntityType;
+  entityId: string;
+  campaignId: string | null;
+  currentStage: string;
+  status: WorkflowInstanceStatus;
+  metadata: Record<string, unknown>;
+  createdBy: string | null;
+  updatedBy: string | null;
+  lastEventAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkflowEvent {
+  id: string;
+  instanceId: string;
+  definitionId: string | null;
+  entityType: WorkflowEntityType;
+  entityId: string;
+  fromStage: string | null;
+  toStage: string;
+  action: string;
+  actorId: string | null;
+  actorRole: UserRole | null;
+  reason: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface WorkflowInstanceDetails {
+  definition: WorkflowDefinition;
+  instance: WorkflowInstance;
+  events: WorkflowEvent[];
+  availableTransitions: WorkflowTransition[];
+}
+
+export interface MyWorkQueueItem {
+  workflowInstanceId: string;
+  entityType: WorkflowEntityType;
+  entityId: string;
+  campaignId: string | null;
+  campaign: DamAssetCampaignRef | null;
+  asset: {
+    id: string;
+    name: string;
+    status: DamAssetStatus;
+    syncStatus: DamSyncStatus;
+    updatedAt: string;
+  };
+  currentStage: string;
+  stageQueueRoles: UserRole[];
+  availableTransitions: WorkflowTransition[];
+  recentEvents: WorkflowEvent[];
+  updatedAt: string;
+}
+
+// --- Render Jobs ---
+
+export type RenderJobStatus =
+  | "queued"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type RenderJobItemStatus =
+  | "queued"
+  | "rendering"
+  | "rendered"
+  | "failed"
+  | "skipped";
+
+export interface RenderJobProgress {
+  total: number;
+  done: number;
+  failed: number;
+  queued: number;
+  rendering: number;
+}
+
+export interface RenderJobItem {
+  id: string;
+  jobId: string;
+  variantId: string;
+  status: RenderJobItemStatus;
+  attempts: number;
+  workerId: string | null;
+  lastError: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RenderJob {
+  id: string;
+  runId: string;
+  priority: number;
+  status: RenderJobStatus;
+  queuedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  errorMessage: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  progress: RenderJobProgress;
+}
+
+// --- Asset Studio audit log ---
+
+export type AuditTargetType =
+  | "variant"
+  | "variant_run"
+  | "template"
+  | "brand_tokens"
+  | "dam_asset";
+
+export interface AuditLogEvent {
+  id: string;
+  actorId: string | null;
+  actorRole: string | null;
+  actorName: string | null; // resolved from users join at read time
+  targetType: AuditTargetType;
+  targetId: string;
+  action: string;
+  reason: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
 // --- Asset Studio dashboard summary ---
 
 export interface AssetStudioSummary {
@@ -1440,4 +1768,3 @@ export interface AssetStudioSummary {
   approvedCount: number;
   recentRuns: VariantRun[];
 }
-

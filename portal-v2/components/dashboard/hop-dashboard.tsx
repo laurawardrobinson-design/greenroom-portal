@@ -206,7 +206,7 @@ export function HopDashboard({ user }: Props) {
           value={stats ? String(stats.pendingApprovals) : "—"}
           icon={AlertTriangle}
           accent="bg-amber-50 text-amber-600"
-          href="/approvals"
+          href="/budget?tab=approvals"
         />
         <StatCard
           label="Upcoming Shoots"

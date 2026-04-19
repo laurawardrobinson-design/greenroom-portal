@@ -5,7 +5,7 @@ import {
   updateVariantStatus,
   deleteVariant,
 } from "@/lib/services/variants.service";
-import type { VariantStatus } from "@/types/domain";
+import { parseBody, updateVariantSchema } from "@/lib/validation/asset-studio";
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -28,16 +28,12 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
   try {
     await requireRole(["Admin", "Producer", "Post Producer", "Designer"]);
     const { id } = await ctx.params;
-    const body = (await request.json()) as {
-      status?: VariantStatus;
-      assetUrl?: string | null;
-      storagePath?: string | null;
-      thumbnailUrl?: string | null;
-      errorMessage?: string | null;
-    };
-    if (!body.status) {
-      return NextResponse.json({ error: "status is required" }, { status: 400 });
+    const raw = await request.json().catch(() => ({}));
+    const parsed = parseBody(raw, updateVariantSchema);
+    if (!parsed.ok) {
+      return NextResponse.json(parsed.error, { status: 400 });
     }
+    const body = parsed.data;
     const variant = await updateVariantStatus(id, body.status, {
       assetUrl: body.assetUrl,
       storagePath: body.storagePath,

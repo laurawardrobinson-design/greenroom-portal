@@ -27,6 +27,8 @@ export default function DashboardPage() {
       return <ArtDirectorDashboard user={user} />;
     case "Post Producer":
       return <PostProducerDashboard user={user} />;
+    case "Designer":
+      return <ProducerDashboard user={user} />;
     default:
       return <DashboardSkeleton />;
   }

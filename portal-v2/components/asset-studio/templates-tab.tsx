@@ -178,13 +178,21 @@ function CreateTemplateModal({
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [width, setWidth] = useState(1080);
-  const [height, setHeight] = useState(1080);
+  const [widthInput, setWidthInput] = useState("1080");
+  const [heightInput, setHeightInput] = useState("1080");
   const [busy, setBusy] = useState(false);
+
+  function normalizePx(raw: string, fallback: number): number {
+    const parsed = Number(raw.trim());
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.max(100, Math.min(4000, Math.round(parsed)));
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
+    const width = normalizePx(widthInput, 1080);
+    const height = normalizePx(heightInput, 1080);
     setBusy(true);
     try {
       const res = await fetch("/api/asset-studio/templates", {
@@ -245,8 +253,11 @@ function CreateTemplateModal({
               type="number"
               min={100}
               max={4000}
-              value={width}
-              onChange={(e) => setWidth(Number(e.target.value) || 1080)}
+              value={widthInput}
+              onChange={(e) => setWidthInput(e.target.value)}
+              onBlur={() =>
+                setWidthInput(String(normalizePx(widthInput, 1080)))
+              }
             />
           </div>
           <div>
@@ -257,8 +268,11 @@ function CreateTemplateModal({
               type="number"
               min={100}
               max={4000}
-              value={height}
-              onChange={(e) => setHeight(Number(e.target.value) || 1080)}
+              value={heightInput}
+              onChange={(e) => setHeightInput(e.target.value)}
+              onBlur={() =>
+                setHeightInput(String(normalizePx(heightInput, 1080)))
+              }
             />
           </div>
         </div>

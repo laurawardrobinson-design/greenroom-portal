@@ -103,7 +103,17 @@ export async function PATCH(
         await requireRole(["Admin"]);
       }
 
-      const cv = await transitionVendorStatus(id, targetStatus, body.payload);
+      // Capture real client IP server-side for PO signatures (legal evidence).
+      // Never trust any IP the client sends.
+      const payload = { ...(body.payload ?? {}) };
+      if (targetStatus === "PO Signed") {
+        const forwardedFor = request.headers.get("x-forwarded-for");
+        const realIp = request.headers.get("x-real-ip");
+        payload.signedIp =
+          forwardedFor?.split(",")[0]?.trim() || realIp || "unknown";
+      }
+
+      const cv = await transitionVendorStatus(id, targetStatus, payload);
       return NextResponse.json(cv);
     }
 

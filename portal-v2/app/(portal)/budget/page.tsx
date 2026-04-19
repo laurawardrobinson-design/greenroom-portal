@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import type { BudgetPoolSummary, CampaignListItem } from "@/types/domain";
 import {
@@ -69,10 +70,21 @@ const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "onboarding", label: "Onboarding", icon: UserCheck },
 ];
 
+const VALID_TABS: readonly Tab[] = ["overview", "budgets", "analysis", "approvals", "spending", "vendors", "onboarding"] as const;
+
+function isTab(value: string | null): value is Tab {
+  return value !== null && (VALID_TABS as readonly string[]).includes(value);
+}
+
 export default function BudgetPage() {
   const { user } = useCurrentUser();
   const isAdmin = user?.role === "Admin";
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const searchParams = useSearchParams();
+  const initialTab = (() => {
+    const t = searchParams.get("tab");
+    return isTab(t) ? t : "overview";
+  })();
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   if (!isAdmin) {
     return (

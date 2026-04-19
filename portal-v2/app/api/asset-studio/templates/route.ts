@@ -6,6 +6,10 @@ import {
   ensureDefaultOutputSpecs,
 } from "@/lib/services/templates.service";
 import type { TemplateStatus } from "@/types/domain";
+import {
+  createTemplateSchema,
+  parseBody,
+} from "@/lib/validation/asset-studio";
 
 // GET /api/asset-studio/templates
 export async function GET(request: Request) {
@@ -26,19 +30,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await requireRole(["Admin", "Producer", "Post Producer", "Designer"]);
-    const body = (await request.json()) as {
-      name?: string;
-      description?: string;
-      category?: string;
-      brandTokensId?: string | null;
-      canvasWidth?: number;
-      canvasHeight?: number;
-      backgroundColor?: string;
-      seedDefaultSpecs?: boolean;
-    };
-    if (!body.name || typeof body.name !== "string") {
-      return NextResponse.json({ error: "name is required" }, { status: 400 });
+    const raw = await request.json().catch(() => ({}));
+    const parsed = parseBody(raw, createTemplateSchema);
+    if (!parsed.ok) {
+      return NextResponse.json(parsed.error, { status: 400 });
     }
+    const body = parsed.data;
     const template = await createTemplate({
       name: body.name,
       description: body.description,

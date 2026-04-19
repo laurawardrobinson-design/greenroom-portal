@@ -2,6 +2,20 @@ import { NextResponse } from "next/server";
 import { requireRole, authErrorResponse } from "@/lib/auth/guards";
 import { listBudgetPools, createBudgetPool, getCategorySpending, updateBudgetPool, getPoolTransactions } from "@/lib/services/budget.service";
 import { listAllCrewBookings } from "@/lib/services/crew-bookings.service";
+import { createBudgetPoolSchema, updateBudgetPoolSchema } from "@/lib/validation/budget.schema";
+import { ZodError } from "zod";
+
+function zodErrorResponse(error: ZodError) {
+  const fieldErrors = error.issues.reduce((acc: Record<string, string>, err) => {
+    const path = err.path.join(".") || "unknown";
+    acc[path] = err.message;
+    return acc;
+  }, {});
+  return NextResponse.json(
+    { error: "Validation failed", fieldErrors },
+    { status: 400 }
+  );
+}
 
 export async function GET(request: Request) {
   try {
@@ -36,9 +50,11 @@ export async function POST(request: Request) {
   try {
     await requireRole(["Admin"]);
     const body = await request.json();
-    const pool = await createBudgetPool(body);
+    const parsed = createBudgetPoolSchema.parse(body);
+    const pool = await createBudgetPool(parsed);
     return NextResponse.json(pool, { status: 201 });
   } catch (error) {
+    if (error instanceof ZodError) return zodErrorResponse(error);
     return authErrorResponse(error);
   }
 }
@@ -47,9 +63,11 @@ export async function PATCH(request: Request) {
   try {
     await requireRole(["Admin"]);
     const body = await request.json();
-    await updateBudgetPool(body.id, body);
+    const { id, ...rest } = updateBudgetPoolSchema.parse(body);
+    await updateBudgetPool(id, rest);
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof ZodError) return zodErrorResponse(error);
     return authErrorResponse(error);
   }
 }

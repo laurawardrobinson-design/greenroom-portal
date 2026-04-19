@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireRole, authErrorResponse } from "@/lib/auth/guards";
 import { listRuns, createRun } from "@/lib/services/runs.service";
-import type { VariantRunBindings, VariantRunStatus } from "@/types/domain";
+import { logAuditEvent } from "@/lib/services/audit-log.service";
+import { createRunSchema, parseBody } from "@/lib/validation/asset-studio";
+import type { VariantRunStatus } from "@/types/domain";
 
 // GET /api/asset-studio/runs
 export async function GET(request: Request) {
@@ -12,7 +14,10 @@ export async function GET(request: Request) {
     const templateId = searchParams.get("templateId") || undefined;
     const campaignId = searchParams.get("campaignId") || undefined;
     const limitParam = searchParams.get("limit");
-    const limit = limitParam ? Math.max(1, Math.min(200, Number(limitParam))) : undefined;
+    const parsedLimit = limitParam ? Number(limitParam) : NaN;
+    const limit = Number.isFinite(parsedLimit)
+      ? Math.max(1, Math.min(200, Math.trunc(parsedLimit)))
+      : undefined;
     const runs = await listRuns({ status, templateId, campaignId, limit });
     return NextResponse.json(runs);
   } catch (error) {
@@ -25,19 +30,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await requireRole(["Admin", "Producer", "Post Producer", "Designer"]);
-    const body = (await request.json()) as {
-      templateId?: string;
-      campaignId?: string | null;
-      name?: string;
-      bindings?: VariantRunBindings;
-      notes?: string;
-    };
-    if (!body.templateId || !body.name || !body.bindings) {
-      return NextResponse.json(
-        { error: "templateId, name, bindings are required" },
-        { status: 400 }
-      );
+    const raw = await request.json().catch(() => ({}));
+    const parsed = parseBody(raw, createRunSchema);
+    if (!parsed.ok) {
+      return NextResponse.json(parsed.error, { status: 400 });
     }
+    const body = parsed.data;
     const run = await createRun({
       templateId: body.templateId,
       campaignId: body.campaignId ?? null,
@@ -45,6 +43,21 @@ export async function POST(request: Request) {
       bindings: body.bindings,
       notes: body.notes,
       createdBy: user.id,
+    });
+    await logAuditEvent({
+      actorId: user.id,
+      actorRole: user.role,
+      targetType: "variant_run",
+      targetId: run.id,
+      action: "created",
+      metadata: {
+        templateId: run.templateId,
+        templateVersionId: run.templateVersionId,
+        totalVariants: run.totalVariants,
+        perRowOverrideCount: Object.keys(
+          body.bindings.copy_overrides_by_product ?? {}
+        ).length,
+      },
     });
     return NextResponse.json(run, { status: 201 });
   } catch (error) {

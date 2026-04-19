@@ -54,7 +54,6 @@ export function PoSignature({
           payload: {
             signatureUrl: signatureDataUrl,
             signatureName: name.trim(),
-            signedIp: "captured-server-side",
           },
         }),
       });

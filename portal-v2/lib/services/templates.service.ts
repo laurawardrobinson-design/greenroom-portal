@@ -30,6 +30,7 @@ function toLayer(row: Record<string, unknown>): TemplateLayer {
     zIndex: Number(row.z_index ?? 0),
     sortOrder: Number(row.sort_order ?? 0),
     props: (row.props as TemplateLayerProps) ?? {},
+    locales: (row.locales as Record<string, string>) ?? {},
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -394,6 +395,7 @@ export async function restoreTemplateVersion(
         z_index: l.zIndex,
         sort_order: l.sortOrder,
         props: l.props,
+        locales: l.locales ?? {},
       }))
     );
   }
@@ -433,6 +435,24 @@ export async function deleteTemplate(id: string): Promise<void> {
 
 // ─── Layers ──────────────────────────────────────────────────────────────────
 
+function clampFinite(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.max(min, Math.min(max, value));
+}
+
+function normalizeLayerGeometry(input: {
+  xPct: number;
+  yPct: number;
+  widthPct: number;
+  heightPct: number;
+}): { xPct: number; yPct: number; widthPct: number; heightPct: number } {
+  const widthPct = clampFinite(input.widthPct, 0.01, 100);
+  const heightPct = clampFinite(input.heightPct, 0.01, 100);
+  const xPct = clampFinite(input.xPct, 0, Math.max(0, 100 - widthPct));
+  const yPct = clampFinite(input.yPct, 0, Math.max(0, 100 - heightPct));
+  return { xPct, yPct, widthPct, heightPct };
+}
+
 export async function createLayer(input: {
   templateId: string;
   name: string;
@@ -449,8 +469,15 @@ export async function createLayer(input: {
   zIndex?: number;
   sortOrder?: number;
   props?: TemplateLayerProps;
+  locales?: Record<string, string>;
 }): Promise<TemplateLayer> {
   const supabase = await createClient();
+  const geometry = normalizeLayerGeometry({
+    xPct: input.xPct ?? 0,
+    yPct: input.yPct ?? 0,
+    widthPct: input.widthPct ?? 100,
+    heightPct: input.heightPct ?? 100,
+  });
   const { data, error } = await supabase
     .from("template_layers")
     .insert({
@@ -461,14 +488,15 @@ export async function createLayer(input: {
       is_locked: input.isLocked ?? false,
       data_binding: input.dataBinding ?? "",
       static_value: input.staticValue ?? "",
-      x_pct: input.xPct ?? 0,
-      y_pct: input.yPct ?? 0,
-      width_pct: input.widthPct ?? 100,
-      height_pct: input.heightPct ?? 100,
+      x_pct: geometry.xPct,
+      y_pct: geometry.yPct,
+      width_pct: geometry.widthPct,
+      height_pct: geometry.heightPct,
       rotation_deg: input.rotationDeg ?? 0,
       z_index: input.zIndex ?? 0,
       sort_order: input.sortOrder ?? 0,
       props: input.props ?? {},
+      locales: input.locales ?? {},
     })
     .select("*")
     .single();
@@ -493,7 +521,9 @@ export async function updateLayer(
     zIndex: number;
     sortOrder: number;
     props: TemplateLayerProps;
-  }>
+    locales: Record<string, string>;
+  }>,
+  opts?: { templateId?: string }
 ): Promise<TemplateLayer> {
   const supabase = await createClient();
   const body: Record<string, unknown> = {};
@@ -503,27 +533,50 @@ export async function updateLayer(
   if (patch.isLocked !== undefined) body.is_locked = patch.isLocked;
   if (patch.dataBinding !== undefined) body.data_binding = patch.dataBinding;
   if (patch.staticValue !== undefined) body.static_value = patch.staticValue;
-  if (patch.xPct !== undefined) body.x_pct = patch.xPct;
-  if (patch.yPct !== undefined) body.y_pct = patch.yPct;
-  if (patch.widthPct !== undefined) body.width_pct = patch.widthPct;
-  if (patch.heightPct !== undefined) body.height_pct = patch.heightPct;
+  const hasGeometryPatch =
+    patch.xPct !== undefined ||
+    patch.yPct !== undefined ||
+    patch.widthPct !== undefined ||
+    patch.heightPct !== undefined;
+  if (hasGeometryPatch) {
+    let geomQ = supabase
+      .from("template_layers")
+      .select("x_pct, y_pct, width_pct, height_pct")
+      .eq("id", id);
+    if (opts?.templateId) geomQ = geomQ.eq("template_id", opts.templateId);
+    const { data: existing, error: geomError } = await geomQ.single();
+    if (geomError) throw geomError;
+    const geometry = normalizeLayerGeometry({
+      xPct: patch.xPct ?? Number(existing.x_pct ?? 0),
+      yPct: patch.yPct ?? Number(existing.y_pct ?? 0),
+      widthPct: patch.widthPct ?? Number(existing.width_pct ?? 100),
+      heightPct: patch.heightPct ?? Number(existing.height_pct ?? 100),
+    });
+    body.x_pct = geometry.xPct;
+    body.y_pct = geometry.yPct;
+    body.width_pct = geometry.widthPct;
+    body.height_pct = geometry.heightPct;
+  }
   if (patch.rotationDeg !== undefined) body.rotation_deg = patch.rotationDeg;
   if (patch.zIndex !== undefined) body.z_index = patch.zIndex;
   if (patch.sortOrder !== undefined) body.sort_order = patch.sortOrder;
   if (patch.props !== undefined) body.props = patch.props;
-  const { data, error } = await supabase
-    .from("template_layers")
-    .update(body)
-    .eq("id", id)
-    .select("*")
-    .single();
+  if (patch.locales !== undefined) body.locales = patch.locales;
+  let q = supabase.from("template_layers").update(body).eq("id", id);
+  if (opts?.templateId) q = q.eq("template_id", opts.templateId);
+  const { data, error } = await q.select("*").single();
   if (error) throw error;
   return toLayer(data);
 }
 
-export async function deleteLayer(id: string): Promise<void> {
+export async function deleteLayer(
+  id: string,
+  opts?: { templateId?: string }
+): Promise<void> {
   const supabase = await createClient();
-  const { error } = await supabase.from("template_layers").delete().eq("id", id);
+  let q = supabase.from("template_layers").delete().eq("id", id);
+  if (opts?.templateId) q = q.eq("template_id", opts.templateId);
+  const { error } = await q;
   if (error) throw error;
 }
 
@@ -556,9 +609,14 @@ export async function createOutputSpec(input: {
   return toOutputSpec(data);
 }
 
-export async function deleteOutputSpec(id: string): Promise<void> {
+export async function deleteOutputSpec(
+  id: string,
+  opts?: { templateId?: string }
+): Promise<void> {
   const supabase = await createClient();
-  const { error } = await supabase.from("template_output_specs").delete().eq("id", id);
+  let q = supabase.from("template_output_specs").delete().eq("id", id);
+  if (opts?.templateId) q = q.eq("template_id", opts.templateId);
+  const { error } = await q;
   if (error) throw error;
 }
 

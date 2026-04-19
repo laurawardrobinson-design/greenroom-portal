@@ -24,6 +24,7 @@ function toVariant(row: Record<string, unknown>): Variant {
     assetUrl: (row.asset_url as string | null) ?? null,
     storagePath: (row.storage_path as string | null) ?? null,
     thumbnailUrl: (row.thumbnail_url as string | null) ?? null,
+    localeCode: (row.locale_code as string | null) ?? null,
     bindings: (row.bindings as VariantBindings) ?? {},
     errorMessage: (row.error_message as string | null) ?? null,
     approvedBy: (row.approved_by as string | null) ?? null,
@@ -81,10 +82,27 @@ export async function listVariants(filters?: {
     .order("created_at", { ascending: false });
   if (filters?.status) q = q.eq("status", filters.status);
   if (filters?.templateId) q = q.eq("template_id", filters.templateId);
-  if (filters?.limit) q = q.limit(filters.limit);
+  if (filters?.limit) q = q.limit(Math.max(1, Math.trunc(filters.limit)));
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []).map(toVariant);
+}
+
+export async function listVariantIdsByStatus(
+  ids: string[],
+  status: VariantStatus
+): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("variants")
+    .select("id")
+    .in("id", ids)
+    .eq("status", status);
+  if (error) throw error;
+  return (data ?? [])
+    .map((row) => row.id as string)
+    .filter(Boolean);
 }
 
 export async function getVariant(id: string): Promise<Variant | null> {
@@ -191,7 +209,8 @@ export async function bulkApproveVariants(
       },
       { count: "exact" }
     )
-    .in("id", ids);
+    .in("id", ids)
+    .eq("status", "rendered");
   if (error) throw error;
   return count ?? 0;
 }
@@ -216,7 +235,8 @@ export async function bulkRejectVariants(
       },
       { count: "exact" }
     )
-    .in("id", ids);
+    .in("id", ids)
+    .eq("status", "rendered");
   if (error) throw error;
   return count ?? 0;
 }

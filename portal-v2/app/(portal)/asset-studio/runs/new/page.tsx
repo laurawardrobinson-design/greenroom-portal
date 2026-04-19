@@ -29,7 +29,21 @@ import {
   Sparkles,
   MousePointerClick,
   FileText,
+  Upload,
+  AlertTriangle,
+  CheckCircle2,
+  Languages,
 } from "lucide-react";
+
+// Locales offered in the run builder. "en-US" is always selected and represents
+// the default (layer.staticValue) — it isn't toggleable. Additional codes map
+// to per-layer translations in template_layers.locales.
+const RUN_LOCALE_OPTIONS = [
+  { code: "en-US", label: "English (US)", required: true },
+  { code: "es-US", label: "Spanish (US)", required: false },
+  { code: "fr-CA", label: "French (Canada)", required: false },
+  { code: "pt-BR", label: "Portuguese (Brazil)", required: false },
+] as const;
 
 const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer"];
 
@@ -48,10 +62,50 @@ export default function NewRunPage() {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [selectedSpecs, setSelectedSpecs] = useState<Set<string>>(new Set());
   const [copyOverrides, setCopyOverrides] = useState<Record<string, string>>({});
+  // Per-row copy overrides keyed by campaign_product_id → { bindingPath → text }.
+  // Merged on top of the global copyOverrides when the run is created.
+  const [perProductCopy, setPerProductCopy] = useState<
+    Record<string, Record<string, string>>
+  >({});
+  const [showPerRow, setShowPerRow] = useState(false);
+  // Locale codes to render. en-US is always present; others are toggleable.
+  const [selectedLocales, setSelectedLocales] = useState<Set<string>>(
+    new Set(["en-US"])
+  );
   const [submitting, setSubmitting] = useState(false);
-  const [productPickerMode, setProductPickerMode] = useState<"grid" | "csv">("grid");
+  const [productPickerMode, setProductPickerMode] = useState<
+    "grid" | "csv" | "upload"
+  >("grid");
   const [bulkInput, setBulkInput] = useState<string>("");
   const [bulkError, setBulkError] = useState<string>("");
+  // CSV upload state
+  const [csvText, setCsvText] = useState<string>("");
+  const [csvFileName, setCsvFileName] = useState<string>("");
+  const [csvPreview, setCsvPreview] = useState<{
+    headers: string[];
+    productKeyHeader: string;
+    bindingHeaders: string[];
+    ignoredHeaders: string[];
+    matched: Array<{
+      rowIndex: number;
+      rawKey: string;
+      matchedVia: "uuid" | "item_code" | "name" | null;
+      campaignProductId: string | null;
+      productName: string | null;
+      copy: Record<string, string>;
+    }>;
+    unmatched: Array<{
+      rowIndex: number;
+      rawKey: string;
+      matchedVia: null;
+      campaignProductId: null;
+      productName: null;
+      copy: Record<string, string>;
+    }>;
+    warnings: string[];
+  } | null>(null);
+  const [csvParsing, setCsvParsing] = useState(false);
+  const [csvError, setCsvError] = useState<string>("");
 
   // ── Data sources ──────────────────────────────────────────────────────────
   const { data: templates } = useSWR<AssetTemplate[]>(
@@ -133,7 +187,8 @@ export default function NewRunPage() {
     allTemplates?.find((t) => t.id === templateId) ??
     null;
   const specs = templateDetail?.outputSpecs ?? [];
-  const totalVariants = selectedProducts.size * selectedSpecs.size;
+  const totalVariants =
+    selectedProducts.size * selectedSpecs.size * selectedLocales.size;
   const canSubmit =
     Boolean(templateId) &&
     Boolean(runName.trim()) &&
@@ -174,6 +229,16 @@ export default function NewRunPage() {
       const cleanedOverrides = Object.fromEntries(
         Object.entries(copyOverrides).filter(([, v]) => v && v.trim() !== "")
       );
+      // Strip empty/whitespace cells from per-row overrides, and drop rows for
+      // products that aren't selected. Only send a non-empty dict.
+      const cleanedPerRow: Record<string, Record<string, string>> = {};
+      for (const [cpId, fields] of Object.entries(perProductCopy)) {
+        if (!selectedProducts.has(cpId)) continue;
+        const nonEmpty = Object.fromEntries(
+          Object.entries(fields).filter(([, v]) => v && v.trim() !== "")
+        );
+        if (Object.keys(nonEmpty).length > 0) cleanedPerRow[cpId] = nonEmpty;
+      }
       const res = await fetch("/api/asset-studio/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -185,10 +250,13 @@ export default function NewRunPage() {
           bindings: {
             campaign_product_ids: Array.from(selectedProducts),
             output_spec_ids: Array.from(selectedSpecs),
+            locale_codes: Array.from(selectedLocales),
             copy_overrides:
               Object.keys(cleanedOverrides).length > 0
                 ? cleanedOverrides
                 : undefined,
+            copy_overrides_by_product:
+              Object.keys(cleanedPerRow).length > 0 ? cleanedPerRow : undefined,
           },
         }),
       });
@@ -200,10 +268,25 @@ export default function NewRunPage() {
       toast("success", `Run created · ${run.totalVariants} variants queued`);
 
       if (kickOff) {
-        // Fire-and-forget render kick; users see progress on detail page.
-        fetch(`/api/asset-studio/runs/${run.id}/render`, { method: "POST" }).catch(
-          () => {}
-        );
+        try {
+          const renderRes = await fetch(`/api/asset-studio/runs/${run.id}/render`, {
+            method: "POST",
+          });
+          if (!renderRes.ok) {
+            const body = await renderRes.json().catch(() => ({}));
+            toast(
+              "info",
+              body.error
+                ? `Run created, but render did not start: ${body.error}`
+                : "Run created, but render did not start automatically."
+            );
+          }
+        } catch {
+          toast(
+            "info",
+            "Run created, but render did not start automatically."
+          );
+        }
       }
       router.push(`/asset-studio/runs/${run.id}`);
     } catch (err) {
@@ -363,6 +446,19 @@ export default function NewRunPage() {
                     <FileText className="h-3 w-3" />
                     Paste list
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setProductPickerMode("upload")}
+                    className={`flex items-center gap-1 px-2 py-1 font-medium ${
+                      productPickerMode === "upload"
+                        ? "bg-[var(--as-accent-soft)] text-[var(--as-accent)]"
+                        : "text-[var(--as-text-muted)] hover:bg-[var(--as-surface-2)]"
+                    }`}
+                    aria-label="CSV upload"
+                  >
+                    <Upload className="h-3 w-3" />
+                    CSV upload
+                  </button>
                 </div>
               </div>
             </div>
@@ -423,7 +519,7 @@ export default function NewRunPage() {
                   );
                 })}
               </div>
-            ) : (
+            ) : productPickerMode === "csv" ? (
               <div className="space-y-2">
                 <p className="text-[11px] text-[var(--as-text-subtle)]">
                   Paste one product per line — by SKU/item code, product name, or UUID.
@@ -466,8 +562,10 @@ export default function NewRunPage() {
                         const lc = line.toLowerCase();
                         const cp = campaignProducts.find((cp) => {
                           if (cp.id === line) return true;
+                          if (cp.productId === line) return true;
                           const p = cp.product;
                           if (!p) return false;
+                          if (p.id === line) return true;
                           if ((p.itemCode ?? "").toLowerCase() === lc) return true;
                           if ((p.name ?? "").toLowerCase() === lc) return true;
                           return false;
@@ -487,10 +585,189 @@ export default function NewRunPage() {
                   </Button>
                 </div>
               </div>
+            ) : (
+              // CSV upload branch — full Storyteq Batch Creator parity.
+              <div className="space-y-3">
+                <p className="text-[11px] text-[var(--as-text-subtle)]">
+                  Upload a CSV with a header row. First column = product key
+                  (SKU, name, or UUID). Remaining columns = dynamic binding
+                  paths (e.g.{" "}
+                  {dynamicTextBindings.length > 0 ? (
+                    <code className="rounded bg-[var(--as-surface-2)] px-1 py-0.5">
+                      {dynamicTextBindings[0]}
+                    </code>
+                  ) : (
+                    <code className="rounded bg-[var(--as-surface-2)] px-1 py-0.5">
+                      product.name
+                    </code>
+                  )}
+                  ) — each row sets per-product copy overrides automatically.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-[var(--as-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--as-layer-hover)]">
+                    <Upload className="h-3.5 w-3.5" />
+                    {csvFileName ? "Replace file…" : "Choose CSV file…"}
+                    <input
+                      type="file"
+                      accept=".csv,text/csv"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        if (f.size > 1_000_000) {
+                          setCsvError("File is over 1 MB — please split it.");
+                          return;
+                        }
+                        const text = await f.text();
+                        setCsvFileName(f.name);
+                        setCsvText(text);
+                        setCsvPreview(null);
+                        setCsvError("");
+                      }}
+                    />
+                  </label>
+                  {csvFileName && (
+                    <span className="text-[11px] text-[var(--as-text-muted)]">
+                      {csvFileName}
+                    </span>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!csvText || !templateId || !campaignId || csvParsing}
+                    loading={csvParsing}
+                    onClick={async () => {
+                      setCsvParsing(true);
+                      setCsvError("");
+                      try {
+                        const res = await fetch(
+                          "/api/asset-studio/runs/parse-csv",
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              templateId,
+                              campaignId,
+                              csvText,
+                            }),
+                          }
+                        );
+                        const body = await res.json();
+                        if (!res.ok) {
+                          throw new Error(body.error ?? "Parse failed");
+                        }
+                        setCsvPreview(body);
+                      } catch (err) {
+                        setCsvError((err as Error).message);
+                      } finally {
+                        setCsvParsing(false);
+                      }
+                    }}
+                  >
+                    Parse & preview
+                  </Button>
+                  {csvPreview && csvPreview.matched.length > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        // Apply matched rows to state
+                        const sel = new Set<string>();
+                        const copyMap: Record<string, Record<string, string>> = {};
+                        for (const row of csvPreview.matched) {
+                          if (!row.campaignProductId) continue;
+                          sel.add(row.campaignProductId);
+                          if (Object.keys(row.copy).length > 0) {
+                            copyMap[row.campaignProductId] = row.copy;
+                          }
+                        }
+                        setSelectedProducts(sel);
+                        setPerProductCopy((prev) => ({ ...prev, ...copyMap }));
+                        // Expand per-row card so user sees what landed
+                        if (Object.keys(copyMap).length > 0) setShowPerRow(true);
+                        toast(
+                          "success",
+                          `Applied ${sel.size} product${sel.size === 1 ? "" : "s"}${
+                            Object.keys(copyMap).length > 0
+                              ? ` and ${Object.keys(copyMap).length} copy override row${Object.keys(copyMap).length === 1 ? "" : "s"}`
+                              : ""
+                          }`
+                        );
+                      }}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Apply {csvPreview.matched.length} match
+                      {csvPreview.matched.length === 1 ? "" : "es"}
+                    </Button>
+                  )}
+                </div>
+                {csvError && (
+                  <p className="flex items-center gap-1 text-[11px] text-[var(--as-status-failed)]">
+                    <AlertTriangle className="h-3 w-3" />
+                    {csvError}
+                  </p>
+                )}
+                {csvPreview && (
+                  <div className="rounded-lg border border-[var(--as-border)] bg-[var(--as-surface-2)] p-3 text-[11px]">
+                    <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[var(--as-text)]">
+                      <span>
+                        <strong className="text-[var(--as-accent)]">
+                          {csvPreview.matched.length}
+                        </strong>{" "}
+                        matched
+                      </span>
+                      <span>
+                        <strong
+                          className={
+                            csvPreview.unmatched.length > 0
+                              ? "text-[var(--as-status-failed)]"
+                              : "text-[var(--as-text-muted)]"
+                          }
+                        >
+                          {csvPreview.unmatched.length}
+                        </strong>{" "}
+                        unmatched
+                      </span>
+                      <span className="text-[var(--as-text-muted)]">
+                        Copy columns:{" "}
+                        {csvPreview.bindingHeaders.length > 0
+                          ? csvPreview.bindingHeaders.join(", ")
+                          : "none"}
+                      </span>
+                    </div>
+                    {csvPreview.ignoredHeaders.length > 0 && (
+                      <p className="mb-1 text-[var(--as-text-muted)]">
+                        Ignored headers: {csvPreview.ignoredHeaders.join(", ")}
+                      </p>
+                    )}
+                    {csvPreview.warnings.map((w, i) => (
+                      <p key={i} className="text-[var(--as-status-failed)]">
+                        · {w}
+                      </p>
+                    ))}
+                    {csvPreview.unmatched.length > 0 && (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-[var(--as-text-muted)]">
+                          Show unmatched
+                        </summary>
+                        <ul className="ml-3 mt-1 list-disc space-y-0.5 text-[var(--as-text-muted)]">
+                          {csvPreview.unmatched.slice(0, 20).map((r) => (
+                            <li key={r.rowIndex}>
+                              row {r.rowIndex}: “{r.rawKey}”
+                            </li>
+                          ))}
+                          {csvPreview.unmatched.length > 20 && (
+                            <li>… and {csvPreview.unmatched.length - 20} more</li>
+                          )}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </Card>
 
-          {/* Step 4: Output specs */}
+          {/* Step 4: Output sizes + locales (both control the fan-out matrix) */}
           <Card padding="lg" className="border-[var(--as-border)] bg-[var(--as-surface)]">
             <StepHeader n={4} title="Output sizes" />
             {!templateId ? (
@@ -538,15 +815,64 @@ export default function NewRunPage() {
                 })}
               </div>
             )}
+
+            {/* Locales — same fan-out dimension as specs, so they share the step. */}
+            <div className="mt-4 border-t border-[var(--as-border)] pt-4">
+              <div className="mb-2 flex items-center gap-2">
+                <Languages className="h-3.5 w-3.5 text-[var(--as-text-muted)]" />
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--as-text-muted)]">
+                  Locales
+                </h3>
+                <span className="text-[11px] text-[var(--as-text-subtle)]">
+                  multiplies variant count
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {RUN_LOCALE_OPTIONS.map(({ code, label, required }) => {
+                  const selected = selectedLocales.has(code);
+                  return (
+                    <button
+                      key={code}
+                      type="button"
+                      disabled={required}
+                      onClick={() => {
+                        if (required) return;
+                        setSelectedLocales((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(code)) next.delete(code);
+                          else next.add(code);
+                          return next;
+                        });
+                      }}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
+                        selected
+                          ? "border-[var(--as-accent)] bg-[var(--as-accent-soft)] text-[var(--as-accent)]"
+                          : "border-[var(--as-border)] text-[var(--as-text-muted)] hover:bg-[var(--as-layer-hover)]"
+                      } ${required ? "cursor-default" : "cursor-pointer"}`}
+                      title={required ? "Always included" : undefined}
+                    >
+                      <span className="font-mono text-[10px]">{code}</span>
+                      <span>{label}</span>
+                      {selected && !required && <CheckSquare className="h-3 w-3" />}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[10px] text-[var(--as-text-subtle)]">
+                Non-default locales pull translated text from the template&apos;s
+                layer translations and fall back to the default when a translation
+                is missing.
+              </p>
+            </div>
           </Card>
 
           {/* Step 5: Copy overrides (optional) */}
           {dynamicTextBindings.length > 0 && (
             <Card padding="lg" className="border-[var(--as-border)] bg-[var(--as-surface)]">
-              <StepHeader n={5} title="Copy overrides (optional)" />
+              <StepHeader n={5} title="Global copy overrides (optional)" />
               <p className="mb-3 text-xs text-[var(--as-text-muted)]">
                 Leave blank to use each product&apos;s field value. Overrides apply to
-                every variant in this run.
+                every variant in this run unless a per-row override is set in step 6.
               </p>
               <div className="space-y-2">
                 {dynamicTextBindings.map((binding) => (
@@ -572,6 +898,105 @@ export default function NewRunPage() {
                   </div>
                 ))}
               </div>
+            </Card>
+          )}
+
+          {/* Step 6: Per-row copy overrides (optional, requires selected products + dynamic bindings) */}
+          {dynamicTextBindings.length > 0 && selectedProducts.size > 0 && (
+            <Card padding="lg" className="border-[var(--as-border)] bg-[var(--as-surface)]">
+              <div className="flex items-center justify-between">
+                <StepHeader n={6} title="Per-row copy overrides (optional)" />
+                <button
+                  type="button"
+                  onClick={() => setShowPerRow((v) => !v)}
+                  className="text-xs font-medium text-[var(--as-accent)] hover:underline"
+                >
+                  {showPerRow ? "Hide" : `Edit ${selectedProducts.size} row${selectedProducts.size === 1 ? "" : "s"}`}
+                </button>
+              </div>
+              <p className="mb-3 text-xs text-[var(--as-text-muted)]">
+                Set different copy for individual products — the Storyteq Batch Creator
+                pattern. Overrides here win over the global copy in step 5.
+              </p>
+              {showPerRow && (
+                <div className="overflow-x-auto rounded-lg border border-[var(--as-border)]">
+                  <table className="w-full text-xs">
+                    <thead className="bg-[var(--as-surface-2)] text-[var(--as-text-muted)]">
+                      <tr>
+                        <th className="sticky left-0 z-10 bg-[var(--as-surface-2)] px-3 py-2 text-left font-semibold">
+                          Product
+                        </th>
+                        {dynamicTextBindings.map((b) => (
+                          <th
+                            key={b}
+                            className="min-w-[160px] px-2 py-2 text-left font-semibold"
+                          >
+                            <code className="rounded bg-[var(--as-surface)] px-1 py-0.5 text-[11px]">
+                              {b}
+                            </code>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(campaignProducts ?? [])
+                        .filter((cp) => selectedProducts.has(cp.id))
+                        .map((cp) => {
+                          const rowCopy = perProductCopy[cp.id] ?? {};
+                          const p = cp.product;
+                          return (
+                            <tr key={cp.id} className="border-t border-[var(--as-border)]">
+                              <td className="sticky left-0 z-10 bg-[var(--as-surface)] px-3 py-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded border border-[var(--as-border)] bg-[var(--as-canvas-bg)]">
+                                    {p?.imageUrl ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={p.imageUrl}
+                                        alt=""
+                                        className="h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <ImageOff className="h-3.5 w-3.5 text-[var(--as-text-subtle)]" />
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="truncate font-medium text-[var(--as-text)]">
+                                      {p?.name ?? "Unknown"}
+                                    </p>
+                                    <p className="truncate text-[10px] text-[var(--as-text-subtle)]">
+                                      {p?.itemCode ?? ""}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                              {dynamicTextBindings.map((b) => (
+                                <td key={b} className="px-2 py-2 align-middle">
+                                  <Input
+                                    value={rowCopy[b] ?? ""}
+                                    onChange={(e) =>
+                                      setPerProductCopy((prev) => ({
+                                        ...prev,
+                                        [cp.id]: {
+                                          ...(prev[cp.id] ?? {}),
+                                          [b]: e.target.value,
+                                        },
+                                      }))
+                                    }
+                                    placeholder={
+                                      copyOverrides[b] ? `(uses “${copyOverrides[b]}”)` : "(default)"
+                                    }
+                                    className="h-8 text-xs"
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </Card>
           )}
         </div>
@@ -616,6 +1041,10 @@ export default function NewRunPage() {
               <SummaryRow
                 label="Output sizes"
                 value={`${selectedSpecs.size} / ${specs.length}`}
+              />
+              <SummaryRow
+                label="Locales"
+                value={`${selectedLocales.size} (${Array.from(selectedLocales).join(", ")})`}
               />
               <div className="mt-2 border-t border-[var(--as-border)] pt-2">
                 <SummaryRow
