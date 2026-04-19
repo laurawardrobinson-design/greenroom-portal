@@ -67,8 +67,8 @@ export default function ProductDirectoryPage() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        breadcrumb="Inventory"
-        breadcrumbHref="/inventory"
+        breadcrumb="Gear"
+        breadcrumbHref="/gear"
         title="Product Directory"
         actions={
           canEdit && (
