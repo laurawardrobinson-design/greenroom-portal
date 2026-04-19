@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { requireRole, authErrorResponse } from "@/lib/auth/guards";
 import { renderTemplatePreview } from "@/lib/services/render.service";
 

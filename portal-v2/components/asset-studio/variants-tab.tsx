@@ -26,7 +26,9 @@ export function VariantsTab({ user }: Props) {
   const [status, setStatus] = useState<"" | VariantStatus>("rendered");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const canApprove = ["Admin", "Producer", "Post Producer"].includes(user.role);
+  const canApprove = ["Admin", "Producer", "Post Producer", "Art Director"].includes(
+    user.role
+  );
 
   const params = new URLSearchParams();
   if (status) params.set("status", status);
@@ -62,17 +64,50 @@ export function VariantsTab({ user }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: Array.from(selected), action, reason }),
       });
-      if (!res.ok) throw new Error("Bulk action failed");
-      const { updated } = (await res.json()) as { updated: number };
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Bulk action failed");
+      }
+      const { updated, skipped = 0 } = (await res.json()) as {
+        updated: number;
+        skipped?: number;
+      };
       toast(
         action === "approve" ? "success" : "info",
-        `${updated} variant${updated === 1 ? "" : "s"} ${action}d`
+        `${updated} variant${updated === 1 ? "" : "s"} ${action}d${
+          skipped > 0 ? ` · ${skipped} skipped` : ""
+        }`
       );
       setSelected(new Set());
       mutate(url);
     } catch (err) {
       console.error(err);
-      toast("error", "Bulk action failed");
+      toast("error", (err as Error).message ?? "Bulk action failed");
+    }
+  }
+
+  async function singleAction(variantId: string, action: "approve" | "reject") {
+    const reason = action === "reject" ? window.prompt("Reason (optional)") ?? "" : "";
+    try {
+      const res =
+        action === "approve"
+          ? await fetch(`/api/asset-studio/variants/${variantId}/approve`, {
+              method: "POST",
+            })
+          : await fetch(`/api/asset-studio/variants/${variantId}/reject`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reason }),
+            });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Couldn't ${action} variant`);
+      }
+      toast(action === "approve" ? "success" : "info", `Variant ${action}d`);
+      mutate(url);
+    } catch (err) {
+      console.error(err);
+      toast("error", (err as Error).message ?? "Action failed");
     }
   }
 
@@ -157,25 +192,12 @@ export function VariantsTab({ user }: Props) {
               onToggle={canApprove ? () => toggle(v.id) : undefined}
               onApprove={
                 canApprove
-                  ? async () => {
-                      await fetch(`/api/asset-studio/variants/${v.id}/approve`, {
-                        method: "POST",
-                      });
-                      mutate(url);
-                    }
+                  ? async () => singleAction(v.id, "approve")
                   : undefined
               }
               onReject={
                 canApprove
-                  ? async () => {
-                      const reason = window.prompt("Reason (optional)") ?? "";
-                      await fetch(`/api/asset-studio/variants/${v.id}/reject`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ reason }),
-                      });
-                      mutate(url);
-                    }
+                  ? async () => singleAction(v.id, "reject")
                   : undefined
               }
             />
@@ -249,7 +271,7 @@ function VariantCard({
           {variant.outputSpec?.label ?? `${variant.width}×${variant.height}`}
         </p>
 
-        {(onApprove || onReject) && variant.status !== "approved" && variant.status !== "rejected" && (
+        {(onApprove || onReject) && variant.status === "rendered" && (
           <div className="mt-2 flex gap-1">
             {onReject && (
               <Button

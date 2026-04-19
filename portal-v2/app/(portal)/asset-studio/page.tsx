@@ -13,6 +13,8 @@ import {
   Images,
   Palette,
   Megaphone,
+  FolderSync,
+  ListChecks,
 } from "lucide-react";
 import { OverviewTab } from "@/components/asset-studio/overview-tab";
 import { TemplatesTab } from "@/components/asset-studio/templates-tab";
@@ -20,14 +22,26 @@ import { RunsTab } from "@/components/asset-studio/runs-tab";
 import { VariantsTab } from "@/components/asset-studio/variants-tab";
 import { BrandTab } from "@/components/asset-studio/brand-tab";
 import { ChannelsTab } from "@/components/asset-studio/channels-tab";
+import { DamTab } from "@/components/asset-studio/dam-tab";
+import { MyWorkTab } from "@/components/asset-studio/my-work-tab";
 
-type Tab = "overview" | "templates" | "runs" | "variants" | "brand" | "channels";
+type Tab =
+  | "overview"
+  | "templates"
+  | "runs"
+  | "variants"
+  | "dam"
+  | "my_work"
+  | "brand"
+  | "channels";
 
 const TABS: Array<{ id: Tab; label: string; icon: React.ElementType }> = [
   { id: "overview",  label: "Overview",  icon: LayoutGrid },
   { id: "templates", label: "Templates", icon: FileImage },
   { id: "runs",      label: "Runs",      icon: PlayCircle },
   { id: "variants",  label: "Variants",  icon: Images },
+  { id: "dam",       label: "DAM",       icon: FolderSync },
+  { id: "my_work",   label: "My Work",   icon: ListChecks },
   { id: "brand",     label: "Brand",     icon: Palette },
   { id: "channels",  label: "Channels",  icon: Megaphone },
 ];
@@ -87,6 +101,8 @@ export default function AssetStudioPage() {
       {activeTab === "templates" && <TemplatesTab user={user} />}
       {activeTab === "runs"      && <RunsTab      user={user} />}
       {activeTab === "variants"  && <VariantsTab  user={user} />}
+      {activeTab === "dam"       && <DamTab       user={user} />}
+      {activeTab === "my_work"   && <MyWorkTab    user={user} />}
       {activeTab === "brand"     && <BrandTab     user={user} />}
       {activeTab === "channels"  && <ChannelsTab  user={user} />}
     </div>

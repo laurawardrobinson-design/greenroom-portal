@@ -111,7 +111,7 @@ export async function listRuns(filters?: {
   if (filters?.status) q = q.eq("status", filters.status);
   if (filters?.templateId) q = q.eq("template_id", filters.templateId);
   if (filters?.campaignId) q = q.eq("campaign_id", filters.campaignId);
-  if (filters?.limit) q = q.limit(filters.limit);
+  if (filters?.limit) q = q.limit(Math.max(1, Math.trunc(filters.limit)));
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []).map(toRun);
@@ -313,7 +313,7 @@ export async function refreshRunCounts(id: string): Promise<VariantRun> {
   // Snapshot prior status so we can detect the transition into completed/failed.
   const { data: priorRow } = await supabase
     .from("variant_runs")
-    .select("status, created_by, name, campaign_id")
+    .select("status, created_by, name, campaign_id, completed_at")
     .eq("id", id)
     .single();
   const priorStatus = (priorRow?.status as VariantRunStatus | null) ?? null;
@@ -338,7 +338,11 @@ export async function refreshRunCounts(id: string): Promise<VariantRun> {
     failed_variants: failed,
   };
   let nextStatus: VariantRunStatus | null = null;
-  if (allDone) {
+  if (priorStatus === "cancelled") {
+    body.status = "cancelled";
+    body.completed_at =
+      (priorRow?.completed_at as string | null | undefined) ?? new Date().toISOString();
+  } else if (allDone) {
     nextStatus = failed > 0 && completed === 0 ? "failed" : "completed";
     body.status = nextStatus;
     body.completed_at = new Date().toISOString();
@@ -404,7 +408,95 @@ export async function refreshRunCounts(id: string): Promise<VariantRun> {
 }
 
 export async function cancelRun(id: string): Promise<VariantRun> {
-  return updateRunStatus(id, "cancelled");
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+
+  const { data: runRow, error: runErr } = await supabase
+    .from("variant_runs")
+    .select("id, status")
+    .eq("id", id)
+    .single();
+  if (runErr) throw runErr;
+
+  const currentStatus = runRow.status as VariantRunStatus;
+  if (currentStatus === "cancelled" || currentStatus === "completed" || currentStatus === "failed") {
+    const existing = await getRun(id);
+    if (!existing) throw new Error(`cancelRun: run ${id} not found`);
+    return existing;
+  }
+
+  const { data: activeJobs, error: jobsErr } = await supabase
+    .from("render_jobs")
+    .select("id")
+    .eq("run_id", id)
+    .in("status", ["queued", "processing"]);
+  if (jobsErr) throw jobsErr;
+  const activeJobIds = (activeJobs ?? [])
+    .map((job) => job.id as string)
+    .filter(Boolean);
+
+  if (activeJobIds.length > 0) {
+    const { error: itemsErr } = await supabase
+      .from("render_job_items")
+      .update({
+        status: "skipped",
+        completed_at: now,
+        last_error: "Run cancelled by user",
+      })
+      .in("job_id", activeJobIds)
+      .in("status", ["queued", "rendering"]);
+    if (itemsErr) throw itemsErr;
+
+    const { error: cancelJobsErr } = await supabase
+      .from("render_jobs")
+      .update({
+        status: "cancelled",
+        completed_at: now,
+        error_message: "Run cancelled by user",
+      })
+      .in("id", activeJobIds);
+    if (cancelJobsErr) throw cancelJobsErr;
+  }
+
+  const { error: variantsErr } = await supabase
+    .from("variants")
+    .update({
+      status: "failed",
+      error_message: "Run cancelled by user",
+    })
+    .eq("run_id", id)
+    .in("status", ["pending", "rendering"]);
+  if (variantsErr) throw variantsErr;
+
+  const { data: variantStatuses, error: statusErr } = await supabase
+    .from("variants")
+    .select("status")
+    .eq("run_id", id);
+  if (statusErr) throw statusErr;
+
+  const total = variantStatuses?.length ?? 0;
+  let completed = 0;
+  let failed = 0;
+  for (const row of variantStatuses ?? []) {
+    const status = (row as Record<string, unknown>).status as VariantStatus;
+    if (status === "rendered" || status === "approved" || status === "rejected") completed += 1;
+    if (status === "failed") failed += 1;
+  }
+
+  const { data, error } = await supabase
+    .from("variant_runs")
+    .update({
+      status: "cancelled",
+      completed_at: now,
+      total_variants: total,
+      completed_variants: completed,
+      failed_variants: failed,
+    })
+    .eq("id", id)
+    .select("*, campaigns(id, wf_number, name, brand)")
+    .single();
+  if (error) throw error;
+  return toRun(data);
 }
 
 export async function deleteRun(id: string): Promise<void> {

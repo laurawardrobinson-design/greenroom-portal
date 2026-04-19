@@ -268,10 +268,25 @@ export default function NewRunPage() {
       toast("success", `Run created · ${run.totalVariants} variants queued`);
 
       if (kickOff) {
-        // Fire-and-forget render kick; users see progress on detail page.
-        fetch(`/api/asset-studio/runs/${run.id}/render`, { method: "POST" }).catch(
-          () => {}
-        );
+        try {
+          const renderRes = await fetch(`/api/asset-studio/runs/${run.id}/render`, {
+            method: "POST",
+          });
+          if (!renderRes.ok) {
+            const body = await renderRes.json().catch(() => ({}));
+            toast(
+              "info",
+              body.error
+                ? `Run created, but render did not start: ${body.error}`
+                : "Run created, but render did not start automatically."
+            );
+          }
+        } catch {
+          toast(
+            "info",
+            "Run created, but render did not start automatically."
+          );
+        }
       }
       router.push(`/asset-studio/runs/${run.id}`);
     } catch (err) {
@@ -547,8 +562,10 @@ export default function NewRunPage() {
                         const lc = line.toLowerCase();
                         const cp = campaignProducts.find((cp) => {
                           if (cp.id === line) return true;
+                          if (cp.productId === line) return true;
                           const p = cp.product;
                           if (!p) return false;
+                          if (p.id === line) return true;
                           if ((p.itemCode ?? "").toLowerCase() === lc) return true;
                           if ((p.name ?? "").toLowerCase() === lc) return true;
                           return false;

@@ -8,8 +8,8 @@ type RouteCtx = { params: Promise<{ id: string; specId: string }> };
 export async function DELETE(_request: Request, ctx: RouteCtx) {
   try {
     await requireRole(["Admin", "Producer", "Post Producer", "Designer"]);
-    const { specId } = await ctx.params;
-    await deleteOutputSpec(specId);
+    const { id: templateId, specId } = await ctx.params;
+    await deleteOutputSpec(specId, { templateId });
     return NextResponse.json({ ok: true });
   } catch (error) {
     return authErrorResponse(error);

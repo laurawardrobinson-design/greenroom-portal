@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireRole, authErrorResponse } from "@/lib/auth/guards";
-import { rejectVariant } from "@/lib/services/variants.service";
+import { getVariant, rejectVariant } from "@/lib/services/variants.service";
 import { logAuditEvent } from "@/lib/services/audit-log.service";
 import { rejectVariantSchema, parseBody } from "@/lib/validation/asset-studio";
 
@@ -18,6 +18,16 @@ export async function POST(request: Request, ctx: RouteCtx) {
       return NextResponse.json(parsed.error, { status: 400 });
     }
     const body = parsed.data;
+    const current = await getVariant(id);
+    if (!current) {
+      return NextResponse.json({ error: "Variant not found" }, { status: 404 });
+    }
+    if (current.status !== "rendered") {
+      return NextResponse.json(
+        { error: "Only rendered variants can be rejected" },
+        { status: 409 }
+      );
+    }
     const variant = await rejectVariant(id, user.id, body.reason ?? "");
     await logAuditEvent({
       actorId: user.id,

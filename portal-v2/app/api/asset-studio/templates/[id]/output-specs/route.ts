@@ -97,13 +97,30 @@ export async function POST(request: Request, ctx: RouteCtx) {
         { status: 400 }
       );
     }
+    const width = Number(body.width);
+    const height = Number(body.height);
+    if (
+      !Number.isFinite(width) ||
+      !Number.isFinite(height) ||
+      width < 1 ||
+      height < 1
+    ) {
+      return NextResponse.json(
+        { error: "width and height must be positive numbers" },
+        { status: 400 }
+      );
+    }
+    const format =
+      body.format === "png" || body.format === "jpg" || body.format === "webp"
+        ? body.format
+        : "png";
     const spec = await createOutputSpec({
       templateId,
       label: body.label,
-      width: body.width,
-      height: body.height,
+      width: Math.round(width),
+      height: Math.round(height),
       channel: body.channel,
-      format: body.format,
+      format,
       sortOrder: body.sortOrder,
     });
     return NextResponse.json(spec, { status: 201 });

@@ -21,7 +21,13 @@ import {
   X,
 } from "lucide-react";
 import { fetcher, fmtRelative, statusPillClass } from "@/components/asset-studio/lib";
-import type { AuditLogEvent, Variant, VariantRun, VariantStatus } from "@/types/domain";
+import type {
+  AuditLogEvent,
+  RenderJob,
+  Variant,
+  VariantRun,
+  VariantStatus,
+} from "@/types/domain";
 
 const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer", "Art Director"];
 
@@ -44,9 +50,18 @@ export default function RunDetailPage({
         ? 3000
         : 0,
   });
+  const renderJobsUrl = `/api/asset-studio/runs/${id}/render-jobs?limit=1`;
+  const { data: renderJobs } = useSWR<RenderJob[]>(renderJobsUrl, fetcher, {
+    refreshInterval: (latest) =>
+      latest?.[0] &&
+      (latest[0].status === "queued" || latest[0].status === "processing")
+        ? 2000
+        : 0,
+  });
 
   const [statusFilter, setStatusFilter] = useState<"" | VariantStatus>("");
   const [acting, setActing] = useState<string | null>(null);
+  const latestRenderJob = renderJobs?.[0] ?? null;
 
   // Memoize variants & counts — hooks must run unconditionally, so we derive
   // from the possibly-undefined `run` and bail on the value later.
@@ -96,13 +111,21 @@ export default function RunDetailPage({
     run.totalVariants > 0
       ? Math.round((run.completedVariants / run.totalVariants) * 100)
       : 0;
+  const jobPct =
+    latestRenderJob && latestRenderJob.progress.total > 0
+      ? Math.round(
+          (latestRenderJob.progress.done / latestRenderJob.progress.total) * 100
+        )
+      : latestRenderJob?.status === "completed"
+        ? 100
+        : 0;
 
   // ── Actions ──────────────────────────────────────────────────────────────
   async function callAction(
     name: string,
     fn: () => Promise<Response>,
     successMsg: string
-  ) {
+  ): Promise<boolean> {
     setActing(name);
     try {
       const res = await fn();
@@ -112,9 +135,12 @@ export default function RunDetailPage({
       }
       toast("success", successMsg);
       await mutate(url);
+      await mutate(renderJobsUrl);
+      return true;
     } catch (err) {
       console.error(err);
       toast("error", (err as Error).message ?? "Action failed");
+      return false;
     } finally {
       setActing(null);
     }
@@ -124,7 +150,7 @@ export default function RunDetailPage({
     callAction(
       "render",
       () => fetch(`/api/asset-studio/runs/${id}/render`, { method: "POST" }),
-      "Render started"
+      "Render queued"
     );
 
   const onRefresh = () =>
@@ -160,8 +186,8 @@ export default function RunDetailPage({
       "delete",
       () => fetch(`/api/asset-studio/runs/${id}`, { method: "DELETE" }),
       "Run deleted"
-    ).then(() => {
-      window.location.href = "/asset-studio?tab=runs";
+    ).then((ok) => {
+      if (ok) window.location.href = "/asset-studio?tab=runs";
     });
   };
 
@@ -173,16 +199,33 @@ export default function RunDetailPage({
       toast("info", "Nothing to approve in this view.");
       return;
     }
-    await callAction(
-      "bulk-approve",
-      () =>
-        fetch("/api/asset-studio/variants", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids, action: "approve" }),
-        }),
-      `${ids.length} variant${ids.length === 1 ? "" : "s"} approved`
-    );
+    setActing("bulk-approve");
+    try {
+      const res = await fetch("/api/asset-studio/variants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, action: "approve" }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Bulk approval failed");
+      }
+      const body = (await res.json()) as { updated: number; skipped?: number };
+      const skipped = body.skipped ?? 0;
+      toast(
+        "success",
+        `${body.updated} variant${body.updated === 1 ? "" : "s"} approved${
+          skipped > 0 ? ` · ${skipped} skipped` : ""
+        }`
+      );
+      await mutate(url);
+      await mutate(renderJobsUrl);
+    } catch (error) {
+      console.error(error);
+      toast("error", (error as Error).message ?? "Action failed");
+    } finally {
+      setActing(null);
+    }
   }
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -315,6 +358,37 @@ export default function RunDetailPage({
             style={{ width: `${pct}%` }}
           />
         </div>
+        {latestRenderJob && (
+          <div className="mt-3 rounded-md border border-[var(--as-border)] bg-[var(--as-surface-2)] p-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-[var(--as-text)]">
+                Latest render job{" "}
+                <span className="font-mono text-[11px] text-[var(--as-text-subtle)]">
+                  {latestRenderJob.id.slice(0, 8)}
+                </span>
+              </p>
+              <span className={renderJobStatusPillClass(latestRenderJob.status)}>
+                {latestRenderJob.status}
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] text-[var(--as-text-subtle)]">
+              {latestRenderJob.progress.done} / {latestRenderJob.progress.total} complete
+              {latestRenderJob.progress.failed > 0
+                ? ` · ${latestRenderJob.progress.failed} failed`
+                : ""}
+            </p>
+            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-[var(--as-surface)]">
+              <div
+                className={`h-full transition-all ${
+                  latestRenderJob.progress.failed > 0
+                    ? "bg-[var(--as-status-failed)]"
+                    : "bg-[var(--as-accent)]"
+                }`}
+                style={{ width: `${jobPct}%` }}
+              />
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Filter + variant gallery */}
@@ -371,21 +445,35 @@ export default function RunDetailPage({
               variant={v}
               canApprove={canApprove}
               onAction={async (action) => {
-                if (action === "approve") {
-                  await fetch(`/api/asset-studio/variants/${v.id}/approve`, {
-                    method: "POST",
-                  });
-                } else {
-                  const reason = window.prompt("Reason (optional)") ?? "";
-                  await fetch(`/api/asset-studio/variants/${v.id}/reject`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ reason }),
-                  });
+                try {
+                  let res: Response;
+                  if (action === "approve") {
+                    res = await fetch(`/api/asset-studio/variants/${v.id}/approve`, {
+                      method: "POST",
+                    });
+                  } else {
+                    const reason = window.prompt("Reason (optional)") ?? "";
+                    res = await fetch(`/api/asset-studio/variants/${v.id}/reject`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ reason }),
+                    });
+                  }
+                  if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.error ?? `Couldn't ${action} variant`);
+                  }
+                  toast(
+                    action === "approve" ? "success" : "info",
+                    `Variant ${action}d`
+                  );
+                } catch (error) {
+                  toast("error", (error as Error).message ?? "Action failed");
+                } finally {
+                  mutate(url);
+                  // Kick the audit-log feed so the new event appears without a reload.
+                  mutate(`/api/asset-studio/runs/${id}/audit-log`);
                 }
-                mutate(url);
-                // Kick the audit-log feed so the new event appears without a reload.
-                mutate(`/api/asset-studio/runs/${id}/audit-log`);
               }}
             />
           ))}
@@ -457,13 +545,23 @@ function AuditActionLabel({
     bulk_approved: "bulk-approved variants",
     bulk_rejected: "bulk-rejected variants",
     created: targetType === "variant_run" ? "created this run" : "created",
+    rendered: "queued a render job",
     completed: "run completed",
     failed: "run failed",
+    cancelled: "run cancelled",
     published: "published template",
     version_saved: "saved a new template version",
     version_restored: "restored a prior template version",
   };
   return <span>{map[action] ?? action}</span>;
+}
+
+function renderJobStatusPillClass(status: RenderJob["status"]): string {
+  if (status === "queued") return statusPillClass("queued");
+  if (status === "processing") return statusPillClass("rendering");
+  if (status === "completed") return statusPillClass("completed");
+  if (status === "failed") return statusPillClass("failed");
+  return "inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-[var(--as-surface-2)] text-[var(--as-text-muted)]";
 }
 
 function CountChip({ label, n }: { label: string; n: number }) {
@@ -535,30 +633,27 @@ function RunVariantCard({
           </p>
         )}
 
-        {canApprove &&
-          variant.status !== "approved" &&
-          variant.status !== "rejected" &&
-          variant.status === "rendered" && (
-            <div className="mt-2 flex gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => onAction("reject")}
-                aria-label="Reject"
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1"
-                onClick={() => onAction("approve")}
-                aria-label="Approve"
-              >
-                <Check className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
+        {canApprove && variant.status === "rendered" && (
+          <div className="mt-2 flex gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => onAction("reject")}
+              aria-label="Reject"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1"
+              onClick={() => onAction("approve")}
+              aria-label="Approve"
+            >
+              <Check className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
 
         {variant.assetUrl && variant.status === "approved" && (
           <a

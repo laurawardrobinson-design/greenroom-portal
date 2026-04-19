@@ -3,6 +3,7 @@ import { requireRole, authErrorResponse } from "@/lib/auth/guards";
 import {
   listVariants,
   listVariantsByRun,
+  listVariantIdsByStatus,
   bulkApproveVariants,
   bulkRejectVariants,
 } from "@/lib/services/variants.service";
@@ -23,7 +24,10 @@ export async function GET(request: Request) {
     const status = (searchParams.get("status") as VariantStatus | null) || undefined;
     const templateId = searchParams.get("templateId") || undefined;
     const limitParam = searchParams.get("limit");
-    const limit = limitParam ? Math.max(1, Math.min(500, Number(limitParam))) : undefined;
+    const parsedLimit = limitParam ? Number(limitParam) : NaN;
+    const limit = Number.isFinite(parsedLimit)
+      ? Math.max(1, Math.min(500, Math.trunc(parsedLimit)))
+      : undefined;
     const variants = await listVariants({ status, templateId, limit });
     return NextResponse.json(variants);
   } catch (error) {
@@ -42,12 +46,18 @@ export async function POST(request: Request) {
       return NextResponse.json(parsed.error, { status: 400 });
     }
     const body = parsed.data;
+    const eligibleIds = await listVariantIdsByStatus(body.ids, "rendered");
+    const skipped = body.ids.length - eligibleIds.length;
+    if (eligibleIds.length === 0) {
+      return NextResponse.json({ updated: 0, skipped });
+    }
+
     if (body.action === "approve") {
-      const count = await bulkApproveVariants(body.ids, user.id);
+      const count = await bulkApproveVariants(eligibleIds, user.id);
       // Log each variant so the feed shows exactly what was touched.
       // Parallel fire-and-forget — audit log failures are swallowed inside the helper.
       await Promise.all(
-        body.ids.map((vid) =>
+        eligibleIds.map((vid) =>
           logAuditEvent({
             actorId: user.id,
             actorRole: user.role,
@@ -57,11 +67,11 @@ export async function POST(request: Request) {
           })
         )
       );
-      return NextResponse.json({ updated: count });
+      return NextResponse.json({ updated: count, skipped });
     }
-    const count = await bulkRejectVariants(body.ids, user.id, body.reason ?? "");
+    const count = await bulkRejectVariants(eligibleIds, user.id, body.reason ?? "");
     await Promise.all(
-      body.ids.map((vid) =>
+      eligibleIds.map((vid) =>
         logAuditEvent({
           actorId: user.id,
           actorRole: user.role,
@@ -72,7 +82,7 @@ export async function POST(request: Request) {
         })
       )
     );
-    return NextResponse.json({ updated: count });
+    return NextResponse.json({ updated: count, skipped });
   } catch (error) {
     return authErrorResponse(error);
   }

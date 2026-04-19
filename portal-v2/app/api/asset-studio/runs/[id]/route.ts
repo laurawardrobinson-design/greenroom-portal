@@ -6,7 +6,8 @@ import {
   cancelRun,
   deleteRun,
 } from "@/lib/services/runs.service";
-import type { VariantRunStatus } from "@/types/domain";
+import { logAuditEvent } from "@/lib/services/audit-log.service";
+import { parseBody, updateRunSchema } from "@/lib/validation/asset-studio";
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -27,14 +28,23 @@ export async function GET(_request: Request, ctx: RouteCtx) {
 // body: { status?, action?: 'cancel' }
 export async function PATCH(request: Request, ctx: RouteCtx) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Designer"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Designer"]);
     const { id } = await ctx.params;
-    const body = (await request.json()) as {
-      status?: VariantRunStatus;
-      action?: "cancel";
-    };
+    const raw = await request.json().catch(() => ({}));
+    const parsed = parseBody(raw, updateRunSchema);
+    if (!parsed.ok) {
+      return NextResponse.json(parsed.error, { status: 400 });
+    }
+    const body = parsed.data;
     if (body.action === "cancel") {
       const run = await cancelRun(id);
+      await logAuditEvent({
+        actorId: user.id,
+        actorRole: user.role,
+        targetType: "variant_run",
+        targetId: id,
+        action: "cancelled",
+      });
       return NextResponse.json(run);
     }
     if (body.status) {

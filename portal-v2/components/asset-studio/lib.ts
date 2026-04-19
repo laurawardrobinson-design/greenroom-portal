@@ -21,6 +21,8 @@ export function statusPillClass(status: string): string {
     archived:  "bg-[var(--as-surface-2)] text-[var(--as-status-archived)]",
     // run
     queued:     "bg-blue-50 text-[var(--as-status-queued)]",
+    running:    "bg-blue-50 text-[var(--as-status-rendering)]",
+    succeeded:  "bg-[var(--as-accent-soft)] text-[var(--as-status-completed)]",
     rendering:  "bg-amber-50 text-[var(--as-status-rendering)]",
     completed:  "bg-[var(--as-accent-soft)] text-[var(--as-status-completed)]",
     failed:     "bg-red-50 text-[var(--as-status-failed)]",
@@ -30,6 +32,19 @@ export function statusPillClass(status: string): string {
     rendered:  "bg-blue-50 text-[var(--as-status-rendered)]",
     approved:  "bg-[var(--as-accent-soft)] text-[var(--as-status-approved)]",
     rejected:  "bg-red-50 text-[var(--as-status-rejected)]",
+    // DAM placeholder
+    ingested:             "bg-[var(--as-surface-2)] text-[var(--as-status-pending)]",
+    retouching:           "bg-amber-50 text-[var(--as-status-rendering)]",
+    retouched:            "bg-emerald-50 text-[var(--as-status-completed)]",
+    versioning:           "bg-blue-50 text-[var(--as-status-rendered)]",
+    ready_for_activation: "bg-[var(--as-accent-soft)] text-[var(--as-status-approved)]",
+    not_requested:        "bg-[var(--as-surface-2)] text-[var(--as-text-muted)]",
+    requested:            "bg-amber-50 text-[var(--as-status-rendering)]",
+    in_progress:          "bg-blue-50 text-[var(--as-status-rendered)]",
+    pending_sync:         "bg-[var(--as-surface-2)] text-[var(--as-text-muted)]",
+    synced:               "bg-[var(--as-accent-soft)] text-[var(--as-status-completed)]",
+    stale:                "bg-amber-50 text-[var(--as-status-rendering)]",
+    error:                "bg-red-50 text-[var(--as-status-failed)]",
   };
   return `inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
     map[status] ?? "bg-[var(--as-surface-2)] text-[var(--as-text-muted)]"

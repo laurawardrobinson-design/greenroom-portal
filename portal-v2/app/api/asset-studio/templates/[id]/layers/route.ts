@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireRole, authErrorResponse } from "@/lib/auth/guards";
 import { createLayer } from "@/lib/services/templates.service";
-import type { TemplateLayerProps, TemplateLayerType } from "@/types/domain";
+import {
+  createTemplateLayerSchema,
+  parseBody,
+} from "@/lib/validation/asset-studio";
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -10,28 +13,12 @@ export async function POST(request: Request, ctx: RouteCtx) {
   try {
     await requireRole(["Admin", "Producer", "Post Producer", "Designer"]);
     const { id: templateId } = await ctx.params;
-    const body = (await request.json()) as {
-      name?: string;
-      layerType?: TemplateLayerType;
-      isDynamic?: boolean;
-      isLocked?: boolean;
-      dataBinding?: string;
-      staticValue?: string;
-      xPct?: number;
-      yPct?: number;
-      widthPct?: number;
-      heightPct?: number;
-      rotationDeg?: number;
-      zIndex?: number;
-      sortOrder?: number;
-      props?: TemplateLayerProps;
-    };
-    if (!body.name || !body.layerType) {
-      return NextResponse.json(
-        { error: "name and layerType are required" },
-        { status: 400 }
-      );
+    const raw = await request.json().catch(() => ({}));
+    const parsed = parseBody(raw, createTemplateLayerSchema);
+    if (!parsed.ok) {
+      return NextResponse.json(parsed.error, { status: 400 });
     }
+    const body = parsed.data;
     const layer = await createLayer({
       templateId,
       name: body.name,
@@ -48,6 +35,7 @@ export async function POST(request: Request, ctx: RouteCtx) {
       zIndex: body.zIndex,
       sortOrder: body.sortOrder,
       props: body.props,
+      locales: body.locales,
     });
     return NextResponse.json(layer, { status: 201 });
   } catch (error) {

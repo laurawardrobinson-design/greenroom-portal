@@ -14,7 +14,10 @@ export async function GET(request: Request) {
     const templateId = searchParams.get("templateId") || undefined;
     const campaignId = searchParams.get("campaignId") || undefined;
     const limitParam = searchParams.get("limit");
-    const limit = limitParam ? Math.max(1, Math.min(200, Number(limitParam))) : undefined;
+    const parsedLimit = limitParam ? Number(limitParam) : NaN;
+    const limit = Number.isFinite(parsedLimit)
+      ? Math.max(1, Math.min(200, Math.trunc(parsedLimit)))
+      : undefined;
     const runs = await listRuns({ status, templateId, campaignId, limit });
     return NextResponse.json(runs);
   } catch (error) {

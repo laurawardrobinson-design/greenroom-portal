@@ -1,10 +1,10 @@
 import sharp from "sharp";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getRun } from "./runs.service";
 import { getTemplate } from "./templates.service";
 import { getActiveBrandTokens } from "./brand.service";
 import type {
   AssetTemplate,
+  TemplateOutputSpec,
   TemplateLayer,
   Variant,
   VariantBindings,
@@ -18,6 +18,17 @@ export interface RenderRunResult {
   rendered: number;
   failed: number;
   skipped: number;
+}
+
+export interface RenderRunVariantEvent {
+  variantId: string;
+  status: "rendering" | "rendered" | "failed" | "skipped";
+  errorMessage?: string;
+}
+
+export interface RenderRunOptions {
+  variantIds?: string[];
+  onVariantStatus?: (event: RenderRunVariantEvent) => Promise<void> | void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -269,6 +280,190 @@ function contentTypeFor(format: "png" | "jpg" | "webp"): string {
   return "image/png";
 }
 
+function toTemplateLayer(row: Record<string, unknown>): TemplateLayer {
+  return {
+    id: row.id as string,
+    templateId: row.template_id as string,
+    name: (row.name as string) ?? "",
+    layerType: row.layer_type as TemplateLayer["layerType"],
+    isDynamic: Boolean(row.is_dynamic),
+    isLocked: Boolean(row.is_locked),
+    dataBinding: (row.data_binding as string) ?? "",
+    staticValue: (row.static_value as string) ?? "",
+    xPct: Number(row.x_pct ?? 0),
+    yPct: Number(row.y_pct ?? 0),
+    widthPct: Number(row.width_pct ?? 100),
+    heightPct: Number(row.height_pct ?? 100),
+    rotationDeg: Number(row.rotation_deg ?? 0),
+    zIndex: Number(row.z_index ?? 0),
+    sortOrder: Number(row.sort_order ?? 0),
+    props: (row.props as TemplateLayer["props"]) ?? {},
+    locales: (row.locales as Record<string, string>) ?? {},
+    createdAt: (row.created_at as string) ?? new Date().toISOString(),
+    updatedAt: (row.updated_at as string) ?? new Date().toISOString(),
+  };
+}
+
+function toTemplateOutputSpec(row: Record<string, unknown>): TemplateOutputSpec {
+  return {
+    id: row.id as string,
+    templateId: row.template_id as string,
+    label: (row.label as string) ?? "",
+    width: Number(row.width ?? 0),
+    height: Number(row.height ?? 0),
+    channel: (row.channel as string) ?? "",
+    format: ((row.format as TemplateOutputSpec["format"] | undefined) ?? "png"),
+    sortOrder: Number(row.sort_order ?? 0),
+    createdAt: (row.created_at as string) ?? new Date().toISOString(),
+  };
+}
+
+function toRenderVariant(row: Record<string, unknown>): Variant {
+  const spec = row.template_output_specs as Record<string, unknown> | null | undefined;
+  return {
+    id: row.id as string,
+    runId: row.run_id as string,
+    templateId: (row.template_id as string | null) ?? null,
+    outputSpecId: (row.output_spec_id as string | null) ?? null,
+    campaignProductId: null,
+    width: Number(row.width),
+    height: Number(row.height),
+    status: row.status as Variant["status"],
+    assetUrl: null,
+    storagePath: null,
+    thumbnailUrl: null,
+    localeCode: null,
+    bindings: (row.bindings as VariantBindings) ?? {},
+    errorMessage: null,
+    approvedBy: null,
+    approvedAt: null,
+    rejectedBy: null,
+    rejectedAt: null,
+    rejectionReason: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    outputSpec: spec ? toTemplateOutputSpec(spec) : null,
+  };
+}
+
+async function getRunForRender(runId: string): Promise<{
+  id: string;
+  templateId: string | null;
+  variants: Variant[];
+} | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("variant_runs")
+    .select(
+      "id, template_id, variants(id, run_id, template_id, output_spec_id, width, height, status, bindings, template_output_specs(id, template_id, label, width, height, channel, format, sort_order, created_at))"
+    )
+    .eq("id", runId)
+    .maybeSingle();
+  if (error || !data) return null;
+
+  const variants = ((data.variants as Record<string, unknown>[] | null) ?? []).map(
+    toRenderVariant
+  );
+  return {
+    id: data.id as string,
+    templateId: (data.template_id as string | null) ?? null,
+    variants,
+  };
+}
+
+async function getTemplateForRender(templateId: string): Promise<AssetTemplate | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("templates")
+    .select(
+      "id, name, description, status, category, brand_tokens_id, thumbnail_url, canvas_width, canvas_height, background_color, current_version_id, created_by, created_at, updated_at, template_layers(*)"
+    )
+    .eq("id", templateId)
+    .maybeSingle();
+  if (error || !data) return null;
+
+  const layers = ((data.template_layers as Record<string, unknown>[] | null) ?? [])
+    .map(toTemplateLayer)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  return {
+    id: data.id as string,
+    name: (data.name as string) ?? "",
+    description: (data.description as string) ?? "",
+    status: data.status as AssetTemplate["status"],
+    category: (data.category as string) ?? "general",
+    brandTokensId: (data.brand_tokens_id as string | null) ?? null,
+    thumbnailUrl: (data.thumbnail_url as string | null) ?? null,
+    canvasWidth: Number(data.canvas_width ?? 1080),
+    canvasHeight: Number(data.canvas_height ?? 1080),
+    backgroundColor: (data.background_color as string) ?? "#FFFFFF",
+    currentVersionId: (data.current_version_id as string | null) ?? null,
+    createdBy: (data.created_by as string | null) ?? null,
+    createdAt: data.created_at as string,
+    updatedAt: data.updated_at as string,
+    layers,
+    outputSpecs: [],
+    versions: [],
+    brandTokens: null,
+  };
+}
+
+async function getBrandForRender(template: AssetTemplate): Promise<BrandTokenSet | null> {
+  const admin = createAdminClient();
+
+  if (template.brandTokensId) {
+    const { data } = await admin
+      .from("brand_tokens")
+      .select("*")
+      .eq("id", template.brandTokensId)
+      .maybeSingle();
+    if (data) {
+      return {
+        id: data.id as string,
+        brand: data.brand as string,
+        version: Number(data.version),
+        isActive: Boolean(data.is_active),
+        notes: (data.notes as string) ?? "",
+        tokens: (data.tokens as BrandTokenSet["tokens"]) ?? {},
+        createdBy: (data.created_by as string | null) ?? null,
+        createdAt: data.created_at as string,
+        updatedAt: data.updated_at as string,
+      };
+    }
+  }
+
+  const { data: active } = await admin
+    .from("brand_tokens")
+    .select("*")
+    .eq("brand", "Publix")
+    .eq("is_active", true)
+    .maybeSingle();
+  if (!active) return null;
+  return {
+    id: active.id as string,
+    brand: active.brand as string,
+    version: Number(active.version),
+    isActive: Boolean(active.is_active),
+    notes: (active.notes as string) ?? "",
+    tokens: (active.tokens as BrandTokenSet["tokens"]) ?? {},
+    createdBy: (active.created_by as string | null) ?? null,
+    createdAt: active.created_at as string,
+    updatedAt: active.updated_at as string,
+  };
+}
+
+async function emitVariantStatus(
+  cb: RenderRunOptions["onVariantStatus"],
+  event: RenderRunVariantEvent
+): Promise<void> {
+  if (!cb) return;
+  try {
+    await cb(event);
+  } catch (error) {
+    console.error("[renderRun] variant status callback failed", error);
+  }
+}
+
 // ─── Run-level orchestrator ──────────────────────────────────────────────────
 
 /**
@@ -279,42 +474,19 @@ function contentTypeFor(format: "png" | "jpg" | "webp"): string {
  * for the 30-variant demo. A real implementation would queue this via a job
  * runner with concurrency limits.
  */
-export async function renderRun(runId: string): Promise<RenderRunResult> {
+export async function renderRun(
+  runId: string,
+  opts?: RenderRunOptions
+): Promise<RenderRunResult> {
   const admin = createAdminClient();
 
-  const run = await getRun(runId);
+  const run = await getRunForRender(runId);
   if (!run) throw new Error(`renderRun: run ${runId} not found`);
   if (!run.templateId) throw new Error(`renderRun: run ${runId} has no template`);
 
-  const template = await getTemplate(run.templateId);
+  const template = await getTemplateForRender(run.templateId);
   if (!template) throw new Error(`renderRun: template ${run.templateId} not found`);
-  const brand = template.brandTokensId
-    ? null // placeholder for explicit lookup — falls back to active brand below
-    : await getActiveBrandTokens();
-  // If template has a pinned brand version, prefer it. Otherwise use active.
-  let brandResolved: BrandTokenSet | null = brand;
-  if (template.brandTokensId) {
-    const { data } = await admin
-      .from("brand_tokens")
-      .select("*")
-      .eq("id", template.brandTokensId)
-      .maybeSingle();
-    if (data) {
-      brandResolved = {
-        id: data.id,
-        brand: data.brand,
-        version: data.version,
-        isActive: Boolean(data.is_active),
-        notes: data.notes ?? "",
-        tokens: data.tokens ?? {},
-        createdBy: data.created_by ?? null,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-      };
-    } else {
-      brandResolved = await getActiveBrandTokens();
-    }
-  }
+  const brandResolved = await getBrandForRender(template);
 
   // Mark run as rendering
   await admin
@@ -322,15 +494,46 @@ export async function renderRun(runId: string): Promise<RenderRunResult> {
     .update({ status: "rendering", started_at: new Date().toISOString() })
     .eq("id", runId);
 
-  const variants = (run.variants ?? []).filter((v) => v.status === "pending");
+  const requestedIds = opts?.variantIds?.length ? new Set(opts.variantIds) : null;
+  const selectedVariants = requestedIds
+    ? (run.variants ?? []).filter((v) => requestedIds.has(v.id))
+    : (run.variants ?? []);
+  const variants = selectedVariants.filter((v) => v.status === "pending");
+  const skippedVariants = selectedVariants.filter((v) => v.status !== "pending");
+
+  for (const skippedVariant of skippedVariants) {
+    await emitVariantStatus(opts?.onVariantStatus, {
+      variantId: skippedVariant.id,
+      status: "skipped",
+    });
+  }
+
   let rendered = 0;
   let failed = 0;
-  const skipped = (run.variants ?? []).length - variants.length;
+  const skipped = skippedVariants.length;
 
   for (const variant of variants) {
     try {
-      // Mark this one as rendering
-      await admin.from("variants").update({ status: "rendering" }).eq("id", variant.id);
+      // Claim this variant only if it's still pending. If another action (cancel,
+      // manual status update) already moved it out of pending, skip it.
+      const { data: claimed } = await admin
+        .from("variants")
+        .update({ status: "rendering" })
+        .eq("id", variant.id)
+        .eq("status", "pending")
+        .select("id")
+        .maybeSingle();
+      if (!claimed) {
+        await emitVariantStatus(opts?.onVariantStatus, {
+          variantId: variant.id,
+          status: "skipped",
+        });
+        continue;
+      }
+      await emitVariantStatus(opts?.onVariantStatus, {
+        variantId: variant.id,
+        status: "rendering",
+      });
 
       const buffer = await renderOneVariant(variant, { template, brand: brandResolved });
 
@@ -348,7 +551,7 @@ export async function renderRun(runId: string): Promise<RenderRunResult> {
 
       const { data: urlData } = admin.storage.from("variants").getPublicUrl(path);
 
-      await admin
+      const { data: persisted } = await admin
         .from("variants")
         .update({
           status: "rendered",
@@ -357,15 +560,34 @@ export async function renderRun(runId: string): Promise<RenderRunResult> {
           thumbnail_url: urlData.publicUrl,
           error_message: null,
         })
-        .eq("id", variant.id);
-      rendered += 1;
+        .eq("status", "rendering")
+        .eq("id", variant.id)
+        .select("id");
+      if (persisted && persisted.length > 0) {
+        rendered += 1;
+        await emitVariantStatus(opts?.onVariantStatus, {
+          variantId: variant.id,
+          status: "rendered",
+        });
+      } else {
+        await emitVariantStatus(opts?.onVariantStatus, {
+          variantId: variant.id,
+          status: "skipped",
+        });
+      }
     } catch (err) {
       failed += 1;
       const message = err instanceof Error ? err.message : String(err);
       await admin
         .from("variants")
         .update({ status: "failed", error_message: message })
+        .eq("status", "rendering")
         .eq("id", variant.id);
+      await emitVariantStatus(opts?.onVariantStatus, {
+        variantId: variant.id,
+        status: "failed",
+        errorMessage: message,
+      });
     }
   }
 
@@ -383,6 +605,12 @@ export async function renderRun(runId: string): Promise<RenderRunResult> {
     if (s === "failed") failedCount += 1;
   }
   const terminal = completedCount + failedCount === total && total > 0;
+  const { data: runStatusRow } = await admin
+    .from("variant_runs")
+    .select("status")
+    .eq("id", runId)
+    .maybeSingle();
+  const runWasCancelled = runStatusRow?.status === "cancelled";
 
   await admin
     .from("variant_runs")
@@ -390,12 +618,16 @@ export async function renderRun(runId: string): Promise<RenderRunResult> {
       total_variants: total,
       completed_variants: completedCount,
       failed_variants: failedCount,
-      status: terminal
-        ? failedCount === total
-          ? "failed"
-          : "completed"
-        : "rendering",
-      completed_at: terminal ? new Date().toISOString() : null,
+      ...(runWasCancelled
+        ? {}
+        : {
+            status: terminal
+              ? failedCount === total
+                ? "failed"
+                : "completed"
+              : "rendering",
+            completed_at: terminal ? new Date().toISOString() : null,
+          }),
     })
     .eq("id", runId);
 

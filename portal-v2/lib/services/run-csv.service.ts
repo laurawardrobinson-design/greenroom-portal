@@ -99,12 +99,13 @@ export async function parseRunCsv(params: {
   const supabase = await createClient();
   const { data: cps, error } = await supabase
     .from("campaign_products")
-    .select("id, products(id, name, item_code)")
+    .select("id, product_id, products(id, name, item_code)")
     .eq("campaign_id", campaignId);
   if (error) throw error;
 
   type CpRow = {
     id: string;
+    product_id: string;
     products: { id: string; name: string; item_code: string | null } | null;
   };
   const cpList = (cps ?? []) as unknown as CpRow[];
@@ -134,7 +135,12 @@ export async function parseRunCsv(params: {
     // Try UUID first (exact CP id), then item_code, then product name.
     let matchedVia: ParsedRunCsvRow["matchedVia"] = null;
     let hit: CpRow | undefined;
-    hit = cpList.find((cp) => cp.id === rawKey);
+    hit = cpList.find(
+      (cp) =>
+        cp.id === rawKey ||
+        cp.product_id === rawKey ||
+        cp.products?.id === rawKey
+    );
     if (hit) matchedVia = "uuid";
     if (!hit) {
       hit = cpList.find((cp) => (cp.products?.item_code ?? "").toLowerCase() === lcKey);
