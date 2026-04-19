@@ -25,6 +25,7 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
       zIndex: number;
       sortOrder: number;
       props: TemplateLayerProps;
+      locales: Record<string, string>;
     }>;
     const layer = await updateLayer(layerId, body);
     return NextResponse.json(layer);

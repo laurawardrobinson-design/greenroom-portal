@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import React, { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR, { mutate } from "swr";
@@ -35,6 +35,7 @@ import {
   History,
   Eye,
   X,
+  Languages,
 } from "lucide-react";
 
 const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer"];
@@ -982,13 +983,16 @@ function PropertiesPanel({
           />
         </Field>
       ) : isText ? (
-        <Field label="Text content">
-          <Input
-            value={layer.staticValue}
-            onChange={(e) => patch({ staticValue: e.target.value })}
-            placeholder="Type text…"
-          />
-        </Field>
+        <>
+          <Field label="Text content">
+            <Input
+              value={layer.staticValue}
+              onChange={(e) => patch({ staticValue: e.target.value })}
+              placeholder="Type text…"
+            />
+          </Field>
+          <TextLayerTranslations layer={layer} patch={patch} />
+        </>
       ) : (
         <Field label="Source">
           <AssetUrlInput
@@ -1202,6 +1206,78 @@ function AssetUrlInput({
           disabled={uploading}
         />
       </label>
+    </div>
+  );
+}
+
+// List of locales available to Publix for the demo. Widen later or drive from
+// a per-template setting. "en-US" is the default that every layer.staticValue
+// implicitly speaks; we don't render it as a row here.
+const AVAILABLE_LOCALES = [
+  { code: "es-US", label: "Spanish (US)" },
+  { code: "fr-CA", label: "French (Canada)" },
+  { code: "pt-BR", label: "Portuguese (Brazil)" },
+] as const;
+
+function TextLayerTranslations({
+  layer,
+  patch,
+}: {
+  layer: TemplateLayer;
+  patch: (p: Partial<TemplateLayer>) => void;
+}) {
+  const [open, setOpen] = React.useState(
+    Object.keys(layer.locales ?? {}).length > 0
+  );
+  const locales = layer.locales ?? {};
+  const activeCount = Object.values(locales).filter((v) => v?.trim()).length;
+  return (
+    <div className="rounded-md border border-dashed border-[var(--as-border)] p-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between text-left text-[11px] font-medium uppercase tracking-wide text-[var(--as-text-muted)]"
+      >
+        <span className="flex items-center gap-1.5">
+          <Languages className="h-3 w-3" />
+          Translations
+          {activeCount > 0 && (
+            <span className="rounded-full bg-[var(--as-accent-soft)] px-1.5 py-0.5 text-[10px] text-[var(--as-accent)]">
+              {activeCount}
+            </span>
+          )}
+        </span>
+        <span className="text-[10px]">{open ? "Hide" : "Show"}</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1.5">
+          {AVAILABLE_LOCALES.map(({ code, label }) => (
+            <div
+              key={code}
+              className="grid grid-cols-[70px_1fr] items-center gap-2"
+            >
+              <span
+                className="text-[10px] font-medium text-[var(--as-text-muted)]"
+                title={label}
+              >
+                {code}
+              </span>
+              <Input
+                value={locales[code] ?? ""}
+                placeholder={layer.staticValue || "(same as default)"}
+                onChange={(e) =>
+                  patch({
+                    locales: { ...locales, [code]: e.target.value },
+                  })
+                }
+              />
+            </div>
+          ))}
+          <p className="text-[10px] text-[var(--as-text-subtle)]">
+            Empty cells fall back to the default text above.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

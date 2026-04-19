@@ -30,10 +30,15 @@ export type RejectVariantInput = z.infer<typeof rejectVariantSchema>;
 
 // Mirror of VariantRunBindings from types/domain.ts. Kept local so zod and the
 // TS type can evolve together without a circular import.
+// Locale codes follow BCP-47 ish: letters-letters, 2-5 chars per segment.
+// Keep loose — we don't want to reject fr-CA vs. pt-BR vs. es-419.
+const localeCode = z.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,5})?$/);
+
 export const variantRunBindingsSchema = z
   .object({
     campaign_product_ids: z.array(uuid).min(1).max(500),
     output_spec_ids: z.array(uuid).min(1).max(50).optional(),
+    locale_codes: z.array(localeCode).min(1).max(20).optional(),
     copy_overrides: copyOverrideMap.optional(),
     copy_overrides_by_product: z
       .record(uuid, copyOverrideMap)

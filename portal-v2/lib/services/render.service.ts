@@ -41,7 +41,13 @@ function escapeXml(value: string): string {
 
 /**
  * Resolve a layer's runtime value for one variant.
- * Priority: copy_overrides[binding] → variant.bindings.product.<field> → layer.staticValue
+ * Priority: copy_overrides[binding] → bindings.product.<field> → layer.locales[locale] → layer.staticValue
+ *
+ * Locales only affect the default fallback — i.e. when no dynamic data is
+ * supplied, we use the translated layer text if one exists for this variant's
+ * locale. Explicit per-row copy overrides still win, which is what you want:
+ * if a designer typed "¡Oferta especial!" into the copy override for
+ * product.headline, we don't want a stale Spanish template string clobbering it.
  */
 function resolveLayerValue(layer: TemplateLayer, bindings: VariantBindings): string {
   if (layer.isDynamic && layer.dataBinding) {
@@ -54,6 +60,11 @@ function resolveLayerValue(layer: TemplateLayer, bindings: VariantBindings): str
       const v = bindings.product[key];
       if (v != null) return String(v);
     }
+  }
+  const locale =
+    typeof bindings.locale === "string" ? bindings.locale : null;
+  if (locale && layer.locales && layer.locales[locale]?.trim()) {
+    return layer.locales[locale];
   }
   return layer.staticValue ?? "";
 }
@@ -405,6 +416,7 @@ export async function renderTemplatePreview(input: {
   specId?: string;
   campaignProductId?: string;
   copyOverrides?: Record<string, string>;
+  localeCode?: string;
 }): Promise<{ buffer: Buffer; contentType: string }> {
   const admin = createAdminClient();
 
@@ -506,9 +518,11 @@ export async function renderTemplatePreview(input: {
     assetUrl: null,
     storagePath: null,
     thumbnailUrl: null,
+    localeCode: input.localeCode ?? null,
     bindings: {
       product,
       copy: input.copyOverrides ?? {},
+      ...(input.localeCode ? { locale: input.localeCode } : {}),
     },
     errorMessage: null,
     approvedBy: null,

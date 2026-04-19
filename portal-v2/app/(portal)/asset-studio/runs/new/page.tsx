@@ -32,7 +32,18 @@ import {
   Upload,
   AlertTriangle,
   CheckCircle2,
+  Languages,
 } from "lucide-react";
+
+// Locales offered in the run builder. "en-US" is always selected and represents
+// the default (layer.staticValue) — it isn't toggleable. Additional codes map
+// to per-layer translations in template_layers.locales.
+const RUN_LOCALE_OPTIONS = [
+  { code: "en-US", label: "English (US)", required: true },
+  { code: "es-US", label: "Spanish (US)", required: false },
+  { code: "fr-CA", label: "French (Canada)", required: false },
+  { code: "pt-BR", label: "Portuguese (Brazil)", required: false },
+] as const;
 
 const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer"];
 
@@ -57,6 +68,10 @@ export default function NewRunPage() {
     Record<string, Record<string, string>>
   >({});
   const [showPerRow, setShowPerRow] = useState(false);
+  // Locale codes to render. en-US is always present; others are toggleable.
+  const [selectedLocales, setSelectedLocales] = useState<Set<string>>(
+    new Set(["en-US"])
+  );
   const [submitting, setSubmitting] = useState(false);
   const [productPickerMode, setProductPickerMode] = useState<
     "grid" | "csv" | "upload"
@@ -172,7 +187,8 @@ export default function NewRunPage() {
     allTemplates?.find((t) => t.id === templateId) ??
     null;
   const specs = templateDetail?.outputSpecs ?? [];
-  const totalVariants = selectedProducts.size * selectedSpecs.size;
+  const totalVariants =
+    selectedProducts.size * selectedSpecs.size * selectedLocales.size;
   const canSubmit =
     Boolean(templateId) &&
     Boolean(runName.trim()) &&
@@ -234,6 +250,7 @@ export default function NewRunPage() {
           bindings: {
             campaign_product_ids: Array.from(selectedProducts),
             output_spec_ids: Array.from(selectedSpecs),
+            locale_codes: Array.from(selectedLocales),
             copy_overrides:
               Object.keys(cleanedOverrides).length > 0
                 ? cleanedOverrides
@@ -733,7 +750,7 @@ export default function NewRunPage() {
             )}
           </Card>
 
-          {/* Step 4: Output specs */}
+          {/* Step 4: Output sizes + locales (both control the fan-out matrix) */}
           <Card padding="lg" className="border-[var(--as-border)] bg-[var(--as-surface)]">
             <StepHeader n={4} title="Output sizes" />
             {!templateId ? (
@@ -781,6 +798,55 @@ export default function NewRunPage() {
                 })}
               </div>
             )}
+
+            {/* Locales — same fan-out dimension as specs, so they share the step. */}
+            <div className="mt-4 border-t border-[var(--as-border)] pt-4">
+              <div className="mb-2 flex items-center gap-2">
+                <Languages className="h-3.5 w-3.5 text-[var(--as-text-muted)]" />
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--as-text-muted)]">
+                  Locales
+                </h3>
+                <span className="text-[11px] text-[var(--as-text-subtle)]">
+                  multiplies variant count
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {RUN_LOCALE_OPTIONS.map(({ code, label, required }) => {
+                  const selected = selectedLocales.has(code);
+                  return (
+                    <button
+                      key={code}
+                      type="button"
+                      disabled={required}
+                      onClick={() => {
+                        if (required) return;
+                        setSelectedLocales((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(code)) next.delete(code);
+                          else next.add(code);
+                          return next;
+                        });
+                      }}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
+                        selected
+                          ? "border-[var(--as-accent)] bg-[var(--as-accent-soft)] text-[var(--as-accent)]"
+                          : "border-[var(--as-border)] text-[var(--as-text-muted)] hover:bg-[var(--as-layer-hover)]"
+                      } ${required ? "cursor-default" : "cursor-pointer"}`}
+                      title={required ? "Always included" : undefined}
+                    >
+                      <span className="font-mono text-[10px]">{code}</span>
+                      <span>{label}</span>
+                      {selected && !required && <CheckSquare className="h-3 w-3" />}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[10px] text-[var(--as-text-subtle)]">
+                Non-default locales pull translated text from the template&apos;s
+                layer translations and fall back to the default when a translation
+                is missing.
+              </p>
+            </div>
           </Card>
 
           {/* Step 5: Copy overrides (optional) */}
@@ -958,6 +1024,10 @@ export default function NewRunPage() {
               <SummaryRow
                 label="Output sizes"
                 value={`${selectedSpecs.size} / ${specs.length}`}
+              />
+              <SummaryRow
+                label="Locales"
+                value={`${selectedLocales.size} (${Array.from(selectedLocales).join(", ")})`}
               />
               <div className="mt-2 border-t border-[var(--as-border)] pt-2">
                 <SummaryRow
