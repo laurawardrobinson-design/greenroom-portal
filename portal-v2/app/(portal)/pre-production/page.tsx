@@ -35,20 +35,24 @@ export default function PreProductionPage() {
     }
   }, [isLoading, target, router, tab]);
 
-  if (isLoading || target) return <DashboardSkeleton />;
+  if (isLoading) return <DashboardSkeleton />;
 
-  // No pre-production campaigns
-  return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-24 text-center">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-secondary">
-        <ClipboardList className="h-5 w-5 text-text-tertiary" />
+  if (!target) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-24 text-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-secondary">
+          <ClipboardList className="h-5 w-5 text-text-tertiary" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-text-secondary">No campaigns in pre-production</p>
+          <p className="text-xs text-text-tertiary mt-0.5">
+            Campaigns with Planning or In Production status will appear here.
+          </p>
+        </div>
       </div>
-      <div>
-        <p className="text-sm font-medium text-text-secondary">No campaigns in pre-production</p>
-        <p className="text-xs text-text-tertiary mt-0.5">
-          Campaigns with Planning or In Production status will appear here.
-        </p>
-      </div>
-    </div>
-  );
+    );
+  }
+
+  // Target exists — redirect is firing via useEffect; show skeleton until it completes.
+  return <DashboardSkeleton />;
 }

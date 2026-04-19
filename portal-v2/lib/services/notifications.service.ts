@@ -110,14 +110,30 @@ export async function notifyCampaignProducers(
 
   if (producerIds.size === 0) return;
 
-  const inserts = [...producerIds].map((userId) => ({
-    user_id: userId,
-    type: notification.type,
-    level: notification.level || "info",
-    title: notification.title,
-    body: notification.body || "",
-    campaign_id: campaignId,
-  }));
+  // Dedup: skip users who already got a notification with the same (user_id, campaign_id, type)
+  // in the last 5 minutes. Protects against duplicate notifications from concurrent PATCH races.
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const { data: recent } = await supabase
+    .from("notifications")
+    .select("user_id")
+    .in("user_id", [...producerIds])
+    .eq("campaign_id", campaignId)
+    .eq("type", notification.type)
+    .gte("created_at", fiveMinAgo);
+  const recentUserIds = new Set((recent || []).map((r: { user_id: string }) => r.user_id));
+
+  const inserts = [...producerIds]
+    .filter((userId) => !recentUserIds.has(userId))
+    .map((userId) => ({
+      user_id: userId,
+      type: notification.type,
+      level: notification.level || "info",
+      title: notification.title,
+      body: notification.body || "",
+      campaign_id: campaignId,
+    }));
+
+  if (inserts.length === 0) return;
 
   const { error } = await supabase.from("notifications").insert(inserts);
   if (error) throw error;

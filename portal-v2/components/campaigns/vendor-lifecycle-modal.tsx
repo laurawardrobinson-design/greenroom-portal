@@ -341,8 +341,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
         const d = await res.json();
         throw new Error(d.error || "Failed");
       }
-      setLocalStatus(targetStatus);
-      mutateCv();
+      await mutateCv();
       onStatusChange();
     } catch (err) {
       toast("error", err instanceof Error ? err.message : "Action failed");

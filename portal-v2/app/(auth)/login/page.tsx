@@ -26,6 +26,7 @@ export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [vendorLoading, setVendorLoading] = useState(false);
+  const [vendorError, setVendorError] = useState<string | null>(null);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetMessage, setResetMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -38,14 +39,14 @@ export default function LoginPage() {
 
   async function fetchDemoVendors() {
     setVendorLoading(true);
+    setVendorError(null);
     try {
       const res = await fetch("/api/demo/vendors");
-      if (res.ok) {
-        const data = await res.json();
-        setVendors(data.vendors || []);
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setVendors(data.vendors || []);
     } catch {
-      console.error("Failed to fetch vendors");
+      setVendorError("Failed to load vendors. Check your connection and try again.");
     }
     setVendorLoading(false);
   }
@@ -131,22 +132,10 @@ export default function LoginPage() {
 
         {/* Sign in card */}
         <div className="rounded-xl bg-white/[0.07] backdrop-blur-sm border border-white/10 p-6">
-          {/* SSO Placeholder (not yet wired up) */}
-          <div className="flex w-full items-center justify-center gap-3 rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-400 shadow-sm cursor-not-allowed select-none">
-            Placeholder - Single Sign On
-          </div>
-
           {/* Dev login */}
           {DEV_AUTH && (
             <>
-              <div className="my-5 flex items-center gap-3">
-                <div className="h-px flex-1 bg-white/15" />
-                <span className="text-[10px] font-medium uppercase tracking-widest text-white/50">
-                  Dev Mode
-                </span>
-                <div className="h-px flex-1 bg-white/15" />
-              </div>
-              <p className="-mt-3 mb-4 text-center text-xs text-white/50">Click any role to sign in instantly</p>
+              <p className="mb-4 text-center text-xs text-white/50">Click any role to sign in instantly</p>
 
               {/* Vendor selector (shown when vendor is selected) */}
               {selectedRole === "vendor" ? (
@@ -157,6 +146,16 @@ export default function LoginPage() {
                     </label>
                     {vendorLoading ? (
                       <div className="text-center py-4 text-sm text-white/50">Loading vendors...</div>
+                    ) : vendorError ? (
+                      <div className="text-center py-4 space-y-2">
+                        <p className="text-sm text-red-300">{vendorError}</p>
+                        <button
+                          onClick={fetchDemoVendors}
+                          className="text-xs text-white/70 underline hover:text-white"
+                        >
+                          Retry
+                        </button>
+                      </div>
                     ) : vendors.length === 0 ? (
                       <div className="text-center py-4 text-sm text-white/50">No demo vendors found</div>
                     ) : (

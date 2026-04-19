@@ -29,7 +29,6 @@ import { useRouter } from "next/navigation";
 import { GatorEasterEgg } from "./gator-easter-egg";
 import { NotificationBell } from "./notification-bell";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { SidebarPendingBadge } from "./sidebar-pending-badge";
 
 interface NavItem {
   label: string;
@@ -113,7 +112,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "Products",
-    href: "/food",
+    href: "/products",
     icon: Utensils,
     roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director"],
   },
@@ -133,7 +132,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Goals",
     href: "/goals",
     icon: Compass,
-    roles: ["Admin", "Producer", "Post Producer", "Studio"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director"],
   },
   {
     label: "Settings",
@@ -176,7 +175,6 @@ export function Sidebar({
     if (item.href === "/vendor-workflow" && userRole === "Vendor") return hasAssignments;
     return true;
   });
-  const showPendingBadge = userRole === "Admin" || userRole === "Producer";
 
   async function handleLogout() {
     const supabase = createClient();

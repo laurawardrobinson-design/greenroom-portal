@@ -169,7 +169,7 @@ export function NotificationBell({ variant = "topbar" }: NotificationBellProps) 
       </button>
 
       {open && (
-        <div className={`absolute z-50 w-96 rounded-xl border border-border bg-surface shadow-xl overflow-hidden ${variant === "sidebar" ? "bottom-full mb-2 left-0" : "top-full mt-2 right-0"}`}>
+        <div className={`absolute z-50 w-96 max-w-[calc(100vw-1rem)] rounded-xl border border-border bg-surface shadow-xl overflow-hidden ${variant === "sidebar" ? "bottom-full mb-2 left-0" : "top-full mt-2 right-0"}`}>
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <h3 className="text-sm font-semibold text-text-primary">Notifications</h3>

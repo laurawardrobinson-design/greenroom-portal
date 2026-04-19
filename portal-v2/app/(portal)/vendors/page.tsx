@@ -87,7 +87,7 @@ export default function VendorsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {vendors.map((vendor) => (
-            <Card key={vendor.id} hover padding="md">
+            <Card key={vendor.id} padding="md">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <h3 className="text-sm font-semibold text-text-primary">
                   {vendor.companyName}

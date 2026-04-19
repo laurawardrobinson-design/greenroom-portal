@@ -1148,6 +1148,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
   const [addingItem, setAddingItem] = useState(false);
   const [newNote, setNewNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(jc?.name || "");
   const [referenceUrl, setReferenceUrl] = useState(jc?.referenceUrl || "");
@@ -1269,10 +1270,13 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
   }
 
   async function handleDeleteNote(noteId: string) {
+    setDeletingNoteId(noteId);
     try {
-      await fetch(`/api/job-classes/${jobClassId}/notes/${noteId}`, { method: "DELETE" });
+      const res = await fetch(`/api/job-classes/${jobClassId}/notes/${noteId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
       mutateNotes();
     } catch { toast("error", "Failed to delete note"); }
+    finally { setDeletingNoteId(null); }
   }
 
   async function handleDeleteClass() {
@@ -1596,7 +1600,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
                   </p>
                 </div>
                 {canEdit && (
-                  <button onClick={() => handleDeleteNote(note.id)} className="shrink-0 rounded-lg p-1.5 text-text-tertiary hover:text-red-500 hover:bg-red-50 transition-colors"><X className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => handleDeleteNote(note.id)} disabled={deletingNoteId === note.id} className="shrink-0 rounded-lg p-1.5 text-text-tertiary hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><X className="h-3.5 w-3.5" /></button>
                 )}
               </div>
             ))}
