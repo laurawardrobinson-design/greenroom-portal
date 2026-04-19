@@ -29,6 +29,9 @@ import {
   Sparkles,
   MousePointerClick,
   FileText,
+  Upload,
+  AlertTriangle,
+  CheckCircle2,
 } from "lucide-react";
 
 const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer"];
@@ -55,9 +58,39 @@ export default function NewRunPage() {
   >({});
   const [showPerRow, setShowPerRow] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [productPickerMode, setProductPickerMode] = useState<"grid" | "csv">("grid");
+  const [productPickerMode, setProductPickerMode] = useState<
+    "grid" | "csv" | "upload"
+  >("grid");
   const [bulkInput, setBulkInput] = useState<string>("");
   const [bulkError, setBulkError] = useState<string>("");
+  // CSV upload state
+  const [csvText, setCsvText] = useState<string>("");
+  const [csvFileName, setCsvFileName] = useState<string>("");
+  const [csvPreview, setCsvPreview] = useState<{
+    headers: string[];
+    productKeyHeader: string;
+    bindingHeaders: string[];
+    ignoredHeaders: string[];
+    matched: Array<{
+      rowIndex: number;
+      rawKey: string;
+      matchedVia: "uuid" | "item_code" | "name" | null;
+      campaignProductId: string | null;
+      productName: string | null;
+      copy: Record<string, string>;
+    }>;
+    unmatched: Array<{
+      rowIndex: number;
+      rawKey: string;
+      matchedVia: null;
+      campaignProductId: null;
+      productName: null;
+      copy: Record<string, string>;
+    }>;
+    warnings: string[];
+  } | null>(null);
+  const [csvParsing, setCsvParsing] = useState(false);
+  const [csvError, setCsvError] = useState<string>("");
 
   // ── Data sources ──────────────────────────────────────────────────────────
   const { data: templates } = useSWR<AssetTemplate[]>(
@@ -381,6 +414,19 @@ export default function NewRunPage() {
                     <FileText className="h-3 w-3" />
                     Paste list
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setProductPickerMode("upload")}
+                    className={`flex items-center gap-1 px-2 py-1 font-medium ${
+                      productPickerMode === "upload"
+                        ? "bg-[var(--as-accent-soft)] text-[var(--as-accent)]"
+                        : "text-[var(--as-text-muted)] hover:bg-[var(--as-surface-2)]"
+                    }`}
+                    aria-label="CSV upload"
+                  >
+                    <Upload className="h-3 w-3" />
+                    CSV upload
+                  </button>
                 </div>
               </div>
             </div>
@@ -441,7 +487,7 @@ export default function NewRunPage() {
                   );
                 })}
               </div>
-            ) : (
+            ) : productPickerMode === "csv" ? (
               <div className="space-y-2">
                 <p className="text-[11px] text-[var(--as-text-subtle)]">
                   Paste one product per line — by SKU/item code, product name, or UUID.
@@ -504,6 +550,185 @@ export default function NewRunPage() {
                     Match {bulkInput.trim() ? `(${bulkInput.split(/[\n,]+/).filter((s) => s.trim()).length})` : ""}
                   </Button>
                 </div>
+              </div>
+            ) : (
+              // CSV upload branch — full Storyteq Batch Creator parity.
+              <div className="space-y-3">
+                <p className="text-[11px] text-[var(--as-text-subtle)]">
+                  Upload a CSV with a header row. First column = product key
+                  (SKU, name, or UUID). Remaining columns = dynamic binding
+                  paths (e.g.{" "}
+                  {dynamicTextBindings.length > 0 ? (
+                    <code className="rounded bg-[var(--as-surface-2)] px-1 py-0.5">
+                      {dynamicTextBindings[0]}
+                    </code>
+                  ) : (
+                    <code className="rounded bg-[var(--as-surface-2)] px-1 py-0.5">
+                      product.name
+                    </code>
+                  )}
+                  ) — each row sets per-product copy overrides automatically.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-[var(--as-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--as-layer-hover)]">
+                    <Upload className="h-3.5 w-3.5" />
+                    {csvFileName ? "Replace file…" : "Choose CSV file…"}
+                    <input
+                      type="file"
+                      accept=".csv,text/csv"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        if (f.size > 1_000_000) {
+                          setCsvError("File is over 1 MB — please split it.");
+                          return;
+                        }
+                        const text = await f.text();
+                        setCsvFileName(f.name);
+                        setCsvText(text);
+                        setCsvPreview(null);
+                        setCsvError("");
+                      }}
+                    />
+                  </label>
+                  {csvFileName && (
+                    <span className="text-[11px] text-[var(--as-text-muted)]">
+                      {csvFileName}
+                    </span>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!csvText || !templateId || !campaignId || csvParsing}
+                    loading={csvParsing}
+                    onClick={async () => {
+                      setCsvParsing(true);
+                      setCsvError("");
+                      try {
+                        const res = await fetch(
+                          "/api/asset-studio/runs/parse-csv",
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              templateId,
+                              campaignId,
+                              csvText,
+                            }),
+                          }
+                        );
+                        const body = await res.json();
+                        if (!res.ok) {
+                          throw new Error(body.error ?? "Parse failed");
+                        }
+                        setCsvPreview(body);
+                      } catch (err) {
+                        setCsvError((err as Error).message);
+                      } finally {
+                        setCsvParsing(false);
+                      }
+                    }}
+                  >
+                    Parse & preview
+                  </Button>
+                  {csvPreview && csvPreview.matched.length > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        // Apply matched rows to state
+                        const sel = new Set<string>();
+                        const copyMap: Record<string, Record<string, string>> = {};
+                        for (const row of csvPreview.matched) {
+                          if (!row.campaignProductId) continue;
+                          sel.add(row.campaignProductId);
+                          if (Object.keys(row.copy).length > 0) {
+                            copyMap[row.campaignProductId] = row.copy;
+                          }
+                        }
+                        setSelectedProducts(sel);
+                        setPerProductCopy((prev) => ({ ...prev, ...copyMap }));
+                        // Expand per-row card so user sees what landed
+                        if (Object.keys(copyMap).length > 0) setShowPerRow(true);
+                        toast(
+                          "success",
+                          `Applied ${sel.size} product${sel.size === 1 ? "" : "s"}${
+                            Object.keys(copyMap).length > 0
+                              ? ` and ${Object.keys(copyMap).length} copy override row${Object.keys(copyMap).length === 1 ? "" : "s"}`
+                              : ""
+                          }`
+                        );
+                      }}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Apply {csvPreview.matched.length} match
+                      {csvPreview.matched.length === 1 ? "" : "es"}
+                    </Button>
+                  )}
+                </div>
+                {csvError && (
+                  <p className="flex items-center gap-1 text-[11px] text-[var(--as-status-failed)]">
+                    <AlertTriangle className="h-3 w-3" />
+                    {csvError}
+                  </p>
+                )}
+                {csvPreview && (
+                  <div className="rounded-lg border border-[var(--as-border)] bg-[var(--as-surface-2)] p-3 text-[11px]">
+                    <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[var(--as-text)]">
+                      <span>
+                        <strong className="text-[var(--as-accent)]">
+                          {csvPreview.matched.length}
+                        </strong>{" "}
+                        matched
+                      </span>
+                      <span>
+                        <strong
+                          className={
+                            csvPreview.unmatched.length > 0
+                              ? "text-[var(--as-status-failed)]"
+                              : "text-[var(--as-text-muted)]"
+                          }
+                        >
+                          {csvPreview.unmatched.length}
+                        </strong>{" "}
+                        unmatched
+                      </span>
+                      <span className="text-[var(--as-text-muted)]">
+                        Copy columns:{" "}
+                        {csvPreview.bindingHeaders.length > 0
+                          ? csvPreview.bindingHeaders.join(", ")
+                          : "none"}
+                      </span>
+                    </div>
+                    {csvPreview.ignoredHeaders.length > 0 && (
+                      <p className="mb-1 text-[var(--as-text-muted)]">
+                        Ignored headers: {csvPreview.ignoredHeaders.join(", ")}
+                      </p>
+                    )}
+                    {csvPreview.warnings.map((w, i) => (
+                      <p key={i} className="text-[var(--as-status-failed)]">
+                        · {w}
+                      </p>
+                    ))}
+                    {csvPreview.unmatched.length > 0 && (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-[var(--as-text-muted)]">
+                          Show unmatched
+                        </summary>
+                        <ul className="ml-3 mt-1 list-disc space-y-0.5 text-[var(--as-text-muted)]">
+                          {csvPreview.unmatched.slice(0, 20).map((r) => (
+                            <li key={r.rowIndex}>
+                              row {r.rowIndex}: “{r.rawKey}”
+                            </li>
+                          ))}
+                          {csvPreview.unmatched.length > 20 && (
+                            <li>… and {csvPreview.unmatched.length - 20} more</li>
+                          )}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </Card>
