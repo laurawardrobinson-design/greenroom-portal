@@ -6,6 +6,8 @@ import {
   bulkApproveVariants,
   bulkRejectVariants,
 } from "@/lib/services/variants.service";
+import { logAuditEvent } from "@/lib/services/audit-log.service";
+import { bulkVariantActionSchema, parseBody } from "@/lib/validation/asset-studio";
 import type { VariantStatus } from "@/types/domain";
 
 // GET /api/asset-studio/variants?runId=&status=&templateId=&limit=
@@ -33,23 +35,43 @@ export async function GET(request: Request) {
 // body: { ids: string[], action: 'approve' | 'reject', reason? }
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Post Producer"]);
-    const body = (await request.json()) as {
-      ids?: string[];
-      action?: "approve" | "reject";
-      reason?: string;
-    };
-    if (!Array.isArray(body.ids) || body.ids.length === 0 || !body.action) {
-      return NextResponse.json(
-        { error: "ids and action are required" },
-        { status: 400 }
-      );
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
+    const raw = await request.json().catch(() => ({}));
+    const parsed = parseBody(raw, bulkVariantActionSchema);
+    if (!parsed.ok) {
+      return NextResponse.json(parsed.error, { status: 400 });
     }
+    const body = parsed.data;
     if (body.action === "approve") {
       const count = await bulkApproveVariants(body.ids, user.id);
+      // Log each variant so the feed shows exactly what was touched.
+      // Parallel fire-and-forget — audit log failures are swallowed inside the helper.
+      await Promise.all(
+        body.ids.map((vid) =>
+          logAuditEvent({
+            actorId: user.id,
+            actorRole: user.role,
+            targetType: "variant",
+            targetId: vid,
+            action: "bulk_approved",
+          })
+        )
+      );
       return NextResponse.json({ updated: count });
     }
     const count = await bulkRejectVariants(body.ids, user.id, body.reason ?? "");
+    await Promise.all(
+      body.ids.map((vid) =>
+        logAuditEvent({
+          actorId: user.id,
+          actorRole: user.role,
+          targetType: "variant",
+          targetId: vid,
+          action: "bulk_rejected",
+          reason: body.reason ?? null,
+        })
+      )
+    );
     return NextResponse.json({ updated: count });
   } catch (error) {
     return authErrorResponse(error);

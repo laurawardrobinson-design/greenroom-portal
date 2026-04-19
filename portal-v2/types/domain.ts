@@ -1354,7 +1354,13 @@ export interface VariantRunBindings {
   // The output spec ids selected for this run (subset of template's specs).
   output_spec_ids?: string[];
   // Free-form copy overrides keyed by binding path (e.g. { "product.price": "$3.99" })
+  // Applied to every variant in the run unless overridden by copy_overrides_by_product.
   copy_overrides?: Record<string, string>;
+  // Per-campaign-product copy overrides — keyed by campaign_product_id, value is the
+  // same shape as copy_overrides. Merged on top of the global copy_overrides so each
+  // row can carry its own headline / price / badge without affecting its siblings.
+  // This is the Storyteq "Batch Creator" pattern.
+  copy_overrides_by_product?: Record<string, Record<string, string>>;
   [key: string]: unknown;
 }
 
@@ -1427,6 +1433,27 @@ export interface Variant {
   // Joined
   outputSpec?: TemplateOutputSpec | null;
   product?: { id: string; name: string; imageUrl: string | null } | null;
+}
+
+// --- Asset Studio audit log ---
+
+export type AuditTargetType =
+  | "variant"
+  | "variant_run"
+  | "template"
+  | "brand_tokens";
+
+export interface AuditLogEvent {
+  id: string;
+  actorId: string | null;
+  actorRole: string | null;
+  actorName: string | null; // resolved from users join at read time
+  targetType: AuditTargetType;
+  targetId: string;
+  action: string;
+  reason: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
 }
 
 // --- Asset Studio dashboard summary ---

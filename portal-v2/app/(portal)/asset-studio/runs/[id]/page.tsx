@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { fetcher, fmtRelative, statusPillClass } from "@/components/asset-studio/lib";
-import type { Variant, VariantRun, VariantStatus } from "@/types/domain";
+import type { AuditLogEvent, Variant, VariantRun, VariantStatus } from "@/types/domain";
 
 const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer", "Art Director"];
 
@@ -86,7 +86,7 @@ export default function RunDetailPage({
   const canControl = ["Admin", "Producer", "Post Producer", "Designer"].includes(
     user.role
   );
-  const canApprove = ["Admin", "Producer", "Post Producer"].includes(user.role);
+  const canApprove = ["Admin", "Producer", "Post Producer", "Art Director"].includes(user.role);
 
   const filtered = statusFilter
     ? variants.filter((v) => v.status === statusFilter)
@@ -384,13 +384,86 @@ export default function RunDetailPage({
                   });
                 }
                 mutate(url);
+                // Kick the audit-log feed so the new event appears without a reload.
+                mutate(`/api/asset-studio/runs/${id}/audit-log`);
               }}
             />
           ))}
         </div>
       )}
+
+      <AuditLogFeed runId={id} />
     </div>
   );
+}
+
+function AuditLogFeed({ runId }: { runId: string }) {
+  const { data: events } = useSWR<AuditLogEvent[]>(
+    `/api/asset-studio/runs/${runId}/audit-log`,
+    fetcher,
+    { refreshInterval: 10000 }
+  );
+  if (!events || events.length === 0) return null;
+  return (
+    <Card padding="none" className="border-[var(--as-border)] bg-[var(--as-surface)]">
+      <div className="flex items-center gap-2 border-b border-[var(--as-border)] px-3.5 py-2.5">
+        <RefreshCw className="h-4 w-4 shrink-0 text-primary" />
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--as-text)]">
+          Audit log
+        </h3>
+        <span className="ml-auto text-[11px] text-[var(--as-text-subtle)]">
+          {events.length} event{events.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      <ul className="max-h-72 overflow-y-auto divide-y divide-[var(--as-border)] text-xs">
+        {events.map((e) => (
+          <li key={e.id} className="flex items-start gap-3 px-3.5 py-2">
+            <span className="w-20 shrink-0 text-[var(--as-text-subtle)]">
+              {fmtRelative(e.createdAt)}
+            </span>
+            <span className="w-28 shrink-0 font-medium text-[var(--as-text)]">
+              {e.actorName ?? (e.actorRole === "system" ? "System" : "—")}
+              {e.actorRole && e.actorRole !== "system" && (
+                <span className="ml-1 text-[10px] text-[var(--as-text-subtle)]">
+                  ({e.actorRole})
+                </span>
+              )}
+            </span>
+            <span className="flex-1 text-[var(--as-text-muted)]">
+              <AuditActionLabel action={e.action} targetType={e.targetType} />
+              {e.reason && (
+                <span className="ml-1 text-[var(--as-text-subtle)]">
+                  — “{e.reason}”
+                </span>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function AuditActionLabel({
+  action,
+  targetType,
+}: {
+  action: string;
+  targetType: string;
+}) {
+  const map: Record<string, string> = {
+    approved: "approved a variant",
+    rejected: "rejected a variant",
+    bulk_approved: "bulk-approved variants",
+    bulk_rejected: "bulk-rejected variants",
+    created: targetType === "variant_run" ? "created this run" : "created",
+    completed: "run completed",
+    failed: "run failed",
+    published: "published template",
+    version_saved: "saved a new template version",
+    version_restored: "restored a prior template version",
+  };
+  return <span>{map[action] ?? action}</span>;
 }
 
 function CountChip({ label, n }: { label: string; n: number }) {

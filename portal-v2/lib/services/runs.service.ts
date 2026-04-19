@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { logAuditEvent } from "@/lib/services/audit-log.service";
+import { createNotification } from "@/lib/services/notifications.service";
 import type {
   VariantRun,
   VariantRunBindings,
@@ -217,6 +219,11 @@ export async function createRun(input: {
   if (runErr) throw runErr;
 
   // Build variant stubs — snapshot product fields into the per-variant bindings.
+  // Per-row copy overrides: start from the run-level global copy, then merge the
+  // per-product overrides on top. This is what makes one run produce 30 different
+  // headlines across 30 products (Storyteq Batch Creator behavior).
+  const globalCopy = input.bindings.copy_overrides ?? {};
+  const perProductCopy = input.bindings.copy_overrides_by_product ?? {};
   const stubs = cps.flatMap((cp: Record<string, unknown>) => {
     const product = (cp.products ?? {}) as Record<string, unknown>;
     const productSnapshot: VariantBindings["product"] = {
@@ -226,6 +233,8 @@ export async function createRun(input: {
       department: (product.department as string | undefined) ?? "",
       item_code: (product.item_code as string | null | undefined) ?? null,
     };
+    const rowCopy = perProductCopy[cp.id as string] ?? {};
+    const mergedCopy: Record<string, string> = { ...globalCopy, ...rowCopy };
     return specs.map((s: Record<string, unknown>) => ({
       run_id: runRow.id,
       template_id: input.templateId,
@@ -236,7 +245,7 @@ export async function createRun(input: {
       status: "pending",
       bindings: {
         product: productSnapshot,
-        copy: input.bindings.copy_overrides ?? {},
+        copy: mergedCopy,
       },
     }));
   });
@@ -276,9 +285,22 @@ export async function updateRunStatus(
 /**
  * Refresh the cached counts on a run by counting child variants directly.
  * Cheaper to call after a batch render completes than tracking deltas client-side.
+ *
+ * Also emits an audit event + notification when the run transitions into a
+ * terminal state (completed / failed). Detection is transition-based so we only
+ * fire once per run regardless of how many times the refresh endpoint is hit.
  */
 export async function refreshRunCounts(id: string): Promise<VariantRun> {
   const supabase = await createClient();
+
+  // Snapshot prior status so we can detect the transition into completed/failed.
+  const { data: priorRow } = await supabase
+    .from("variant_runs")
+    .select("status, created_by, name, campaign_id")
+    .eq("id", id)
+    .single();
+  const priorStatus = (priorRow?.status as VariantRunStatus | null) ?? null;
+
   const { data: variants, error: vErr } = await supabase
     .from("variants")
     .select("status")
@@ -298,8 +320,10 @@ export async function refreshRunCounts(id: string): Promise<VariantRun> {
     completed_variants: completed,
     failed_variants: failed,
   };
+  let nextStatus: VariantRunStatus | null = null;
   if (allDone) {
-    body.status = failed > 0 && completed === 0 ? "failed" : "completed";
+    nextStatus = failed > 0 && completed === 0 ? "failed" : "completed";
+    body.status = nextStatus;
     body.completed_at = new Date().toISOString();
   }
   const { data, error } = await supabase
@@ -309,7 +333,57 @@ export async function refreshRunCounts(id: string): Promise<VariantRun> {
     .select("*, campaigns(id, wf_number, name, brand)")
     .single();
   if (error) throw error;
-  return toRun(data);
+  const run = toRun(data);
+
+  // Fire-and-forget side effects — don't hold the HTTP response.
+  // Only trigger on the first transition into a terminal state.
+  // Only fire on the first transition into a terminal state. Once prior status
+  // is completed/failed, the comparison short-circuits; the extra status-equality
+  // check is redundant because TS narrows prior to non-terminal at this point.
+  const terminalTransition =
+    nextStatus !== null &&
+    priorStatus !== "completed" &&
+    priorStatus !== "failed";
+  if (terminalTransition) {
+    const createdBy = (priorRow?.created_by as string | null) ?? null;
+    const runName = (priorRow?.name as string | null) ?? run.name;
+    const campaignId = (priorRow?.campaign_id as string | null) ?? null;
+
+    // Audit: one run-level event marking completion.
+    await logAuditEvent({
+      actorId: null,
+      actorRole: "system",
+      targetType: "variant_run",
+      targetId: id,
+      action: nextStatus === "completed" ? "completed" : "failed",
+      metadata: {
+        totalVariants: total,
+        completedVariants: completed,
+        failedVariants: failed,
+      },
+    });
+
+    // Notification: tell the person who kicked off the run that it's done.
+    // createdBy may be null on legacy rows — skip silently.
+    if (createdBy) {
+      await createNotification({
+        userId: createdBy,
+        type: "variant_run_complete",
+        level: nextStatus === "completed" ? "info" : "warning",
+        title:
+          nextStatus === "completed"
+            ? `Variant run complete — ${runName}`
+            : `Variant run failed — ${runName}`,
+        body:
+          nextStatus === "completed"
+            ? `${completed} variant${completed === 1 ? "" : "s"} rendered${failed > 0 ? ` (${failed} failed)` : ""}. Ready for review.`
+            : `All variants failed to render. Check the run page for details.`,
+        campaignId: campaignId ?? undefined,
+      });
+    }
+  }
+
+  return run;
 }
 
 export async function cancelRun(id: string): Promise<VariantRun> {

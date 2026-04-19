@@ -5,7 +5,7 @@ import { linkProductToCampaignSchema } from "@/lib/validation/products.schema";
 
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio", "Vendor"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Designer", "Studio", "Vendor"]);
     const { searchParams } = new URL(request.url);
     const campaignId = searchParams.get("campaignId");
     if (!campaignId) {

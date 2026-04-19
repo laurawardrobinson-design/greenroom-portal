@@ -5,7 +5,8 @@ import {
   updateTemplate,
   deleteTemplate,
 } from "@/lib/services/templates.service";
-import type { TemplateStatus } from "@/types/domain";
+import { logAuditEvent } from "@/lib/services/audit-log.service";
+import { updateTemplateSchema, parseBody } from "@/lib/validation/asset-studio";
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -27,18 +28,23 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
   try {
     const user = await requireRole(["Admin", "Producer", "Post Producer", "Designer"]);
     const { id } = await ctx.params;
-    const body = (await request.json()) as Partial<{
-      name: string;
-      description: string;
-      status: TemplateStatus;
-      category: string;
-      brandTokensId: string | null;
-      thumbnailUrl: string | null;
-      canvasWidth: number;
-      canvasHeight: number;
-      backgroundColor: string;
-    }>;
+    const raw = await request.json().catch(() => ({}));
+    const parsed = parseBody(raw, updateTemplateSchema);
+    if (!parsed.ok) {
+      return NextResponse.json(parsed.error, { status: 400 });
+    }
+    const body = parsed.data;
     const template = await updateTemplate(id, body, { userId: user.id });
+    if (body.status === "published") {
+      await logAuditEvent({
+        actorId: user.id,
+        actorRole: user.role,
+        targetType: "template",
+        targetId: id,
+        action: "published",
+        metadata: { versionId: template.currentVersionId ?? null },
+      });
+    }
     return NextResponse.json(template);
   } catch (error) {
     return authErrorResponse(error);

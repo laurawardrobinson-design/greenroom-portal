@@ -48,6 +48,12 @@ export default function NewRunPage() {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [selectedSpecs, setSelectedSpecs] = useState<Set<string>>(new Set());
   const [copyOverrides, setCopyOverrides] = useState<Record<string, string>>({});
+  // Per-row copy overrides keyed by campaign_product_id → { bindingPath → text }.
+  // Merged on top of the global copyOverrides when the run is created.
+  const [perProductCopy, setPerProductCopy] = useState<
+    Record<string, Record<string, string>>
+  >({});
+  const [showPerRow, setShowPerRow] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [productPickerMode, setProductPickerMode] = useState<"grid" | "csv">("grid");
   const [bulkInput, setBulkInput] = useState<string>("");
@@ -174,6 +180,16 @@ export default function NewRunPage() {
       const cleanedOverrides = Object.fromEntries(
         Object.entries(copyOverrides).filter(([, v]) => v && v.trim() !== "")
       );
+      // Strip empty/whitespace cells from per-row overrides, and drop rows for
+      // products that aren't selected. Only send a non-empty dict.
+      const cleanedPerRow: Record<string, Record<string, string>> = {};
+      for (const [cpId, fields] of Object.entries(perProductCopy)) {
+        if (!selectedProducts.has(cpId)) continue;
+        const nonEmpty = Object.fromEntries(
+          Object.entries(fields).filter(([, v]) => v && v.trim() !== "")
+        );
+        if (Object.keys(nonEmpty).length > 0) cleanedPerRow[cpId] = nonEmpty;
+      }
       const res = await fetch("/api/asset-studio/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -189,6 +205,8 @@ export default function NewRunPage() {
               Object.keys(cleanedOverrides).length > 0
                 ? cleanedOverrides
                 : undefined,
+            copy_overrides_by_product:
+              Object.keys(cleanedPerRow).length > 0 ? cleanedPerRow : undefined,
           },
         }),
       });
@@ -543,10 +561,10 @@ export default function NewRunPage() {
           {/* Step 5: Copy overrides (optional) */}
           {dynamicTextBindings.length > 0 && (
             <Card padding="lg" className="border-[var(--as-border)] bg-[var(--as-surface)]">
-              <StepHeader n={5} title="Copy overrides (optional)" />
+              <StepHeader n={5} title="Global copy overrides (optional)" />
               <p className="mb-3 text-xs text-[var(--as-text-muted)]">
                 Leave blank to use each product&apos;s field value. Overrides apply to
-                every variant in this run.
+                every variant in this run unless a per-row override is set in step 6.
               </p>
               <div className="space-y-2">
                 {dynamicTextBindings.map((binding) => (
@@ -572,6 +590,105 @@ export default function NewRunPage() {
                   </div>
                 ))}
               </div>
+            </Card>
+          )}
+
+          {/* Step 6: Per-row copy overrides (optional, requires selected products + dynamic bindings) */}
+          {dynamicTextBindings.length > 0 && selectedProducts.size > 0 && (
+            <Card padding="lg" className="border-[var(--as-border)] bg-[var(--as-surface)]">
+              <div className="flex items-center justify-between">
+                <StepHeader n={6} title="Per-row copy overrides (optional)" />
+                <button
+                  type="button"
+                  onClick={() => setShowPerRow((v) => !v)}
+                  className="text-xs font-medium text-[var(--as-accent)] hover:underline"
+                >
+                  {showPerRow ? "Hide" : `Edit ${selectedProducts.size} row${selectedProducts.size === 1 ? "" : "s"}`}
+                </button>
+              </div>
+              <p className="mb-3 text-xs text-[var(--as-text-muted)]">
+                Set different copy for individual products — the Storyteq Batch Creator
+                pattern. Overrides here win over the global copy in step 5.
+              </p>
+              {showPerRow && (
+                <div className="overflow-x-auto rounded-lg border border-[var(--as-border)]">
+                  <table className="w-full text-xs">
+                    <thead className="bg-[var(--as-surface-2)] text-[var(--as-text-muted)]">
+                      <tr>
+                        <th className="sticky left-0 z-10 bg-[var(--as-surface-2)] px-3 py-2 text-left font-semibold">
+                          Product
+                        </th>
+                        {dynamicTextBindings.map((b) => (
+                          <th
+                            key={b}
+                            className="min-w-[160px] px-2 py-2 text-left font-semibold"
+                          >
+                            <code className="rounded bg-[var(--as-surface)] px-1 py-0.5 text-[11px]">
+                              {b}
+                            </code>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(campaignProducts ?? [])
+                        .filter((cp) => selectedProducts.has(cp.id))
+                        .map((cp) => {
+                          const rowCopy = perProductCopy[cp.id] ?? {};
+                          const p = cp.product;
+                          return (
+                            <tr key={cp.id} className="border-t border-[var(--as-border)]">
+                              <td className="sticky left-0 z-10 bg-[var(--as-surface)] px-3 py-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded border border-[var(--as-border)] bg-[var(--as-canvas-bg)]">
+                                    {p?.imageUrl ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={p.imageUrl}
+                                        alt=""
+                                        className="h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <ImageOff className="h-3.5 w-3.5 text-[var(--as-text-subtle)]" />
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="truncate font-medium text-[var(--as-text)]">
+                                      {p?.name ?? "Unknown"}
+                                    </p>
+                                    <p className="truncate text-[10px] text-[var(--as-text-subtle)]">
+                                      {p?.itemCode ?? ""}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                              {dynamicTextBindings.map((b) => (
+                                <td key={b} className="px-2 py-2 align-middle">
+                                  <Input
+                                    value={rowCopy[b] ?? ""}
+                                    onChange={(e) =>
+                                      setPerProductCopy((prev) => ({
+                                        ...prev,
+                                        [cp.id]: {
+                                          ...(prev[cp.id] ?? {}),
+                                          [b]: e.target.value,
+                                        },
+                                      }))
+                                    }
+                                    placeholder={
+                                      copyOverrides[b] ? `(uses “${copyOverrides[b]}”)` : "(default)"
+                                    }
+                                    className="h-8 text-xs"
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </Card>
           )}
         </div>

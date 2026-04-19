@@ -43,7 +43,7 @@ export const PERMISSIONS = {
     // Kick off a variant run
     runVariants: ["Admin", "Producer", "Post Producer", "Designer"] as UserRole[],
     // Approve or reject rendered variants
-    approveVariants: ["Admin", "Producer", "Post Producer"] as UserRole[],
+    approveVariants: ["Admin", "Producer", "Post Producer", "Art Director"] as UserRole[],
   },
 } as const;
 
