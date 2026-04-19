@@ -36,7 +36,15 @@ import {
   Eye,
   X,
   Languages,
+  CheckSquare,
+  Square,
 } from "lucide-react";
+import {
+  SIZE_PRESETS,
+  CATEGORY_META,
+  type SizePreset,
+  type SizePresetCategory,
+} from "@/lib/asset-studio/size-presets";
 
 const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer"];
 
@@ -1351,22 +1359,35 @@ function OutputSpecsPanel({
     }
   }
 
+  const [presetOpen, setPresetOpen] = useState(false);
+
   return (
     <div className="rounded-xl border border-[var(--as-border)] bg-[var(--as-surface)] p-3">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[var(--as-text)]">Output sizes</h3>
-        <button
-          type="button"
-          onClick={ensureDefaults}
-          disabled={busy}
-          className="text-xs font-medium text-[var(--as-accent)] hover:text-[var(--as-accent-hover)]"
-        >
-          + Defaults
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setPresetOpen(true)}
+            disabled={busy}
+            className="text-xs font-medium text-[var(--as-accent)] hover:text-[var(--as-accent-hover)]"
+          >
+            + POP &amp; digital pack
+          </button>
+          <button
+            type="button"
+            onClick={ensureDefaults}
+            disabled={busy}
+            className="text-xs font-medium text-[var(--as-text-muted)] hover:text-[var(--as-text)]"
+          >
+            + Defaults
+          </button>
+        </div>
       </div>
       {specs.length === 0 ? (
         <p className="text-xs text-[var(--as-text-muted)]">
-          No output sizes. Add the Storyteq defaults to get 1:1, 4:5, and 9:16.
+          No output sizes. Add retail POP + digital sizes, or the Storyteq
+          defaults (1:1, 4:5, 9:16).
         </p>
       ) : (
         <ul className="space-y-1">
@@ -1394,6 +1415,229 @@ function OutputSpecsPanel({
           ))}
         </ul>
       )}
+      {presetOpen && (
+        <PresetPickerModal
+          templateId={template.id}
+          existing={specs}
+          onClose={() => setPresetOpen(false)}
+          onApplied={() => {
+            mutate(mutateUrl);
+            setPresetOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function PresetPickerModal({
+  templateId,
+  existing,
+  onClose,
+  onApplied,
+}: {
+  templateId: string;
+  existing: TemplateOutputSpec[];
+  onClose: () => void;
+  onApplied: () => void;
+}) {
+  const { toast } = useToast();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+
+  // Build a lookup of existing sizes so we can gray out already-added presets.
+  const existingKeys = new Set(
+    existing.map((s) => `${s.label}|${s.width}x${s.height}`)
+  );
+
+  const grouped: Record<SizePresetCategory, SizePreset[]> = {
+    shelf: [],
+    aisle: [],
+    endcap: [],
+    counter: [],
+    window: [],
+    print: [],
+    social: [],
+    email: [],
+    display: [],
+  };
+  for (const p of SIZE_PRESETS) grouped[p.category].push(p);
+
+  function toggle(code: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  }
+
+  function selectGroup(group: "physical" | "digital") {
+    const picks = SIZE_PRESETS.filter(
+      (p) =>
+        CATEGORY_META[p.category].group === group &&
+        !existingKeys.has(`${p.label}|${p.width}x${p.height}`)
+    ).map((p) => p.code);
+    setSelected(new Set(picks));
+  }
+
+  async function apply() {
+    if (selected.size === 0) return;
+    setBusy(true);
+    try {
+      const res = await fetch(
+        `/api/asset-studio/templates/${templateId}/output-specs`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ presetCodes: Array.from(selected) }),
+        }
+      );
+      const body = (await res.json()) as {
+        created?: number;
+        duplicates?: string[];
+        skipped?: string[];
+      };
+      if (!res.ok) throw new Error("Request failed");
+      const msg = `Added ${body.created ?? 0} size${body.created === 1 ? "" : "s"}${
+        body.duplicates && body.duplicates.length > 0
+          ? ` (${body.duplicates.length} already present)`
+          : ""
+      }`;
+      toast("success", msg);
+      onApplied();
+    } catch {
+      toast("error", "Couldn't apply preset pack");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-[var(--as-surface)] shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-[var(--as-border)] px-4 py-3">
+          <div>
+            <h2 className="text-sm font-semibold text-[var(--as-text)]">
+              Retail POP + digital sizes
+            </h2>
+            <p className="text-[11px] text-[var(--as-text-muted)]">
+              Applied in one batch. Already-present sizes are skipped automatically.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 text-[var(--as-text-subtle)] hover:bg-[var(--as-surface-2)]"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2 border-b border-[var(--as-border)] bg-[var(--as-surface-2)] px-4 py-2 text-[11px]">
+          <button
+            type="button"
+            onClick={() => selectGroup("physical")}
+            className="rounded-md border border-[var(--as-border)] px-2 py-1 font-medium hover:bg-[var(--as-layer-hover)]"
+          >
+            Select all in-store + print
+          </button>
+          <button
+            type="button"
+            onClick={() => selectGroup("digital")}
+            className="rounded-md border border-[var(--as-border)] px-2 py-1 font-medium hover:bg-[var(--as-layer-hover)]"
+          >
+            Select all digital
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className="rounded-md border border-[var(--as-border)] px-2 py-1 font-medium text-[var(--as-text-muted)] hover:bg-[var(--as-layer-hover)]"
+          >
+            Clear
+          </button>
+          <span className="ml-auto self-center text-[var(--as-text-muted)]">
+            {selected.size} selected
+          </span>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          {(
+            Object.keys(CATEGORY_META) as SizePresetCategory[]
+          ).map((cat) => (
+            <div key={cat} className="mb-4 last:mb-0">
+              <div className="mb-1 flex items-center gap-2">
+                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--as-text-muted)]">
+                  {CATEGORY_META[cat].label}
+                </h3>
+                <span className="text-[10px] text-[var(--as-text-subtle)]">
+                  {CATEGORY_META[cat].group === "physical" ? "In-store / print" : "Digital"}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 md:grid-cols-3">
+                {grouped[cat].map((p) => {
+                  const isExisting = existingKeys.has(
+                    `${p.label}|${p.width}x${p.height}`
+                  );
+                  const isSelected = selected.has(p.code);
+                  return (
+                    <button
+                      key={p.code}
+                      type="button"
+                      disabled={isExisting}
+                      onClick={() => toggle(p.code)}
+                      className={`flex flex-col items-start rounded-md border p-2 text-left transition-colors ${
+                        isExisting
+                          ? "cursor-default border-[var(--as-border)] bg-[var(--as-surface-2)] opacity-50"
+                          : isSelected
+                            ? "border-[var(--as-accent)] bg-[var(--as-accent-soft)]"
+                            : "border-[var(--as-border)] hover:bg-[var(--as-layer-hover)]"
+                      }`}
+                      title={p.description}
+                    >
+                      <div className="flex w-full items-center justify-between">
+                        <span className="text-xs font-medium text-[var(--as-text)]">
+                          {p.label}
+                        </span>
+                        {isExisting ? (
+                          <span className="text-[10px] text-[var(--as-text-subtle)]">
+                            added
+                          </span>
+                        ) : isSelected ? (
+                          <CheckSquare className="h-3.5 w-3.5 text-[var(--as-accent)]" />
+                        ) : (
+                          <Square className="h-3.5 w-3.5 text-[var(--as-text-subtle)]" />
+                        )}
+                      </div>
+                      <span className="text-[10px] text-[var(--as-text-subtle)]">
+                        {p.width}×{p.height}
+                        {p.physical
+                          ? ` · ${p.physical.widthIn}×${p.physical.heightIn} in`
+                          : ""}
+                        {" · "}
+                        {p.format.toUpperCase()}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-[var(--as-border)] px-4 py-3">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button size="sm" disabled={selected.size === 0 || busy} loading={busy} onClick={apply}>
+            Add {selected.size || ""} size{selected.size === 1 ? "" : "s"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
