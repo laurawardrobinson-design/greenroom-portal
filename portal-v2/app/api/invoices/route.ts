@@ -46,6 +46,25 @@ export async function POST(request: Request) {
       );
     }
 
+    const ALLOWED_INVOICE_TYPES = new Set([
+      "application/pdf",
+      "image/png",
+      "image/jpeg",
+    ]);
+    const MAX_INVOICE_BYTES = 10 * 1024 * 1024;
+    if (!ALLOWED_INVOICE_TYPES.has(file.type)) {
+      return NextResponse.json(
+        { error: "Invoice must be a PDF, PNG, or JPG" },
+        { status: 400 }
+      );
+    }
+    if (file.size > MAX_INVOICE_BYTES) {
+      return NextResponse.json(
+        { error: "Invoice file must be 10 MB or less" },
+        { status: 400 }
+      );
+    }
+
     // Upload to PRIVATE invoices bucket (not public)
     const db = createAdminClient();
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");

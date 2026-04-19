@@ -17,6 +17,7 @@ interface Props {
   campaignId: string;
   canEdit: boolean;
   isVendor: boolean;
+  showVendors?: boolean;
   currentAd: AppUser | null;
   producers: AppUser[];
   allUsers: AppUser[];
@@ -30,6 +31,7 @@ export function PeopleTile({
   campaignId,
   canEdit,
   isVendor,
+  showVendors = true,
   currentAd,
   producers,
   allUsers,
@@ -50,8 +52,8 @@ export function PeopleTile({
         </div>
       </div>
 
-      <div className="grid grid-cols-2">
-        <div className="space-y-2 px-3.5 py-3 border-r border-border">
+      <div className={showVendors ? "grid grid-cols-2" : ""}>
+        <div className={`space-y-2 px-3.5 py-3 ${showVendors ? "border-r border-border" : ""}`}>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
             Internal
           </p>
@@ -67,12 +69,14 @@ export function PeopleTile({
           />
         </div>
 
-        <div className="space-y-2 px-3.5 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
-            Vendors
-          </p>
-          <VendorsTab campaignId={campaignId} canEdit={canEdit} />
-        </div>
+        {showVendors && (
+          <div className="space-y-2 px-3.5 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+              Vendors
+            </p>
+            <VendorsTab campaignId={campaignId} canEdit={canEdit} />
+          </div>
+        )}
       </div>
     </Card>
   );

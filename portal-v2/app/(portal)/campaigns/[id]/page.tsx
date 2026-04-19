@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState, useRef } from "react";
+import Link from "next/link";
 import { useCampaign } from "@/hooks/use-campaigns";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
@@ -25,7 +26,7 @@ import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Bell, AlertCircle, Calendar, X, Info } from "lucide-react";
+import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Bell, AlertCircle, Calendar, X, Info, FolderSync } from "lucide-react";
 import { ShotListModal } from "@/components/campaigns/shot-list-modal";
 import useSWR from "swr";
 import type { AppUser } from "@/types/domain";
@@ -110,7 +111,11 @@ export default function CampaignDetailPage({
   const canDelete = user?.role === "Admin" || user?.role === "Producer" || user?.role === "Post Producer";
   const isVendor = user?.role === "Vendor";
   const isArtDirector = user?.role === "Art Director";
-  const showFinancials = !isVendor && !isArtDirector;
+  const showFinancials =
+    user?.role === "Admin" ||
+    user?.role === "Producer" ||
+    user?.role === "Post Producer";
+  const showVendors = showFinancials;
 
   // Fetch users for producer name + AD picker (needed for non-vendor roles)
   const { data: allUsers = [] } = useSWR<AppUser[]>(
@@ -121,15 +126,19 @@ export default function CampaignDetailPage({
   // Handlers
   async function handleStatusChange(newStatus: CampaignStatus) {
     try {
-      await fetch(`/api/campaigns/${id}`, {
+      const res = await fetch(`/api/campaigns/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
+      if (!res.ok) {
+        const message = await res.text().catch(() => res.statusText);
+        throw new Error(message || "Failed to change status");
+      }
       toast("success", `Status changed to ${newStatus}`);
       mutate();
-    } catch {
-      toast("error", "Failed to change status");
+    } catch (e) {
+      toast("error", e instanceof Error ? e.message : "Failed to change status");
     }
   }
 
@@ -149,14 +158,18 @@ export default function CampaignDetailPage({
 
   async function handleUpdate(field: string, value: string | number | null) {
     try {
-      await fetch(`/api/campaigns/${id}`, {
+      const res = await fetch(`/api/campaigns/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ [field]: value }),
       });
+      if (!res.ok) {
+        const message = await res.text().catch(() => res.statusText);
+        throw new Error(message || "Failed to update");
+      }
       mutate();
-    } catch {
-      toast("error", "Failed to update");
+    } catch (e) {
+      toast("error", e instanceof Error ? e.message : "Failed to update");
     }
   }
 
@@ -352,6 +365,13 @@ export default function CampaignDetailPage({
               onStatusChange={canEdit && campaign.status !== "Cancelled" ? handleStatusChange : undefined}
               disabled={!canEdit || campaign.status === "Cancelled"}
             />
+            <Link
+              href={`/asset-studio?tab=dam&campaignId=${id}`}
+              title="Open DAM placeholder"
+              className="flex items-center justify-center rounded-lg border border-border p-1.5 text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors shrink-0"
+            >
+              <FolderSync className="h-3.5 w-3.5" />
+            </Link>
             <button
               type="button"
               onClick={() => setShowDraftEmail(true)}
@@ -488,6 +508,7 @@ export default function CampaignDetailPage({
             campaignId={id}
             canEdit={canEdit}
             isVendor={isVendor}
+            showVendors={showVendors}
             currentAd={artDirector ?? null}
             producers={producers}
             allUsers={allUsers}
@@ -666,4 +687,3 @@ export default function CampaignDetailPage({
     </div>
   );
 }
-

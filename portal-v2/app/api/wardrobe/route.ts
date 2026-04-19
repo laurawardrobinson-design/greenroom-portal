@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ZodError } from "zod";
 import { getAuthUser, requireRole, authErrorResponse } from "@/lib/auth/guards";
 import {
   listWardrobeItems,
@@ -10,8 +11,24 @@ import {
   batchCheckoutWardrobe,
   batchCheckinWardrobe,
 } from "@/lib/services/wardrobe.service";
-import { createWardrobeSchema } from "@/lib/validation/wardrobe.schema";
-import type { WardrobeCategory, WardrobeCondition } from "@/types/domain";
+import {
+  createWardrobeSchema,
+  checkoutActionSchema,
+  checkinActionSchema,
+  checkinByItemActionSchema,
+  batchCheckoutActionSchema,
+  batchCheckinActionSchema,
+} from "@/lib/validation/wardrobe.schema";
+import type { WardrobeCategory } from "@/types/domain";
+
+function zodErrorResponse(error: ZodError) {
+  const fieldErrors = error.issues.reduce((acc: Record<string, string>, err) => {
+    const path = err.path.join(".") || "unknown";
+    acc[path] = err.message;
+    return acc;
+  }, {});
+  return NextResponse.json({ error: "Validation failed", fieldErrors }, { status: 400 });
+}
 
 export async function GET(request: Request) {
   try {
@@ -45,49 +62,54 @@ export async function POST(request: Request) {
 
     // ── Checkout actions ──────────────────────────────────────────────────────
     if (action === "checkout") {
+      const parsed = checkoutActionSchema.parse(body);
       const checkoutId = await checkoutWardrobeItem({
-        wardrobeItemId: body.wardrobeItemId,
+        wardrobeItemId: parsed.wardrobeItemId,
         userId: user.id,
-        campaignId: body.campaignId,
-        condition: body.condition as WardrobeCondition,
-        notes: body.notes,
-        dueDate: body.dueDate,
+        campaignId: parsed.campaignId,
+        condition: parsed.condition,
+        notes: parsed.notes,
+        dueDate: parsed.dueDate,
       });
       return NextResponse.json({ checkoutId });
     }
 
     if (action === "checkin") {
+      const parsed = checkinActionSchema.parse(body);
       await checkinWardrobeItem({
-        checkoutId: body.checkoutId,
-        condition: body.condition as WardrobeCondition,
-        notes: body.notes,
+        checkoutId: parsed.checkoutId,
+        condition: parsed.condition ?? "Good",
+        notes: parsed.notes,
       });
       return NextResponse.json({ success: true });
     }
 
     if (action === "checkin_by_item") {
+      const parsed = checkinByItemActionSchema.parse(body);
       await checkinWardrobeItemByItemId({
-        wardrobeItemId: body.wardrobeItemId,
-        condition: body.condition as WardrobeCondition,
-        notes: body.notes,
+        wardrobeItemId: parsed.wardrobeItemId,
+        condition: parsed.condition ?? "Good",
+        notes: parsed.notes,
       });
       return NextResponse.json({ success: true });
     }
 
     if (action === "batch_checkout") {
+      const parsed = batchCheckoutActionSchema.parse(body);
       const results = await batchCheckoutWardrobe(
-        body.items,
+        parsed.items,
         user.id,
-        body.campaignId,
-        body.dueDate
+        parsed.campaignId,
+        parsed.dueDate
       );
       return NextResponse.json({ results });
     }
 
     if (action === "batch_checkin") {
+      const parsed = batchCheckinActionSchema.parse(body);
       const results = await batchCheckinWardrobe(
-        body.wardrobeItemIds,
-        body.condition as WardrobeCondition
+        parsed.wardrobeItemIds,
+        parsed.condition ?? "Good"
       );
       return NextResponse.json({ results });
     }
@@ -97,9 +119,7 @@ export async function POST(request: Request) {
     const item = await createWardrobeItem(parsed, user.id);
     return NextResponse.json(item, { status: 201 });
   } catch (error) {
-    if (error instanceof Error && error.name === "ZodError") {
-      return NextResponse.json({ error: "Validation failed" }, { status: 400 });
-    }
+    if (error instanceof ZodError) return zodErrorResponse(error);
     return authErrorResponse(error);
   }
 }

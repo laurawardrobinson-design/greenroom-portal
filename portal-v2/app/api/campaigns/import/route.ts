@@ -26,6 +26,21 @@ export async function POST(request: Request) {
 
     // Only import rows without errors
     const validRows = rows.filter((r) => r.errors.length === 0);
+
+    if (validRows.length === 0) {
+      const errorDetails = rows
+        .filter((r) => r.errors.length > 0)
+        .map((r) => ({
+          row: r.rowNumber,
+          wfNumber: r.wfNumber || `Row ${r.rowNumber}`,
+          error: r.errors.join(", "),
+        }));
+      return NextResponse.json(
+        { error: "No valid rows in CSV", errorDetails },
+        { status: 400 }
+      );
+    }
+
     const results: { wfNumber: string; name: string; id: string }[] = [];
     const errors: { row: number; wfNumber: string; error: string }[] = [];
 

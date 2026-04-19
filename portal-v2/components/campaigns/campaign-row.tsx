@@ -6,6 +6,7 @@ import useSWR from "swr";
 import type { CampaignListItem, AppUser, BudgetRequest } from "@/types/domain";
 import { CampaignStatusBadge } from "./campaign-status-badge";
 import { formatCurrency } from "@/lib/utils/format";
+import { useToast } from "@/components/ui/toast";
 import { format, parseISO, differenceInDays } from "date-fns";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -19,6 +20,7 @@ interface Props {
 
 export function CampaignRow({ campaign, onMutate, hideFinancials, readOnly }: Props) {
   const router = useRouter();
+  const { toast } = useToast();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -45,20 +47,23 @@ export function CampaignRow({ campaign, onMutate, hideFinancials, readOnly }: Pr
   const budgetInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch users for dropdowns (SWR deduplicates across all rows)
-  const { data: producers } = useSWR<AppUser[]>(
+  const { data: rawProducers } = useSWR<AppUser[]>(
     editingProducer ? "/api/users?roles=Producer,Admin" : null,
     fetcher
   );
-  const { data: artDirectors } = useSWR<AppUser[]>(
+  const producers = Array.isArray(rawProducers) ? rawProducers : null;
+  const { data: rawArtDirectors } = useSWR<AppUser[]>(
     editingAD ? "/api/users?roles=Art%20Director,Admin" : null,
     fetcher
   );
+  const artDirectors = Array.isArray(rawArtDirectors) ? rawArtDirectors : null;
 
   // Fetch budget requests when popover opens
-  const { data: requestsData } = useSWR<BudgetRequest[]>(
+  const { data: rawRequestsData } = useSWR<BudgetRequest[]>(
     showFundsPopover ? `/api/budget/requests?campaignId=${campaign.id}` : null,
     fetcher
   );
+  const requestsData = Array.isArray(rawRequestsData) ? rawRequestsData : null;
 
   // Close funds popover on outside click
   useEffect(() => {
@@ -78,12 +83,20 @@ export function CampaignRow({ campaign, onMutate, hideFinancials, readOnly }: Pr
   }, [editingBudget]);
 
   async function patchCampaign(body: Record<string, unknown>) {
-    await fetch(`/api/campaigns/${campaign.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    onMutate?.();
+    try {
+      const res = await fetch(`/api/campaigns/${campaign.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const message = await res.text().catch(() => res.statusText);
+        throw new Error(message || "Update failed");
+      }
+      onMutate?.();
+    } catch (e) {
+      toast("error", e instanceof Error ? e.message : "Update failed");
+    }
   }
 
   async function saveProducer(userId: string) {

@@ -14,10 +14,11 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function RateCardManagement() {
   const { toast } = useToast();
-  const { data: rateCards = [], mutate } = useSWR<RateCard[]>(
+  const { data: rawRateCards, mutate } = useSWR<RateCard[]>(
     "/api/rate-cards",
     fetcher
   );
+  const rateCards = Array.isArray(rawRateCards) ? rawRateCards : [];
   const [adding, setAdding] = useState(false);
   const [newRole, setNewRole] = useState("");
   const [newRate, setNewRate] = useState("");
@@ -69,6 +70,7 @@ export function RateCardManagement() {
   }
 
   async function handleDelete(id: string, role: string) {
+    if (!confirm(`Delete ${role} rate card? This cannot be undone.`)) return;
     try {
       const res = await fetch(`/api/rate-cards?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
