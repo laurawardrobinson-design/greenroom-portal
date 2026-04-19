@@ -30,6 +30,7 @@ function toLayer(row: Record<string, unknown>): TemplateLayer {
     zIndex: Number(row.z_index ?? 0),
     sortOrder: Number(row.sort_order ?? 0),
     props: (row.props as TemplateLayerProps) ?? {},
+    locales: (row.locales as Record<string, string>) ?? {},
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -394,6 +395,7 @@ export async function restoreTemplateVersion(
         z_index: l.zIndex,
         sort_order: l.sortOrder,
         props: l.props,
+        locales: l.locales ?? {},
       }))
     );
   }
@@ -449,6 +451,7 @@ export async function createLayer(input: {
   zIndex?: number;
   sortOrder?: number;
   props?: TemplateLayerProps;
+  locales?: Record<string, string>;
 }): Promise<TemplateLayer> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -469,6 +472,7 @@ export async function createLayer(input: {
       z_index: input.zIndex ?? 0,
       sort_order: input.sortOrder ?? 0,
       props: input.props ?? {},
+      locales: input.locales ?? {},
     })
     .select("*")
     .single();
@@ -493,6 +497,7 @@ export async function updateLayer(
     zIndex: number;
     sortOrder: number;
     props: TemplateLayerProps;
+    locales: Record<string, string>;
   }>
 ): Promise<TemplateLayer> {
   const supabase = await createClient();
@@ -511,6 +516,7 @@ export async function updateLayer(
   if (patch.zIndex !== undefined) body.z_index = patch.zIndex;
   if (patch.sortOrder !== undefined) body.sort_order = patch.sortOrder;
   if (patch.props !== undefined) body.props = patch.props;
+  if (patch.locales !== undefined) body.locales = patch.locales;
   const { data, error } = await supabase
     .from("template_layers")
     .update(body)

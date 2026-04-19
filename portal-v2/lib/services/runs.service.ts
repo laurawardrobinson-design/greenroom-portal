@@ -29,6 +29,7 @@ function toVariant(row: Record<string, unknown>): Variant {
     assetUrl: (row.asset_url as string | null) ?? null,
     storagePath: (row.storage_path as string | null) ?? null,
     thumbnailUrl: (row.thumbnail_url as string | null) ?? null,
+    localeCode: (row.locale_code as string | null) ?? null,
     bindings: (row.bindings as VariantBindings) ?? {},
     errorMessage: (row.error_message as string | null) ?? null,
     approvedBy: (row.approved_by as string | null) ?? null,
@@ -74,6 +75,7 @@ function toRun(row: Record<string, unknown>): VariantRun {
     totalVariants: Number(row.total_variants ?? 0),
     completedVariants: Number(row.completed_variants ?? 0),
     failedVariants: Number(row.failed_variants ?? 0),
+    localeCodes: (row.locale_codes as string[] | null) ?? ["en-US"],
     bindings: (row.bindings as VariantRunBindings) ?? {},
     notes: (row.notes as string) ?? "",
     createdBy: (row.created_by as string | null) ?? null,
@@ -186,7 +188,16 @@ export async function createRun(input: {
     throw new Error("createRun: none of the supplied campaign_product_ids resolved");
   }
 
-  const totalVariants = cps.length * specs.length;
+  // Resolve locale set. Default to a single en-US so pre-073 flows keep
+  // producing exactly one variant per product × spec. Guard against a
+  // caller passing an empty array (would zero out the fan-out).
+  const rawLocales = input.bindings.locale_codes;
+  const localeCodes =
+    Array.isArray(rawLocales) && rawLocales.length > 0
+      ? Array.from(new Set(rawLocales.map((l) => l.trim()).filter(Boolean)))
+      : ["en-US"];
+
+  const totalVariants = cps.length * specs.length * localeCodes.length;
 
   // Look up the template's current version so we can pin this run to it.
   // If the template has never been published, current_version_id is null and
@@ -210,6 +221,7 @@ export async function createRun(input: {
       total_variants: totalVariants,
       completed_variants: 0,
       failed_variants: 0,
+      locale_codes: localeCodes,
       bindings: input.bindings,
       notes: input.notes ?? "",
       created_by: input.createdBy ?? null,
@@ -235,19 +247,24 @@ export async function createRun(input: {
     };
     const rowCopy = perProductCopy[cp.id as string] ?? {};
     const mergedCopy: Record<string, string> = { ...globalCopy, ...rowCopy };
-    return specs.map((s: Record<string, unknown>) => ({
-      run_id: runRow.id,
-      template_id: input.templateId,
-      output_spec_id: s.id,
-      campaign_product_id: cp.id,
-      width: Number(s.width),
-      height: Number(s.height),
-      status: "pending",
-      bindings: {
-        product: productSnapshot,
-        copy: mergedCopy,
-      },
-    }));
+    // Cartesian product: spec × locale. Each combination becomes one variant.
+    return specs.flatMap((s: Record<string, unknown>) =>
+      localeCodes.map((locale) => ({
+        run_id: runRow.id,
+        template_id: input.templateId,
+        output_spec_id: s.id,
+        campaign_product_id: cp.id,
+        width: Number(s.width),
+        height: Number(s.height),
+        status: "pending",
+        locale_code: locale,
+        bindings: {
+          product: productSnapshot,
+          copy: mergedCopy,
+          locale,
+        },
+      }))
+    );
   });
 
   if (stubs.length > 0) {

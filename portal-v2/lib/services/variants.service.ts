@@ -24,6 +24,7 @@ function toVariant(row: Record<string, unknown>): Variant {
     assetUrl: (row.asset_url as string | null) ?? null,
     storagePath: (row.storage_path as string | null) ?? null,
     thumbnailUrl: (row.thumbnail_url as string | null) ?? null,
+    localeCode: (row.locale_code as string | null) ?? null,
     bindings: (row.bindings as VariantBindings) ?? {},
     errorMessage: (row.error_message as string | null) ?? null,
     approvedBy: (row.approved_by as string | null) ?? null,

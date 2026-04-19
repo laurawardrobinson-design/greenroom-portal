@@ -1273,6 +1273,12 @@ export interface TemplateLayer {
   zIndex: number;
   sortOrder: number;
   props: TemplateLayerProps;
+  /**
+   * Per-locale content overrides for text layers. Empty string or missing
+   * key means "fall back to staticValue / dataBinding resolution."
+   * Shape: { "es-US": "Hola", "fr-CA": "Bonjour" }.
+   */
+  locales: Record<string, string>;
   createdAt: string;
   updatedAt: string;
 }
@@ -1353,6 +1359,10 @@ export interface VariantRunBindings {
   campaign_product_ids?: string[];
   // The output spec ids selected for this run (subset of template's specs).
   output_spec_ids?: string[];
+  // Locales to render this run for. Fan-out count = products × specs × locales.
+  // Defaults server-side to ['en-US'] if omitted. Stored alongside the run row
+  // in variant_runs.locale_codes (not just bindings) for queryability.
+  locale_codes?: string[];
   // Free-form copy overrides keyed by binding path (e.g. { "product.price": "$3.99" })
   // Applied to every variant in the run unless overridden by copy_overrides_by_product.
   copy_overrides?: Record<string, string>;
@@ -1374,6 +1384,8 @@ export interface VariantRun {
   totalVariants: number;
   completedVariants: number;
   failedVariants: number;
+  /** Locales this run will fan out across. Server default is ['en-US']. */
+  localeCodes: string[];
   bindings: VariantRunBindings;
   notes: string;
   createdBy: string | null;
@@ -1406,6 +1418,8 @@ export interface VariantBindings {
     item_code?: string | null;
   };
   copy?: Record<string, string>;
+  /** Locale this variant should resolve text layer translations against. */
+  locale?: string;
   [key: string]: unknown;
 }
 
@@ -1421,6 +1435,11 @@ export interface Variant {
   assetUrl: string | null;
   storagePath: string | null;
   thumbnailUrl: string | null;
+  /**
+   * Locale this variant was rendered in. Null on pre-073 variants and on
+   * single-locale runs that never set the column. UI treats null as "default".
+   */
+  localeCode: string | null;
   bindings: VariantBindings;
   errorMessage: string | null;
   approvedBy: string | null;
