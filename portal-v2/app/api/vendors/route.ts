@@ -5,7 +5,7 @@ import { createVendorSchema } from "@/lib/validation/vendors.schema";
 
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Designer"]);
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || undefined;
     const category = searchParams.get("category") || undefined;

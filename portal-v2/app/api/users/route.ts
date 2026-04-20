@@ -5,7 +5,7 @@ import { listUsers, createUser, updateUser } from "@/lib/services/crew.service";
 // GET /api/users?roles=Admin,Producer,Studio
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Designer"]);
     const { searchParams } = new URL(request.url);
     const rolesParam = searchParams.get("roles");
     const roles = rolesParam ? rolesParam.split(",") : undefined;
