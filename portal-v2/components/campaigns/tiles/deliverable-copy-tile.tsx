@@ -11,6 +11,7 @@ interface Props {
   deliverables: CampaignDeliverable[];
   canEdit: boolean;
   onMutate: () => void;
+  bare?: boolean;
 }
 
 type OverrideKey =
@@ -28,8 +29,24 @@ const FIELDS: Array<{ key: OverrideKey; inherit: CampaignCopyKey; label: string 
   { key: "legalOverride",      inherit: "legal",      label: "Legal" },
 ];
 
-export function DeliverableCopyTile({ campaign, deliverables, canEdit, onMutate }: Props) {
+export function DeliverableCopyTile({ campaign, deliverables, canEdit, onMutate, bare }: Props) {
   if (deliverables.length === 0) return null;
+
+  const body = (
+    <div className="divide-y divide-border">
+      {deliverables.map((d) => (
+        <DeliverableRow
+          key={d.id}
+          campaign={campaign}
+          deliverable={d}
+          canEdit={canEdit}
+          onMutate={onMutate}
+        />
+      ))}
+    </div>
+  );
+
+  if (bare) return body;
 
   return (
     <Card padding="none">
@@ -42,18 +59,7 @@ export function DeliverableCopyTile({ campaign, deliverables, canEdit, onMutate 
           Blank = inherits campaign
         </span>
       </div>
-
-      <div className="divide-y divide-border">
-        {deliverables.map((d) => (
-          <DeliverableRow
-            key={d.id}
-            campaign={campaign}
-            deliverable={d}
-            canEdit={canEdit}
-            onMutate={onMutate}
-          />
-        ))}
-      </div>
+      {body}
     </Card>
   );
 }

@@ -6,7 +6,6 @@ import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageTabs } from "@/components/ui/page-tabs";
 import {
-  LayoutGrid,
   FileImage,
   PlayCircle,
   Images,
@@ -15,7 +14,6 @@ import {
   FolderSync,
   ListChecks,
 } from "lucide-react";
-import { OverviewTab } from "@/components/asset-studio/overview-tab";
 import { TemplatesTab } from "@/components/asset-studio/templates-tab";
 import { RunsTab } from "@/components/asset-studio/runs-tab";
 import { VariantsTab } from "@/components/asset-studio/variants-tab";
@@ -25,36 +23,32 @@ import { DamTab } from "@/components/asset-studio/dam-tab";
 import { MyWorkTab } from "@/components/asset-studio/my-work-tab";
 
 type Tab =
-  | "overview"
+  | "my_work"
   | "templates"
   | "runs"
   | "variants"
   | "dam"
-  | "my_work"
   | "brand"
   | "channels";
 
 const TABS: Array<{ id: Tab; label: string; icon: React.ElementType }> = [
-  { id: "overview",  label: "Overview",  icon: LayoutGrid },
+  { id: "my_work",   label: "My Work",   icon: ListChecks },
   { id: "templates", label: "Templates", icon: FileImage },
   { id: "runs",      label: "Runs",      icon: PlayCircle },
-  { id: "variants",  label: "Variants",  icon: Images },
+  { id: "variants",  label: "Mechanicals",  icon: Images },
   { id: "dam",       label: "DAM",       icon: FolderSync },
-  { id: "my_work",   label: "My Work",   icon: ListChecks },
   { id: "brand",     label: "Brand",     icon: Palette },
   { id: "channels",  label: "Channels",  icon: Megaphone },
 ];
 
 const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"];
 
-// Role-aware default landing. Designers open Asset Studio to see the
-// deliverables they need to template — not a dashboard. Art Director
-// and Creative Director default to the variants queue where their
-// approval work lives.
+// Role-aware default landing. Everyone lands on My Work — the one place
+// that shows KPIs, assigned campaigns, and the personal action queue.
+// Art/Creative Directors still default to the approval queue under Variants.
 function defaultTabForRole(role?: string): Tab {
-  if (role === "Designer") return "my_work";
   if (role === "Creative Director" || role === "Art Director") return "variants";
-  return "overview";
+  return "my_work";
 }
 
 export default function AssetStudioPage() {
@@ -101,12 +95,11 @@ export default function AssetStudioPage() {
         onTabChange={(key) => switchTab(key as Tab)}
       />
 
-      {activeTab === "overview"  && <OverviewTab  user={user} />}
+      {activeTab === "my_work"   && <MyWorkTab    user={user} />}
       {activeTab === "templates" && <TemplatesTab user={user} />}
       {activeTab === "runs"      && <RunsTab      user={user} />}
       {activeTab === "variants"  && <VariantsTab  user={user} />}
       {activeTab === "dam"       && <DamTab       user={user} />}
-      {activeTab === "my_work"   && <MyWorkTab    user={user} />}
       {activeTab === "brand"     && <BrandTab     user={user} />}
       {activeTab === "channels"  && <ChannelsTab  user={user} />}
     </div>

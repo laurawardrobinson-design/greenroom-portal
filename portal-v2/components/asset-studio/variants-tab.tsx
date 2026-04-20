@@ -174,11 +174,11 @@ export function VariantsTab({ user, campaignId }: Props) {
       ) : !data || data.length === 0 ? (
         <Card padding="lg" className="border-[var(--as-border)] bg-[var(--as-surface)]">
           <EmptyState
-            title="No variants"
+            title="No mechanicals"
             description={
               status === "rendered"
                 ? "Nothing waiting for approval. Kick off a run to generate more."
-                : "No variants match this filter."
+                : "No mechanicals match this filter."
             }
           />
         </Card>

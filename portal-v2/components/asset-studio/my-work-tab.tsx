@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -8,9 +8,25 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import Link from "next/link";
-import type { AppUser, Campaign, MyWorkQueueItem, WorkflowTransition } from "@/types/domain";
+import type {
+  AppUser,
+  AssetStudioSummary,
+  Campaign,
+  MyWorkQueueItem,
+  WorkflowTransition,
+} from "@/types/domain";
 import { fetcher, fmtRelative, statusPillClass } from "./lib";
-import { CircleCheckBig, ListChecks, Palette, Wand2, PencilLine } from "lucide-react";
+import {
+  CircleCheckBig,
+  ListChecks,
+  Palette,
+  Wand2,
+  PencilLine,
+  FileImage,
+  PlayCircle,
+  Images,
+  CheckCircle2,
+} from "lucide-react";
 
 interface Props {
   user: AppUser;
@@ -42,16 +58,10 @@ export function MyWorkTab({ user }: Props) {
   );
   const myCampaigns = myCampaignsData?.items ?? [];
 
-  const stageSummary = useMemo(() => {
-    const queueItems = data?.items ?? [];
-    const counts = new Map<string, number>();
-    for (const item of queueItems) {
-      counts.set(item.currentStage, (counts.get(item.currentStage) ?? 0) + 1);
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 4);
-  }, [data?.items]);
+  const { data: summary } = useSWR<AssetStudioSummary>(
+    "/api/asset-studio/summary",
+    fetcher
+  );
 
   const items = data?.items ?? [];
 
@@ -324,16 +334,37 @@ export function MyWorkTab({ user }: Props) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-3 lg:grid-cols-4">
-          <StageStat label="Actionable" value={items.length} />
-          <StageStat label="My campaigns" value={myCampaigns.length} />
-          {stageSummary.map(([stage, count]) => (
-            <StageStat
-              key={stage}
-              label={stage.replaceAll("_", " ")}
-              value={count}
-            />
-          ))}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <StageStat
+            label="Actionable"
+            value={items.length}
+            sub="In your queue"
+            icon={ListChecks}
+          />
+          <StageStat
+            label="Templates"
+            value={summary?.publishedTemplateCount ?? 0}
+            sub={`${summary?.templateCount ?? 0} total`}
+            icon={FileImage}
+          />
+          <StageStat
+            label="Active runs"
+            value={summary?.activeRunCount ?? 0}
+            sub="Queued or rendering"
+            icon={PlayCircle}
+          />
+          <StageStat
+            label="Mechanicals this week"
+            value={summary?.variantsThisWeek ?? 0}
+            sub="Last 7 days"
+            icon={Images}
+          />
+          <StageStat
+            label="Pending approval"
+            value={summary?.pendingApprovalCount ?? 0}
+            sub={`${summary?.approvedCount ?? 0} approved`}
+            icon={CheckCircle2}
+          />
         </div>
       </Card>
 
@@ -413,11 +444,35 @@ export function MyWorkTab({ user }: Props) {
   );
 }
 
-function StageStat({ label, value }: { label: string; value: number }) {
+function StageStat({
+  label,
+  value,
+  sub,
+  icon: Icon,
+}: {
+  label: string;
+  value: number;
+  sub?: string;
+  icon?: React.ElementType;
+}) {
   return (
     <div className="rounded-md border border-[var(--as-border)] bg-[var(--as-surface-2)] px-3 py-2">
-      <p className="text-[11px] uppercase tracking-wide text-[var(--as-text-muted)]">{label}</p>
-      <p className="text-lg font-semibold text-[var(--as-text)]">{value.toLocaleString()}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[11px] uppercase tracking-wide text-[var(--as-text-muted)]">{label}</p>
+          <p className="mt-0.5 text-lg font-semibold text-[var(--as-text)]">
+            {value.toLocaleString()}
+          </p>
+          {sub && (
+            <p className="mt-0.5 text-[10px] text-[var(--as-text-subtle)]">{sub}</p>
+          )}
+        </div>
+        {Icon && (
+          <div className="rounded-md bg-[var(--as-surface)] p-1.5 text-[var(--as-text-muted)]">
+            <Icon className="h-3.5 w-3.5" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

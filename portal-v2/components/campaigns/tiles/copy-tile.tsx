@@ -10,6 +10,7 @@ interface Props {
   campaign: Campaign;
   canEdit: boolean;
   onUpdate: (field: string, value: string) => Promise<void>;
+  bare?: boolean;
 }
 
 type CopyField = {
@@ -26,7 +27,26 @@ const FIELDS: CopyField[] = [
   { key: "legal", label: "Legal", hint: "Copyright, brand, registration lines.", multiline: true },
 ];
 
-export function CopyTile({ campaign, canEdit, onUpdate }: Props) {
+export function CopyTile({ campaign, canEdit, onUpdate, bare }: Props) {
+  const body = (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+      {FIELDS.map((field, i) => (
+        <CopyField
+          key={field.key}
+          field={field}
+          value={campaign[field.key] ?? ""}
+          canEdit={canEdit}
+          onUpdate={onUpdate}
+          className={`px-3.5 py-3 ${i < FIELDS.length - 1 ? "border-b md:border-b" : ""} ${
+            i % 2 === 0 ? "md:border-r" : ""
+          } border-border`}
+        />
+      ))}
+    </div>
+  );
+
+  if (bare) return body;
+
   return (
     <Card padding="none">
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
@@ -38,21 +58,7 @@ export function CopyTile({ campaign, canEdit, onUpdate }: Props) {
           Inherits to every deliverable
         </span>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-        {FIELDS.map((field, i) => (
-          <CopyField
-            key={field.key}
-            field={field}
-            value={campaign[field.key] ?? ""}
-            canEdit={canEdit}
-            onUpdate={onUpdate}
-            className={`px-3.5 py-3 ${i < FIELDS.length - 1 ? "border-b md:border-b" : ""} ${
-              i % 2 === 0 ? "md:border-r" : ""
-            } border-border`}
-          />
-        ))}
-      </div>
+      {body}
     </Card>
   );
 }

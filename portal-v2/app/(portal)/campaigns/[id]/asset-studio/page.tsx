@@ -18,11 +18,11 @@ import {
   FolderSync,
   Type,
   Palette,
-  ListChecks,
 } from "lucide-react";
 import { DamTab } from "@/components/asset-studio/dam-tab";
 import { RunsTab } from "@/components/asset-studio/runs-tab";
 import { VariantsTab } from "@/components/asset-studio/variants-tab";
+import { DeliverableTemplatesTile } from "@/components/campaigns/tiles/deliverable-templates-tile";
 import { fetcher } from "@/components/asset-studio/lib";
 import type { CampaignAssignment } from "@/lib/services/campaign-assignments.service";
 
@@ -32,7 +32,7 @@ const TABS: Array<{ id: Tab; label: string; icon: React.ElementType }> = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "dam",      label: "Shoot images", icon: FolderSync },
   { id: "runs",     label: "Runs",     icon: PlayCircle },
-  { id: "variants", label: "Variants", icon: Images },
+  { id: "variants", label: "Mechanicals", icon: Images },
 ];
 
 const ALLOWED_ROLES = [
@@ -137,79 +137,67 @@ function CampaignOverview({
   const ad = assignments.find((a) => a.assignmentRole === "primary_art_director");
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      {/* Brief summary */}
-      <Card padding="none" className="lg:col-span-2">
-        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
-          <Type className="h-4 w-4 shrink-0 text-primary" />
-          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
-            Brief
-          </span>
-          <Link
-            href={`/campaigns/${campaignId}`}
-            className="ml-auto text-[10px] uppercase tracking-wider text-text-tertiary hover:text-text-secondary"
-          >
-            Edit on campaign →
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border">
-          <BriefField label="Headline" value={campaign.headline} />
-          <BriefField label="CTA" value={campaign.cta} />
-          <BriefField label="Disclaimer" value={campaign.disclaimer} />
-          <BriefField label="Legal" value={campaign.legal} />
-        </div>
-      </Card>
+    <div className="space-y-4">
+      {/* Deliverables — primary section: designers work through these */}
+      <DeliverableTemplatesTile
+        campaignId={campaignId}
+        enableActions
+        title="Deliverables"
+      />
 
-      {/* Creative team */}
-      <Card padding="none">
-        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
-          <Palette className="h-4 w-4 shrink-0 text-primary" />
-          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
-            Creative Team
-          </span>
-        </div>
-        <div className="px-3.5 py-3 space-y-2">
-          <TeamRow label="Designer" name={designer?.user?.name ?? null} />
-          <TeamRow label="Art Director" name={ad?.user?.name ?? null} />
-          <Link
-            href={`/campaigns/${campaignId}`}
-            className="block pt-1 text-[10px] uppercase tracking-wider text-text-tertiary hover:text-text-secondary"
-          >
-            Manage team →
-          </Link>
-        </div>
-      </Card>
+      {/* Secondary context: Brief + Creative Team side by side */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card padding="none" className="lg:col-span-2">
+          <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+            <Type className="h-4 w-4 shrink-0 text-primary" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+              Brief
+            </span>
+            <Link
+              href={`/campaigns/${campaignId}`}
+              className="ml-auto text-[10px] uppercase tracking-wider text-text-tertiary hover:text-text-secondary"
+            >
+              Edit on campaign →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border">
+            <BriefField label="Headline" value={campaign.headline} />
+            <BriefField label="CTA" value={campaign.cta} />
+            <BriefField label="Disclaimer" value={campaign.disclaimer} />
+            <BriefField label="Legal" value={campaign.legal} />
+          </div>
+        </Card>
 
-      {/* Quick actions */}
-      <Card padding="none" className="lg:col-span-3">
-        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
-          <ListChecks className="h-4 w-4 shrink-0 text-primary" />
-          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
-            Work on this campaign
-          </span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border">
-          <QuickAction
-            icon={FolderSync}
-            title="Shoot images"
-            subtitle="Find, tag, and hand off photographs to designers."
-            href={`/campaigns/${campaignId}/asset-studio?tab=dam`}
-          />
-          <QuickAction
-            icon={PlayCircle}
-            title="New run"
-            subtitle="Pick a template and products to generate variants."
-            href={`/asset-studio/runs/new?campaignId=${campaignId}`}
-            primary={["Admin", "Producer", "Post Producer", "Designer"].includes(user?.role ?? "")}
-          />
-          <QuickAction
-            icon={Images}
-            title="Variants to review"
-            subtitle="Approve or reject rendered output before delivery."
-            href={`/campaigns/${campaignId}/asset-studio?tab=variants`}
-          />
-        </div>
-      </Card>
+        <Card padding="none">
+          <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+            <Palette className="h-4 w-4 shrink-0 text-primary" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+              Creative Team
+            </span>
+          </div>
+          <div className="px-3.5 py-3 space-y-2">
+            <TeamRow label="Designer" name={designer?.user?.name ?? null} />
+            <TeamRow label="Art Director" name={ad?.user?.name ?? null} />
+            <Link
+              href={`/campaigns/${campaignId}`}
+              className="block pt-1 text-[10px] uppercase tracking-wider text-text-tertiary hover:text-text-secondary"
+            >
+              Manage team →
+            </Link>
+          </div>
+        </Card>
+      </div>
+
+      {/* New run shortcut (for producers / designers once templates are ready) */}
+      {["Admin", "Producer", "Post Producer", "Designer"].includes(user?.role ?? "") && (
+        <Link
+          href={`/asset-studio/runs/new?campaignId=${campaignId}`}
+          className="inline-flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-xs font-medium text-text-primary hover:border-primary hover:text-primary"
+        >
+          <PlayCircle className="h-3.5 w-3.5" />
+          New run from a ready template
+        </Link>
+      )}
     </div>
   );
 }
@@ -240,37 +228,3 @@ function TeamRow({ label, name }: { label: string; name: string | null }) {
   );
 }
 
-function QuickAction({
-  icon: Icon,
-  title,
-  subtitle,
-  href,
-  primary = false,
-}: {
-  icon: React.ElementType;
-  title: string;
-  subtitle: string;
-  href: string;
-  primary?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group flex items-start gap-3 px-3.5 py-3 hover:bg-surface-secondary transition-colors"
-    >
-      <div
-        className={`rounded-md p-1.5 ${
-          primary ? "bg-primary/10 text-primary" : "bg-surface-secondary text-text-secondary"
-        }`}
-      >
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-text-primary group-hover:text-primary transition-colors">
-          {title}
-        </p>
-        <p className="text-[11px] text-text-secondary">{subtitle}</p>
-      </div>
-    </Link>
-  );
-}

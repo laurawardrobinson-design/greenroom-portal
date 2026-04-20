@@ -12,7 +12,7 @@ import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import type { AppUser, AssetTemplate, TemplateStatus } from "@/types/domain";
 import { fetcher, statusPillClass, fmtRelative } from "./lib";
-import { Plus, Search, Pencil, ImageIcon } from "lucide-react";
+import { Plus, Search, Pencil, ImageIcon, History } from "lucide-react";
 
 interface Props {
   user: AppUser;
@@ -139,7 +139,13 @@ export function TemplatesTab({ user }: Props) {
                   <span className={statusPillClass(t.status)}>{t.status}</span>
                 </div>
                 {canManage && (
-                  <div className="mt-3 flex justify-end">
+                  <div className="mt-3 flex justify-end gap-2">
+                    <Link href={`/asset-studio/templates/${t.id}/edit?versions=open`}>
+                      <Button variant="outline" size="sm">
+                        <History className="h-3.5 w-3.5" />
+                        Versions
+                      </Button>
+                    </Link>
                     <Link href={`/asset-studio/templates/${t.id}/edit`}>
                       <Button variant="outline" size="sm">
                         <Pencil className="h-3.5 w-3.5" />

@@ -2,7 +2,7 @@
 
 import React, { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import useSWR, { mutate } from "swr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -384,6 +384,8 @@ function TemplateHeader({
   onToggleInspectorPanel: () => void;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialVersionsOpen = searchParams?.get("versions") === "open";
   const { toast } = useToast();
   const [name, setName] = useState(template.name);
   const [status, setStatus] = useState<TemplateStatus>(template.status);
@@ -477,7 +479,7 @@ function TemplateHeader({
           Save
         </Button>
         <PreviewButton templateId={template.id} outputSpecs={template.outputSpecs ?? []} />
-        <VersionHistoryButton template={template} mutateUrl={mutateUrl} />
+        <VersionHistoryButton template={template} mutateUrl={mutateUrl} initialOpen={initialVersionsOpen} />
         <Link href={`/asset-studio/runs/new?templateId=${template.id}`}>
           <Button size="sm" variant="outline">
             New run
@@ -656,12 +658,14 @@ function PreviewButton({
 function VersionHistoryButton({
   template,
   mutateUrl,
+  initialOpen = false,
 }: {
   template: AssetTemplate;
   mutateUrl: string;
+  initialOpen?: boolean;
 }) {
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [busy, setBusy] = useState(false);
   const versions = (template.versions ?? []).slice().sort((a, b) => b.version - a.version);
   const current = versions.find((v) => v.id === template.currentVersionId);

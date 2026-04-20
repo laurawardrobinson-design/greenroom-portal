@@ -22,8 +22,7 @@ import { LinkGearDrawer } from "@/components/campaigns/link-gear-drawer";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { PeopleTile } from "@/components/campaigns/tiles/people-tile";
 import { BudgetSidebarTile } from "@/components/campaigns/tiles/budget-sidebar-tile";
-import { CopyTile } from "@/components/campaigns/tiles/copy-tile";
-import { DeliverableCopyTile } from "@/components/campaigns/tiles/deliverable-copy-tile";
+import { CopySectionTile } from "@/components/campaigns/tiles/copy-section-tile";
 import { DeliverableTemplatesTile } from "@/components/campaigns/tiles/deliverable-templates-tile";
 import { CreativeTeamTile } from "@/components/campaigns/tiles/creative-team-tile";
 import { useToast } from "@/components/ui/toast";
@@ -506,21 +505,13 @@ export default function CampaignDetailPage({
         onViewFullList={isVendor ? () => setShowShotListModal(true) : undefined}
       />
 
-      {/* === CAMPAIGN COPY (from brief; inherits to deliverables) === */}
+      {/* === COPY (collapsed by default; tabs: Campaign | Per Deliverable) === */}
       {!isVendor && (
-        <CopyTile
-          campaign={campaign}
-          canEdit={canEdit}
-          onUpdate={async (field, value) => { await handleUpdate(field, value); }}
-        />
-      )}
-
-      {/* === DELIVERABLE COPY OVERRIDES === */}
-      {!isVendor && (
-        <DeliverableCopyTile
+        <CopySectionTile
           campaign={campaign}
           deliverables={deliverables}
           canEdit={canEdit}
+          onUpdate={async (field, value) => { await handleUpdate(field, value); }}
           onMutate={mutate}
         />
       )}
