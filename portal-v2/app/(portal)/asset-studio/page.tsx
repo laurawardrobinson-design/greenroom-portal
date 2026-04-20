@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
@@ -48,26 +47,31 @@ const TABS: Array<{ id: Tab; label: string; icon: React.ElementType }> = [
 
 const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"];
 
+// Role-aware default landing. Designers open Asset Studio to see the
+// deliverables they need to template — not a dashboard. Art Director
+// and Creative Director default to the variants queue where their
+// approval work lives.
+function defaultTabForRole(role?: string): Tab {
+  if (role === "Designer") return "my_work";
+  if (role === "Creative Director" || role === "Art Director") return "variants";
+  return "overview";
+}
+
 export default function AssetStudioPage() {
   const { user, isLoading } = useCurrentUser();
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const tabParam = searchParams.get("tab") as Tab | null;
-  const initialTab: Tab = TABS.some((t) => t.id === tabParam)
-    ? (tabParam as Tab)
-    : "overview";
-  const [localTab, setLocalTab] = useState<Tab>(initialTab);
 
-  // Source of truth: whatever's in the URL if valid, otherwise local state.
-  // This lets deep-links (e.g. /asset-studio?tab=runs) work without an effect.
+  // URL wins when present and valid; otherwise pick a landing tab
+  // based on the user's role.
   const activeTab: Tab =
     tabParam && TABS.some((t) => t.id === tabParam)
       ? (tabParam as Tab)
-      : localTab;
+      : defaultTabForRole(user?.role);
 
   function switchTab(tab: Tab) {
-    setLocalTab(tab);
     router.replace(`/asset-studio?tab=${tab}`, { scroll: false });
   }
 

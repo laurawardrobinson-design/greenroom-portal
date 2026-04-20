@@ -408,22 +408,59 @@ function TemplateHeader({
     }
   }
 
+  const deliverableId = template.campaignDeliverableId;
+  const { data: deliverableCtx } = useSWR<{
+    id: string;
+    campaignId: string;
+    channel: string;
+    format: string;
+    width: number;
+    height: number;
+    campaign: { id: string; wf_number: string; name: string } | null;
+  }>(deliverableId ? `/api/deliverables/${deliverableId}` : null, fetcher);
+
+  const isForDeliverable = Boolean(deliverableId);
+  const backHref = isForDeliverable ? "/asset-studio?tab=my_work" : "/asset-studio?tab=templates";
+  const backLabel = isForDeliverable ? "Back to My Work" : "Back to templates";
+
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-[var(--as-border)] bg-[var(--as-surface)] p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-1 items-center gap-3">
-        <button
-          onClick={() => router.push("/asset-studio?tab=templates")}
-          className="rounded-md p-1.5 text-[var(--as-text-muted)] hover:bg-[var(--as-surface-2)]"
-          aria-label="Back to templates"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="max-w-md font-semibold"
-        />
-        <span className={statusPillClass(status)}>{status}</span>
+      <div className="flex flex-1 flex-col gap-1">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push(backHref)}
+            className="rounded-md p-1.5 text-[var(--as-text-muted)] hover:bg-[var(--as-surface-2)]"
+            aria-label={backLabel}
+            title={backLabel}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="max-w-md font-semibold"
+          />
+          <span className={statusPillClass(status)}>{status}</span>
+        </div>
+        {deliverableCtx && (
+          <div className="ml-9 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--as-text-muted)]">
+            <span className="uppercase tracking-wider text-[var(--as-text-subtle)]">For:</span>
+            {deliverableCtx.campaign && (
+              <>
+                <Link
+                  href={`/campaigns/${deliverableCtx.campaign.id}`}
+                  className="font-medium text-[var(--as-text)] hover:text-[var(--as-accent)]"
+                >
+                  {deliverableCtx.campaign.wf_number} · {deliverableCtx.campaign.name}
+                </Link>
+                <span className="text-[var(--as-text-subtle)]">›</span>
+              </>
+            )}
+            <span>
+              {deliverableCtx.channel} {deliverableCtx.format} · {deliverableCtx.width}×{deliverableCtx.height}
+            </span>
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <select
