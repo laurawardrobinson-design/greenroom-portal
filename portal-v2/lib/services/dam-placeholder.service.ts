@@ -17,7 +17,7 @@ import {
 } from "@/lib/services/workflow.service";
 
 const DAM_ASSET_SELECT =
-  "*, campaigns(id, wf_number, name, brand), dam_asset_versions(*), dam_asset_campaigns(campaign_id, campaigns(id, wf_number, name, brand))";
+  "*, campaigns(id, wf_number, name, brand), dam_asset_versions(*), dam_asset_campaigns(campaign_id, campaigns(id, wf_number, name, brand)), dam_asset_products(product_sku)";
 
 function toDamAssetVersion(row: Record<string, unknown>): DamAssetVersion {
   return {
@@ -87,6 +87,15 @@ function toDamAsset(row: Record<string, unknown>): DamAsset {
     .map(toDamAssetVersion)
     .sort((a, b) => b.versionNumber - a.versionNumber);
 
+  const productRows = (row.dam_asset_products as Record<string, unknown>[] | undefined) ?? [];
+  const productSkus = Array.from(
+    new Set(
+      productRows
+        .map((p) => p.product_sku as string | null | undefined)
+        .filter((sku): sku is string => typeof sku === "string" && sku.length > 0)
+    )
+  ).sort();
+
   return {
     id: row.id as string,
     campaignId: (row.campaign_id as string | null) ?? campaigns[0]?.id ?? null,
@@ -111,7 +120,61 @@ function toDamAsset(row: Record<string, unknown>): DamAsset {
     campaign: campaigns[0] ?? null,
     campaigns,
     versions,
+    productSkus,
   };
+}
+
+export async function tagDamAssetProduct(input: {
+  damAssetId: string;
+  productSku: string;
+  taggedBy: string;
+}): Promise<{ productSku: string }> {
+  const db = createAdminClient();
+  const sku = input.productSku.trim();
+  if (!sku) throw new Error("productSku is required");
+  const { error } = await db.from("dam_asset_products").upsert(
+    {
+      dam_asset_id: input.damAssetId,
+      product_sku: sku,
+      tagged_by: input.taggedBy,
+    },
+    { onConflict: "dam_asset_id,product_sku", ignoreDuplicates: true }
+  );
+  if (error) throw error;
+  return { productSku: sku };
+}
+
+export async function untagDamAssetProduct(input: {
+  damAssetId: string;
+  productSku: string;
+}): Promise<void> {
+  const db = createAdminClient();
+  const sku = input.productSku.trim();
+  if (!sku) return;
+  const { error } = await db
+    .from("dam_asset_products")
+    .delete()
+    .eq("dam_asset_id", input.damAssetId)
+    .eq("product_sku", sku);
+  if (error) throw error;
+}
+
+export async function listDamAssetsByProductSku(sku: string): Promise<DamAsset[]> {
+  const db = createAdminClient();
+  const { data: rows, error } = await db
+    .from("dam_asset_products")
+    .select("dam_asset_id")
+    .eq("product_sku", sku);
+  if (error) throw error;
+  const ids = Array.from(new Set((rows ?? []).map((r) => r.dam_asset_id as string)));
+  if (ids.length === 0) return [];
+
+  const { data, error: err2 } = await db
+    .from("dam_assets")
+    .select(DAM_ASSET_SELECT)
+    .in("id", ids);
+  if (err2) throw err2;
+  return (data ?? []).map((row) => toDamAsset(row as Record<string, unknown>));
 }
 
 function isLikelyVisualAsset(fileType: string, fileName: string): boolean {

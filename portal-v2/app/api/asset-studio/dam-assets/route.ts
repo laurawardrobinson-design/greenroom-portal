@@ -21,7 +21,7 @@ const ALLOWED_STATUSES: DamAssetStatus[] = [
 // GET /api/asset-studio/dam-assets?campaignId=&status=&includeSources=true
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"]);
 
     const { searchParams } = new URL(request.url);
     const campaignId = searchParams.get("campaignId") || undefined;
@@ -55,6 +55,7 @@ export async function POST(request: Request) {
       "Post Producer",
       "Designer",
       "Art Director",
+      "Creative Director",
     ]);
 
     const raw = await request.json().catch(() => ({}));

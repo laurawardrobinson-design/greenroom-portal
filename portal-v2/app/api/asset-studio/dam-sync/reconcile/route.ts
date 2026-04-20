@@ -13,6 +13,7 @@ export async function POST(request: Request) {
       "Post Producer",
       "Designer",
       "Art Director",
+      "Creative Director",
     ]);
 
     const raw = await request.json().catch(() => ({}));

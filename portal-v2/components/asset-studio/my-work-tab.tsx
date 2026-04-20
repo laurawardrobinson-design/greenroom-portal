@@ -6,9 +6,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
-import type { AppUser, MyWorkQueueItem, WorkflowTransition } from "@/types/domain";
+import Link from "next/link";
+import type { AppUser, Campaign, MyWorkQueueItem, WorkflowTransition } from "@/types/domain";
 import { fetcher, fmtRelative, statusPillClass } from "./lib";
-import { CircleCheckBig, ListChecks } from "lucide-react";
+import { CircleCheckBig, ListChecks, Palette } from "lucide-react";
 
 interface Props {
   user: AppUser;
@@ -32,6 +33,12 @@ export function MyWorkTab({ user }: Props) {
     "/api/asset-studio/workflows/my-work?limit=100",
     fetcher
   );
+
+  const { data: myCampaignsData } = useSWR<{ items: Array<{ campaign: Campaign; roles: string[] }> }>(
+    "/api/campaigns/mine",
+    fetcher
+  );
+  const myCampaigns = myCampaignsData?.items ?? [];
 
   const stageSummary = useMemo(() => {
     const queueItems = data?.items ?? [];
@@ -123,6 +130,7 @@ export function MyWorkTab({ user }: Props) {
 
         <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-3 lg:grid-cols-4">
           <StageStat label="Actionable" value={items.length} />
+          <StageStat label="My campaigns" value={myCampaigns.length} />
           {stageSummary.map(([stage, count]) => (
             <StageStat
               key={stage}
@@ -132,6 +140,58 @@ export function MyWorkTab({ user }: Props) {
           ))}
         </div>
       </Card>
+
+      {myCampaigns.length > 0 && (
+        <Card padding="none" className="border-[var(--as-border)] bg-[var(--as-surface)]">
+          <div className="flex items-center gap-2 border-b border-[var(--as-border)] px-4 py-3">
+            <Palette className="h-4 w-4 text-[var(--as-accent)]" />
+            <h3 className="text-sm font-semibold text-[var(--as-text)]">My campaigns</h3>
+            <span className="ml-auto text-[11px] uppercase tracking-wider text-[var(--as-text-subtle)]">
+              You own versioning
+            </span>
+          </div>
+          <ul className="divide-y divide-[var(--as-border)]">
+            {myCampaigns.map((row) => (
+              <li key={row.campaign.id} className="px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link
+                      href={`/campaigns/${row.campaign.id}/asset-studio`}
+                      className="truncate text-sm font-semibold text-[var(--as-text)] hover:text-[var(--as-accent)]"
+                    >
+                      {row.campaign.wfNumber ? `${row.campaign.wfNumber} · ` : ""}
+                      {row.campaign.name}
+                    </Link>
+                    <p className="mt-0.5 text-[11px] text-[var(--as-text-subtle)]">
+                      {row.roles
+                        .map((r) =>
+                          r === "primary_designer"
+                            ? "Primary Designer"
+                            : r === "primary_art_director"
+                              ? "Primary Art Director"
+                              : r
+                        )
+                        .join(" · ")}
+                      {row.campaign.assetsDeliveryDate && (
+                        <>
+                          {" · "}
+                          Assets due {row.campaign.assetsDeliveryDate}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/campaigns/${row.campaign.id}/asset-studio`}
+                    className="shrink-0 text-[11px] uppercase tracking-wider text-[var(--as-text-muted)] hover:text-[var(--as-text)]"
+                  >
+                    Open →
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {items.length === 0 ? (
         <Card padding="lg" className="border-[var(--as-border)] bg-[var(--as-surface)]">

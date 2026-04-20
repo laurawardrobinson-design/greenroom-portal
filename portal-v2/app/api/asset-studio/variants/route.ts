@@ -14,7 +14,7 @@ import type { VariantStatus } from "@/types/domain";
 // GET /api/asset-studio/variants?runId=&status=&templateId=&limit=
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"]);
     const { searchParams } = new URL(request.url);
     const runId = searchParams.get("runId");
     if (runId) {
@@ -23,12 +23,13 @@ export async function GET(request: Request) {
     }
     const status = (searchParams.get("status") as VariantStatus | null) || undefined;
     const templateId = searchParams.get("templateId") || undefined;
+    const campaignId = searchParams.get("campaignId") || undefined;
     const limitParam = searchParams.get("limit");
     const parsedLimit = limitParam ? Number(limitParam) : NaN;
     const limit = Number.isFinite(parsedLimit)
       ? Math.max(1, Math.min(500, Math.trunc(parsedLimit)))
       : undefined;
-    const variants = await listVariants({ status, templateId, limit });
+    const variants = await listVariants({ status, templateId, campaignId, limit });
     return NextResponse.json(variants);
   } catch (error) {
     return authErrorResponse(error);
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
 // body: { ids: string[], action: 'approve' | 'reject', reason? }
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
+    const user = await requireRole(["Admin", "Creative Director"]);
     const raw = await request.json().catch(() => ({}));
     const parsed = parseBody(raw, bulkVariantActionSchema);
     if (!parsed.ok) {

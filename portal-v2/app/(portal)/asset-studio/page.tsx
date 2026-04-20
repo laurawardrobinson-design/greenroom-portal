@@ -46,7 +46,7 @@ const TABS: Array<{ id: Tab; label: string; icon: React.ElementType }> = [
   { id: "channels",  label: "Channels",  icon: Megaphone },
 ];
 
-const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer", "Art Director"];
+const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"];
 
 export default function AssetStudioPage() {
   const { user, isLoading } = useCurrentUser();
@@ -77,7 +77,7 @@ export default function AssetStudioPage() {
     return (
       <EmptyState
         title="Access restricted"
-        description="Asset Studio is available to Designers, Producers, Post Producers, Art Directors, and Admins."
+        description="Asset Studio is available to Designers, Producers, Post Producers, Art Directors, Creative Directors, and Admins."
       />
     );
   }

@@ -22,6 +22,10 @@ function toCampaign(row: Record<string, unknown>): Campaign {
     producerId: (row.producer_id as string) || null,
     producerRoles: {},
     artDirectorId: (row.art_director_id as string) || null,
+    headline: (row.headline as string) || "",
+    cta: (row.cta as string) || "",
+    disclaimer: (row.disclaimer as string) || "",
+    legal: (row.legal as string) || "",
     createdBy: (row.created_by as string) || "",
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -255,6 +259,10 @@ export async function getDeliverables(
     quantity: row.quantity,
     notes: row.notes,
     assignedVendorId: row.assigned_vendor_id ?? null,
+    headlineOverride: row.headline_override ?? null,
+    ctaOverride: row.cta_override ?? null,
+    disclaimerOverride: row.disclaimer_override ?? null,
+    legalOverride: row.legal_override ?? null,
   }));
 }
 
@@ -322,6 +330,10 @@ export async function updateCampaign(
     updateData.producer_id = (input as Record<string, unknown>).producerId;
   if ((input as Record<string, unknown>).artDirectorId !== undefined)
     updateData.art_director_id = (input as Record<string, unknown>).artDirectorId;
+  if (input.headline !== undefined) updateData.headline = input.headline;
+  if (input.cta !== undefined) updateData.cta = input.cta;
+  if (input.disclaimer !== undefined) updateData.disclaimer = input.disclaimer;
+  if (input.legal !== undefined) updateData.legal = input.legal;
 
   const { data, error } = await db
     .from("campaigns")

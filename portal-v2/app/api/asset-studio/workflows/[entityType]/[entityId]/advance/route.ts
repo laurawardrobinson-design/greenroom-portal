@@ -23,6 +23,7 @@ export async function POST(request: Request, ctx: RouteCtx) {
       "Post Producer",
       "Designer",
       "Art Director",
+      "Creative Director",
     ]);
 
     const { entityType: rawEntityType, entityId } = await ctx.params;

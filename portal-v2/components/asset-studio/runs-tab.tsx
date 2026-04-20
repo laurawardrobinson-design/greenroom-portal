@@ -12,6 +12,8 @@ import { useState } from "react";
 
 interface Props {
   user: AppUser;
+  // When set, filter runs to just this campaign (used by /campaigns/[id]/asset-studio).
+  campaignId?: string;
 }
 
 const STATUS_OPTIONS: Array<{ value: "" | VariantRunStatus; label: string }> = [
@@ -23,15 +25,19 @@ const STATUS_OPTIONS: Array<{ value: "" | VariantRunStatus; label: string }> = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-export function RunsTab({ user }: Props) {
+export function RunsTab({ user, campaignId }: Props) {
   const [status, setStatus] = useState<"" | VariantRunStatus>("");
   const params = new URLSearchParams();
   if (status) params.set("status", status);
+  if (campaignId) params.set("campaignId", campaignId);
   const qs = params.toString();
   const url = `/api/asset-studio/runs${qs ? `?${qs}` : ""}`;
   const { data, isLoading } = useSWR<VariantRun[]>(url, fetcher);
 
   const canCreate = ["Admin", "Producer", "Post Producer", "Designer"].includes(user.role);
+  const newRunHref = campaignId
+    ? `/asset-studio/runs/new?campaignId=${campaignId}`
+    : "/asset-studio/runs/new";
 
   return (
     <div className="space-y-4">
@@ -52,7 +58,7 @@ export function RunsTab({ user }: Props) {
           ))}
         </div>
         {canCreate && (
-          <Link href="/asset-studio/runs/new">
+          <Link href={newRunHref}>
             <Button size="sm">
               <Plus className="h-4 w-4" />
               New run

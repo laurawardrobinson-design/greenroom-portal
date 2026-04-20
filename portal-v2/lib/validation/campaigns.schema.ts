@@ -38,6 +38,10 @@ export const updateCampaignSchema = z.object({
   notes: z.string().optional(),
   producerId: z.string().uuid().nullable().optional(),
   artDirectorId: z.string().uuid().nullable().optional(),
+  headline: z.string().optional(),
+  cta: z.string().optional(),
+  disclaimer: z.string().optional(),
+  legal: z.string().optional(),
 });
 
 export const campaignStatusSchema = z.enum([

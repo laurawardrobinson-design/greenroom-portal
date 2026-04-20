@@ -13,7 +13,7 @@ type RouteCtx = { params: Promise<{ id: string }> };
 // GET /api/asset-studio/templates/:id — joined with layers + output specs
 export async function GET(_request: Request, ctx: RouteCtx) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"]);
     const { id } = await ctx.params;
     const template = await getTemplate(id);
     if (!template) return NextResponse.json({ error: "Not found" }, { status: 404 });

@@ -8,7 +8,7 @@ type RouteCtx = { params: Promise<{ id: string }> };
 // POST /api/asset-studio/variants/:id/approve
 export async function POST(_request: Request, ctx: RouteCtx) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
+    const user = await requireRole(["Admin", "Creative Director"]);
     const { id } = await ctx.params;
     const current = await getVariant(id);
     if (!current) {

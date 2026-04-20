@@ -54,9 +54,10 @@ export default function NewRunPage() {
   const { toast } = useToast();
 
   const initialTemplateId = searchParams.get("templateId") ?? "";
+  const initialCampaignId = searchParams.get("campaignId") ?? "";
 
   const [templateId, setTemplateId] = useState<string>(initialTemplateId);
-  const [campaignId, setCampaignId] = useState<string>("");
+  const [campaignId, setCampaignId] = useState<string>(initialCampaignId);
   const [runName, setRunName] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
@@ -67,6 +68,9 @@ export default function NewRunPage() {
   const [perProductCopy, setPerProductCopy] = useState<
     Record<string, Record<string, string>>
   >({});
+  // Per-campaign-product image overrides (cp.id → DAM asset file URL). When set,
+  // the variant uses this image instead of the default product-on-white shot.
+  const [imageOverrides, setImageOverrides] = useState<Record<string, string>>({});
   const [showPerRow, setShowPerRow] = useState(false);
   // Locale codes to render. en-US is always present; others are toggleable.
   const [selectedLocales, setSelectedLocales] = useState<Set<string>>(
@@ -125,6 +129,23 @@ export default function NewRunPage() {
     campaignId ? `/api/campaign-products?campaignId=${campaignId}` : null,
     fetcher
   );
+  // Campaign-scoped DAM assets — photographer-uploaded shoot images tagged to
+  // this campaign (and optionally to a SKU). Designers can pick one to swap in
+  // for a product's default on-white shot when building the run.
+  const { data: damLibrary } = useSWR<{
+    assets: Array<{
+      id: string;
+      name: string;
+      fileUrl: string;
+      fileType: string;
+      productSkus?: string[];
+    }>;
+  }>(
+    campaignId
+      ? `/api/asset-studio/dam-assets?includeSources=false&campaignId=${campaignId}`
+      : null,
+    fetcher
+  );
 
   // Default-select all output specs when template loads
   useEffect(() => {
@@ -144,10 +165,44 @@ export default function NewRunPage() {
     }
   }, [templateDetail?.id, campaignId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Clear product selection when campaign changes
+  // Clear product selection and image overrides when campaign changes
   useEffect(() => {
     setSelectedProducts(new Set());
+    setImageOverrides({});
   }, [campaignId]);
+
+  // Prefill copy overrides from campaign-level copy when template + campaign
+  // are picked. Maps bindings whose last segment is headline/cta/disclaimer/legal
+  // to the corresponding campaign field. Does not overwrite values the user
+  // has already typed — only fills empty slots.
+  const campaign = campaigns?.find((c) => c.id === campaignId);
+  useEffect(() => {
+    if (!campaign || !templateDetail?.layers) return;
+    const campaignCopy: Record<string, string> = {
+      headline: campaign.headline ?? "",
+      cta: campaign.cta ?? "",
+      disclaimer: campaign.disclaimer ?? "",
+      legal: campaign.legal ?? "",
+    };
+    const dynamicBindings = templateDetail.layers
+      .filter((l) => l.layerType === "text" && l.isDynamic && l.dataBinding)
+      .map((l) => l.dataBinding);
+
+    setCopyOverrides((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const binding of dynamicBindings) {
+        if (!binding) continue;
+        const last = binding.split(".").pop()?.toLowerCase() ?? "";
+        const candidate = campaignCopy[last];
+        if (candidate && !(next[binding] ?? "").trim()) {
+          next[binding] = candidate;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [campaign?.id, campaign?.headline, campaign?.cta, campaign?.disclaimer, campaign?.legal, templateDetail?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Gather dynamic text layers so we can expose copy_overrides UI
   const dynamicTextBindings = useMemo(() => {
@@ -257,6 +312,13 @@ export default function NewRunPage() {
                 : undefined,
             copy_overrides_by_product:
               Object.keys(cleanedPerRow).length > 0 ? cleanedPerRow : undefined,
+            image_overrides_by_product: (() => {
+              const cleaned: Record<string, string> = {};
+              for (const [cpId, url] of Object.entries(imageOverrides)) {
+                if (selectedProducts.has(cpId) && url) cleaned[cpId] = url;
+              }
+              return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+            })(),
           },
         }),
       });
@@ -766,6 +828,113 @@ export default function NewRunPage() {
               </div>
             )}
           </Card>
+
+          {/* Step 3b: Campaign DAM images (optional image overrides) */}
+          {campaignId && (damLibrary?.assets?.length ?? 0) > 0 && (
+            <Card padding="lg" className="border-[var(--as-border)] bg-[var(--as-surface)]">
+              <StepHeader n={3.5} title="Campaign DAM" />
+              <p className="text-[11px] text-[var(--as-text-subtle)] mb-2">
+                Shoot images uploaded to this campaign. Click to swap in for matching
+                products; products without an override use the default on-white shot.
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                {(damLibrary?.assets ?? [])
+                  .filter((a) => (a.fileType || "").startsWith("image/"))
+                  .map((asset) => {
+                    const skuTags = asset.productSkus ?? [];
+                    const matchingCps = (campaignProducts ?? []).filter((cp) => {
+                      const code = cp.product?.itemCode ?? "";
+                      return skuTags.includes(code);
+                    });
+                    const appliedToCount = matchingCps.filter(
+                      (cp) => imageOverrides[cp.id] === asset.fileUrl
+                    ).length;
+                    const allApplied =
+                      matchingCps.length > 0 && appliedToCount === matchingCps.length;
+
+                    return (
+                      <div
+                        key={asset.id}
+                        className="rounded-lg border border-[var(--as-border)] bg-[var(--as-surface-2)] overflow-hidden"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={asset.fileUrl}
+                          alt={asset.name}
+                          className="h-24 w-full object-cover"
+                        />
+                        <div className="p-2 space-y-1.5">
+                          <p className="truncate text-[11px] text-[var(--as-text)]">
+                            {asset.name}
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {skuTags.length === 0 ? (
+                              <span className="text-[10px] italic text-[var(--as-text-subtle)]">
+                                Untagged
+                              </span>
+                            ) : (
+                              skuTags.slice(0, 3).map((sku) => (
+                                <span
+                                  key={sku}
+                                  className="rounded-full bg-[var(--as-surface)] border border-[var(--as-border)] px-1.5 text-[10px] text-[var(--as-text-muted)]"
+                                >
+                                  {sku}
+                                </span>
+                              ))
+                            )}
+                          </div>
+                          {matchingCps.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setImageOverrides((prev) => {
+                                  const next = { ...prev };
+                                  for (const cp of matchingCps) {
+                                    if (allApplied) delete next[cp.id];
+                                    else next[cp.id] = asset.fileUrl;
+                                  }
+                                  return next;
+                                });
+                                // Ensure those products are selected so overrides apply.
+                                if (!allApplied) {
+                                  setSelectedProducts((prev) => {
+                                    const next = new Set(prev);
+                                    for (const cp of matchingCps) next.add(cp.id);
+                                    return next;
+                                  });
+                                }
+                              }}
+                              className={`w-full rounded-md border px-2 py-1 text-[11px] transition-colors ${
+                                allApplied
+                                  ? "border-[var(--as-accent)] bg-[var(--as-accent-soft)] text-[var(--as-accent)]"
+                                  : "border-[var(--as-border)] hover:bg-[var(--as-layer-hover)]"
+                              }`}
+                            >
+                              {allApplied
+                                ? `Applied to ${matchingCps.length} · click to undo`
+                                : `Apply to ${matchingCps.length} matching`}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+              {Object.keys(imageOverrides).length > 0 && (
+                <p className="mt-2 text-[11px] text-[var(--as-text-subtle)]">
+                  {Object.keys(imageOverrides).length} product(s) using a DAM image
+                  instead of the on-white shot.{" "}
+                  <button
+                    type="button"
+                    onClick={() => setImageOverrides({})}
+                    className="underline hover:text-[var(--as-text)]"
+                  >
+                    Clear all
+                  </button>
+                </p>
+              )}
+            </Card>
+          )}
 
           {/* Step 4: Output sizes + locales (both control the fan-out matrix) */}
           <Card padding="lg" className="border-[var(--as-border)] bg-[var(--as-surface)]">

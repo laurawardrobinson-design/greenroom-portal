@@ -12,6 +12,7 @@ import { Check, X, ImageOff } from "lucide-react";
 
 interface Props {
   user: AppUser;
+  campaignId?: string;
 }
 
 const STATUS_OPTIONS: Array<{ value: "" | VariantStatus; label: string }> = [
@@ -22,16 +23,15 @@ const STATUS_OPTIONS: Array<{ value: "" | VariantStatus; label: string }> = [
   { value: "failed", label: "Failed" },
 ];
 
-export function VariantsTab({ user }: Props) {
+export function VariantsTab({ user, campaignId }: Props) {
   const [status, setStatus] = useState<"" | VariantStatus>("rendered");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const canApprove = ["Admin", "Producer", "Post Producer", "Art Director"].includes(
-    user.role
-  );
+  const canApprove = ["Admin", "Creative Director"].includes(user.role);
 
   const params = new URLSearchParams();
   if (status) params.set("status", status);
+  if (campaignId) params.set("campaignId", campaignId);
   params.set("limit", "200");
   const url = `/api/asset-studio/variants?${params.toString()}`;
   const { data, isLoading } = useSWR<Variant[]>(url, fetcher);

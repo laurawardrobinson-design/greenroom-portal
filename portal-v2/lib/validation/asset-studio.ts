@@ -52,6 +52,9 @@ export const variantRunBindingsSchema = z
     copy_overrides_by_product: z
       .record(uuid, copyOverrideMap)
       .optional(),
+    image_overrides_by_product: z
+      .record(uuid, z.string().url().max(2048))
+      .optional(),
   })
   .passthrough();
 

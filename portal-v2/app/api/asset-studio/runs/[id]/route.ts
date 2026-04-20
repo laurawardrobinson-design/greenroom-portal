@@ -14,7 +14,7 @@ type RouteCtx = { params: Promise<{ id: string }> };
 // GET /api/asset-studio/runs/:id — joined with variants + template + campaign
 export async function GET(_request: Request, ctx: RouteCtx) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"]);
     const { id } = await ctx.params;
     const run = await getRun(id);
     if (!run) return NextResponse.json({ error: "Not found" }, { status: 404 });

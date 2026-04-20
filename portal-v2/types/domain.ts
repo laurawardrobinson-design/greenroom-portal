@@ -9,6 +9,7 @@ export type UserRole =
   | "Studio"
   | "Vendor"
   | "Art Director"
+  | "Creative Director"
   | "Post Producer"
   | "Designer";
 
@@ -126,6 +127,12 @@ export interface Campaign {
   producerId: string | null; // = producerIds[0] ?? null — kept for backward compat
   producerRoles: Record<string, string | null>; // userId → campaign_role override
   artDirectorId: string | null;
+  // Campaign-owned copy (populated from the brief; inherited by deliverables
+  // and prefilled into variant runs).
+  headline: string;
+  cta: string;
+  disclaimer: string;
+  legal: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -201,6 +208,11 @@ export interface CampaignDeliverable {
   quantity: number;
   notes: string;
   assignedVendorId: string | null;
+  // NULL = inherit from campaign; empty string = explicitly blank.
+  headlineOverride: string | null;
+  ctaOverride: string | null;
+  disclaimerOverride: string | null;
+  legalOverride: string | null;
 }
 
 // --- Vendors ---
@@ -1371,6 +1383,10 @@ export interface VariantRunBindings {
   // row can carry its own headline / price / badge without affecting its siblings.
   // This is the Storyteq "Batch Creator" pattern.
   copy_overrides_by_product?: Record<string, Record<string, string>>;
+  // Per-campaign-product DAM asset image overrides — keyed by campaign_product_id.
+  // When present, the variant uses this URL instead of the product's default image_url.
+  // Sourced from campaign-scoped DAM assets picked in the run builder.
+  image_overrides_by_product?: Record<string, string>;
   [key: string]: unknown;
 }
 
@@ -1520,6 +1536,7 @@ export interface DamAsset {
   campaign?: DamAssetCampaignRef | null;
   campaigns: DamAssetCampaignRef[];
   versions?: DamAssetVersion[];
+  productSkus?: string[];
 }
 
 export interface DamAssetSource {

@@ -29,7 +29,7 @@ import type {
   VariantStatus,
 } from "@/types/domain";
 
-const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer", "Art Director"];
+const ALLOWED_ROLES = ["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"];
 
 type RouteParams = { id: string };
 
@@ -85,7 +85,7 @@ export default function RunDetailPage({
     return (
       <EmptyState
         title="Access restricted"
-        description="Asset Studio runs are visible to Designers, Producers, Post Producers, Art Directors, and Admins."
+        description="Asset Studio runs are visible to Designers, Producers, Post Producers, Art Directors, Creative Directors, and Admins."
       />
     );
   }
@@ -101,7 +101,7 @@ export default function RunDetailPage({
   const canControl = ["Admin", "Producer", "Post Producer", "Designer"].includes(
     user.role
   );
-  const canApprove = ["Admin", "Producer", "Post Producer", "Art Director"].includes(user.role);
+  const canApprove = ["Admin", "Creative Director"].includes(user.role);
 
   const filtered = statusFilter
     ? variants.filter((v) => v.status === statusFilter)

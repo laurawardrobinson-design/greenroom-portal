@@ -73,15 +73,29 @@ export async function listVariantsByRun(runId: string): Promise<Variant[]> {
 export async function listVariants(filters?: {
   status?: VariantStatus;
   templateId?: string;
+  campaignId?: string;
   limit?: number;
 }): Promise<Variant[]> {
   const supabase = await createClient();
+
+  let runIdsOnCampaign: string[] | null = null;
+  if (filters?.campaignId) {
+    const { data: runs, error: runErr } = await supabase
+      .from("variant_runs")
+      .select("id")
+      .eq("campaign_id", filters.campaignId);
+    if (runErr) throw runErr;
+    runIdsOnCampaign = (runs ?? []).map((r) => r.id as string);
+    if (runIdsOnCampaign.length === 0) return [];
+  }
+
   let q = supabase
     .from("variants")
     .select("*, template_output_specs(*), campaign_products(*, products(*))")
     .order("created_at", { ascending: false });
   if (filters?.status) q = q.eq("status", filters.status);
   if (filters?.templateId) q = q.eq("template_id", filters.templateId);
+  if (runIdsOnCampaign) q = q.in("run_id", runIdsOnCampaign);
   if (filters?.limit) q = q.limit(Math.max(1, Math.trunc(filters.limit)));
   const { data, error } = await q;
   if (error) throw error;

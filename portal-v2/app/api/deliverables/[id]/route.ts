@@ -8,7 +8,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Creative Director"]);
     const { id } = await params;
     const body = await request.json();
     const db = createAdminClient();
@@ -19,6 +19,10 @@ export async function PATCH(
     }
     if ("notes" in body) updates.notes = body.notes;
     if ("quantity" in body) updates.quantity = body.quantity;
+    if ("headlineOverride" in body) updates.headline_override = body.headlineOverride;
+    if ("ctaOverride" in body) updates.cta_override = body.ctaOverride;
+    if ("disclaimerOverride" in body) updates.disclaimer_override = body.disclaimerOverride;
+    if ("legalOverride" in body) updates.legal_override = body.legalOverride;
 
     const { data, error } = await db
       .from("campaign_deliverables")

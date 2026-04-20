@@ -48,6 +48,7 @@ export async function GET(request: Request, ctx: RouteCtx) {
       "Post Producer",
       "Designer",
       "Art Director",
+      "Creative Director",
     ]);
     const { id: runId } = await ctx.params;
     const url = new URL(request.url);

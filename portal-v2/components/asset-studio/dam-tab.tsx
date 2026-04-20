@@ -17,10 +17,12 @@ import type {
   DamAssetStatus,
 } from "@/types/domain";
 import { fetcher, fmtRelative, statusPillClass } from "./lib";
-import { Camera, FolderSync, Layers, WandSparkles } from "lucide-react";
+import { Camera, FolderSync, Layers, WandSparkles, Plus, Tag, X } from "lucide-react";
 
 interface Props {
   user: AppUser;
+  // When set, lock DAM to this campaign and hide the picker (used by /campaigns/[id]/asset-studio).
+  lockedCampaignId?: string;
 }
 
 const STATUS_OPTIONS: Array<{ value: "" | DamAssetStatus; label: string }> = [
@@ -42,9 +44,9 @@ const LIFECYCLE_STATUSES: DamAssetStatus[] = [
   "archived",
 ];
 
-export function DamTab({ user }: Props) {
+export function DamTab({ user, lockedCampaignId }: Props) {
   const searchParams = useSearchParams();
-  const initialCampaignId = searchParams.get("campaignId") ?? "all";
+  const initialCampaignId = lockedCampaignId ?? searchParams.get("campaignId") ?? "all";
   const [campaignId, setCampaignId] = useState<string>(initialCampaignId);
   const [status, setStatus] = useState<"" | DamAssetStatus>("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -268,22 +270,24 @@ export function DamTab({ user }: Props) {
       </Card>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-[var(--as-text-muted)]">Campaign</label>
-          <select
-            value={campaignId}
-            onChange={(e) => setCampaignId(e.target.value)}
-            className="rounded-md border border-[var(--as-border)] bg-[var(--as-surface)] px-2.5 py-1.5 text-xs text-[var(--as-text)]"
-          >
-            <option value="all">All campaigns</option>
-            {(campaigns ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.wfNumber ? `${c.wfNumber} · ` : ""}
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {!lockedCampaignId && (
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-[var(--as-text-muted)]">Campaign</label>
+            <select
+              value={campaignId}
+              onChange={(e) => setCampaignId(e.target.value)}
+              className="rounded-md border border-[var(--as-border)] bg-[var(--as-surface)] px-2.5 py-1.5 text-xs text-[var(--as-text)]"
+            >
+              <option value="all">All campaigns</option>
+              {(campaigns ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.wfNumber ? `${c.wfNumber} · ` : ""}
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="flex flex-1 flex-wrap gap-1 sm:justify-end">
           {STATUS_OPTIONS.map((opt) => (
@@ -389,7 +393,15 @@ export function DamTab({ user }: Props) {
                 return (
                   <li key={asset.id} className="px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
+                      {(asset.fileType || "").startsWith("image/") && asset.fileUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={asset.fileUrl}
+                          alt={asset.name}
+                          className="h-16 w-16 shrink-0 rounded-md border border-[var(--as-border)] bg-white object-contain"
+                        />
+                      ) : null}
+                      <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-[var(--as-text)]">{asset.name}</p>
                         <p className="mt-0.5 text-xs text-[var(--as-text-muted)]">
                           {linkedCampaigns.length === 0
@@ -416,6 +428,12 @@ export function DamTab({ user }: Props) {
                         <p className="mt-1 text-[11px] text-[var(--as-text-subtle)]">
                           Updated {fmtRelative(asset.updatedAt)} · {asset.versions?.length ?? 0} versions
                         </p>
+                        <ProductSkuRow
+                          assetId={asset.id}
+                          skus={asset.productSkus ?? []}
+                          canEdit={canManage}
+                          onMutate={mutate}
+                        />
                       </div>
 
                       {canManage && (
@@ -496,6 +514,115 @@ export function DamTab({ user }: Props) {
           )}
         </Card>
       </div>
+    </div>
+  );
+}
+
+function ProductSkuRow({
+  assetId,
+  skus,
+  canEdit,
+  onMutate,
+}: {
+  assetId: string;
+  skus: string[];
+  canEdit: boolean;
+  onMutate: () => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
+  const { toast } = useToast();
+
+  async function addSku() {
+    const sku = draft.trim();
+    if (!sku) {
+      setAdding(false);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/asset-studio/dam-assets/${assetId}/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sku }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast("success", `Tagged ${sku}`);
+      setDraft("");
+      setAdding(false);
+      onMutate();
+    } catch {
+      toast("error", "Could not tag SKU");
+    }
+  }
+
+  async function removeSku(sku: string) {
+    try {
+      const res = await fetch(
+        `/api/asset-studio/dam-assets/${assetId}/products?sku=${encodeURIComponent(sku)}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) throw new Error(await res.text());
+      toast("success", `Untagged ${sku}`);
+      onMutate();
+    } catch {
+      toast("error", "Could not untag SKU");
+    }
+  }
+
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+      <Tag className="h-3 w-3 shrink-0 text-[var(--as-text-muted)]" />
+      {skus.length === 0 && !adding && (
+        <span className="text-[10px] uppercase tracking-wider text-[var(--as-text-subtle)]">
+          No SKUs tagged
+        </span>
+      )}
+      {skus.map((sku) => (
+        <span
+          key={sku}
+          className="inline-flex items-center gap-1 rounded-full border border-[var(--as-border)] bg-[var(--as-surface-2)] px-2 py-0.5 text-[11px] text-[var(--as-text)]"
+        >
+          {sku}
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => removeSku(sku)}
+              className="text-[var(--as-text-subtle)] hover:text-[var(--as-text)]"
+              aria-label={`Remove ${sku}`}
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          )}
+        </span>
+      ))}
+      {canEdit && (
+        adding ? (
+          <input
+            autoFocus
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={addSku}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+              if (e.key === "Escape") {
+                setDraft("");
+                setAdding(false);
+              }
+            }}
+            placeholder="SKU or item code"
+            className="w-32 rounded-full border border-[var(--as-border)] bg-transparent px-2 py-0.5 text-[11px] text-[var(--as-text)] focus:outline-none focus:border-[var(--as-accent)]"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="inline-flex items-center gap-1 rounded-full border border-dashed border-[var(--as-border)] px-2 py-0.5 text-[11px] text-[var(--as-text-muted)] hover:text-[var(--as-text)] hover:border-[var(--as-text-muted)]"
+          >
+            <Plus className="h-2.5 w-2.5" /> Tag SKU
+          </button>
+        )
+      )}
     </div>
   );
 }

@@ -9,7 +9,7 @@ import type { BrandTokenPayload } from "@/types/domain";
 // GET /api/asset-studio/brand-tokens?brand=Publix
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"]);
     const { searchParams } = new URL(request.url);
     const brand = searchParams.get("brand") || undefined;
     const tokens = await listBrandTokens(brand);

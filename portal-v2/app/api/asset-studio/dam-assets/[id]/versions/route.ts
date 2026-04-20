@@ -15,6 +15,7 @@ export async function POST(request: Request, ctx: RouteCtx) {
       "Post Producer",
       "Designer",
       "Art Director",
+      "Creative Director",
     ]);
 
     const { id } = await ctx.params;

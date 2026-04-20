@@ -5,7 +5,7 @@ import useSWR from "swr";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { AppUser, AssetStudioSummary } from "@/types/domain";
+import type { AppUser, AssetStudioSummary, Campaign } from "@/types/domain";
 import { fetcher, statusPillClass, fmtRelative } from "./lib";
 import {
   FileImage,
@@ -15,6 +15,7 @@ import {
   PlayCircle,
   Clock,
   ArrowUpRight,
+  Palette,
 } from "lucide-react";
 
 interface Props {
@@ -26,6 +27,13 @@ export function OverviewTab({ user }: Props) {
     "/api/asset-studio/summary",
     fetcher
   );
+
+  // Campaigns the current user owns (primary_designer or primary_art_director).
+  // Surfaced prominently for Designers / ADs — their home view.
+  const { data: myCampaignsData } = useSWR<{
+    items: Array<{ campaign: Campaign; roles: string[] }>;
+  }>("/api/campaigns/mine", fetcher);
+  const myCampaigns = myCampaignsData?.items ?? [];
 
   const canCreate = ["Admin", "Producer", "Post Producer", "Designer"].includes(user.role);
 
@@ -80,6 +88,51 @@ export function OverviewTab({ user }: Props) {
 
   return (
     <div className="space-y-5">
+      {/* My campaigns — first thing a designer/AD sees */}
+      {myCampaigns.length > 0 && (
+        <Card padding="none" className="border-[var(--as-border)] bg-[var(--as-surface)]">
+          <div className="flex items-center gap-2 border-b border-[var(--as-border)] px-4 py-3">
+            <Palette className="h-4 w-4 text-[var(--as-accent)]" />
+            <h3 className="text-sm font-semibold text-[var(--as-text)]">My campaigns</h3>
+            <span className="ml-auto text-[11px] uppercase tracking-wider text-[var(--as-text-subtle)]">
+              {myCampaigns.length} assigned
+            </span>
+          </div>
+          <ul className="divide-y divide-[var(--as-border)]">
+            {myCampaigns.map(({ campaign, roles }) => (
+              <li key={campaign.id}>
+                <Link
+                  href={`/campaigns/${campaign.id}/asset-studio`}
+                  className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-[var(--as-layer-hover)]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-[var(--as-text)]">
+                      {campaign.wfNumber ? `${campaign.wfNumber} · ` : ""}
+                      {campaign.name}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-[var(--as-text-subtle)]">
+                      {roles
+                        .map((r) =>
+                          r === "primary_designer"
+                            ? "Primary Designer"
+                            : r === "primary_art_director"
+                              ? "Primary Art Director"
+                              : r
+                        )
+                        .join(" · ")}
+                      {campaign.assetsDeliveryDate && (
+                        <> · Assets due {campaign.assetsDeliveryDate}</>
+                      )}
+                    </p>
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 shrink-0 text-[var(--as-text-subtle)]" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       {/* Hero / CTA */}
       <Card padding="lg" className="flex flex-col gap-3 border-[var(--as-border)] bg-[var(--as-surface)] sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">

@@ -15,6 +15,7 @@ export async function GET(_request: Request, ctx: RouteCtx) {
       "Post Producer",
       "Designer",
       "Art Director",
+      "Creative Director",
     ]);
     const { id } = await ctx.params;
     // Resolve variant ids so we pick up approve/reject events for them too.

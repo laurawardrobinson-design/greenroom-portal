@@ -236,12 +236,16 @@ export async function createRun(input: {
   // headlines across 30 products (Storyteq Batch Creator behavior).
   const globalCopy = input.bindings.copy_overrides ?? {};
   const perProductCopy = input.bindings.copy_overrides_by_product ?? {};
+  const perProductImage = input.bindings.image_overrides_by_product ?? {};
   const stubs = cps.flatMap((cp: Record<string, unknown>) => {
     const product = (cp.products ?? {}) as Record<string, unknown>;
+    // DAM image override takes precedence over the default product-on-white.
+    const defaultImageUrl = (product.image_url as string | undefined) ?? "";
+    const overrideImageUrl = perProductImage[cp.id as string] ?? "";
     const productSnapshot: VariantBindings["product"] = {
       id: product.id as string | undefined,
       name: (product.name as string | undefined) ?? "",
-      image_url: (product.image_url as string | undefined) ?? "",
+      image_url: overrideImageUrl || defaultImageUrl,
       department: (product.department as string | undefined) ?? "",
       item_code: (product.item_code as string | null | undefined) ?? null,
     };

@@ -9,7 +9,7 @@ type RouteCtx = { params: Promise<{ id: string }> };
 // GET /api/asset-studio/dam-assets/:id
 export async function GET(_request: Request, ctx: RouteCtx) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"]);
     const { id } = await ctx.params;
     const asset = await getDamAsset(id);
     if (!asset) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -28,6 +28,7 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
       "Post Producer",
       "Designer",
       "Art Director",
+      "Creative Director",
     ]);
 
     const { id } = await ctx.params;

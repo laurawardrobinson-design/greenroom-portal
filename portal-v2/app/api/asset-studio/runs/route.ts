@@ -8,7 +8,7 @@ import type { VariantRunStatus } from "@/types/domain";
 // GET /api/asset-studio/runs
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"]);
     const { searchParams } = new URL(request.url);
     const status = (searchParams.get("status") as VariantRunStatus | null) || undefined;
     const templateId = searchParams.get("templateId") || undefined;

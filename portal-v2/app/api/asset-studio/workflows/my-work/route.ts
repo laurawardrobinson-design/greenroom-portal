@@ -12,6 +12,7 @@ export async function GET(request: Request) {
       "Post Producer",
       "Designer",
       "Art Director",
+      "Creative Director",
     ]);
 
     const { searchParams } = new URL(request.url);

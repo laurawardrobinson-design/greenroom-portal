@@ -13,7 +13,7 @@ import {
 // GET /api/asset-studio/dam-sync/jobs?damAssetId=&status=&limit=
 export async function GET(request: Request) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"]);
 
     const { searchParams } = new URL(request.url);
     const parsed = listDamSyncJobsQuerySchema.safeParse({
@@ -49,6 +49,7 @@ export async function POST(request: Request) {
       "Post Producer",
       "Designer",
       "Art Director",
+      "Creative Director",
     ]);
 
     const raw = await request.json().catch(() => ({}));

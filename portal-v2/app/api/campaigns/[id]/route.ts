@@ -70,7 +70,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Creative Director"]);
     const { id } = await params;
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

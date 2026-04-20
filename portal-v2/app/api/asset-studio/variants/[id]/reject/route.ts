@@ -10,7 +10,7 @@ type RouteCtx = { params: Promise<{ id: string }> };
 // body: { reason?: string }
 export async function POST(request: Request, ctx: RouteCtx) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Post Producer", "Art Director"]);
+    const user = await requireRole(["Admin", "Creative Director"]);
     const { id } = await ctx.params;
     const raw = await request.json().catch(() => ({}));
     const parsed = parseBody(raw, rejectVariantSchema);

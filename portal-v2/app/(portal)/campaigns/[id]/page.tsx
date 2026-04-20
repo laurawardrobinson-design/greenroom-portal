@@ -22,11 +22,14 @@ import { LinkGearDrawer } from "@/components/campaigns/link-gear-drawer";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { PeopleTile } from "@/components/campaigns/tiles/people-tile";
 import { BudgetSidebarTile } from "@/components/campaigns/tiles/budget-sidebar-tile";
+import { CopyTile } from "@/components/campaigns/tiles/copy-tile";
+import { DeliverableCopyTile } from "@/components/campaigns/tiles/deliverable-copy-tile";
+import { CreativeTeamTile } from "@/components/campaigns/tiles/creative-team-tile";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Bell, AlertCircle, Calendar, X, Info, FolderSync } from "lucide-react";
+import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Bell, AlertCircle, Calendar, X, Info, FolderSync, Images } from "lucide-react";
 import { ShotListModal } from "@/components/campaigns/shot-list-modal";
 import useSWR from "swr";
 import type { AppUser } from "@/types/domain";
@@ -366,11 +369,12 @@ export default function CampaignDetailPage({
               disabled={!canEdit || campaign.status === "Cancelled"}
             />
             <Link
-              href={`/asset-studio?tab=dam&campaignId=${id}`}
-              title="Open DAM placeholder"
-              className="flex items-center justify-center rounded-lg border border-border p-1.5 text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors shrink-0"
+              href={`/campaigns/${id}/asset-studio`}
+              title="Open Asset Studio for this campaign"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2 py-1.5 text-xs text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors shrink-0"
             >
-              <FolderSync className="h-3.5 w-3.5" />
+              <Images className="h-3.5 w-3.5" />
+              Asset Studio
             </Link>
             <button
               type="button"
@@ -500,6 +504,34 @@ export default function CampaignDetailPage({
         onMutate={mutate}
         onViewFullList={isVendor ? () => setShowShotListModal(true) : undefined}
       />
+
+      {/* === CAMPAIGN COPY (from brief; inherits to deliverables) === */}
+      {!isVendor && (
+        <CopyTile
+          campaign={campaign}
+          canEdit={canEdit}
+          onUpdate={async (field, value) => { await handleUpdate(field, value); }}
+        />
+      )}
+
+      {/* === DELIVERABLE COPY OVERRIDES === */}
+      {!isVendor && (
+        <DeliverableCopyTile
+          campaign={campaign}
+          deliverables={deliverables}
+          canEdit={canEdit}
+          onMutate={mutate}
+        />
+      )}
+
+      {/* === CREATIVE TEAM (designer + AD + viewers for versioning) === */}
+      {!isVendor && (
+        <CreativeTeamTile
+          campaignId={id}
+          canEdit={canEdit}
+          allUsers={allUsers}
+        />
+      )}
 
       {/* === ROW 2: People | Inventory === */}
       <div className={`grid grid-cols-1 gap-4 items-stretch ${isVendor ? "" : "lg:grid-cols-2"}`}>

@@ -34,34 +34,32 @@ export const PERMISSIONS = {
   },
   // Asset Studio — Storyteq-style versioning module
   assetStudio: {
-    // Browse the module + see templates / variants
-    view: ["Admin", "Producer", "Post Producer", "Designer", "Art Director"] as UserRole[],
-    // Create / edit / publish templates
+    view: ["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"] as UserRole[],
     manageTemplates: ["Admin", "Producer", "Post Producer", "Designer"] as UserRole[],
-    // Manage versioned brand_tokens
-    manageBrand: ["Admin", "Designer"] as UserRole[],
-    // Kick off a variant run
+    manageBrand: ["Admin", "Designer", "Creative Director"] as UserRole[],
     runVariants: ["Admin", "Producer", "Post Producer", "Designer"] as UserRole[],
-    // Approve or reject rendered variants
-    approveVariants: ["Admin", "Producer", "Post Producer", "Art Director"] as UserRole[],
+    // Creative Director is the sole approver (Admin retained as superuser fallback).
+    approveVariants: ["Admin", "Creative Director"] as UserRole[],
+    // Designer + Art Director are versioning owners; Creative Director reviews + signs off.
+    manageAssignments: ["Admin", "Producer", "Creative Director"] as UserRole[],
   },
 } as const;
 
 // Route-level access control
 export const ROUTE_ROLES: Record<string, UserRole[]> = {
-  "/dashboard": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Designer"],
-  "/campaigns": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Designer"],
+  "/dashboard": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director", "Designer"],
+  "/campaigns": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director", "Designer"],
   "/vendors": ["Admin", "Producer", "Post Producer"],
   "/vendors/portal": ["Vendor"],
   "/inventory": ["Admin", "Producer", "Post Producer", "Studio"],
   "/calendar": ["Admin", "Producer", "Post Producer", "Studio"],
   "/approvals": ["Admin"],
   "/budget": ["Admin", "Producer", "Post Producer"],
-  "/contacts": ["Admin", "Producer", "Post Producer", "Studio", "Art Director", "Designer"],
+  "/contacts": ["Admin", "Producer", "Post Producer", "Studio", "Art Director", "Creative Director", "Designer"],
   "/props": ["Admin", "Producer", "Post Producer", "Studio", "Art Director"],
   "/goals": ["Admin", "Producer", "Post Producer", "Studio"],
-  "/settings": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Designer"],
-  "/asset-studio": ["Admin", "Producer", "Post Producer", "Designer", "Art Director"],
+  "/settings": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director", "Designer"],
+  "/asset-studio": ["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"],
 };
 
 export function hasPermission(

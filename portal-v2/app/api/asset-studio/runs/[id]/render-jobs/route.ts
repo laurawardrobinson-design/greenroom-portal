@@ -7,7 +7,7 @@ type RouteCtx = { params: Promise<{ id: string }> };
 // GET /api/asset-studio/runs/:id/render-jobs?limit=10
 export async function GET(request: Request, ctx: RouteCtx) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"]);
     const { id } = await ctx.params;
     const { searchParams } = new URL(request.url);
     const limitParam = searchParams.get("limit");
