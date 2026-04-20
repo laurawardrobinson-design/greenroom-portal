@@ -24,6 +24,7 @@ import { PeopleTile } from "@/components/campaigns/tiles/people-tile";
 import { BudgetSidebarTile } from "@/components/campaigns/tiles/budget-sidebar-tile";
 import { CopyTile } from "@/components/campaigns/tiles/copy-tile";
 import { DeliverableCopyTile } from "@/components/campaigns/tiles/deliverable-copy-tile";
+import { DeliverableTemplatesTile } from "@/components/campaigns/tiles/deliverable-templates-tile";
 import { CreativeTeamTile } from "@/components/campaigns/tiles/creative-team-tile";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
@@ -523,6 +524,9 @@ export default function CampaignDetailPage({
           onMutate={mutate}
         />
       )}
+
+      {/* === DELIVERABLE TEMPLATES PROGRESS === */}
+      {!isVendor && <DeliverableTemplatesTile campaignId={id} />}
 
       {/* === CREATIVE TEAM (designer + AD + viewers for versioning) === */}
       {!isVendor && (

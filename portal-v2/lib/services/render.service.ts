@@ -376,7 +376,7 @@ async function getTemplateForRender(templateId: string): Promise<AssetTemplate |
   const { data, error } = await admin
     .from("templates")
     .select(
-      "id, name, description, status, category, brand_tokens_id, thumbnail_url, canvas_width, canvas_height, background_color, current_version_id, created_by, created_at, updated_at, template_layers(*)"
+      "id, name, description, status, category, brand_tokens_id, thumbnail_url, canvas_width, canvas_height, background_color, current_version_id, campaign_deliverable_id, created_by, created_at, updated_at, template_layers(*)"
     )
     .eq("id", templateId)
     .maybeSingle();
@@ -398,6 +398,7 @@ async function getTemplateForRender(templateId: string): Promise<AssetTemplate |
     canvasHeight: Number(data.canvas_height ?? 1080),
     backgroundColor: (data.background_color as string) ?? "#FFFFFF",
     currentVersionId: (data.current_version_id as string | null) ?? null,
+    campaignDeliverableId: (data.campaign_deliverable_id as string | null) ?? null,
     createdBy: (data.created_by as string | null) ?? null,
     createdAt: data.created_at as string,
     updatedAt: data.updated_at as string,

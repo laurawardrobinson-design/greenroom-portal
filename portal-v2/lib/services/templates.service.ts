@@ -72,6 +72,7 @@ function toTemplate(row: Record<string, unknown>): AssetTemplate {
     canvasHeight: Number(row.canvas_height ?? 1080),
     backgroundColor: (row.background_color as string) ?? "#FFFFFF",
     currentVersionId: (row.current_version_id as string | null) ?? null,
+    campaignDeliverableId: (row.campaign_deliverable_id as string | null) ?? null,
     createdBy: (row.created_by as string | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -165,6 +166,7 @@ export async function createTemplate(input: {
   canvasWidth?: number;
   canvasHeight?: number;
   backgroundColor?: string;
+  campaignDeliverableId?: string | null;
   createdBy?: string | null;
 }): Promise<AssetTemplate> {
   const supabase = await createClient();
@@ -178,6 +180,7 @@ export async function createTemplate(input: {
       canvas_width: input.canvasWidth ?? 1080,
       canvas_height: input.canvasHeight ?? 1080,
       background_color: input.backgroundColor ?? "#FFFFFF",
+      campaign_deliverable_id: input.campaignDeliverableId ?? null,
       created_by: input.createdBy ?? null,
       status: "draft",
     })

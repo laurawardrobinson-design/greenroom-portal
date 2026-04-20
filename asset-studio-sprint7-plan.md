@@ -43,7 +43,7 @@ Smallest possible end-to-end win. After this, designers have a real queue.
 
 **Migration 079** (`079_asset_studio_deliverable_templating.sql`):
 - `ALTER TABLE campaign_deliverables ADD COLUMN assigned_designer_id uuid NULL REFERENCES users(id) ON DELETE SET NULL` — per-deliverable designer override. NULL means inherit campaign `primary_designer`.
-- `ALTER TABLE asset_templates ADD COLUMN campaign_deliverable_id uuid NULL REFERENCES campaign_deliverables(id) ON DELETE SET NULL` — the FK from template back to the deliverable it was built for.
+- `ALTER TABLE templates ADD COLUMN campaign_deliverable_id uuid NULL REFERENCES campaign_deliverables(id) ON DELETE SET NULL` — the FK from template back to the deliverable it was built for.
 - Seed one `workflow_definitions` row for `entity_type = 'deliverable'`:
   - Stages: `needs_template → drafting → template_ready` (Designer self-approves — matches Storyteq; Art Director owns variant-versioning, not template gating)
   - Transitions (role-gated):
@@ -102,7 +102,7 @@ Producer visibility without a second tool.
 - Header summary: "5 of 8 templates ready" with a progress bar.
 - This is read-only; assignment changes happen in the existing creative team tile.
 
-**API** — extend `GET /api/campaigns/[id]` response to include `deliverables[].templateStatus` and `deliverables[].templateId`. Single join against workflow_instances + asset_templates; no N+1.
+**API** — extend `GET /api/campaigns/[id]` response to include `deliverables[].templateStatus` and `deliverables[].templateId`. Single join against workflow_instances + templates; no N+1.
 
 **Done when:** A Producer on campaign detail sees which deliverables are done, in progress, or stuck, without opening Asset Studio.
 
@@ -129,7 +129,7 @@ The one-line win that should have been there from the start.
 - Designer owns all template transitions end-to-end: start (`needs_template → drafting`), publish (`drafting → template_ready`), reopen (`template_ready → drafting`). This matches Storyteq — the designer is the template's author and its publisher.
 - Art Director's role is unchanged by Sprint 7 — they remain versioning owners on variants, not template gate-keepers.
 - Creative Director retains sole variant-approval authority. Templates publish without CD review; CD queue stays focused on final rendered creative.
-- RLS on `campaign_deliverables` + `workflow_instances` + `asset_templates` already uses the `current_user_has_role` helper; no new policies needed, but verify the ALTER TABLE columns inherit correctly.
+- RLS on `campaign_deliverables` + `workflow_instances` + `templates` already uses the `current_user_has_role` helper; no new policies needed, but verify the ALTER TABLE columns inherit correctly.
 
 ---
 

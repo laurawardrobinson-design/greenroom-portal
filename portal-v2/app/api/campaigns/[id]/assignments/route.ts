@@ -6,6 +6,38 @@ import {
   clearPrimaryAssignment,
   type AssignmentRole,
 } from "@/lib/services/campaign-assignments.service";
+import { ensureDeliverableWorkflowInstance } from "@/lib/services/workflow.service";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+async function ensureWorkflowInstancesForCampaignDeliverables(
+  campaignId: string,
+  createdBy: string
+): Promise<void> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("campaign_deliverables")
+    .select("id")
+    .eq("campaign_id", campaignId);
+
+  if (error) {
+    console.error("Failed to list deliverables for workflow backfill:", error);
+    return;
+  }
+
+  for (const row of data ?? []) {
+    try {
+      await ensureDeliverableWorkflowInstance({
+        deliverableId: row.id as string,
+        createdBy,
+      });
+    } catch (wfError) {
+      console.error(
+        `Failed to ensure workflow instance for deliverable ${row.id}:`,
+        wfError
+      );
+    }
+  }
+}
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -61,6 +93,12 @@ export async function POST(request: Request, ctx: RouteCtx) {
       assignmentRole: role,
       assignedBy: user.id,
     });
+
+    // If this was a primary_designer assignment, every deliverable on the
+    // campaign now needs a templating task in that designer's queue.
+    if (role === "primary_designer") {
+      await ensureWorkflowInstancesForCampaignDeliverables(id, user.id);
+    }
 
     return NextResponse.json(assignment, { status: 201 });
   } catch (error) {
