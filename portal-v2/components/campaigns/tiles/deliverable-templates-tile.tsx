@@ -86,9 +86,10 @@ export function DeliverableTemplatesTile({
     }
   }
 
-  if (!data || data.items.length === 0) return null;
+  if (!data?.items?.length) return null;
 
-  const { items, summary } = data;
+  const items = data.items;
+  const summary = data.summary ?? { total: 0, ready: 0, drafting: 0, needsTemplate: 0 };
   const pctReady = summary.total > 0 ? Math.round((summary.ready / summary.total) * 100) : 0;
 
   return (

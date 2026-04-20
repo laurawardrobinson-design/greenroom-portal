@@ -48,7 +48,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Campaigns",
     href: "/campaigns",
     icon: Film,
-    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Designer"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director"],
   },
   {
     label: "Estimates & Invoices",
