@@ -31,6 +31,7 @@ export async function GET(request: Request) {
     }
 
     const items = await listMyWorkQueue({
+      actorId: user.id,
       actorRole: user.role,
       limit: parsed.data.limit,
     });

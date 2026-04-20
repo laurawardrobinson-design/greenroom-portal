@@ -259,6 +259,7 @@ export async function getDeliverables(
     quantity: row.quantity,
     notes: row.notes,
     assignedVendorId: row.assigned_vendor_id ?? null,
+    assignedDesignerId: row.assigned_designer_id ?? null,
     headlineOverride: row.headline_override ?? null,
     ctaOverride: row.cta_override ?? null,
     disclaimerOverride: row.disclaimer_override ?? null,

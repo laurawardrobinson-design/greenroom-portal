@@ -207,7 +207,8 @@ export type MyWorkQueueQueryInput = z.infer<typeof myWorkQueueQuerySchema>;
 // ─── Templates ───────────────────────────────────────────────────────────────
 
 export const createTemplateSchema = z.object({
-  name: nonEmptyString.max(200),
+  // Optional when deliverableId is provided — we'll derive the name.
+  name: nonEmptyString.max(200).optional(),
   description: z.string().max(2000).optional(),
   category: z.string().max(100).optional(),
   brandTokensId: z.union([uuid, z.null()]).optional(),
@@ -215,6 +216,11 @@ export const createTemplateSchema = z.object({
   canvasHeight: z.number().int().min(1).max(8000).optional(),
   backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   seedDefaultSpecs: z.boolean().optional(),
+  // When present, prefill canvas from the deliverable, back-link the
+  // template via campaign_deliverable_id, and advance the deliverable
+  // workflow from needs_template → drafting. Used by "Start templating"
+  // on My Work.
+  deliverableId: uuid.optional(),
 });
 export type CreateTemplateInput = z.infer<typeof createTemplateSchema>;
 

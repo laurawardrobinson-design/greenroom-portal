@@ -208,6 +208,8 @@ export interface CampaignDeliverable {
   quantity: number;
   notes: string;
   assignedVendorId: string | null;
+  // NULL inherits from campaign.primary_designer (via campaign_assignments).
+  assignedDesignerId: string | null;
   // NULL = inherit from campaign; empty string = explicitly blank.
   headlineOverride: string | null;
   ctaOverride: string | null;
@@ -1319,6 +1321,9 @@ export interface AssetTemplate {
   canvasHeight: number;
   backgroundColor: string;
   currentVersionId: string | null;
+  // Back-link to the deliverable this template was built for (Sprint 7).
+  // NULL for standalone templates.
+  campaignDeliverableId: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1602,7 +1607,7 @@ export interface DamSyncJob {
   items: DamSyncJobItem[];
 }
 
-export type WorkflowEntityType = "dam_asset";
+export type WorkflowEntityType = "dam_asset" | "deliverable";
 
 export type WorkflowTransitionKind = "advance" | "return" | "reject";
 
@@ -1685,13 +1690,27 @@ export interface MyWorkQueueItem {
   entityId: string;
   campaignId: string | null;
   campaign: DamAssetCampaignRef | null;
+  // Populated when entityType === "dam_asset".
   asset: {
     id: string;
     name: string;
     status: DamAssetStatus;
     syncStatus: DamSyncStatus;
     updatedAt: string;
-  };
+  } | null;
+  // Populated when entityType === "deliverable".
+  deliverable: {
+    id: string;
+    channel: string;
+    format: string;
+    width: number;
+    height: number;
+    aspectRatio: string;
+    quantity: number;
+    notes: string;
+    assignedDesignerId: string | null;
+    templateId: string | null;
+  } | null;
   currentStage: string;
   stageQueueRoles: UserRole[];
   availableTransitions: WorkflowTransition[];
