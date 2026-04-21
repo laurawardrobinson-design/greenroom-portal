@@ -60,9 +60,9 @@ export function StudioDashboard({ user }: Props) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-text-primary">
+          <h1 className="text-2xl font-bold text-text-primary">
             Welcome back, {user.name.split(" ")[0]}
-          </h2>
+          </h1>
         </div>
         <Link href="/gear/scan">
           <Button size="md" variant="secondary">

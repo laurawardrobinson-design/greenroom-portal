@@ -216,7 +216,7 @@ export default function WardrobePage() {
       <div className="space-y-0">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 pb-4 border-b border-border">
-          <h2 className="text-2xl font-bold text-text-primary">Wardrobe</h2>
+          <h1 className="text-2xl font-bold text-text-primary">Wardrobe</h1>
           {tab === "backstock" && (
             <Button variant="secondary" onClick={() => { setShowScanner(true); setScannerActive(true); }}>
               <ScanLine className="h-4 w-4" />

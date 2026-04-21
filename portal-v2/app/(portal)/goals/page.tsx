@@ -106,7 +106,7 @@ export default function GoalsPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-text-primary">{isAdmin ? "Team Goals" : "My Goals"}</h2>
+      <h1 className="text-2xl font-bold text-text-primary">{isAdmin ? "Team Goals" : "My Goals"}</h1>
 
       {!isAdmin && !hasOwnGoal && !isLoading && (
         <div className="rounded-xl border border-border bg-surface-secondary/50 px-4 py-3">

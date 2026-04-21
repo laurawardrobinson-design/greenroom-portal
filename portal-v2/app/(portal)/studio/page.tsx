@@ -868,7 +868,7 @@ export default function StudioManagementPage() {
       <div className="space-y-0">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-border">
-          <h2 className="text-2xl font-bold text-text-primary">{pageTitle}</h2>
+          <h1 className="text-2xl font-bold text-text-primary">{pageTitle}</h1>
           {user.role === "Studio" && (
             <Link href="/gear/scan">
               <Button size="md" variant="secondary">

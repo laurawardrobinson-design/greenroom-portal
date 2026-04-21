@@ -95,7 +95,7 @@ export default function CampaignAssetStudioPage({
           Back to campaign
         </Link>
         <div className="mt-1 flex items-center gap-3">
-          <h1 className="text-2xl font-semibold text-text-primary">
+          <h1 className="text-2xl font-bold text-text-primary">
             {campaign.wfNumber ? `${campaign.wfNumber} · ` : ""}
             {campaign.name}
           </h1>

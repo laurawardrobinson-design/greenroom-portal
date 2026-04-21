@@ -462,7 +462,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-2xl font-bold text-text-primary">Settings</h2>
+      <h1 className="text-2xl font-bold text-text-primary">Settings</h1>
 
       {/* My Card */}
       {user && (

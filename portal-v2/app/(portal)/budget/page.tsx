@@ -90,7 +90,7 @@ export default function BudgetPage() {
     return (
       <div className="space-y-6">
         <div className="pb-4 border-b border-border">
-          <h2 className="text-2xl font-bold text-text-primary">Budget</h2>
+          <h1 className="text-2xl font-bold text-text-primary">Budget</h1>
         </div>
         <VendorFinancialsTab />
       </div>
@@ -101,7 +101,7 @@ export default function BudgetPage() {
     <div className="space-y-6">
       <div className="space-y-0">
         <div className="pb-4 border-b border-border">
-          <h2 className="text-2xl font-bold text-text-primary">Budget</h2>
+          <h1 className="text-2xl font-bold text-text-primary">Budget</h1>
         </div>
 
         <PageTabs tabs={TABS} activeTab={activeTab} onTabChange={(key) => setActiveTab(key as Tab)} />

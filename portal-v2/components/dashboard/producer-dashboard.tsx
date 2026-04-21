@@ -265,9 +265,9 @@ export function ProducerDashboard({ user }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-text-primary">
+          <h1 className="text-2xl font-bold text-text-primary">
             Welcome back, {user.name.split(" ")[0]}
-          </h2>
+          </h1>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex rounded-lg border border-border bg-surface-secondary p-0.5">

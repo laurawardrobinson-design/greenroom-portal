@@ -40,7 +40,7 @@ export function DesignerDashboard({ user }: { user: AppUser }) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-text-primary">
+      <h1 className="text-2xl font-bold text-text-primary">
         Welcome back, {user.name?.split(" ")[0] || "there"}
       </h1>
 

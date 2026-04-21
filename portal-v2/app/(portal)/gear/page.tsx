@@ -416,7 +416,7 @@ export default function InventoryPage() {
       <div className="space-y-0">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 pb-4 border-b border-border">
-          <h2 className="text-2xl font-bold text-text-primary">Gear</h2>
+          <h1 className="text-2xl font-bold text-text-primary">Gear</h1>
           <Button variant="secondary" onClick={() => setShowScanner(true)}>
             <ScanLine className="h-4 w-4" />
             Scan Gear

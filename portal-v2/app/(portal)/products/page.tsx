@@ -62,7 +62,7 @@ export default function ProductDirectoryPage() {
       <div className="space-y-0">
         {/* Header */}
         <div className="pb-4 border-b border-border">
-          <h2 className="text-2xl font-bold text-text-primary">Products</h2>
+          <h1 className="text-2xl font-bold text-text-primary">Products</h1>
         </div>
 
         <PageTabs

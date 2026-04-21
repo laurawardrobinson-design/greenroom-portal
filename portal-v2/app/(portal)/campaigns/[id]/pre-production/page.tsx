@@ -30,7 +30,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { ScheduleTab } from "@/components/pre-production/schedule-tab";
+import {
+  ScheduleTab,
+  SCHEDULE_SUB_VIEWS,
+  type ScheduleSubViewId,
+} from "@/components/pre-production/schedule-tab";
 import { VendorAssignmentPanel } from "@/components/campaigns/vendor-assignment-panel";
 import { SpacePickerModal } from "@/components/studio/space-picker-modal";
 import { SPACE_TYPE_ICON, SPACE_TYPE_COLOR } from "@/lib/constants/studio";
@@ -48,11 +52,84 @@ const TABS = [
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
+type TabDef = (typeof TABS)[number];
 
 function parseTabId(value: string | null): TabId | null {
   if (!value) return null;
   if (TABS.some((tab) => tab.id === value)) return value as TabId;
   return null;
+}
+
+function SectionDropdown({
+  tabs,
+  activeTab,
+  onSelect,
+  showActiveUnderline = true,
+}: {
+  tabs: readonly TabDef[];
+  activeTab: TabId;
+  onSelect: (tabId: TabId) => void;
+  showActiveUnderline?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const active = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const ActiveIcon = active.icon;
+
+  useEffect(() => {
+    function handler(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="relative flex items-center gap-[var(--density-tabs-gap)] px-[var(--density-tabs-px)] py-[var(--density-tabs-py)] text-sm font-medium leading-none text-text-primary transition-colors hover:text-text-secondary"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <ActiveIcon className="h-3.5 w-3.5 shrink-0 text-primary" />
+        <span>{active.label}</span>
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-text-tertiary transition-transform ${open ? "rotate-180" : ""}`} />
+        {showActiveUnderline && (
+          <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-primary" />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[220px] overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = tab.id === activeTab;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onSelect(tab.id);
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                  isActive ? "bg-primary/5 text-text-primary" : "text-text-secondary hover:bg-surface-secondary"
+                }`}
+              >
+                <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-primary" : "text-text-tertiary"}`} />
+                <span className="flex-1">{tab.label}</span>
+                {isActive && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Placeholder tab content ──────────────────────────────────────────────────
@@ -1307,6 +1384,7 @@ export default function PreProductionWorkspacePage({
   const { campaign, shoots, vendors, isLoading, mutate: refreshCampaign } = useCampaign(id);
   const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState<TabId>(tabFromUrl ?? "schedule");
+  const [activeScheduleView, setActiveScheduleView] = useState<ScheduleSubViewId>("shot-list");
 
   useEffect(() => {
     if (tabFromUrl && tabFromUrl !== activeTab) {
@@ -1343,10 +1421,16 @@ export default function PreProductionWorkspacePage({
   const visibleTabs = isArtDirector
     ? TABS.filter((t) => t.id === "schedule" || t.id === "people")
     : TABS;
+  const visibleScheduleViews = isArtDirector
+    ? SCHEDULE_SUB_VIEWS.filter((view) => view.id === "shot-list")
+    : SCHEDULE_SUB_VIEWS;
 
   const resolvedActiveTab = visibleTabs.some((tab) => tab.id === activeTab)
     ? activeTab
     : visibleTabs[0].id;
+  const resolvedScheduleView = visibleScheduleViews.some((view) => view.id === activeScheduleView)
+    ? activeScheduleView
+    : visibleScheduleViews[0].id;
 
   function handleTabClick(tabId: TabId) {
     setActiveTab(tabId);
@@ -1356,9 +1440,9 @@ export default function PreProductionWorkspacePage({
   return (
     <div className="space-y-0">
       {/* Header */}
-      <div className="space-y-3 pb-4 border-b border-border">
-        <div className="flex items-start justify-between gap-4">
-          <h2 className="text-2xl font-bold text-text-primary">Pre Production</h2>
+      <div className="space-y-[var(--density-page-header-gap)] border-b border-border pb-[var(--density-page-header-pb)]">
+        <div className="flex items-start justify-between gap-[var(--density-page-header-row-gap)]">
+          <h1 className="text-2xl font-bold text-text-primary">Pre Production</h1>
           <CampaignSwitcher
             currentId={id}
             currentName={campaign.name}
@@ -1368,37 +1452,47 @@ export default function PreProductionWorkspacePage({
         </div>
       </div>
 
-      {/* Tab bar */}
+      {/* Section selector + contextual sub-tabs */}
       <div className="border-b border-border">
-        <nav className="flex gap-0">
-          {visibleTabs.map(({ id: tabId, label, icon: Icon }) => {
-            const active = resolvedActiveTab === tabId;
-            return (
-              <button
-                key={tabId}
-                type="button"
-                onClick={() => handleTabClick(tabId)}
-                className={`
-                  relative flex items-center gap-2 px-5 py-3.5 text-sm font-medium transition-colors
-                  ${active
-                    ? "text-text-primary"
-                    : "text-text-tertiary hover:text-text-secondary"
-                  }
-                `}
-              >
-                <Icon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-primary" : "text-text-tertiary/60"}`} />
-                {label}
-                {active && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-primary" />
-                )}
-              </button>
-            );
-          })}
-        </nav>
+        <div className="flex flex-wrap items-center gap-2">
+          <SectionDropdown
+            tabs={visibleTabs}
+            activeTab={resolvedActiveTab}
+            onSelect={handleTabClick}
+            showActiveUnderline={resolvedActiveTab !== "schedule"}
+          />
+
+          {resolvedActiveTab === "schedule" && (
+            <>
+              <span className="h-5 w-px bg-border/70" aria-hidden />
+              <nav className="flex flex-wrap items-center gap-2">
+              {visibleScheduleViews.map((view) => {
+                const active = resolvedScheduleView === view.id;
+                return (
+                  <button
+                    key={view.id}
+                    type="button"
+                    onClick={() => setActiveScheduleView(view.id)}
+                    className={`
+                      relative px-[var(--density-tabs-px)] py-[var(--density-tabs-py)] text-sm font-medium leading-none transition-colors
+                      ${active ? "text-text-primary" : "text-text-tertiary hover:text-text-secondary"}
+                    `}
+                  >
+                    {view.label}
+                    {active && (
+                      <span className="absolute bottom-0 left-[var(--density-tabs-px)] right-[var(--density-tabs-px)] h-0.5 rounded-full bg-primary" />
+                    )}
+                  </button>
+                );
+              })}
+              </nav>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Tab content */}
-      <div className="pt-6">
+      <div className="pt-[var(--density-preprod-content-pt)]">
         {resolvedActiveTab === "schedule"  && (
           <ScheduleTab
             campaignId={id}
@@ -1409,6 +1503,9 @@ export default function PreProductionWorkspacePage({
             shoots={shoots}
             vendors={vendors}
             isArtDirector={isArtDirector}
+            activeView={resolvedScheduleView}
+            onActiveViewChange={setActiveScheduleView}
+            showViewSwitcher={false}
           />
         )}
         {resolvedActiveTab === "logistics" && <LogisticsTab campaignId={id} shoots={shoots} />}

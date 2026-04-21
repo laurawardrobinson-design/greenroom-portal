@@ -179,9 +179,9 @@ export function HopDashboard({ user }: Props) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-text-primary">
+      <h1 className="text-2xl font-bold text-text-primary">
         Welcome back, {user.name.split(" ")[0]}
-      </h2>
+      </h1>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
