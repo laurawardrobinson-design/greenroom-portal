@@ -611,7 +611,11 @@ function AuditLogFeed({ runId }: { runId: string }) {
   const { data: events } = useSWR<AuditLogEvent[]>(
     `/api/asset-studio/runs/${runId}/audit-log`,
     fetcher,
-    { refreshInterval: 10000 }
+    {
+      refreshInterval: 3000,
+      revalidateOnFocus: true,
+      revalidateOnMount: true,
+    }
   );
   if (!events || events.length === 0) return null;
   return (
@@ -713,8 +717,8 @@ function RunVariantCard({
   onOpen: () => void;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-lg border border-[var(--as-border)] bg-[var(--as-surface)] transition-all hover:shadow-md">
-      <div className="relative aspect-square bg-white">
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-[var(--as-border)] bg-[var(--as-surface)] transition-all hover:shadow-md">
+      <div className={`relative aspect-square ${variant.status === "failed" ? "bg-[color-mix(in_srgb,var(--as-status-failed)_8%,white)]" : "bg-white"}`}>
         {variant.assetUrl ? (
           <button
             type="button"
@@ -731,6 +735,13 @@ function RunVariantCard({
               loading="lazy"
             />
           </button>
+        ) : variant.status === "failed" ? (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-3 text-center">
+            <ImageOff className="h-6 w-6 text-[var(--as-status-failed)]" />
+            <p className="text-[11px] leading-snug text-[var(--as-status-failed)]">
+              {variant.errorMessage ?? "Render failed"}
+            </p>
+          </div>
         ) : (
           <div className="flex h-full w-full items-center justify-center text-[var(--as-text-subtle)]">
             <ImageOff className="h-8 w-8" />
@@ -749,7 +760,7 @@ function RunVariantCard({
         )}
       </div>
 
-      <div className="p-2.5">
+      <div className="flex flex-1 flex-col p-2.5">
         <p className="truncate text-xs font-medium text-[var(--as-text)]">
           {variant.product?.name || "Variant"}
         </p>
@@ -759,12 +770,6 @@ function RunVariantCard({
             <> · <span className="font-mono">{variant.localeCode}</span></>
           )}
         </p>
-
-        {variant.errorMessage && variant.status === "failed" && (
-          <p className="mt-1 truncate text-[11px] text-[var(--as-status-failed)]" title={variant.errorMessage}>
-            {variant.errorMessage}
-          </p>
-        )}
 
         {canApprove && variant.status === "rendered" && (
           <div className="mt-2 flex gap-1">
