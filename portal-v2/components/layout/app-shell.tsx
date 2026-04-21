@@ -22,12 +22,20 @@ export function AppShell({ children }: AppShellProps) {
   const { user, isLoading, isError, mutate } = useCurrentUser();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isCompactPreview, setIsCompactPreview] = useState(false);
 
   useEffect(() => {
     if (!isLoading && isError) {
       router.replace("/login");
     }
   }, [isLoading, isError, router]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    setIsCompactPreview(params.get("density") === "compact");
+  }, []);
 
   if (isLoading || !user) {
     return (
@@ -41,7 +49,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <MenagerieProvider userId={user.id}>
-      <div className="flex h-full">
+      <div className="flex h-full" data-density={isCompactPreview ? "compact" : undefined}>
         <Sidebar
           userRole={user.role}
           userName={user.name}
@@ -58,7 +66,7 @@ export function AppShell({ children }: AppShellProps) {
           <Topbar onMenuClick={() => setMobileOpen(true)} />
 
           <main className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
+            <div className="mx-auto max-w-7xl px-[var(--density-page-content-px)] py-[var(--density-page-content-py)] lg:px-[var(--density-page-content-px-lg)]">
               {children}
             </div>
           </main>

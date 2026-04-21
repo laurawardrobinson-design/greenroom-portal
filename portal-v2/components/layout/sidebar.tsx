@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { formatRoleLabel } from "@/lib/auth/roles";
 import { GatorEasterEgg } from "./gator-easter-egg";
 import { NotificationBell } from "./notification-bell";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -42,13 +43,13 @@ const NAV_ITEMS: NavItem[] = [
     label: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Designer"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director", "Designer"],
   },
   {
     label: "Campaigns",
     href: "/campaigns",
     icon: Film,
-    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director"],
   },
   {
     label: "Estimates & Invoices",
@@ -96,7 +97,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Asset Studio",
     href: "/asset-studio",
     icon: Palette,
-    roles: ["Admin", "Producer", "Post Producer", "Designer", "Art Director"],
+    roles: ["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"],
   },
   {
     label: "Gear",
@@ -126,7 +127,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Contacts",
     href: "/contacts",
     icon: Contact,
-    roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director", "Designer"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director", "Creative Director", "Designer"],
   },
   {
     label: "Goals",
@@ -138,7 +139,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Settings",
     href: "/settings",
     icon: Settings,
-    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Designer"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director", "Designer"],
   },
 ];
 
@@ -252,7 +253,7 @@ export function Sidebar({
           <UserAvatar name={userName} favoriteProduct={userFavoriteProduct} size="sm" variant="dark" />
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-medium">{userName}</p>
-            <p className="text-xs text-white/50 capitalize">{userRole}</p>
+            <p className="text-xs text-white/50">{formatRoleLabel(userRole)}</p>
           </div>
           <NotificationBell variant="sidebar" />
           <button

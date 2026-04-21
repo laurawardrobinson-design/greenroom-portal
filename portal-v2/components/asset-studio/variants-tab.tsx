@@ -229,11 +229,11 @@ function VariantCard({
           : "border-[var(--as-border)] hover:shadow-md"
       }`}
     >
-      <div className="relative aspect-square bg-[var(--as-canvas-bg)]">
+      <div className="relative aspect-square bg-white">
         {variant.assetUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={variant.thumbnailUrl ?? variant.assetUrl}
+            src={`${variant.thumbnailUrl ?? variant.assetUrl}?v=${encodeURIComponent(variant.updatedAt)}`}
             alt={variant.product?.name ?? "Variant"}
             className="h-full w-full object-contain"
           />

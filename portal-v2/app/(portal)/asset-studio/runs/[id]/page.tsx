@@ -19,6 +19,7 @@ import {
   ImageOff,
   PlayCircle,
   RefreshCw,
+  RotateCcw,
   StopCircle,
   Trash2,
   X,
@@ -448,7 +449,53 @@ export default function RunDetailPage({
               key={v.id}
               variant={v}
               canApprove={canApprove}
+              canControl={canControl}
               onOpen={() => setLightboxIndex(i)}
+              onRetry={async () => {
+                try {
+                  const reset = await fetch(`/api/asset-studio/variants/${v.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ status: "pending", errorMessage: null }),
+                  });
+                  if (!reset.ok) {
+                    const body = await reset.json().catch(() => ({}));
+                    throw new Error(body.error ?? "Couldn't reset variant");
+                  }
+                  const res = await fetch(`/api/asset-studio/runs/${id}/render`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({}),
+                  });
+                  if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.error ?? "Couldn't queue retry");
+                  }
+                  toast("success", "Retry queued");
+                  mutate(url);
+                  mutate(`/api/asset-studio/runs/${id}/audit-log`);
+                } catch (error) {
+                  toast("error", (error as Error).message ?? "Retry failed");
+                }
+              }}
+              onDelete={async () => {
+                if (!window.confirm("Remove this failed variant? This cannot be undone."))
+                  return;
+                try {
+                  const res = await fetch(`/api/asset-studio/variants/${v.id}`, {
+                    method: "DELETE",
+                  });
+                  if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.error ?? "Couldn't remove variant");
+                  }
+                  toast("success", "Variant removed");
+                  mutate(url);
+                  mutate(`/api/asset-studio/runs/${id}/audit-log`);
+                } catch (error) {
+                  toast("error", (error as Error).message ?? "Remove failed");
+                }
+              }}
               onAction={async (action) => {
                 try {
                   let res: Response;
@@ -708,13 +755,19 @@ function CountChip({ label, n }: { label: string; n: number }) {
 function RunVariantCard({
   variant,
   canApprove,
+  canControl,
   onAction,
   onOpen,
+  onRetry,
+  onDelete,
 }: {
   variant: Variant;
   canApprove: boolean;
+  canControl: boolean;
   onAction: (action: "approve" | "reject") => Promise<void>;
   onOpen: () => void;
+  onRetry: () => Promise<void>;
+  onDelete: () => Promise<void>;
 }) {
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-[var(--as-border)] bg-[var(--as-surface)] transition-all hover:shadow-md">
@@ -789,6 +842,29 @@ function RunVariantCard({
               aria-label="Approve"
             >
               <Check className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+
+        {canControl && variant.status === "failed" && (
+          <div className="mt-2 flex gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={onDelete}
+              aria-label="Remove"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1"
+              onClick={onRetry}
+              aria-label="Retry"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Retry
             </Button>
           </div>
         )}

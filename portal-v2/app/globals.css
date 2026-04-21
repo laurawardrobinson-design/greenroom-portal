@@ -66,6 +66,172 @@
 }
 
 /* ============================================================
+   Density tokens (comfortable default + compact preview)
+   ============================================================ */
+
+:root {
+  --density-form-stack-gap: 0.375rem;
+  --density-control-radius: 0.5rem;
+  --density-control-px: 0.875rem;
+  --density-control-py: 0.625rem;
+  --density-textarea-min-h: 5rem;
+
+  --density-card-p-sm: 1rem;
+  --density-card-p-md: 1.25rem;
+  --density-card-p-lg: 1.5rem;
+  --density-card-header-px: 0.875rem;
+  --density-card-header-py: 0.625rem;
+
+  --density-button-h-sm: 2rem;
+  --density-button-h-md: 2.25rem;
+  --density-button-h-lg: 2.75rem;
+  --density-button-px-sm: 0.75rem;
+  --density-button-px-md: 1rem;
+  --density-button-px-lg: 1.25rem;
+  --density-button-gap-sm: 0.375rem;
+  --density-button-gap-md: 0.5rem;
+  --density-button-gap-lg: 0.5rem;
+  --density-button-radius-sm: 0.375rem;
+  --density-button-radius-md: 0.5rem;
+  --density-button-radius-lg: 0.5rem;
+
+  --density-page-header-gap: 0.75rem;
+  --density-page-header-pb: 1rem;
+  --density-page-header-row-gap: 1rem;
+  --density-page-header-crumb-gap: 0.5rem;
+  --density-page-header-action-gap: 0.5rem;
+
+  --density-tabs-px: 1.25rem;
+  --density-tabs-py: 0.875rem;
+  --density-tabs-gap: 0.5rem;
+  --density-preprod-content-pt: 1.5rem;
+
+  --density-subnav-stack-gap: 0.75rem;
+  --density-subnav-gap: 0.25rem;
+  --density-subnav-pill-gap: 0.375rem;
+  --density-subnav-pill-px: 0.875rem;
+  --density-subnav-pill-py: 0.375rem;
+  --density-schedule-offset-x: 0rem;
+  --density-schedule-panel-pad-x: 0.75rem;
+  --density-schedule-panel-pad-y: 0.5rem;
+  --density-schedule-panel-content-pad: 0.75rem;
+
+  --density-shotlist-stack-gap: 0.75rem;
+  --density-shotlist-actions-gap: 0.5rem;
+  --density-shotlist-button-gap: 0.375rem;
+  --density-shotlist-btn-px-sm: 0.625rem;
+  --density-shotlist-btn-px-md: 0.75rem;
+  --density-shotlist-btn-py: 0.375rem;
+  --density-shotlist-table-head-px: 0.625rem;
+  --density-shotlist-table-head-py: 0.5rem;
+  --density-shotlist-row-cell-px: 0.625rem;
+  --density-shotlist-row-cell-py: 0.5rem;
+  --density-shotlist-chip-cell-px: 0.5rem;
+  --density-shotlist-chip-cell-py: 0.375rem;
+  --density-shotlist-setup-gap: 0.5rem;
+  --density-shotlist-setup-px: 0.875rem;
+  --density-shotlist-setup-py: 0.625rem;
+  --density-shotlist-addshot-px: 0.875rem;
+  --density-shotlist-addshot-py: 0.5rem;
+
+  --density-page-content-px: 1rem;
+  --density-page-content-px-lg: 1.5rem;
+  --density-page-content-py: 1.5rem;
+
+  --density-modal-overlay-pad: 1rem;
+  --density-modal-content-pad: 1.25rem;
+  --density-modal-header-gap: 0.5rem;
+  --density-modal-header-mb: 1rem;
+  --density-modal-footer-mt: 1.5rem;
+  --density-modal-footer-gap: 0.75rem;
+  --density-modal-close-pad: 0.25rem;
+
+  --density-drawer-header-px: 1.25rem;
+  --density-drawer-header-py: 1rem;
+  --density-drawer-content-pad: 1.25rem;
+  --density-drawer-close-pad: 0.375rem;
+  --density-drawer-desc-mt: 0.125rem;
+}
+
+[data-density="compact"] {
+  --density-form-stack-gap: 0.25rem;
+  --density-control-px: 0.75rem;
+  --density-control-py: 0.5rem;
+  --density-textarea-min-h: 4.5rem;
+
+  --density-card-p-sm: 0.75rem;
+  --density-card-p-md: 1rem;
+  --density-card-p-lg: 1.25rem;
+  --density-card-header-px: 0.75rem;
+  --density-card-header-py: 0.5rem;
+
+  --density-button-h-sm: 1.875rem;
+  --density-button-h-md: 2rem;
+  --density-button-h-lg: 2.5rem;
+  --density-button-px-sm: 0.625rem;
+  --density-button-px-md: 0.875rem;
+  --density-button-px-lg: 1rem;
+  --density-button-gap-sm: 0.25rem;
+  --density-button-gap-md: 0.375rem;
+  --density-button-gap-lg: 0.375rem;
+
+  --density-page-header-gap: 0.5rem;
+  --density-page-header-pb: 0.75rem;
+  --density-page-header-row-gap: 0.75rem;
+  --density-page-header-crumb-gap: 0.375rem;
+  --density-page-header-action-gap: 0.375rem;
+
+  --density-tabs-px: 0.875rem;
+  --density-tabs-py: 0.625rem;
+  --density-tabs-gap: 0.375rem;
+  --density-preprod-content-pt: 0.875rem;
+
+  --density-subnav-stack-gap: 0.625rem;
+  --density-subnav-gap: 0.25rem;
+  --density-subnav-pill-gap: 0.375rem;
+  --density-subnav-pill-px: 0.875rem;
+  --density-subnav-pill-py: 0.375rem;
+  --density-schedule-offset-x: 0rem;
+  --density-schedule-panel-pad-x: 0.75rem;
+  --density-schedule-panel-pad-y: 0.5rem;
+  --density-schedule-panel-content-pad: 0.75rem;
+
+  --density-shotlist-stack-gap: 0.75rem;
+  --density-shotlist-actions-gap: 0.5rem;
+  --density-shotlist-button-gap: 0.375rem;
+  --density-shotlist-btn-px-sm: 0.625rem;
+  --density-shotlist-btn-px-md: 0.75rem;
+  --density-shotlist-btn-py: 0.375rem;
+  --density-shotlist-table-head-px: 0.625rem;
+  --density-shotlist-table-head-py: 0.5rem;
+  --density-shotlist-row-cell-px: 0.625rem;
+  --density-shotlist-row-cell-py: 0.5rem;
+  --density-shotlist-chip-cell-px: 0.5rem;
+  --density-shotlist-chip-cell-py: 0.375rem;
+  --density-shotlist-setup-gap: 0.5rem;
+  --density-shotlist-setup-px: 0.875rem;
+  --density-shotlist-setup-py: 0.625rem;
+  --density-shotlist-addshot-px: 0.875rem;
+  --density-shotlist-addshot-py: 0.5rem;
+
+  --density-page-content-px: 0.75rem;
+  --density-page-content-px-lg: 1rem;
+  --density-page-content-py: 1rem;
+
+  --density-modal-overlay-pad: 0.75rem;
+  --density-modal-content-pad: 1rem;
+  --density-modal-header-gap: 0.375rem;
+  --density-modal-header-mb: 0.75rem;
+  --density-modal-footer-mt: 1rem;
+  --density-modal-footer-gap: 0.5rem;
+
+  --density-drawer-header-px: 1rem;
+  --density-drawer-header-py: 0.75rem;
+  --density-drawer-content-pad: 1rem;
+  --density-drawer-close-pad: 0.25rem;
+}
+
+/* ============================================================
    Base styles
    ============================================================ */
 
@@ -467,4 +633,3 @@ textarea {
   --as-handle-color:   #69A925;
   --as-handle-locked:  #F59E0B;
 }
-

@@ -72,7 +72,7 @@ export function Drawer({
         `}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-5 py-4">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-[var(--density-drawer-header-px)] py-[var(--density-drawer-header-py)]">
           <div>
             {title && (
               <h2
@@ -83,19 +83,19 @@ export function Drawer({
               </h2>
             )}
             {description && (
-              <p className="mt-0.5 text-sm text-text-secondary">{description}</p>
+              <p className="mt-[var(--density-drawer-desc-mt)] text-sm text-text-secondary">{description}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="rounded-md p-1.5 text-text-secondary hover:bg-fill-secondary hover:text-text-primary"
+            className="rounded-md p-[var(--density-drawer-close-pad)] text-text-secondary hover:bg-fill-secondary hover:text-text-primary"
           >
             <X className="h-4.5 w-4.5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-5">{children}</div>
+        <div className="p-[var(--density-drawer-content-pad)]">{children}</div>
       </div>
     </div>
   );

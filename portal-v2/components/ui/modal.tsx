@@ -91,7 +91,7 @@ export function Modal({
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-[var(--density-modal-overlay-pad)]"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
@@ -107,19 +107,19 @@ export function Modal({
         aria-labelledby={title ? "modal-title" : undefined}
         className={`
           relative w-full ${sizeStyles[size]}
-          rounded-xl border border-border bg-surface p-5 shadow-lg
+          rounded-xl border border-border bg-surface p-[var(--density-modal-content-pad)] shadow-lg
           animate-in fade-in zoom-in-95 duration-200
           max-h-[90vh] overflow-y-auto overscroll-contain
           max-sm:rounded-b-none max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:max-w-none max-sm:rounded-t-2xl max-sm:animate-none
         `}
       >
         {title && (
-          <div className="flex items-start justify-between gap-2 mb-4">
+          <div className="mb-[var(--density-modal-header-mb)] flex items-start justify-between gap-[var(--density-modal-header-gap)]">
             <div>
               <h2 id="modal-title" className="text-lg font-semibold text-text-primary">{title}</h2>
               {description && <p className="mt-1 text-sm text-text-secondary">{description}</p>}
             </div>
-            <button onClick={onClose} className="shrink-0 rounded-lg p-1 -mt-0.5 -mr-0.5 text-text-tertiary hover:text-text-secondary hover:bg-surface-secondary transition-colors">
+            <button onClick={onClose} className="-mr-0.5 -mt-0.5 shrink-0 rounded-lg p-[var(--density-modal-close-pad)] text-text-tertiary transition-colors hover:bg-surface-secondary hover:text-text-secondary">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -139,7 +139,7 @@ export function ModalFooter({
 }) {
   return (
     <div
-      className={`mt-6 flex items-center justify-end gap-3 ${className}`}
+      className={`mt-[var(--density-modal-footer-mt)] flex items-center justify-end gap-[var(--density-modal-footer-gap)] ${className}`}
     >
       {children}
     </div>

@@ -68,3 +68,17 @@ export function hasPermission(
 ): boolean {
   return allowedRoles.includes(userRole);
 }
+
+// Creative leadership tier — Creative Director covers both CD and Design Director
+// responsibilities today. When DD lands as its own enum value, add it here and
+// every permission gate picks it up automatically.
+export function isCreativeLeadership(role: UserRole): boolean {
+  return role === "Creative Director";
+}
+
+// Display label for a role. Keeps the enum stable (identifier = "Creative Director")
+// while showing the combined "Creative/Design Director" in the UI.
+export function formatRoleLabel(role: UserRole): string {
+  if (role === "Creative Director") return "Creative/Design Director";
+  return role;
+}

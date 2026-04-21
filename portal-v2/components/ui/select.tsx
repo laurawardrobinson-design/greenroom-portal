@@ -13,7 +13,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const errorId = error && selectId ? `${selectId}-error` : undefined;
 
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-[var(--density-form-stack-gap)]">
         {label && (
           <label
             htmlFor={selectId}
@@ -29,7 +29,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           aria-describedby={errorId}
           aria-label={!label ? (placeholder || undefined) : undefined}
           className={`
-            block w-full rounded-lg border bg-surface px-3.5 py-2.5
+            block w-full rounded-[var(--density-control-radius)] border bg-surface px-[var(--density-control-px)] py-[var(--density-control-py)]
             text-sm text-text-primary
             shadow-xs transition-all appearance-none
             focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none

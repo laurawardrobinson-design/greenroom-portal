@@ -11,7 +11,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     const errorId = error && textareaId ? `${textareaId}-error` : undefined;
 
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-[var(--density-form-stack-gap)]">
         {label && (
           <label
             htmlFor={textareaId}
@@ -27,9 +27,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           aria-describedby={errorId}
           aria-label={!label ? (props.placeholder || undefined) : undefined}
           className={`
-            block w-full rounded-lg border bg-surface px-3.5 py-2.5
+            block w-full rounded-[var(--density-control-radius)] border bg-surface px-[var(--density-control-px)] py-[var(--density-control-py)]
             text-sm text-text-primary placeholder:text-text-tertiary
-            shadow-xs transition-all resize-y min-h-[80px]
+            shadow-xs transition-all resize-y min-h-[var(--density-textarea-min-h)]
             focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none
             disabled:bg-surface-secondary disabled:text-text-tertiary
             ${error ? "border-error" : "border-border"}

@@ -26,7 +26,7 @@ export function PageTabs({ tabs, activeTab, onTabChange }: PageTabsProps) {
               type="button"
               onClick={() => onTabChange(key)}
               className={`
-                relative flex items-center gap-2 px-5 py-3.5 text-sm font-medium transition-colors
+                relative flex items-center gap-[var(--density-tabs-gap)] px-[var(--density-tabs-px)] py-[var(--density-tabs-py)] text-sm font-medium transition-colors
                 ${active
                   ? "text-text-primary"
                   : "text-text-tertiary hover:text-text-secondary"

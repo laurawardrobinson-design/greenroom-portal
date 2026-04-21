@@ -1,28 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import {
-  List,
-  AlignJustify,
-  CalendarDays,
-  FileText,
-  Download,
-} from "lucide-react";
-import type { Shoot, CampaignDeliverable } from "@/types/domain";
+import type { Shoot } from "@/types/domain";
 import { ShotListCleanView } from "./shot-list-clean-view";
 import { OneLinerView } from "./one-liner-view";
 import { DayByDayView } from "./day-by-day-view";
 import { CallSheetBuilder } from "./call-sheet-builder";
 
 // ─── Sub-nav config ──────────────────────────────────────────────────────────
-const SUB_VIEWS = [
-  { id: "shot-list", label: "Shot List", icon: List },
-  { id: "one-liner", label: "One-Liner", icon: AlignJustify },
-  { id: "day-by-day", label: "Day-by-Day", icon: CalendarDays },
-  { id: "call-sheet", label: "Call Sheet", icon: FileText },
+export const SCHEDULE_SUB_VIEWS = [
+  { id: "shot-list", label: "Shot List" },
+  { id: "one-liner", label: "One-Liner" },
+  { id: "day-by-day", label: "Day-by-Day" },
+  { id: "call-sheet", label: "Call Sheet" },
 ] as const;
 
-type SubViewId = (typeof SUB_VIEWS)[number]["id"];
+export type ScheduleSubViewId = (typeof SCHEDULE_SUB_VIEWS)[number]["id"];
 
 interface ScheduleTabProps {
   campaignId: string;
@@ -42,6 +35,9 @@ interface ScheduleTabProps {
       category: string;
     };
   }>;
+  activeView?: ScheduleSubViewId;
+  onActiveViewChange?: (view: ScheduleSubViewId) => void;
+  showViewSwitcher?: boolean;
 }
 
 export function ScheduleTab({
@@ -53,77 +49,99 @@ export function ScheduleTab({
   shoots,
   isArtDirector,
   vendors,
+  activeView: activeViewProp,
+  onActiveViewChange,
+  showViewSwitcher = true,
 }: ScheduleTabProps) {
-  const [activeView, setActiveView] = useState<SubViewId>("shot-list");
+  const [internalActiveView, setInternalActiveView] = useState<ScheduleSubViewId>("shot-list");
+  const isControlled = activeViewProp !== undefined;
+  const activeView = isControlled ? activeViewProp : internalActiveView;
   const visibleViews = isArtDirector
-    ? SUB_VIEWS.filter((v) => v.id === "shot-list")
-    : SUB_VIEWS;
+    ? SCHEDULE_SUB_VIEWS.filter((v) => v.id === "shot-list")
+    : SCHEDULE_SUB_VIEWS;
+  const resolvedActiveView = visibleViews.some((view) => view.id === activeView)
+    ? activeView
+    : visibleViews[0].id;
+
+  function handleViewChange(viewId: ScheduleSubViewId) {
+    if (!isControlled) {
+      setInternalActiveView(viewId);
+    }
+    onActiveViewChange?.(viewId);
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Sub-navigation — compact pills, nested under main Schedule tab */}
-      <div className="flex items-center gap-1.5">
-        {visibleViews.map(({ id, label, icon: Icon }) => {
-          const active = activeView === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setActiveView(id)}
-              className={`
-                flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors
-                ${active
-                  ? "bg-primary/10 text-primary"
-                  : "text-text-tertiary hover:text-text-secondary hover:bg-surface-secondary"
-                }
-              `}
-            >
-              <Icon className="h-3 w-3" />
-              {label}
-            </button>
-          );
-        })}
-      </div>
+    <div className="pl-[var(--density-schedule-offset-x)]">
+      <section className="overflow-hidden rounded-xl border border-border bg-surface">
+        {showViewSwitcher && (
+          <div className="border-b border-border bg-surface-secondary/55 px-[var(--density-schedule-panel-pad-x)] py-[var(--density-schedule-panel-pad-y)]">
+            <div className="inline-flex items-center gap-[var(--density-subnav-gap)] rounded-lg bg-surface-secondary/70 p-1">
+              {visibleViews.map(({ id, label }) => {
+                const active = resolvedActiveView === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => handleViewChange(id)}
+                    className={`
+                      rounded-md px-[var(--density-subnav-pill-px)] py-[var(--density-subnav-pill-py)] text-xs font-medium transition-colors
+                      ${active
+                        ? "bg-surface text-text-primary shadow-xs"
+                        : "text-text-tertiary hover:bg-surface/70 hover:text-text-secondary"
+                      }
+                    `}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
-      {/* View content */}
-      {activeView === "shot-list" && (
-        <ShotListCleanView
-          campaignId={campaignId}
-          campaignName={campaignName}
-          wfNumber={wfNumber}
-          assetsDeliveryDate={assetsDeliveryDate}
-          shoots={shoots}
-        />
-      )}
+        {/* Window body: selected subview */}
+        <div className="p-[var(--density-schedule-panel-content-pad)]">
+          {resolvedActiveView === "shot-list" && (
+            <ShotListCleanView
+              campaignId={campaignId}
+              campaignName={campaignName}
+              wfNumber={wfNumber}
+              assetsDeliveryDate={assetsDeliveryDate}
+              shoots={shoots}
+              embedded
+            />
+          )}
 
-      {activeView === "one-liner" && (
-        <OneLinerView
-          campaignId={campaignId}
-          campaignName={campaignName}
-          wfNumber={wfNumber}
-          shoots={shoots}
-        />
-      )}
+          {resolvedActiveView === "one-liner" && (
+            <OneLinerView
+              campaignId={campaignId}
+              campaignName={campaignName}
+              wfNumber={wfNumber}
+              shoots={shoots}
+            />
+          )}
 
-      {activeView === "day-by-day" && (
-        <DayByDayView
-          campaignId={campaignId}
-          campaignName={campaignName}
-          wfNumber={wfNumber}
-          shoots={shoots}
-        />
-      )}
+          {resolvedActiveView === "day-by-day" && (
+            <DayByDayView
+              campaignId={campaignId}
+              campaignName={campaignName}
+              wfNumber={wfNumber}
+              shoots={shoots}
+            />
+          )}
 
-      {activeView === "call-sheet" && (
-        <CallSheetBuilder
-          campaignId={campaignId}
-          campaignName={campaignName}
-          wfNumber={wfNumber}
-          shoots={shoots}
-          vendors={vendors}
-          producerId={producerId}
-        />
-      )}
+          {resolvedActiveView === "call-sheet" && (
+            <CallSheetBuilder
+              campaignId={campaignId}
+              campaignName={campaignName}
+              wfNumber={wfNumber}
+              shoots={shoots}
+              vendors={vendors}
+              producerId={producerId}
+            />
+          )}
+        </div>
+      </section>
     </div>
   );
 }

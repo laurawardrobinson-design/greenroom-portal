@@ -71,6 +71,7 @@ interface Props {
   wfNumber: string;
   assetsDeliveryDate: string | null;
   shoots: Shoot[];
+  embedded?: boolean;
 }
 
 interface ScheduleData {
@@ -179,12 +180,12 @@ function Cell({
               setEditing(false);
             }
           }}
-          className="absolute inset-0 px-2.5 py-2 text-xs bg-white outline-none z-10 ring-2 ring-inset ring-primary text-text-primary"
+          className="absolute inset-0 px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs bg-white outline-none z-10 ring-2 ring-inset ring-primary text-text-primary"
           placeholder={placeholder}
         />
       ) : (
         <div
-          className={`px-2.5 py-2 text-xs h-full ${
+          className={`px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs h-full ${
             value ? "text-text-primary" : "text-text-tertiary/40"
           } group-hover:bg-primary/3 transition-colors`}
         >
@@ -546,7 +547,7 @@ function ProductTagCell({
 
   if (!editing) {
     return (
-      <td className="px-2 py-1.5 overflow-hidden relative">
+      <td className="px-[var(--density-shotlist-chip-cell-px)] py-[var(--density-shotlist-chip-cell-py)] overflow-hidden relative">
         {hasTags ? (
           <div className="flex flex-col gap-0.5 overflow-hidden">
             {linkedProducts.map((p) => (
@@ -597,7 +598,7 @@ function ProductTagCell({
 
   return (
     <td className="px-0 py-0 relative overflow-hidden" ref={dropRef}>
-      <div className="flex flex-col gap-0.5 px-2 py-1.5 min-h-[32px] ring-2 ring-inset ring-primary bg-white overflow-hidden">
+      <div className="flex flex-col gap-0.5 px-[var(--density-shotlist-chip-cell-px)] py-[var(--density-shotlist-chip-cell-py)] min-h-[32px] ring-2 ring-inset ring-primary bg-white overflow-hidden">
         {/* Linked product chips */}
         {linkedProducts.map((p) => (
           <span key={p.cpId} className="inline-flex items-center gap-0.5 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 max-w-full overflow-hidden">
@@ -1337,7 +1338,7 @@ function ChannelCell({
   }
 
   return (
-    <div ref={addRef} className="flex flex-wrap items-center gap-1 px-2 py-1.5 min-h-[32px] h-full"
+    <div ref={addRef} className="flex h-full min-h-[32px] flex-wrap items-center gap-1 px-[var(--density-shotlist-chip-cell-px)] py-[var(--density-shotlist-chip-cell-py)]"
       onClick={toggle}
       style={{ cursor: "cell" }}>
       {shotLinks.map((lnk) => {
@@ -1380,6 +1381,7 @@ export function ShotListCleanView({
   wfNumber,
   assetsDeliveryDate,
   shoots,
+  embedded = false,
 }: Props) {
   const { toast } = useToast();
   const swrKey = `/api/campaigns/${campaignId}/schedule`;
@@ -1387,30 +1389,24 @@ export function ShotListCleanView({
 
   // Drag state
   const [dragId, setDragId] = useState<string | null>(null);
+  const [expandedShots, setExpandedShots] = useState<Record<string, boolean>>({});
 
   // ─── Column resize ──────────────────────────────────────────────────────────
   const COLUMNS = [
     { key: "drag", label: "", minW: 28, defaultW: 28 },
     { key: "#", label: "#", minW: 36, defaultW: 36 },
     { key: "ref", label: "Ref", minW: 36, defaultW: 36 },
-    { key: "name", label: "Shot Name", minW: 80, defaultW: 130 },
-    { key: "type", label: "Type", minW: 36, defaultW: 44 },
-    { key: "angle", label: "Angle", minW: 40, defaultW: 52 },
-    { key: "env", label: "Env", minW: 52, defaultW: 68 },
-    { key: "channel", label: "Channel", minW: 64, defaultW: 84 },
-    { key: "desc", label: "Description", minW: 100, defaultW: 160 },
-    { key: "surface", label: "Surface", minW: 60, defaultW: 84 },
-    { key: "props", label: "Props", minW: 60, defaultW: 84 },
-    { key: "products", label: "Products", minW: 80, defaultW: 110 },
-    { key: "lighting", label: "Lighting", minW: 60, defaultW: 84 },
-    { key: "talent", label: "Talent", minW: 44, defaultW: 56 },
-    { key: "wardrobe", label: "Wardrobe", minW: 60, defaultW: 84 },
-    { key: "notes", label: "Notes", minW: 64, defaultW: 100 },
-    { key: "retouching", label: "Retouching", minW: 64, defaultW: 100 },
+    { key: "name", label: "Shot Name", minW: 120, defaultW: 190 },
+    { key: "type", label: "Type", minW: 56, defaultW: 72 },
+    { key: "angle", label: "Angle", minW: 64, defaultW: 84 },
+    { key: "env", label: "Env", minW: 72, defaultW: 98 },
+    { key: "channel", label: "Channel", minW: 84, defaultW: 118 },
+    { key: "desc", label: "Description", minW: 150, defaultW: 260 },
+    { key: "details", label: "Details", minW: 76, defaultW: 82 },
     { key: "delete", label: "", minW: 28, defaultW: 28 },
   ];
 
-  const storageKey = `shotlist-col-widths-v4-${campaignId}`;
+  const storageKey = `shotlist-col-widths-v5-${campaignId}`;
   const [colWidths, setColWidths] = useState<number[]>(() => {
     if (typeof window === "undefined") return COLUMNS.map((c) => c.defaultW);
     try {
@@ -1637,20 +1633,21 @@ export function ShotListCleanView({
   }
 
   const totalShots = data.shots.length;
+  const sortedSetups = [...data.setups].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
-    <div className="space-y-3">
+    <div className={embedded ? "" : "space-y-[var(--density-shotlist-stack-gap)]"}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-text-primary">
+      <div className={`flex items-center justify-between ${embedded ? "border-b border-border pb-3" : ""}`}>
+        <p className="inline-flex items-center rounded-md bg-surface-secondary px-2.5 py-1 text-xs font-medium text-text-secondary">
           {totalShots} shot{totalShots !== 1 ? "s" : ""} across{" "}
           {data.setups.length} setup{data.setups.length !== 1 ? "s" : ""}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-[var(--density-shotlist-actions-gap)]">
           <button
             type="button"
             onClick={addSetup}
-            className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-secondary transition-colors"
+            className="flex items-center gap-[var(--density-shotlist-button-gap)] rounded-lg border border-border px-[var(--density-shotlist-btn-px-sm)] py-[var(--density-shotlist-btn-py)] text-xs font-medium text-text-secondary hover:bg-surface-secondary transition-colors"
           >
             <Plus className="h-3 w-3" />
             Add Setup
@@ -1658,7 +1655,7 @@ export function ShotListCleanView({
           <button
             type="button"
             onClick={handleDownload}
-            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-secondary transition-colors"
+            className="flex items-center gap-[var(--density-shotlist-button-gap)] rounded-lg border border-border px-[var(--density-shotlist-btn-px-md)] py-[var(--density-shotlist-btn-py)] text-xs font-medium text-text-secondary hover:bg-surface-secondary transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
             Download PDF
@@ -1666,19 +1663,15 @@ export function ShotListCleanView({
         </div>
       </div>
 
-      {/* Setups + shots */}
-      {data.setups
-        .sort((a, b) => a.sort_order - b.sort_order)
-        .map((setup) => {
+      {/* Unified shot-list frame with setup sections */}
+      <div className={embedded ? "" : "overflow-hidden rounded-xl border border-border bg-surface"}>
+        {sortedSetups.map((setup, setupIdx) => {
           const setupShots = data.shots
             .filter((s) => s.setup_id === setup.id)
             .sort((a, b) => a.sort_order - b.sort_order);
 
           return (
-            <div
-              key={setup.id}
-              className="rounded-lg border border-border overflow-hidden"
-            >
+            <section key={setup.id} className={setupIdx > 0 ? "border-t border-border" : embedded ? "pt-1" : ""}>
               {/* Setup header */}
               <SetupHeader
                 setup={setup}
@@ -1705,7 +1698,7 @@ export function ShotListCleanView({
                         <th
                           key={col.key}
                           style={{ width: colWidths[ci] }}
-                          className={`relative ${col.label ? "px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary" : ""} select-none`}
+                          className={`relative ${col.label ? "px-[var(--density-shotlist-table-head-px)] py-[var(--density-shotlist-table-head-py)] text-[11px] font-semibold uppercase tracking-wider text-text-secondary" : ""} select-none`}
                         >
                           {col.label}
                           {/* Resize handle (skip for first, last, and tiny columns) */}
@@ -1720,206 +1713,235 @@ export function ShotListCleanView({
                     </tr>
                   </thead>
                   <tbody>
-                    {setupShots.map((shot, si) => {
-                      const shotLinks = data.links.filter(
-                        (l) => l.shot_id === shot.id
-                      );
-                      const channels = shotLinks
-                        .map((l) =>
-                          data.deliverables.find(
-                            (d) => d.id === l.deliverable_id
-                          )
-                        )
-                        .filter(Boolean)
-                        .map((d) => d!.channel)
-                        .join(", ");
-
+                    {setupShots.map((shot) => {
                       const globalIdx =
                         data.shots.findIndex((s) => s.id === shot.id) + 1;
+                      const detailsOpen = !!expandedShots[shot.id];
+                      const linkedProducts = data.productLinks
+                        .filter((pl) => pl.shot_id === shot.id)
+                        .map((pl) => {
+                          const cp = data.campaignProducts.find((c) => c.id === pl.campaign_product_id);
+                          return cp ? {
+                            cpId: cp.id,
+                            name: cp.product?.name || "Product",
+                            itemCode: cp.product?.item_code ?? null,
+                            department: cp.product?.department ?? null,
+                            description: cp.product?.description ?? null,
+                            shootingNotes: cp.product?.shooting_notes ?? null,
+                            imageUrl: cp.product?.image_url ?? null,
+                          } : null;
+                        })
+                        .filter((x): x is { cpId: string; name: string; itemCode: string | null; department: string | null; description: string | null; shootingNotes: string | null; imageUrl: string | null } => !!x);
+                      const freeTextTags = shot.product_tags
+                        ? shot.product_tags.split(",").map((t) => t.trim()).filter(Boolean)
+                        : [];
+                      const shotTalent = data.talent.filter((t) => t.shot_id === shot.id);
 
                       return (
-                        <tr
-                          key={shot.id}
-                          draggable
-                          onDragStart={() => setDragId(shot.id)}
-                          onDragEnd={() => setDragId(null)}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            handleDrop(shot.id);
-                          }}
-                          className={`border-t border-border transition-colors ${
-                            dragId === shot.id
-                              ? "opacity-30 bg-primary/5"
-                              : "hover:bg-surface-secondary/50"
-                          }`}
-                        >
-                          {/* Drag handle */}
-                          <td className="w-[28px] cursor-grab active:cursor-grabbing">
-                            <div className="flex items-center justify-center h-full">
-                              <GripVertical className="h-3 w-3 text-text-tertiary/30" />
-                            </div>
-                          </td>
+                        <Fragment key={shot.id}>
+                          <tr
+                            draggable
+                            onDragStart={() => setDragId(shot.id)}
+                            onDragEnd={() => setDragId(null)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              handleDrop(shot.id);
+                            }}
+                            className={`border-t border-border transition-colors ${
+                              dragId === shot.id
+                                ? "opacity-30 bg-primary/5"
+                                : "hover:bg-surface-secondary/50"
+                            }`}
+                          >
+                            {/* Drag handle */}
+                            <td className="w-[28px] cursor-grab active:cursor-grabbing">
+                              <div className="flex items-center justify-center h-full">
+                                <GripVertical className="h-3 w-3 text-text-tertiary/30" />
+                              </div>
+                            </td>
 
-                          {/* Shot # (read-only) */}
-                          <td className="px-2.5 py-2 text-xs font-medium text-text-primary">
-                            {globalIdx}
-                          </td>
+                            {/* Shot # (read-only) */}
+                            <td className="px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs font-medium text-text-primary">
+                              {globalIdx}
+                            </td>
 
-                          {/* Ref image (click to upload) */}
-                          <RefImageCell
-                            shotId={shot.id}
-                            campaignId={campaignId}
-                            url={shot.reference_image_url}
-                            swrKey={swrKey}
-                          />
+                            {/* Ref image (click to upload) */}
+                            <RefImageCell
+                              shotId={shot.id}
+                              campaignId={campaignId}
+                              url={shot.reference_image_url}
+                              swrKey={swrKey}
+                            />
 
-                          {/* File Name */}
-                          <Cell
-                            value={shot.name}
-                            placeholder="Shot name"
-                            onSave={(v) => patchShot(shot.id, "name", v)}
-                          />
+                            {/* File Name */}
+                            <Cell
+                              value={shot.name}
+                              placeholder="Shot name"
+                              onSave={(v) => patchShot(shot.id, "name", v)}
+                            />
 
-                          {/* Type */}
-                          <td className="relative">
-                            <select
-                              value={shot.media_type || "Still"}
-                              onChange={(e) => patchShot(shot.id, "mediaType", e.target.value)}
-                              className="w-full px-2.5 py-2 text-xs text-text-primary bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none"
-                            >
-                              <option value="Still">Still</option>
-                              <option value="Video">Video</option>
-                              <option value="Stop Motion">Stop Motion</option>
-                            </select>
-                          </td>
+                            {/* Type */}
+                            <td className="relative">
+                              <select
+                                value={shot.media_type || "Still"}
+                                onChange={(e) => patchShot(shot.id, "mediaType", e.target.value)}
+                                className="w-full px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs text-text-primary bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none"
+                              >
+                                <option value="Still">Still</option>
+                                <option value="Video">Video</option>
+                                <option value="Stop Motion">Stop Motion</option>
+                              </select>
+                            </td>
 
-                          {/* Angle */}
-                          <td className="relative">
-                            <select
-                              value={shot.angle || ""}
-                              onChange={(e) => patchShot(shot.id, "angle", e.target.value)}
-                              className={`w-full px-2.5 py-2 text-xs bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none ${
-                                shot.angle ? "text-text-primary" : "text-text-tertiary/40"
-                              }`}
-                            >
-                              <option value="">Angle</option>
-                              <option value="Straight on">Straight on</option>
-                              <option value="Overhead">Overhead</option>
-                              <option value="3/4">3/4</option>
-                              <option value="Various (video)">Various (video)</option>
-                            </select>
-                          </td>
+                            {/* Angle */}
+                            <td className="relative">
+                              <select
+                                value={shot.angle || ""}
+                                onChange={(e) => patchShot(shot.id, "angle", e.target.value)}
+                                className={`w-full px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none ${
+                                  shot.angle ? "text-text-primary" : "text-text-tertiary/40"
+                                }`}
+                              >
+                                <option value="">Angle</option>
+                                <option value="Straight on">Straight on</option>
+                                <option value="Overhead">Overhead</option>
+                                <option value="3/4">3/4</option>
+                                <option value="Various (video)">Various (video)</option>
+                              </select>
+                            </td>
 
-                          {/* Environment */}
-                          <td className="relative">
-                            <select
-                              value={shot.location || ""}
-                              onChange={(e) => patchShot(shot.id, "location", e.target.value)}
-                              className={`w-full px-2.5 py-2 text-xs bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none ${
-                                shot.location ? "text-text-primary" : "text-text-tertiary/40"
-                              }`}
-                            >
-                              <option value="">Environment</option>
-                              <option value="White seamless">White seamless</option>
-                              <option value="Lifestyle: Studio">Lifestyle: Studio</option>
-                              <option value="Lifestyle: Location">Lifestyle: Location</option>
-                            </select>
-                          </td>
+                            {/* Environment */}
+                            <td className="relative">
+                              <select
+                                value={shot.location || ""}
+                                onChange={(e) => patchShot(shot.id, "location", e.target.value)}
+                                className={`w-full px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none ${
+                                  shot.location ? "text-text-primary" : "text-text-tertiary/40"
+                                }`}
+                              >
+                                <option value="">Environment</option>
+                                <option value="White seamless">White seamless</option>
+                                <option value="Lifestyle: Studio">Lifestyle: Studio</option>
+                                <option value="Lifestyle: Location">Lifestyle: Location</option>
+                              </select>
+                            </td>
 
-                          {/* Channel */}
-                          <td className="relative">
-                            {data && <ChannelCell shotId={shot.id} campaignId={campaignId} data={data} swrKey={swrKey} />}
-                          </td>
+                            {/* Channel */}
+                            <td className="relative">
+                              <ChannelCell shotId={shot.id} campaignId={campaignId} data={data} swrKey={swrKey} />
+                            </td>
 
-                          {/* Description */}
-                          <Cell
-                            value={shot.description}
-                            placeholder="Description"
-                            onSave={(v) =>
-                              patchShot(shot.id, "description", v)
-                            }
-                          />
+                            {/* Description */}
+                            <Cell
+                              value={shot.description}
+                              placeholder="Description"
+                              onSave={(v) => patchShot(shot.id, "description", v)}
+                            />
 
-                          {/* Surface */}
-                          <Cell
-                            value={shot.surface || ""}
-                            placeholder="Surface"
-                            onSave={(v) => patchShot(shot.id, "surface", v)}
-                          />
+                            {/* Expand details */}
+                            <td className="px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)]">
+                              <button
+                                type="button"
+                                onClick={() => setExpandedShots((prev) => ({ ...prev, [shot.id]: !prev[shot.id] }))}
+                                className="inline-flex items-center rounded border border-border px-2 py-0.5 text-[10px] font-medium text-text-secondary hover:border-primary/40 hover:text-primary transition-colors"
+                              >
+                                {detailsOpen ? "Hide" : "Details"}
+                              </button>
+                            </td>
 
-                          {/* Props */}
-                          <Cell
-                            value={shot.props}
-                            placeholder="Props"
-                            onSave={(v) => patchShot(shot.id, "props", v)}
-                          />
+                            {/* Delete */}
+                            <td className="w-[28px]">
+                              <button
+                                type="button"
+                                onClick={() => deleteShot(shot.id)}
+                                className="flex items-center justify-center h-full w-full opacity-0 hover:opacity-100 focus:opacity-100 text-text-tertiary hover:text-red-500 transition-all"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </td>
+                          </tr>
 
-                          {/* Products (tag input with search + free text) */}
-                          <ProductTagCell
-                            shotId={shot.id}
-                            campaignId={campaignId}
-                            linkedProducts={
-                              data.productLinks
-                                .filter((pl) => pl.shot_id === shot.id)
-                                .map((pl) => {
-                                  const cp = data.campaignProducts.find((c) => c.id === pl.campaign_product_id);
-                                  return cp ? { cpId: cp.id, name: cp.product?.name || "Product", itemCode: cp.product?.item_code ?? null, department: cp.product?.department ?? null, description: cp.product?.description ?? null, shootingNotes: cp.product?.shooting_notes ?? null, imageUrl: cp.product?.image_url ?? null } : null;
-                                })
-                                .filter((x): x is { cpId: string; name: string; itemCode: string | null; department: string | null; description: string | null; shootingNotes: string | null; imageUrl: string | null } => !!x)
-                            }
-                            freeTextTags={shot.product_tags ? shot.product_tags.split(",").map((t) => t.trim()).filter(Boolean) : []}
-                            swrKey={swrKey}
-                          />
-
-                          {/* Lighting */}
-                          <Cell
-                            value={shot.lighting || ""}
-                            placeholder="Lighting"
-                            onSave={(v) => patchShot(shot.id, "lighting", v)}
-                          />
-
-                          {/* Talent */}
-                          <TalentCell
-                            shotId={shot.id}
-                            campaignId={campaignId}
-                            shotTalent={data.talent.filter((t) => t.shot_id === shot.id)}
-                            allTalent={data.talent}
-                            swrKey={swrKey}
-                          />
-
-                          {/* Wardrobe */}
-                          <Cell
-                            value={shot.wardrobe || ""}
-                            placeholder="Wardrobe"
-                            onSave={(v) => patchShot(shot.id, "wardrobe", v)}
-                          />
-
-                          {/* Notes */}
-                          <Cell
-                            value={shot.notes}
-                            placeholder="Notes"
-                            onSave={(v) => patchShot(shot.id, "notes", v)}
-                          />
-
-                          {/* Retouching */}
-                          <Cell
-                            value={shot.retouching_notes || ""}
-                            placeholder="Retouching"
-                            onSave={(v) => patchShot(shot.id, "retouchingNotes", v)}
-                          />
-
-                          {/* Delete */}
-                          <td className="w-[28px]">
-                            <button
-                              type="button"
-                              onClick={() => deleteShot(shot.id)}
-                              className="flex items-center justify-center h-full w-full opacity-0 hover:opacity-100 focus:opacity-100 text-text-tertiary hover:text-red-500 transition-all"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          </td>
-                        </tr>
+                          {detailsOpen && (
+                            <tr className="border-t border-border bg-surface-secondary/35">
+                              <td colSpan={COLUMNS.length} className="px-2 py-2">
+                                <div className="overflow-x-auto rounded-md border border-border bg-surface">
+                                  <table className="min-w-[780px] w-full text-left" style={{ tableLayout: "fixed" }}>
+                                    <thead>
+                                      <tr className="bg-surface-secondary">
+                                        {[
+                                          "Surface",
+                                          "Props",
+                                          "Products",
+                                          "Lighting",
+                                          "Talent",
+                                          "Wardrobe",
+                                          "Notes",
+                                          "Retouching",
+                                        ].map((label) => (
+                                          <th
+                                            key={label}
+                                            className="px-[var(--density-shotlist-table-head-px)] py-[var(--density-shotlist-table-head-py)] text-[10px] font-semibold uppercase tracking-wider text-text-secondary"
+                                          >
+                                            {label}
+                                          </th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      <tr className="border-t border-border">
+                                        <Cell
+                                          value={shot.surface || ""}
+                                          placeholder="Surface"
+                                          onSave={(v) => patchShot(shot.id, "surface", v)}
+                                        />
+                                        <Cell
+                                          value={shot.props}
+                                          placeholder="Props"
+                                          onSave={(v) => patchShot(shot.id, "props", v)}
+                                        />
+                                        <ProductTagCell
+                                          shotId={shot.id}
+                                          campaignId={campaignId}
+                                          linkedProducts={linkedProducts}
+                                          freeTextTags={freeTextTags}
+                                          swrKey={swrKey}
+                                        />
+                                        <Cell
+                                          value={shot.lighting || ""}
+                                          placeholder="Lighting"
+                                          onSave={(v) => patchShot(shot.id, "lighting", v)}
+                                        />
+                                        <TalentCell
+                                          shotId={shot.id}
+                                          campaignId={campaignId}
+                                          shotTalent={shotTalent}
+                                          allTalent={data.talent}
+                                          swrKey={swrKey}
+                                        />
+                                        <Cell
+                                          value={shot.wardrobe || ""}
+                                          placeholder="Wardrobe"
+                                          onSave={(v) => patchShot(shot.id, "wardrobe", v)}
+                                        />
+                                        <Cell
+                                          value={shot.notes}
+                                          placeholder="Notes"
+                                          onSave={(v) => patchShot(shot.id, "notes", v)}
+                                        />
+                                        <Cell
+                                          value={shot.retouching_notes || ""}
+                                          placeholder="Retouching"
+                                          onSave={(v) => patchShot(shot.id, "retouchingNotes", v)}
+                                        />
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
                       );
                     })}
                   </tbody>
@@ -1930,14 +1952,15 @@ export function ShotListCleanView({
               <button
                 type="button"
                 onClick={() => addShot(setup.id)}
-                className="flex items-center gap-1 w-full px-3.5 py-2 text-xs text-text-tertiary hover:text-primary hover:bg-primary/3 transition-colors border-t border-border"
+                className="flex w-full items-center gap-[var(--density-shotlist-button-gap)] border-t border-border px-[var(--density-shotlist-addshot-px)] py-[var(--density-shotlist-addshot-py)] text-xs text-text-tertiary transition-colors hover:bg-primary/3 hover:text-primary"
               >
                 <Plus className="h-3 w-3" />
                 Add shot
               </button>
-            </div>
+            </section>
           );
         })}
+      </div>
     </div>
   );
 }
@@ -1969,7 +1992,7 @@ function SetupHeader({
   }
 
   return (
-    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-surface-secondary/60 border-b border-border group">
+    <div className="flex items-center gap-[var(--density-shotlist-setup-gap)] border-b border-border bg-surface-secondary/60 px-[var(--density-shotlist-setup-px)] py-[var(--density-shotlist-setup-py)] group">
       {editing ? (
         <input
           ref={inputRef}

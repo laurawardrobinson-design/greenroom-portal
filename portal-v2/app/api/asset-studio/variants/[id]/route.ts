@@ -49,7 +49,7 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
 // DELETE /api/asset-studio/variants/:id
 export async function DELETE(_request: Request, ctx: RouteCtx) {
   try {
-    await requireRole(["Admin"]);
+    await requireRole(["Admin", "Producer", "Post Producer"]);
     const { id } = await ctx.params;
     await deleteVariant(id);
     return NextResponse.json({ ok: true });

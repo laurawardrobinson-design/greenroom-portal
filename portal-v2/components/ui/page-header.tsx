@@ -25,9 +25,9 @@ export function PageHeader({
   const router = useRouter();
 
   return (
-    <div className="space-y-3 pb-4 border-b border-border">
+    <div className="space-y-[var(--density-page-header-gap)] border-b border-border pb-[var(--density-page-header-pb)]">
       {breadcrumb && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-[var(--density-page-header-crumb-gap)]">
           {breadcrumbHref ? (
             <Link
               href={breadcrumbHref}
@@ -48,7 +48,7 @@ export function PageHeader({
         </div>
       )}
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-[var(--density-page-header-row-gap)]">
         {typeof title === "string" ? (
           <h1 className="text-2xl font-bold text-text-primary flex-1 break-words">
             {title}
@@ -58,7 +58,7 @@ export function PageHeader({
             {title}
           </div>
         )}
-        {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+        {actions && <div className="flex shrink-0 items-center gap-[var(--density-page-header-action-gap)]">{actions}</div>}
       </div>
     </div>
   );

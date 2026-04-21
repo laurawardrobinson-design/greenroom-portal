@@ -14,7 +14,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const describedBy = [errorId, hintId].filter(Boolean).join(" ") || undefined;
 
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-[var(--density-form-stack-gap)]">
         {label && (
           <label
             htmlFor={inputId}
@@ -30,7 +30,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           aria-describedby={describedBy}
           aria-label={!label ? (props.placeholder || undefined) : undefined}
           className={`
-            block w-full rounded-lg border bg-surface px-3.5 py-2.5
+            block w-full rounded-[var(--density-control-radius)] border bg-surface px-[var(--density-control-px)] py-[var(--density-control-py)]
             text-sm text-text-primary placeholder:text-text-tertiary
             shadow-xs transition-all
             focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none
