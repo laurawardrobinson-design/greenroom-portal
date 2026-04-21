@@ -500,7 +500,7 @@ function CrewPicker({
                 <span className="text-[11px] font-medium text-text-primary">
                   {u.name}
                 </span>
-                <span className="text-[9px] text-text-tertiary ml-auto">
+                <span className="text-[10px] text-text-tertiary ml-auto">
                   {u.role}
                 </span>
               </button>

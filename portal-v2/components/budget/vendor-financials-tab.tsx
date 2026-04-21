@@ -116,7 +116,7 @@ function VendorProgressBar({ status }: { status: string }) {
           <div key={stage.label} className="flex items-center flex-1 min-w-0">
             <div className="flex flex-col items-center gap-0.5 shrink-0">
               <div className={`h-2 w-2 rounded-full transition-colors ${reached ? "bg-primary" : "bg-surface-tertiary border border-border"}`} />
-              <span className={`text-[9px] leading-tight ${reached ? "text-primary font-medium" : "text-text-tertiary"}`}>
+              <span className={`text-[10px] leading-tight ${reached ? "text-primary font-medium" : "text-text-tertiary"}`}>
                 {stage.label}
               </span>
             </div>

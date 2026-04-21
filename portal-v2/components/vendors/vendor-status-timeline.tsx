@@ -115,7 +115,7 @@ export function VendorStatusTimeline({ currentStatus }: Props) {
             <div key={stage.id} className="flex items-center flex-1 last:flex-none">
               <div
                 title={stage.label}
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold transition-all ${
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold transition-all ${
                   isComplete
                     ? "bg-emerald-100 text-emerald-600"
                     : isCurrent && isRejected

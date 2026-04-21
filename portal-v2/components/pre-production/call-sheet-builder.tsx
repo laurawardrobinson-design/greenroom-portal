@@ -1,7 +1,21 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Download, FileText, Plus, Trash2, Eye, EyeOff } from "lucide-react";
+import {
+  AlertTriangle,
+  Aperture,
+  Building2,
+  Download,
+  Eye,
+  EyeOff,
+  FileText,
+  Info,
+  Plus,
+  ShieldAlert,
+  Sparkles,
+  Trash2,
+  Users,
+} from "lucide-react";
 import useSWR from "swr";
 import { format, parseISO } from "date-fns";
 import { generateCallSheetPdf } from "@/lib/utils/pdf-generator";
@@ -355,13 +369,13 @@ export function CallSheetBuilder({
         {/* ─── LEFT: Editable form ─── */}
         <div className="space-y-5">
           {/* Company Info */}
-          <FormSection title="Company Info">
+          <FormSection title="Company Info" icon={Building2}>
             <FormField label="Company Name" value={companyName} onChange={setCompanyName} />
             <FormTextarea label="Address & Phone" value={companyAddress} onChange={setCompanyAddress} rows={3} />
           </FormSection>
 
           {/* Shoot Details */}
-          <FormSection title="Shoot Details">
+          <FormSection title="Shoot Details" icon={Aperture}>
             <div className="grid grid-cols-2 gap-3">
               <FormField label="General Call Time" value={generalCallTime} onChange={setGeneralCallTime} placeholder="8:30 AM" />
               <FormField label="Weather" value={weatherNotes} onChange={setWeatherNotes} placeholder="Sunny, 78°F" />
@@ -371,14 +385,14 @@ export function CallSheetBuilder({
           </FormSection>
 
           {/* Emergency */}
-          <FormSection title="Emergency Info">
+          <FormSection title="Emergency Info" icon={AlertTriangle}>
             <FormField label="Hospital Name" value={emergencyHospital} onChange={setEmergencyHospital} placeholder="Lakeland Regional Medical Center" />
             <FormField label="Hospital Address" value={emergencyAddress} onChange={setEmergencyAddress} />
             <FormField label="Hospital Phone" value={emergencyPhone} onChange={setEmergencyPhone} />
           </FormSection>
 
           {/* Crew Contacts */}
-          <FormSection title="Crew Contacts">
+          <FormSection title="Crew Contacts" icon={Users}>
             <div className="space-y-2">
               {crewList.map((c) => (
                 <div key={c.id} className="grid grid-cols-[100px_1fr_120px_80px_28px] gap-1.5 items-start">
@@ -426,7 +440,7 @@ export function CallSheetBuilder({
           </FormSection>
 
           {/* Talent */}
-          <FormSection title="Talent">
+          <FormSection title="Talent" icon={Sparkles}>
             <div className="space-y-2">
               {talentList.map((t) => (
                 <div key={t.id} className="grid grid-cols-[1fr_120px_80px_100px_28px] gap-1.5 items-start">
@@ -474,7 +488,7 @@ export function CallSheetBuilder({
           </FormSection>
 
           {/* Special Instructions */}
-          <FormSection title="Special Instructions">
+          <FormSection title="Special Instructions" icon={Info}>
             <FormTextarea
               label=""
               value={specialInstructions}
@@ -485,7 +499,7 @@ export function CallSheetBuilder({
           </FormSection>
 
           {/* Safety */}
-          <FormSection title="Safety Reminders">
+          <FormSection title="Safety Reminders" icon={ShieldAlert}>
             <FormTextarea
               label=""
               value={safetyReminders}
@@ -498,8 +512,12 @@ export function CallSheetBuilder({
         {/* ─── RIGHT: PDF Preview ─── */}
         <div className={`${showPreview ? "block" : "hidden"} lg:block`}>
           <div className="sticky top-4">
-            <div className="rounded-lg border border-border bg-surface-secondary p-4 overflow-hidden">
-              <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-3">Call Sheet Preview</p>
+            <div className="rounded-lg border border-border bg-surface overflow-hidden">
+              <div className="flex items-center gap-2 border-b border-border bg-surface-secondary/50 px-3.5 py-2.5">
+                <Eye className="h-4 w-4 shrink-0 text-primary" />
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">Call Sheet Preview</h3>
+              </div>
+              <div className="p-4">
 
               {/* Mini preview — simplified text representation */}
               <div className="bg-white rounded border border-border p-3 space-y-3 text-[10px] text-text-primary overflow-y-auto max-h-[600px]">
@@ -507,9 +525,9 @@ export function CallSheetBuilder({
                 <div className="grid grid-cols-3 gap-2 border-b border-gray-200 pb-2">
                   <div>
                     <p className="font-bold text-[10px]">{companyName}</p>
-                    <p className="text-[9px] text-gray-500 whitespace-pre-line">{companyAddress}</p>
+                    <p className="text-[10px] text-gray-500 whitespace-pre-line">{companyAddress}</p>
                     {producer && (
-                      <p className="text-[9px] text-gray-500 mt-1">{producer.email}<br />{producer.phone}</p>
+                      <p className="text-[10px] text-gray-500 mt-1">{producer.email}<br />{producer.phone}</p>
                     )}
                   </div>
                   <div className="text-center">
@@ -526,7 +544,7 @@ export function CallSheetBuilder({
                     <p className="font-bold mt-1">CREW CALL: {generalCallTime || "TBD"}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] text-gray-500">Weather</p>
+                    <p className="text-[10px] text-gray-500">Weather</p>
                     <p>{weatherNotes || "—"}</p>
                   </div>
                 </div>
@@ -535,19 +553,19 @@ export function CallSheetBuilder({
                 <div className="grid grid-cols-3 gap-2 border-b border-gray-200 pb-2">
                   <div>
                     <p className="font-bold">Shoot Location</p>
-                    <p className="text-[9px] text-gray-500 whitespace-pre-line">{location || "TBD"}</p>
+                    <p className="text-[10px] text-gray-500 whitespace-pre-line">{location || "TBD"}</p>
                     {parkingDirections && (
-                      <p className="text-[9px] text-gray-500 mt-1 whitespace-pre-line">{parkingDirections}</p>
+                      <p className="text-[10px] text-gray-500 mt-1 whitespace-pre-line">{parkingDirections}</p>
                     )}
                   </div>
                   <div>
                     <p className="font-bold">Emergency</p>
-                    <p className="text-[9px] text-gray-500">Dial 911</p>
-                    {emergencyHospital && <p className="text-[9px] text-gray-500">{emergencyHospital}</p>}
+                    <p className="text-[10px] text-gray-500">Dial 911</p>
+                    {emergencyHospital && <p className="text-[10px] text-gray-500">{emergencyHospital}</p>}
                   </div>
                   <div>
                     <p className="font-bold">Job Number</p>
-                    <p className="text-[9px] text-gray-500">{wfNumber} {campaignName}</p>
+                    <p className="text-[10px] text-gray-500">{wfNumber} {campaignName}</p>
                   </div>
                 </div>
 
@@ -557,21 +575,21 @@ export function CallSheetBuilder({
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-gray-50">
-                        <th className="border border-gray-200 px-1 py-0.5 text-left text-[9px]">Title</th>
-                        <th className="border border-gray-200 px-1 py-0.5 text-left text-[9px]">Name</th>
-                        <th className="border border-gray-200 px-1 py-0.5 text-left text-[9px]">Contact</th>
-                        <th className="border border-gray-200 px-1 py-0.5 text-left text-[9px]">Call</th>
+                        <th className="border border-gray-200 px-1 py-0.5 text-left text-[10px]">Title</th>
+                        <th className="border border-gray-200 px-1 py-0.5 text-left text-[10px]">Name</th>
+                        <th className="border border-gray-200 px-1 py-0.5 text-left text-[10px]">Contact</th>
+                        <th className="border border-gray-200 px-1 py-0.5 text-left text-[10px]">Call</th>
                       </tr>
                     </thead>
                     <tbody>
                       {crewList.map((c) => (
                         <tr key={c.id}>
-                          <td className="border border-gray-200 px-1 py-0.5 text-[9px]">{c.role}</td>
-                          <td className="border border-gray-200 px-1 py-0.5 text-[9px]">{c.name}</td>
-                          <td className="border border-gray-200 px-1 py-0.5 text-[9px]">
+                          <td className="border border-gray-200 px-1 py-0.5 text-[10px]">{c.role}</td>
+                          <td className="border border-gray-200 px-1 py-0.5 text-[10px]">{c.name}</td>
+                          <td className="border border-gray-200 px-1 py-0.5 text-[10px]">
                             {c.contactVisibility === "full" ? `${c.email}` : "reach out to producer"}
                           </td>
-                          <td className="border border-gray-200 px-1 py-0.5 text-[9px]">{c.callTime}</td>
+                          <td className="border border-gray-200 px-1 py-0.5 text-[10px]">{c.callTime}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -585,21 +603,21 @@ export function CallSheetBuilder({
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-gray-50">
-                          <th className="border border-gray-200 px-1 py-0.5 text-left text-[9px]">Role</th>
-                          <th className="border border-gray-200 px-1 py-0.5 text-left text-[9px]">Name</th>
-                          <th className="border border-gray-200 px-1 py-0.5 text-left text-[9px]">Contact</th>
-                          <th className="border border-gray-200 px-1 py-0.5 text-left text-[9px]">Call</th>
-                          <th className="border border-gray-200 px-1 py-0.5 text-left text-[9px]">Agency</th>
+                          <th className="border border-gray-200 px-1 py-0.5 text-left text-[10px]">Role</th>
+                          <th className="border border-gray-200 px-1 py-0.5 text-left text-[10px]">Name</th>
+                          <th className="border border-gray-200 px-1 py-0.5 text-left text-[10px]">Contact</th>
+                          <th className="border border-gray-200 px-1 py-0.5 text-left text-[10px]">Call</th>
+                          <th className="border border-gray-200 px-1 py-0.5 text-left text-[10px]">Agency</th>
                         </tr>
                       </thead>
                       <tbody>
                         {talentList.map((t) => (
                           <tr key={t.id}>
-                            <td className="border border-gray-200 px-1 py-0.5 text-[9px]">{t.role}</td>
-                            <td className="border border-gray-200 px-1 py-0.5 text-[9px]">{t.name}</td>
-                            <td className="border border-gray-200 px-1 py-0.5 text-[9px]">{t.email}</td>
-                            <td className="border border-gray-200 px-1 py-0.5 text-[9px]">{t.callTime}</td>
-                            <td className="border border-gray-200 px-1 py-0.5 text-[9px]">{t.agency}</td>
+                            <td className="border border-gray-200 px-1 py-0.5 text-[10px]">{t.role}</td>
+                            <td className="border border-gray-200 px-1 py-0.5 text-[10px]">{t.name}</td>
+                            <td className="border border-gray-200 px-1 py-0.5 text-[10px]">{t.email}</td>
+                            <td className="border border-gray-200 px-1 py-0.5 text-[10px]">{t.callTime}</td>
+                            <td className="border border-gray-200 px-1 py-0.5 text-[10px]">{t.agency}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -609,7 +627,7 @@ export function CallSheetBuilder({
 
                 {/* Safety */}
                 <div className="border-t border-gray-200 pt-2">
-                  <p className="text-[9px] text-gray-500 whitespace-pre-line">{safetyReminders}</p>
+                  <p className="text-[10px] text-gray-500 whitespace-pre-line">{safetyReminders}</p>
                 </div>
               </div>
             </div>
@@ -617,15 +635,25 @@ export function CallSheetBuilder({
         </div>
       </div>
     </div>
+    </div>
   );
 }
 
 // ─── Form helpers ────────────────────────────────────────────────────────────
-function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+function FormSection({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-lg border border-border bg-surface overflow-hidden">
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">{title}</h3>
+        <Icon className="h-4 w-4 shrink-0 text-primary" />
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">{title}</h3>
       </div>
       <div className="p-3.5 space-y-3">{children}</div>
     </div>
