@@ -96,6 +96,29 @@ async function fetchImageBuffer(url: string): Promise<Buffer | null> {
   }
 }
 
+// Rough glyph-width heuristic for sans-serif fonts. Letters like M, W are wider;
+// i, l are narrower. 0.55 of font-size is a reasonable average for proportional
+// type. This is only used to pick a font-size that fits — the SVG renderer
+// itself still lays out glyphs natively, so a small estimation error just means
+// text ends up slightly smaller than strictly necessary.
+const AVG_CHAR_WIDTH_RATIO = 0.55;
+const MIN_AUTOFIT_FONT_SIZE = 8;
+
+function fitFontSize(
+  text: string,
+  maxWidth: number,
+  requestedSize: number
+): number {
+  const longest = text
+    .split(/\\n|\n/)
+    .reduce((n, line) => Math.max(n, line.length), 0);
+  if (longest === 0) return requestedSize;
+  const estimatedWidth = longest * requestedSize * AVG_CHAR_WIDTH_RATIO;
+  if (estimatedWidth <= maxWidth) return requestedSize;
+  const fitted = maxWidth / (longest * AVG_CHAR_WIDTH_RATIO);
+  return Math.max(MIN_AUTOFIT_FONT_SIZE, Math.floor(fitted));
+}
+
 /**
  * Build an SVG overlay for a single text layer.
  * The SVG canvas is the layer's own bounding box; sharp will composite it
@@ -112,7 +135,8 @@ function buildTextSvg(opts: {
   align: "left" | "center" | "right";
   verticalAlign: "top" | "middle" | "bottom";
 }): Buffer {
-  const { width, height, text, fontSize, fontWeight, fontFamily, color, align, verticalAlign } = opts;
+  const { width, height, text, fontWeight, fontFamily, color, align, verticalAlign } = opts;
+  const fontSize = fitFontSize(text, width, opts.fontSize);
   const anchor = align === "left" ? "start" : align === "right" ? "end" : "middle";
   const x = align === "left" ? 0 : align === "right" ? width : width / 2;
   // Approximate vertical centering — fontSize * 0.35 baseline offset.
@@ -201,8 +225,15 @@ async function renderOneVariant(variant: Variant, ctx: RenderContext): Promise<B
       const buf = await fetchImageBuffer(url);
       if (!buf) continue;
       const fit = (layer.props?.fit as "cover" | "contain" | "fill" | undefined) ?? "cover";
+      // Sharp's default letterbox fill for fit:contain is opaque black. Force
+      // transparent so the template's canvas background (typically white)
+      // shows through when the source image doesn't match the layer's aspect.
       const resized = await sharp(buf)
-        .resize(layerWidth, layerHeight, { fit, position: "center" })
+        .resize(layerWidth, layerHeight, {
+          fit,
+          position: "center",
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        })
         .png()
         .toBuffer();
       composites.push({ input: resized, left: layerLeft, top: layerTop });

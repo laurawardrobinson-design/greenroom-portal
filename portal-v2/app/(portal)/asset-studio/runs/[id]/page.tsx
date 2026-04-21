@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import useSWR, { mutate } from "swr";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useToast } from "@/components/ui/toast";
@@ -11,6 +12,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
   Check,
   Download,
   ImageOff,
@@ -61,6 +64,7 @@ export default function RunDetailPage({
 
   const [statusFilter, setStatusFilter] = useState<"" | VariantStatus>("");
   const [acting, setActing] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const latestRenderJob = renderJobs?.[0] ?? null;
 
   // Memoize variants & counts — hooks must run unconditionally, so we derive
@@ -439,11 +443,12 @@ export default function RunDetailPage({
         </Card>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {filtered.map((v) => (
+          {filtered.map((v, i) => (
             <RunVariantCard
               key={v.id}
               variant={v}
               canApprove={canApprove}
+              onOpen={() => setLightboxIndex(i)}
               onAction={async (action) => {
                 try {
                   let res: Response;
@@ -481,6 +486,123 @@ export default function RunDetailPage({
       )}
 
       <AuditLogFeed runId={id} />
+
+      {lightboxIndex !== null && filtered[lightboxIndex] && (
+        <VariantLightbox
+          variants={filtered}
+          index={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onIndexChange={setLightboxIndex}
+        />
+      )}
+    </div>
+  );
+}
+
+function VariantLightbox({
+  variants,
+  index,
+  onClose,
+  onIndexChange,
+}: {
+  variants: Variant[];
+  index: number;
+  onClose: () => void;
+  onIndexChange: (i: number) => void;
+}) {
+  const variant = variants[index];
+  const canPrev = index > 0;
+  const canNext = index < variants.length - 1;
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowLeft" && canPrev) onIndexChange(index - 1);
+      else if (e.key === "ArrowRight" && canNext) onIndexChange(index + 1);
+    }
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [index, canPrev, canNext, onClose, onIndexChange]);
+
+  if (!variant.assetUrl) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 sm:p-8"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${variant.product?.name ?? "Variant"} preview`}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur transition-colors hover:bg-white/20"
+        aria-label="Close preview"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
+      {canPrev && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onIndexChange(index - 1);
+          }}
+          className="absolute left-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur transition-colors hover:bg-white/20"
+          aria-label="Previous variant"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+      )}
+
+      {canNext && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onIndexChange(index + 1);
+          }}
+          className="absolute right-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur transition-colors hover:bg-white/20"
+          aria-label="Next variant"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      )}
+
+      <div
+        className="relative flex max-h-full max-w-5xl flex-col items-center gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative flex max-h-[80vh] max-w-full items-center justify-center rounded-lg bg-white">
+          <Image
+            src={`${variant.assetUrl}?v=${encodeURIComponent(variant.updatedAt)}`}
+            alt={variant.product?.name ?? "Variant"}
+            width={variant.width || 1200}
+            height={variant.height || 1200}
+            sizes="(max-width: 1024px) 90vw, 1024px"
+            className="max-h-[80vh] w-auto rounded-lg object-contain"
+            priority
+          />
+          <span className={`absolute right-3 top-3 ${statusPillClass(variant.status)}`}>
+            {variant.status}
+          </span>
+        </div>
+        <div className="text-center text-white">
+          <p className="text-sm font-medium">{variant.product?.name ?? "Variant"}</p>
+          <p className="mt-0.5 text-xs text-white/60">
+            {variant.outputSpec?.label ?? `${variant.width}\u00d7${variant.height}`}
+            {" \u00b7 "}
+            {index + 1} of {variants.length}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -583,21 +705,32 @@ function RunVariantCard({
   variant,
   canApprove,
   onAction,
+  onOpen,
 }: {
   variant: Variant;
   canApprove: boolean;
   onAction: (action: "approve" | "reject") => Promise<void>;
+  onOpen: () => void;
 }) {
   return (
     <div className="group relative overflow-hidden rounded-lg border border-[var(--as-border)] bg-[var(--as-surface)] transition-all hover:shadow-md">
-      <div className="relative aspect-square bg-[var(--as-canvas-bg)]">
+      <div className="relative aspect-square bg-white">
         {variant.assetUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={variant.thumbnailUrl ?? variant.assetUrl}
-            alt={variant.product?.name ?? "Variant"}
-            className="h-full w-full object-contain"
-          />
+          <button
+            type="button"
+            onClick={onOpen}
+            className="absolute inset-0 block cursor-zoom-in"
+            aria-label={`Review ${variant.product?.name ?? "variant"} full size`}
+          >
+            <Image
+              src={`${variant.thumbnailUrl ?? variant.assetUrl}?v=${encodeURIComponent(variant.updatedAt)}`}
+              alt={variant.product?.name ?? "Variant"}
+              fill
+              sizes="(max-width: 768px) 50vw, (max-width: 1280px) 25vw, 240px"
+              className="object-contain"
+              loading="lazy"
+            />
+          </button>
         ) : (
           <div className="flex h-full w-full items-center justify-center text-[var(--as-text-subtle)]">
             <ImageOff className="h-8 w-8" />
