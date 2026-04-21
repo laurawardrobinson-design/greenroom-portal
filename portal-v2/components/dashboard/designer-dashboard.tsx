@@ -40,14 +40,9 @@ export function DesignerDashboard({ user }: { user: AppUser }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-text-primary">
-          Welcome back, {user.name?.split(" ")[0] || "there"}
-        </h1>
-        <p className="mt-0.5 text-sm text-text-secondary">
-          Campaigns assigned to you. Click a campaign to work on its deliverables.
-        </p>
-      </div>
+      <h1 className="text-xl font-semibold text-text-primary">
+        Welcome back, {user.name?.split(" ")[0] || "there"}
+      </h1>
 
       <Card padding="none" className="overflow-hidden">
         <TileHeader

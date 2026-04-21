@@ -106,14 +106,7 @@ export default function GoalsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-text-primary">{isAdmin ? "Team Goals" : "My Goals"}</h2>
-        <p className="text-sm text-text-secondary">
-          {isAdmin
-            ? "See what the team is growing toward and offer advice"
-            : "Track your career growth and milestones"}
-        </p>
-      </div>
+      <h2 className="text-2xl font-bold text-text-primary">{isAdmin ? "Team Goals" : "My Goals"}</h2>
 
       {!isAdmin && !hasOwnGoal && !isLoading && (
         <div className="rounded-xl border border-border bg-surface-secondary/50 px-4 py-3">

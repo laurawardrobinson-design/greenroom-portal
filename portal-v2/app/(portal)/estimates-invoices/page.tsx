@@ -196,12 +196,7 @@ export default function EstimatesInvoicesPage() {
 
   return (
     <div className="max-w-2xl space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">Estimates & Invoices</h1>
-        <p className="text-sm text-text-secondary mt-1">
-          Documents across all campaigns.
-        </p>
-      </div>
+      <h1 className="text-2xl font-bold text-text-primary">Estimates & Invoices</h1>
 
       {loadingPending ? (
         <DashboardSkeleton />

@@ -372,9 +372,6 @@ export default function NewRunPage() {
             Back to runs
           </Link>
           <h1 className="text-2xl font-bold text-[var(--as-text)]">New run</h1>
-          <p className="text-sm text-[var(--as-text-muted)]">
-            Pick a template, a campaign, and the products you want to render.
-          </p>
         </div>
       </div>
 

@@ -89,12 +89,9 @@ export function PostProducerDashboard({ user }: Props) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-text-primary">
-          Welcome back, {user.name.split(" ")[0]}
-        </h2>
-        <p className="text-sm text-text-secondary">Post production overview</p>
-      </div>
+      <h2 className="text-2xl font-bold text-text-primary">
+        Welcome back, {user.name.split(" ")[0]}
+      </h2>
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -264,7 +264,7 @@ function TeamSection({
               key={person.id}
               hover
               padding="md"
-              className="cursor-pointer"
+              className="flex h-full cursor-pointer flex-col"
               onClick={() => setDetailPerson(person)}
             >
               <div className="flex items-start gap-3">

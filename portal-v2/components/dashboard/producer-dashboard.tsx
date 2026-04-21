@@ -268,7 +268,6 @@ export function ProducerDashboard({ user }: Props) {
           <h2 className="text-2xl font-bold text-text-primary">
             Welcome back, {user.name.split(" ")[0]}
           </h2>
-          <p className="text-sm text-text-secondary">Your campaigns and tasks</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex rounded-lg border border-border bg-surface-secondary p-0.5">

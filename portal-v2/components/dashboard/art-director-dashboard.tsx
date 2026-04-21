@@ -117,14 +117,9 @@ export function ArtDirectorDashboard({ user }: { user: AppUser }) {
   return (
     <div className="space-y-6">
       {/* Greeting */}
-      <div>
-        <h1 className="text-xl font-semibold text-text-primary">
-          Welcome back, {user.name?.split(" ")[0] || "there"}
-        </h1>
-        <p className="mt-0.5 text-sm text-text-secondary">
-          Here&apos;s your creative overview
-        </p>
-      </div>
+      <h1 className="text-xl font-semibold text-text-primary">
+        Welcome back, {user.name?.split(" ")[0] || "there"}
+      </h1>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

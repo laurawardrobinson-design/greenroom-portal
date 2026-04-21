@@ -84,9 +84,6 @@ export default function AssetStudioPage() {
     <div className="space-y-5" data-area="asset-studio">
       <div>
         <h1 className="text-2xl font-bold text-text-primary">Asset Studio</h1>
-        <p className="text-sm text-text-secondary">
-          Build templates, generate variants, ship campaigns — with brand consistency on rails.
-        </p>
       </div>
 
       <PageTabs

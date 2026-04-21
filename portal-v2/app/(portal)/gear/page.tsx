@@ -564,7 +564,7 @@ export default function InventoryPage() {
                   hover
                   padding="md"
                   onClick={() => setDetailItem(item)}
-                  className="cursor-pointer"
+                  className="flex h-full cursor-pointer flex-col"
                 >
                   {item.imageUrl ? (
                     <img

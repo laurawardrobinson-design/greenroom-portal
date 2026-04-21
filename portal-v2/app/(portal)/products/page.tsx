@@ -174,7 +174,7 @@ export default function ProductDirectoryPage() {
                 <button
                   key={product.id}
                   onClick={() => setDrawerProduct(product)}
-                  className="flex flex-col rounded-xl border border-border bg-surface p-4 text-left hover:bg-surface-secondary transition-colors"
+                  className="flex h-full flex-col rounded-xl border border-border bg-surface p-4 text-left hover:bg-surface-secondary transition-colors"
                 >
                   <div className="flex items-start gap-3">
                     {product.imageUrl ? (
@@ -205,16 +205,6 @@ export default function ProductDirectoryPage() {
                       </Badge>
                     </div>
                   </div>
-                  {product.shootingNotes && (
-                    <p className="mt-2 text-xs text-text-secondary line-clamp-2">
-                      {product.shootingNotes}
-                    </p>
-                  )}
-                  {product.restrictions && (
-                    <p className="mt-1 text-xs text-orange-700 font-medium">
-                      {product.restrictions}
-                    </p>
-                  )}
                 </button>
               ))}
             </div>

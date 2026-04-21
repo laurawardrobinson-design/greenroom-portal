@@ -63,9 +63,6 @@ export function StudioDashboard({ user }: Props) {
           <h2 className="text-2xl font-bold text-text-primary">
             Welcome back, {user.name.split(" ")[0]}
           </h2>
-          <p className="text-sm text-text-secondary">
-            Your shoots, gear, and reservations
-          </p>
         </div>
         <Link href="/gear/scan">
           <Button size="md" variant="secondary">

@@ -321,7 +321,7 @@ export default function PropsPage() {
                 <button
                   key={item.id}
                   onClick={() => setDetailItem(item)}
-                  className="flex flex-col rounded-xl border border-border bg-surface p-4 text-left hover:bg-surface-secondary transition-colors"
+                  className="flex h-full flex-col rounded-xl border border-border bg-surface p-4 text-left hover:bg-surface-secondary transition-colors"
                 >
                   <div className="flex items-start gap-3">
                     {item.imageUrl ? (

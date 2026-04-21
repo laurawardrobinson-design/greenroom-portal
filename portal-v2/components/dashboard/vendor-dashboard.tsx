@@ -59,14 +59,9 @@ export function VendorDashboard({ user }: Props) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-text-primary">
-          Welcome back, {user.name.split(" ")[0]}
-        </h2>
-        <p className="text-sm text-text-secondary">
-          Your campaign assignments and tasks
-        </p>
-      </div>
+      <h2 className="text-2xl font-bold text-text-primary">
+        Welcome back, {user.name.split(" ")[0]}
+      </h2>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-10">
       <div className="lg:col-span-7 space-y-6">
