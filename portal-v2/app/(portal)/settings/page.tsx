@@ -112,7 +112,8 @@ function MyCard({ user }: { user: AppUser }) {
         <div>
           <p className="font-semibold text-text-primary">{user.name}</p>
           <p className="text-xs text-text-tertiary">
-            {user.role}{user.title ? ` · ${user.title}` : ""}
+            {user.role}
+            {user.title && user.title !== user.role ? ` · ${user.title}` : ""}
           </p>
         </div>
       </div>
@@ -151,10 +152,10 @@ function MyCard({ user }: { user: AppUser }) {
             <span>{drinks.join(", ")}</span>
           </div>
         )}
-        {user.energyBoost && (
+        {user.energyBoost && user.energyBoost.replace(/\s*-\s*$/, "").trim() && (
           <div className="flex items-start gap-2 text-text-secondary">
             <Zap className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-            <span>{user.energyBoost}</span>
+            <span>{user.energyBoost.replace(/\s*-\s*$/, "").trim()}</span>
           </div>
         )}
         {allergies.length > 0 && (
