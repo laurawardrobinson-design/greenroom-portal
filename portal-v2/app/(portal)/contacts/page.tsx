@@ -834,13 +834,13 @@ function ContactDetailModal({
           </div>
         )}
 
-        {/* ── Growing Toward ── */}
+        {/* ── Working Toward ── */}
         {!editMode && person && (
           <div className="rounded-xl border border-border overflow-hidden">
             <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
               <Compass className="h-4 w-4 shrink-0 text-primary" />
               <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
-                Growing Toward
+                Working Toward
               </span>
               {canEditGoal && !goalData?.goal && !goalEditMode && (
                 <button

@@ -230,7 +230,7 @@ function GoalCard({ user: u, onSelect }: { user: GoalOverviewUser; onSelect: () 
         <div className="space-y-1">
           <div className="flex items-center gap-1.5">
             <Compass className="h-3 w-3 text-primary shrink-0" />
-            <p className="text-xs font-medium text-primary">Growing toward</p>
+            <p className="text-xs font-medium text-primary">Working toward</p>
           </div>
           <p className="text-sm text-text-primary line-clamp-2">{u.goal.goalText}</p>
           {u.goal.currentRoleContext && (
@@ -442,7 +442,7 @@ function GoalDetailModal({
           <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
             <Compass className="h-4 w-4 shrink-0 text-primary" />
             <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
-              Growing Toward
+              Working Toward
             </span>
             {canEditGoal && goal && !goalEditMode && (
               <button
