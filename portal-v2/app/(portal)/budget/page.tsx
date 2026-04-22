@@ -1,13 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import type { BudgetPoolSummary, CampaignListItem } from "@/types/domain";
-import {
-  PieChart, Pie, Cell, Tooltip as ReTooltip, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
-} from "recharts";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,28 +20,24 @@ import {
   FileText,
   Check,
   X,
-  BarChart3,
   LayoutList,
   Clock,
   Pencil,
   TrendingUp,
-  TrendingDown,
   AlertTriangle,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
   Activity,
   Users,
   Layers,
   ChevronDown,
   ChevronRight,
-  Undo2,
   Receipt,
-  ExternalLink,
   HardHat,
   CheckCircle2,
   Circle,
   UserCheck,
+  Inbox,
+  FileSignature,
+  Banknote,
 } from "lucide-react";
 import Link from "next/link";
 import { VendorFinancialsTab } from "@/components/budget/vendor-financials-tab";
@@ -58,19 +50,16 @@ const fetcher = (url: string) =>
     return r.json();
   });
 
-type Tab = "overview" | "budgets" | "analysis" | "approvals" | "spending" | "vendors" | "onboarding";
+type Tab = "queue" | "program" | "cost-report" | "vendors";
 
 const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
-  { key: "overview", label: "Budget Pools", icon: DollarSign },
-  { key: "budgets", label: "Campaigns", icon: LayoutList },
-  { key: "approvals", label: "Approvals", icon: ShieldCheck },
-  { key: "analysis", label: "Analysis", icon: Activity },
-  { key: "spending", label: "Spending", icon: BarChart3 },
-  { key: "vendors", label: "Vendors", icon: Receipt },
-  { key: "onboarding", label: "Onboarding", icon: UserCheck },
+  { key: "queue", label: "Queue", icon: ShieldCheck },
+  { key: "program", label: "Program", icon: LayoutList },
+  { key: "cost-report", label: "Cost Report", icon: Activity },
+  { key: "vendors", label: "Vendors", icon: Users },
 ];
 
-const VALID_TABS: readonly Tab[] = ["overview", "budgets", "analysis", "approvals", "spending", "vendors", "onboarding"] as const;
+const VALID_TABS: readonly Tab[] = ["queue", "program", "cost-report", "vendors"] as const;
 
 function isTab(value: string | null): value is Tab {
   return value !== null && (VALID_TABS as readonly string[]).includes(value);
@@ -82,7 +71,7 @@ export default function BudgetPage() {
   const searchParams = useSearchParams();
   const initialTab = (() => {
     const t = searchParams.get("tab");
-    return isTab(t) ? t : "overview";
+    return isTab(t) ? t : "queue";
   })();
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
@@ -108,13 +97,320 @@ export default function BudgetPage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "overview" && <BudgetPoolsTab isAdmin={isAdmin} />}
-      {activeTab === "budgets" && <CampaignBudgetsTab />}
-      {activeTab === "approvals" && <ApprovalsTab />}
-      {activeTab === "analysis" && <AnalysisTab />}
-      {activeTab === "spending" && <SpendingTab />}
-      {activeTab === "vendors" && <VendorFinancialsTab />}
-      {activeTab === "onboarding" && <OnboardingTab />}
+      {activeTab === "queue" && <QueueSection />}
+      {activeTab === "program" && <ProgramSection isAdmin={isAdmin} />}
+      {activeTab === "cost-report" && <CostReportSection />}
+      {activeTab === "vendors" && <VendorsSection />}
+    </div>
+  );
+}
+
+// ─── Queue Section ───
+// Counter strip on top, then the existing ApprovalsTab underneath. The counters
+// give an at-a-glance read of what's waiting for the HOP — matches the mockup.
+function QueueSection() {
+  const { data } = useSWR<{
+    budgetRequests: Array<{ amount: number }>;
+    pendingInvoices: Array<{ invoiceTotal: number }>;
+    pendingCrewBookings: Array<{ totalAmount: number }>;
+    pendingCrewPayments: Array<{ totalAmount: number }>;
+  }>("/api/approvals", fetcher);
+
+  const overages = {
+    count: data?.budgetRequests.length || 0,
+    amount: (data?.budgetRequests || []).reduce((s, r) => s + Number(r.amount), 0),
+  };
+  const invoices = {
+    count: data?.pendingInvoices.length || 0,
+    amount: (data?.pendingInvoices || []).reduce((s, i) => s + Number(i.invoiceTotal), 0),
+  };
+  const rates = {
+    count: data?.pendingCrewBookings.length || 0,
+    amount: (data?.pendingCrewBookings || []).reduce((s, b) => s + Number(b.totalAmount), 0),
+  };
+  const payments = {
+    count: data?.pendingCrewPayments.length || 0,
+    amount: (data?.pendingCrewPayments || []).reduce((s, p) => s + Number(p.totalAmount), 0),
+  };
+
+  const counters = [
+    { label: "Overages", icon: AlertTriangle, tone: "warning", ...overages },
+    { label: "Invoices", icon: Receipt, tone: "info", ...invoices },
+    { label: "Rate Approvals", icon: FileSignature, tone: "warning", ...rates },
+    { label: "Crew Payments", icon: Banknote, tone: "info", ...payments },
+  ] as const;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {counters.map((c) => {
+          const Icon = c.icon;
+          const toneColor = c.tone === "warning" ? "text-amber-600" : "text-blue-600";
+          return (
+            <Card key={c.label} padding="none">
+              <div className="px-3.5 py-3">
+                <div className="flex items-center justify-between">
+                  <Icon className={`h-4 w-4 ${toneColor}`} />
+                  <span className={`text-[10px] font-semibold uppercase tracking-wider ${c.count > 0 ? toneColor : "text-text-tertiary"}`}>
+                    {c.count} open
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xl font-bold text-text-primary">
+                  {formatCurrency(c.amount)}
+                </p>
+                <p className="text-xs text-text-tertiary">{c.label}</p>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+      <ApprovalsTab />
+    </div>
+  );
+}
+
+// ─── Program Section ───
+// Pool cards expand/collapse to reveal the campaigns they fund. Matches the
+// mockup: top-down pool → campaign relationship, nested in one view.
+function ProgramSection({ isAdmin }: { isAdmin: boolean }) {
+  const { data, mutate } = useSWR<AnalysisData>("/api/budget/analysis", fetcher);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [showAdd, setShowAdd] = useState(false);
+  const [selectedPool, setSelectedPool] = useState<AnalysisData["poolHealth"][number] | null>(null);
+
+  const pools = data?.poolHealth || [];
+  const allCampaigns = data?.campaignAnalysis || [];
+  const campaignsByPool = new Map<string, AnalysisData["campaignAnalysis"]>();
+  for (const c of allCampaigns) {
+    const key = c.budgetPoolId || "unassigned";
+    if (!campaignsByPool.has(key)) campaignsByPool.set(key, []);
+    campaignsByPool.get(key)!.push(c);
+  }
+  // Default: first pool expanded on first load
+  const defaultExpandKey = pools[0]?.id;
+
+  function isOpen(id: string) {
+    if (id in expanded) return expanded[id];
+    return id === defaultExpandKey;
+  }
+  function toggle(id: string) {
+    setExpanded((e) => ({ ...e, [id]: !isOpen(id) }));
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-text-secondary">
+          {pools.length} pool{pools.length !== 1 ? "s" : ""} · {allCampaigns.length} campaign{allCampaigns.length !== 1 ? "s" : ""}
+        </p>
+        {isAdmin && (
+          <Button size="sm" onClick={() => setShowAdd(true)}>
+            <Plus className="h-3.5 w-3.5" />
+            New Pool
+          </Button>
+        )}
+      </div>
+
+      {pools.length === 0 ? (
+        <EmptyState
+          icon={<DollarSign className="h-5 w-5" />}
+          title="No budget pools"
+          description="Create a budget pool for a fiscal period to start tracking production spending."
+          action={isAdmin ? (
+            <Button size="sm" onClick={() => setShowAdd(true)}>
+              <Plus className="h-3.5 w-3.5" />
+              New Pool
+            </Button>
+          ) : undefined}
+        />
+      ) : (
+        <div className="space-y-4">
+          {pools.map((pool) => {
+            const poolCampaigns = campaignsByPool.get(pool.id) || [];
+            const open = isOpen(pool.id);
+            const spentPct = pool.totalAmount > 0 ? (pool.spent / pool.totalAmount) * 100 : 0;
+            const committedPct = pool.totalAmount > 0 ? ((pool.committed - pool.spent) / pool.totalAmount) * 100 : 0;
+            const allocPct = pool.totalAmount > 0 ? ((pool.allocated - pool.committed) / pool.totalAmount) * 100 : 0;
+            const fmtPeriod = (d: string) => {
+              const [y, m, day] = d.split("-");
+              return new Date(Number(y), Number(m) - 1, Number(day)).toLocaleDateString("en-US", {
+                month: "short", day: "numeric", year: "numeric",
+              });
+            };
+
+            return (
+              <Card key={pool.id} padding="none">
+                <button
+                  type="button"
+                  onClick={() => toggle(pool.id)}
+                  className="w-full text-left hover:bg-surface-secondary/40 transition-colors"
+                >
+                  <div className="flex items-start gap-3 px-3.5 py-3 border-b border-border">
+                    {open ? (
+                      <ChevronDown className="h-4 w-4 mt-0.5 text-text-tertiary shrink-0" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 mt-0.5 text-text-tertiary shrink-0" />
+                    )}
+                    <DollarSign className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">{pool.name}</span>
+                        <Badge variant={pool.utilizationPct > 95 ? "error" : pool.utilizationPct > 80 ? "warning" : "default"}>
+                          {pool.utilizationPct}% allocated
+                        </Badge>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => { e.stopPropagation(); setSelectedPool(pool); }}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setSelectedPool(pool); } }}
+                          className="ml-auto text-[10px] text-text-tertiary hover:text-primary cursor-pointer"
+                        >
+                          Edit pool →
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-text-tertiary">
+                        {fmtPeriod(pool.periodStart)} — {fmtPeriod(pool.periodEnd)} · {pool.campaignCount} campaign{pool.campaignCount !== 1 ? "s" : ""}
+                      </p>
+                      <div className="mt-2 h-2 rounded-full bg-surface-tertiary overflow-hidden">
+                        <div className="h-full flex">
+                          <div className="bg-emerald-500" style={{ width: `${Math.min(spentPct, 100)}%` }} />
+                          <div className="bg-blue-400" style={{ width: `${Math.min(committedPct, 100)}%` }} />
+                          <div className="bg-slate-300" style={{ width: `${Math.min(allocPct, 100)}%` }} />
+                        </div>
+                      </div>
+                      <div className="mt-1.5 flex gap-4 text-[10px] text-text-tertiary flex-wrap">
+                        <span>Paid <span className="font-semibold text-emerald-600">{formatCurrency(pool.spent)}</span></span>
+                        <span>Committed <span className="font-semibold text-text-primary">{formatCurrency(pool.committed)}</span></span>
+                        <span>Allocated <span className="font-semibold text-text-primary">{formatCurrency(pool.allocated)}</span></span>
+                        <span>Remaining <span className="font-semibold text-emerald-600">{formatCurrency(pool.remaining)}</span></span>
+                        <span className="ml-auto">Total <span className="font-semibold text-text-primary">{formatCurrency(pool.totalAmount)}</span></span>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {open && (
+                  <>
+                    <div className="hidden md:grid grid-cols-[88px_1fr_110px_100px_100px_100px_100px_100px_80px] gap-3 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border bg-surface-secondary/40">
+                      <div>WF#</div>
+                      <div>Campaign</div>
+                      <div>Status</div>
+                      <div className="text-right">Budget</div>
+                      <div className="text-right">Committed</div>
+                      <div className="text-right">Invoiced</div>
+                      <div className="text-right">Paid</div>
+                      <div className="text-right">EFC</div>
+                      <div className="text-right">Var</div>
+                    </div>
+                    {poolCampaigns.length === 0 ? (
+                      <div className="px-3.5 py-6 text-center text-xs text-text-tertiary">
+                        No campaigns in this pool yet.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {poolCampaigns.map((c) => {
+                          const varTone = Math.abs(c.variancePct) < 3
+                            ? "text-text-secondary"
+                            : c.variancePct > 0 ? "text-red-600" : "text-emerald-600";
+                          return (
+                            <Link
+                              key={c.id}
+                              href={`/campaigns/${c.id}`}
+                              className="grid grid-cols-2 md:grid-cols-[88px_1fr_110px_100px_100px_100px_100px_100px_80px] gap-3 px-3.5 py-2.5 items-center hover:bg-surface-secondary/40 transition-colors"
+                            >
+                              <div className="text-[10px] font-mono text-text-tertiary">{c.wfNumber}</div>
+                              <div className="col-span-2 md:col-span-1 min-w-0">
+                                <p className="text-sm font-medium text-text-primary truncate">{c.name}</p>
+                              </div>
+                              <div><CampaignStatusBadge status={c.status} /></div>
+                              <div className="text-right text-sm text-text-secondary">{formatCurrency(c.budget)}</div>
+                              <div className="text-right text-sm text-text-secondary">{formatCurrency(c.committed)}</div>
+                              <div className="text-right text-sm text-text-secondary">{formatCurrency(c.invoiced)}</div>
+                              <div className="text-right text-sm text-text-secondary">{formatCurrency(c.spent)}</div>
+                              <div className="text-right text-sm font-semibold text-text-primary">{formatCurrency(c.efc)}</div>
+                              <div className={`text-right text-xs font-medium ${varTone}`}>
+                                {c.variancePct !== 0 && (<>{c.variancePct > 0 ? "+" : ""}{c.variancePct}%</>)}
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <AddPoolModal open={showAdd} onClose={() => setShowAdd(false)} onCreated={() => { mutate(); setShowAdd(false); }} />
+      {selectedPool && (
+        <PoolDetailModal
+          pool={{
+            id: selectedPool.id,
+            name: selectedPool.name,
+            periodStart: selectedPool.periodStart,
+            periodEnd: selectedPool.periodEnd,
+            totalAmount: selectedPool.totalAmount,
+            allocated: selectedPool.allocated,
+            committed: selectedPool.committed,
+            spent: selectedPool.spent,
+            remaining: selectedPool.remaining,
+          } as BudgetPoolSummary}
+          open={!!selectedPool}
+          onClose={() => setSelectedPool(null)}
+          onUpdated={() => { mutate(); setSelectedPool(null); }}
+          isAdmin={isAdmin}
+        />
+      )}
+    </>
+  );
+}
+
+function CampaignStatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; variant: "default" | "info" | "success" | "warning" }> = {
+    "Planning": { label: "Planning", variant: "default" },
+    "In Production": { label: "In Production", variant: "info" },
+    "Post": { label: "Post", variant: "warning" },
+    "Complete": { label: "Complete", variant: "success" },
+  };
+  const m = map[status] || { label: status, variant: "default" as const };
+  return <Badge variant={m.variant}>{m.label}</Badge>;
+}
+
+// ─── Vendors Section ───
+// Lifecycle (vendor financials) + paymaster onboarding as inner tabs. Two
+// sides of the same vendor relationship; keeping them in one place removes
+// tab-hopping between "where are they in the lifecycle" and "are they ready
+// to be paid".
+function VendorsSection() {
+  const [inner, setInner] = useState<"lifecycle" | "onboarding">("lifecycle");
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-1">
+        {[
+          { k: "lifecycle" as const, label: "Lifecycle", icon: Receipt },
+          { k: "onboarding" as const, label: "Paymaster Onboarding", icon: UserCheck },
+        ].map((t) => {
+          const Icon = t.icon;
+          const active = inner === t.k;
+          return (
+            <button
+              key={t.k}
+              onClick={() => setInner(t.k)}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                active ? "bg-primary/10 text-primary" : "text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+      {inner === "lifecycle" && <VendorFinancialsTab />}
+      {inner === "onboarding" && <OnboardingTab />}
     </div>
   );
 }
@@ -659,7 +955,512 @@ function CampaignBudgetsTab() {
   );
 }
 
-// ─── Analysis Tab ───
+// ─── Cost Report Section ───
+// Replaces the prior Analysis + Spending tabs. One canonical report with the
+// production-accountant column set (Budget / Committed / Invoiced / Paid /
+// EFC / Variance), sliceable three ways via filter pills. Crew deal memos
+// live inside the Crew Labor row of "By Category" — that's what they
+// structurally are.
+type CostSlice = "category" | "vendor" | "quarter";
+
+function CostReportSection() {
+  const { data, isLoading } = useSWR<AnalysisData>("/api/budget/analysis", fetcher);
+  const { data: crewBookings = [] } = useSWR<CrewBookingRow[]>("/api/budget?type=crew", fetcher);
+  const [slice, setSlice] = useState<CostSlice>("category");
+  const [drilldown, setDrilldown] = useState<{ type: "vendor" | "category"; id: string; label: string } | null>(null);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [editingBooking, setEditingBooking] = useState<CrewBookingRow | null>(null);
+
+  if (isLoading || !data) {
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-32 animate-pulse rounded-xl bg-surface-secondary" />
+        ))}
+      </div>
+    );
+  }
+
+  const { summary, categoryBreakdown, vendorBreakdown, quarterlyTrend, overageSummary } = data;
+
+  return (
+    <div className="space-y-6">
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <CostKpi
+          label="Estimate Accuracy"
+          value={`${summary.estimateAccuracyPct > 0 ? "+" : ""}${summary.estimateAccuracyPct}%`}
+          tone={Math.abs(summary.estimateAccuracyPct) <= 5 ? "success" : Math.abs(summary.estimateAccuracyPct) <= 15 ? "warning" : "error"}
+          caption="invoice vs. estimate"
+        />
+        <CostKpi
+          label="Vendor Concentration"
+          value={`${summary.vendorConcentrationPct}%`}
+          tone={summary.vendorConcentrationPct > 70 ? "warning" : "default"}
+          caption="top 3 vendors"
+        />
+        <CostKpi
+          label="Avg Cost / Shoot Day"
+          value={summary.avgCostPerShootDay !== null ? formatCurrency(summary.avgCostPerShootDay) : "—"}
+          tone="default"
+          caption={`${summary.totalShootDays} shoot days YTD`}
+        />
+        <CostKpi
+          label="Budget Adjustments"
+          value={formatCurrency(overageSummary.totalApproved)}
+          tone="default"
+          caption={`${overageSummary.approvedCount} approved · ${overageSummary.declinedCount} declined`}
+        />
+      </div>
+
+      {/* Slice filter */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">View:</span>
+        {(["category", "vendor", "quarter"] as CostSlice[]).map((s) => (
+          <button
+            key={s}
+            onClick={() => setSlice(s)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              slice === s
+                ? "bg-primary text-white"
+                : "bg-surface-secondary text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            By {s.charAt(0).toUpperCase() + s.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* Cost Report Table */}
+      {slice === "category" && (
+        <CategoryCostReport
+          rows={categoryBreakdown}
+          crewBookings={crewBookings}
+          expanded={expandedCategory}
+          onToggleExpand={(name) => setExpandedCategory(expandedCategory === name ? null : name)}
+          onDrilldown={(category) => setDrilldown({ type: "category", id: category, label: category })}
+          onEditBooking={setEditingBooking}
+        />
+      )}
+      {slice === "vendor" && (
+        <VendorCostReport
+          rows={vendorBreakdown}
+          onDrilldown={(v) => setDrilldown({ type: "vendor", id: v.id, label: v.name })}
+        />
+      )}
+      {slice === "quarter" && <QuarterCostReport rows={quarterlyTrend} />}
+
+      {drilldown && (
+        <TransactionDrilldownModal
+          type={drilldown.type}
+          id={drilldown.id}
+          label={drilldown.label}
+          onClose={() => setDrilldown(null)}
+        />
+      )}
+
+      {editingBooking && (
+        <CrewBookingEditModal booking={editingBooking} onClose={() => setEditingBooking(null)} />
+      )}
+    </div>
+  );
+}
+
+function CostKpi({
+  label, value, tone = "default", caption,
+}: {
+  label: string;
+  value: string;
+  tone?: "default" | "success" | "warning" | "error";
+  caption?: string;
+}) {
+  const toneColor =
+    tone === "success" ? "text-emerald-600" :
+    tone === "warning" ? "text-amber-600" :
+    tone === "error" ? "text-red-600" :
+    "text-text-primary";
+  return (
+    <Card padding="none">
+      <div className="px-3.5 py-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">{label}</p>
+        <p className={`mt-1 text-xl font-bold ${toneColor}`}>{value}</p>
+        {caption && <p className="mt-0.5 text-[10px] text-text-tertiary">{caption}</p>}
+      </div>
+    </Card>
+  );
+}
+
+// ─── By Category — with Crew Labor expandable for Deal Memos ───
+function CategoryCostReport({
+  rows,
+  crewBookings,
+  expanded,
+  onToggleExpand,
+  onDrilldown,
+  onEditBooking,
+}: {
+  rows: AnalysisData["categoryBreakdown"];
+  crewBookings: CrewBookingRow[];
+  expanded: string | null;
+  onToggleExpand: (name: string) => void;
+  onDrilldown: (category: string) => void;
+  onEditBooking: (b: CrewBookingRow) => void;
+}) {
+  const totals = rows.reduce(
+    (a, r) => ({
+      estimated: a.estimated + r.estimated,
+      invoiced: a.invoiced + r.invoiced,
+      efc: a.efc + r.efc,
+    }),
+    { estimated: 0, invoiced: 0, efc: 0 }
+  );
+
+  return (
+    <Card padding="none">
+      <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+        <Layers className="h-4 w-4 shrink-0 text-primary" />
+        <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Cost Report — By Category</span>
+        <span className="ml-auto text-[10px] text-text-tertiary">{rows.length} categories</span>
+      </div>
+      <div className="hidden md:grid grid-cols-[1fr_110px_110px_110px_90px] gap-3 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border bg-surface-secondary/40">
+        <div>Category</div>
+        <div className="text-right">Estimated</div>
+        <div className="text-right">Invoiced</div>
+        <div className="text-right">EFC</div>
+        <div className="text-right">Variance</div>
+      </div>
+      <div className="divide-y divide-border">
+        {rows.length === 0 ? (
+          <div className="px-3.5 py-6">
+            <EmptyState icon={<Layers className="h-5 w-5" />} title="No category data yet" description="Category spending appears as estimates and invoices are processed." />
+          </div>
+        ) : (
+          rows.map((r) => {
+            const isCrew = r.category === "Crew Labor";
+            const isOpen = expanded === r.category;
+            return (
+              <div key={r.category}>
+                <div
+                  onClick={() => isCrew ? onToggleExpand(r.category) : onDrilldown(r.category)}
+                  className="grid grid-cols-2 md:grid-cols-[1fr_110px_110px_110px_90px] gap-3 px-3.5 py-2.5 items-center cursor-pointer hover:bg-surface-secondary/40"
+                >
+                  <div className="col-span-2 md:col-span-1 min-w-0 flex items-center gap-2">
+                    {isCrew && (isOpen ? <ChevronDown className="h-3.5 w-3.5 text-text-tertiary" /> : <ChevronRight className="h-3.5 w-3.5 text-text-tertiary" />)}
+                    <p className="text-sm font-medium text-text-primary truncate">{r.category}</p>
+                  </div>
+                  <div className="text-right text-sm text-text-secondary">{formatCurrency(r.estimated)}</div>
+                  <div className="text-right text-sm text-text-secondary">{formatCurrency(r.invoiced)}</div>
+                  <div className="text-right text-sm font-semibold text-text-primary">{formatCurrency(r.efc)}</div>
+                  <div className={`text-right text-xs font-medium ${
+                    r.variancePct === 0 ? "text-text-secondary" : r.variancePct > 0 ? "text-red-600" : "text-emerald-600"
+                  }`}>
+                    {r.variancePct !== 0 && (
+                      <>
+                        {r.variancePct > 0 ? "+" : ""}{r.variancePct}%
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {isCrew && isOpen && (
+                  <CrewDealMemosInline bookings={crewBookings} onEdit={onEditBooking} />
+                )}
+              </div>
+            );
+          })
+        )}
+        {rows.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-[1fr_110px_110px_110px_90px] gap-3 px-3.5 py-2.5 items-center bg-surface-secondary/60 border-t-2 border-border">
+            <div className="col-span-2 md:col-span-1 text-[10px] font-semibold uppercase tracking-wider text-text-primary">Total</div>
+            <div className="text-right text-sm font-semibold text-text-primary">{formatCurrency(totals.estimated)}</div>
+            <div className="text-right text-sm font-semibold text-text-primary">{formatCurrency(totals.invoiced)}</div>
+            <div className="text-right text-sm font-bold text-text-primary">{formatCurrency(totals.efc)}</div>
+            <div className={`text-right text-xs font-semibold ${totals.efc > totals.estimated ? "text-red-600" : "text-emerald-600"}`}>
+              {totals.estimated > 0 ? `${((totals.efc - totals.estimated) / totals.estimated * 100).toFixed(1)}%` : "—"}
+            </div>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function CrewDealMemosInline({
+  bookings,
+  onEdit,
+}: {
+  bookings: CrewBookingRow[];
+  onEdit: (b: CrewBookingRow) => void;
+}) {
+  if (bookings.length === 0) {
+    return (
+      <div className="bg-surface-secondary/40 border-t border-border px-5 py-3">
+        <p className="text-xs text-text-tertiary">No crew bookings yet.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="bg-surface-secondary/40 border-t border-border">
+      <div className="flex items-center gap-2 px-3.5 py-2 border-b border-border">
+        <HardHat className="h-3.5 w-3.5 text-primary" />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">Crew Deal Memos</span>
+        <span className="ml-auto text-[10px] text-text-tertiary">{bookings.length} memos</span>
+      </div>
+      <div className="divide-y divide-border">
+        {bookings.map((b) => {
+          const personName = b.vendor ? (b.vendor.contactName || b.vendor.companyName) : (b.user?.name || "Unknown");
+          const days = b.payment?.totalDays ?? b.confirmedDays ?? b.plannedDays ?? 0;
+          const amount = b.payment?.totalAmount ?? b.totalAmount ?? 0;
+          const statusLabel = b.payment?.status ?? b.status;
+          const statusVariant: "success" | "warning" | "info" | "default" =
+            statusLabel === "Paid" ? "success" :
+            statusLabel === "Pending Approval" ? "warning" :
+            statusLabel === "Approved" || statusLabel === "Sent to Paymaster" ? "info" :
+            "default";
+          const locked = b.payment?.status === "Approved" || b.payment?.status === "Sent to Paymaster" || b.payment?.status === "Paid";
+          return (
+            <div
+              key={b.id}
+              onClick={() => !locked && onEdit(b)}
+              className={`grid grid-cols-[1fr_120px_90px_60px_100px_110px] gap-3 px-5 py-2 items-center ${locked ? "" : "cursor-pointer hover:bg-surface"}`}
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-text-primary truncate">{personName}</p>
+                <p className="text-[10px] text-text-tertiary">{b.role}</p>
+              </div>
+              <div className="text-[10px] text-text-secondary">{b.classification}</div>
+              <div className="text-right text-xs text-text-secondary">{formatCurrency(b.dayRate)}/day</div>
+              <div className="text-right text-[10px] text-text-tertiary">{days} day{days !== 1 ? "s" : ""}</div>
+              <div className="text-right text-xs font-semibold text-text-primary">{formatCurrency(amount)}</div>
+              <div className="text-right">
+                <Badge variant={statusVariant}>{statusLabel}</Badge>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── By Vendor ───
+function VendorCostReport({
+  rows,
+  onDrilldown,
+}: {
+  rows: AnalysisData["vendorBreakdown"];
+  onDrilldown: (v: AnalysisData["vendorBreakdown"][number]) => void;
+}) {
+  const totals = rows.reduce(
+    (a, r) => ({
+      committed: a.committed + r.estimateTotal,
+      invoiced: a.invoiced + r.invoiceTotal,
+      paid: a.paid + r.paidTotal,
+      efc: a.efc + r.efc,
+    }),
+    { committed: 0, invoiced: 0, paid: 0, efc: 0 }
+  );
+
+  return (
+    <Card padding="none">
+      <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+        <Users className="h-4 w-4 shrink-0 text-primary" />
+        <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Cost Report — By Vendor</span>
+        <span className="ml-auto text-[10px] text-text-tertiary">{rows.length} vendors</span>
+      </div>
+      <div className="hidden md:grid grid-cols-[1fr_60px_110px_110px_110px_110px_90px] gap-3 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border bg-surface-secondary/40">
+        <div>Vendor</div>
+        <div className="text-center">Camp.</div>
+        <div className="text-right">Committed</div>
+        <div className="text-right">Invoiced</div>
+        <div className="text-right">Paid</div>
+        <div className="text-right">EFC</div>
+        <div className="text-right">Variance</div>
+      </div>
+      <div className="divide-y divide-border">
+        {rows.length === 0 ? (
+          <div className="px-3.5 py-6">
+            <EmptyState icon={<Users className="h-5 w-5" />} title="No vendor data yet" description="Vendor spending appears as estimates and invoices are processed." />
+          </div>
+        ) : (
+          rows.map((v) => (
+            <div
+              key={v.id}
+              onClick={() => onDrilldown(v)}
+              className="grid grid-cols-2 md:grid-cols-[1fr_60px_110px_110px_110px_110px_90px] gap-3 px-3.5 py-2.5 items-center cursor-pointer hover:bg-surface-secondary/40"
+            >
+              <div className="col-span-2 md:col-span-1 min-w-0">
+                <p className="text-sm font-medium text-text-primary truncate">{v.name}</p>
+                <p className="text-[10px] text-text-tertiary truncate">{v.category}</p>
+              </div>
+              <div className="text-center text-sm text-text-secondary">{v.campaignCount}</div>
+              <div className="text-right text-sm text-text-secondary">{formatCurrency(v.estimateTotal)}</div>
+              <div className="text-right text-sm text-text-secondary">{formatCurrency(v.invoiceTotal)}</div>
+              <div className="text-right text-sm text-text-secondary">{formatCurrency(v.paidTotal)}</div>
+              <div className="text-right text-sm font-semibold text-text-primary">{formatCurrency(v.efc)}</div>
+              <div className={`text-right text-xs font-medium ${
+                v.variancePct === 0 ? "text-text-secondary" : v.variancePct > 0 ? "text-red-600" : "text-emerald-600"
+              }`}>
+                {v.variancePct !== 0 && <>{v.variancePct > 0 ? "+" : ""}{v.variancePct}%</>}
+              </div>
+            </div>
+          ))
+        )}
+        {rows.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-[1fr_60px_110px_110px_110px_110px_90px] gap-3 px-3.5 py-2.5 items-center bg-surface-secondary/60 border-t-2 border-border">
+            <div className="col-span-2 md:col-span-1 text-[10px] font-semibold uppercase tracking-wider text-text-primary">Total</div>
+            <div />
+            <div className="text-right text-sm font-semibold text-text-primary">{formatCurrency(totals.committed)}</div>
+            <div className="text-right text-sm font-semibold text-text-primary">{formatCurrency(totals.invoiced)}</div>
+            <div className="text-right text-sm font-semibold text-text-primary">{formatCurrency(totals.paid)}</div>
+            <div className="text-right text-sm font-bold text-text-primary">{formatCurrency(totals.efc)}</div>
+            <div />
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+// ─── By Quarter ───
+function QuarterCostReport({ rows }: { rows: AnalysisData["quarterlyTrend"] }) {
+  return (
+    <Card padding="none">
+      <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+        <TrendingUp className="h-4 w-4 shrink-0 text-primary" />
+        <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Cost Report — By Quarter</span>
+        <span className="ml-auto text-[10px] text-text-tertiary">{rows.length} quarters</span>
+      </div>
+      <div className="hidden md:grid grid-cols-[1fr_120px_120px_120px] gap-3 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border bg-surface-secondary/40">
+        <div>Quarter</div>
+        <div className="text-right">Estimated</div>
+        <div className="text-right">Invoiced</div>
+        <div className="text-right">Paid</div>
+      </div>
+      <div className="divide-y divide-border">
+        {rows.length === 0 ? (
+          <div className="px-3.5 py-6">
+            <EmptyState icon={<TrendingUp className="h-5 w-5" />} title="No quarterly data yet" description="Quarterly trend will appear as bookings and invoices accumulate." />
+          </div>
+        ) : (
+          rows.map((q) => (
+            <div key={q.quarter} className="grid grid-cols-2 md:grid-cols-[1fr_120px_120px_120px] gap-3 px-3.5 py-2.5 items-center">
+              <div className="col-span-2 md:col-span-1 text-sm font-medium text-text-primary">{q.quarter}</div>
+              <div className="text-right text-sm text-text-secondary">{formatCurrency(q.estimated)}</div>
+              <div className="text-right text-sm text-text-secondary">{formatCurrency(q.invoiced)}</div>
+              <div className="text-right text-sm font-semibold text-emerald-600">{formatCurrency(q.paid)}</div>
+            </div>
+          ))
+        )}
+      </div>
+    </Card>
+  );
+}
+
+// ─── Crew Booking Edit Modal (extracted from old SpendingTab) ───
+function CrewBookingEditModal({
+  booking,
+  onClose,
+}: {
+  booking: CrewBookingRow;
+  onClose: () => void;
+}) {
+  const { toast } = useToast();
+  const [draft, setDraft] = useState({
+    role: booking.role,
+    dayRate: String(booking.dayRate),
+    classification: booking.classification,
+    notes: booking.notes || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const personName = booking.vendor
+    ? booking.vendor.contactName || booking.vendor.companyName
+    : booking.user?.name || "";
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/crew-bookings/${booking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: draft.role,
+          dayRate: Number(draft.dayRate),
+          classification: draft.classification,
+          notes: draft.notes,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast("success", "Deal memo updated");
+      onClose();
+    } catch {
+      toast("error", "Failed to save changes");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={`Edit Deal Memo — ${personName}`}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">Role</label>
+            <input
+              type="text"
+              value={draft.role}
+              onChange={(e) => setDraft((d) => ({ ...d, role: e.target.value }))}
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">Day Rate</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-tertiary">$</span>
+              <input
+                type="number"
+                value={draft.dayRate}
+                onChange={(e) => setDraft((d) => ({ ...d, dayRate: e.target.value }))}
+                className="w-full rounded-lg border border-border bg-surface pl-6 pr-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+          </div>
+        </div>
+        <div>
+          <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">Classification</label>
+          <select
+            value={draft.classification}
+            onChange={(e) => setDraft((d) => ({ ...d, classification: e.target.value }))}
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            {CLASSIFICATIONS.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">Notes</label>
+          <input
+            type="text"
+            value={draft.notes}
+            onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
+            placeholder="Optional notes…"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+      </div>
+      <ModalFooter>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={save} disabled={saving}>
+          <Check className="h-3.5 w-3.5" />
+          {saving ? "Saving…" : "Save Changes"}
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+// ─── Old AnalysisTab (kept for type re-use) ───
 type SortField = "name" | "budget" | "committed" | "spent" | "variancePct" | "shootDays" | "costPerShootDay";
 type SortDir = "asc" | "desc";
 type AnalysisView = "overview" | "category" | "vendor" | "campaign";
@@ -671,6 +1472,7 @@ interface AnalysisData {
     totalCommitted: number;
     totalInvoiced: number;
     totalSpent: number;
+    totalEfc: number;
     unallocated: number;
     activeCampaignCount: number;
     completedCampaignCount: number;
@@ -682,22 +1484,23 @@ interface AnalysisData {
   poolHealth: Array<{
     id: string; name: string; periodStart: string; periodEnd: string;
     totalAmount: number; allocated: number; committed: number;
-    invoiced: number; spent: number; remaining: number;
+    invoiced: number; spent: number; efc: number; remaining: number;
     campaignCount: number; utilizationPct: number;
   }>;
   categoryBreakdown: Array<{
-    category: string; estimated: number; invoiced: number;
+    category: string; estimated: number; invoiced: number; efc: number;
     variance: number; variancePct: number;
   }>;
   vendorBreakdown: Array<{
     id: string; name: string; category: string;
-    estimateTotal: number; invoiceTotal: number; paidTotal: number;
+    estimateTotal: number; invoiceTotal: number; paidTotal: number; efc: number;
     campaignCount: number; assignmentCount: number;
     variance: number; variancePct: number;
   }>;
   campaignAnalysis: Array<{
     id: string; wfNumber: string; name: string; status: string;
-    budget: number; committed: number; invoiced: number; spent: number;
+    budgetPoolId: string | null;
+    budget: number; committed: number; invoiced: number; spent: number; efc: number;
     remaining: number; variancePct: number; vendorCount: number;
     shootDays: number; costPerShootDay: number | null;
   }>;
@@ -711,691 +1514,6 @@ interface AnalysisData {
   };
 }
 
-function AnalysisTab() {
-  const { data, isLoading } = useSWR<AnalysisData>("/api/budget/analysis", fetcher);
-  const [view, setView] = useState<AnalysisView>("overview");
-  const [sortField, setSortField] = useState<SortField>("budget");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [vendorSort, setVendorSort] = useState<"spend" | "variance" | "campaigns">("spend");
-  const [categorySort, setCategorySort] = useState<"invoiced" | "variance">("invoiced");
-  const [drilldown, setDrilldown] = useState<{ type: "vendor" | "category"; id: string; label: string } | null>(null);
-
-  const CHART_COLORS = [
-    "#2d6a4f", "#40916c", "#52b788", "#74c69d", "#95d5b2",
-    "#457b9d", "#6096ba", "#a8dadc", "#e9c46a", "#f4a261", "#e76f51",
-  ];
-
-  const { summary, poolHealth, categoryBreakdown, vendorBreakdown, campaignAnalysis, quarterlyTrend, overageSummary } = data || {} as AnalysisData;
-
-  const sortedCampaigns = useMemo(() => {
-    if (!campaignAnalysis) return [];
-    return [...campaignAnalysis].sort((a, b) => {
-      const av = a[sortField] ?? 0;
-      const bv = b[sortField] ?? 0;
-      if (typeof av === "string" && typeof bv === "string") {
-        return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-      }
-      return sortDir === "asc" ? (av as number) - (bv as number) : (bv as number) - (av as number);
-    });
-  }, [campaignAnalysis, sortField, sortDir]);
-
-  const sortedVendors = useMemo(() => {
-    if (!vendorBreakdown) return [];
-    return [...vendorBreakdown].sort((a, b) => {
-      if (vendorSort === "spend") return (b.paidTotal || b.estimateTotal) - (a.paidTotal || a.estimateTotal);
-      if (vendorSort === "variance") return Math.abs(b.variancePct) - Math.abs(a.variancePct);
-      return b.campaignCount - a.campaignCount;
-    });
-  }, [vendorBreakdown, vendorSort]);
-
-  const sortedCategories = useMemo(() => {
-    if (!categoryBreakdown) return [];
-    return [...categoryBreakdown].sort((a, b) => {
-      if (categorySort === "invoiced") return b.invoiced - a.invoiced;
-      return Math.abs(b.variancePct) - Math.abs(a.variancePct);
-    });
-  }, [categoryBreakdown, categorySort]);
-
-  const totalCategorySpend = useMemo(
-    () => (categoryBreakdown || []).reduce((s, c) => s + c.invoiced, 0) || 1,
-    [categoryBreakdown]
-  );
-
-  const categoryPieData = useMemo(() => {
-    const topCats = sortedCategories.filter((c) => c.invoiced > 0).slice(0, 8);
-    const otherTotal = sortedCategories.slice(8).reduce((s, c) => s + c.invoiced, 0);
-    const result = topCats.map((c) => ({ name: c.category, value: c.invoiced }));
-    if (otherTotal > 0) result.push({ name: "Other", value: otherTotal });
-    return result;
-  }, [sortedCategories]);
-
-  const vendorBarData = useMemo(() => {
-    return sortedVendors.slice(0, 10).map((v) => ({
-      name: v.name.length > 18 ? v.name.slice(0, 16) + "…" : v.name,
-      Estimated: v.estimateTotal,
-      Invoiced: v.invoiceTotal,
-      Paid: v.paidTotal,
-    }));
-  }, [sortedVendors]);
-
-  const campaignBarData = useMemo(() => {
-    return sortedCampaigns.slice(0, 10).map((c) => ({
-      name: c.name.length > 20 ? c.name.slice(0, 18) + "…" : c.name,
-      Budget: c.budget,
-      Committed: c.committed,
-      Spent: c.spent,
-    }));
-  }, [sortedCampaigns]);
-
-  const budgetFlowData = useMemo(() => {
-    if (!summary || (!summary.totalBudgeted && !summary.totalAllocated)) return [];
-    return [
-      { name: "Budgeted", value: summary.totalBudgeted },
-      { name: "Allocated", value: summary.totalAllocated },
-      { name: "Committed", value: summary.totalCommitted },
-      { name: "Invoiced", value: summary.totalInvoiced },
-      { name: "Paid", value: summary.totalSpent },
-    ];
-  }, [summary]);
-
-  function toggleCampaignSort(field: SortField) {
-    if (sortField === field) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDir("desc");
-    }
-  }
-
-  function SortIcon({ field }: { field: SortField }) {
-    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
-    return sortDir === "asc"
-      ? <ArrowUp className="h-3 w-3" />
-      : <ArrowDown className="h-3 w-3" />;
-  }
-
-  function CustomTooltip({ active, payload, label }: any) {
-    if (!active || !payload?.length) return null;
-    return (
-      <div className="rounded-lg border border-border bg-surface px-3 py-2 shadow-md">
-        <p className="text-xs font-medium text-text-primary mb-1">{label || payload[0]?.name}</p>
-        {payload.map((p: any, i: number) => (
-          <p key={i} className="text-xs text-text-secondary">
-            <span className="inline-block h-2 w-2 rounded-full mr-1.5" style={{ backgroundColor: p.color || p.fill }} />
-            {p.name}: {formatCurrency(p.value)}
-          </p>
-        ))}
-      </div>
-    );
-  }
-
-  const ANALYSIS_VIEWS: { key: AnalysisView; label: string; icon: React.ElementType }[] = [
-    { key: "overview", label: "Overview", icon: Activity },
-    { key: "category", label: "By Category", icon: Layers },
-    { key: "vendor", label: "By Vendor", icon: Users },
-    { key: "campaign", label: "By Campaign", icon: LayoutList },
-  ];
-
-  return isLoading || !data ? (
-    <div className="space-y-4">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="h-32 animate-pulse rounded-xl bg-surface-secondary" />
-      ))}
-    </div>
-  ) : (
-    <div className="space-y-6">
-      {/* Sub-navigation */}
-      <div className="flex gap-1.5">
-        {ANALYSIS_VIEWS.map((v) => {
-          const Icon = v.icon;
-          return (
-            <button
-              key={v.key}
-              onClick={() => setView(v.key)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
-                view === v.key
-                  ? "bg-primary/10 text-primary"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {v.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ─── Overview View ─── */}
-      {view === "overview" && (
-        <div className="space-y-6">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Card>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Total Budgeted</p>
-              <p className="mt-1 text-xl font-bold text-text-primary">{formatCurrency(summary.totalBudgeted)}</p>
-              <p className="mt-0.5 text-xs text-text-tertiary">
-                {formatCurrency(summary.unallocated)} unallocated
-              </p>
-            </Card>
-            <Card>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Committed</p>
-              <p className="mt-1 text-xl font-bold text-text-primary">{formatCurrency(summary.totalCommitted)}</p>
-              <p className="mt-0.5 text-xs text-text-tertiary">
-                {formatCurrency(summary.totalInvoiced)} invoiced
-              </p>
-            </Card>
-            <Card>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Spent (Paid)</p>
-              <p className="mt-1 text-xl font-bold text-text-primary">{formatCurrency(summary.totalSpent)}</p>
-              {summary.avgCostPerShootDay !== null && (
-                <p className="mt-0.5 text-xs text-text-tertiary">
-                  {formatCurrency(summary.avgCostPerShootDay)} / shoot day
-                </p>
-              )}
-            </Card>
-            <Card>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Estimate Accuracy</p>
-              <p className={`mt-1 text-xl font-bold ${
-                Math.abs(summary.estimateAccuracyPct) <= 5
-                  ? "text-emerald-600"
-                  : Math.abs(summary.estimateAccuracyPct) <= 15
-                  ? "text-amber-600"
-                  : "text-red-600"
-              }`}>
-                {summary.estimateAccuracyPct > 0 ? "+" : ""}{summary.estimateAccuracyPct}%
-              </p>
-              <p className="mt-0.5 text-xs text-text-tertiary">
-                invoice vs. estimate variance
-              </p>
-            </Card>
-          </div>
-
-          {/* Budget Flow Chart */}
-          {budgetFlowData.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-text-tertiary" />
-                  Budget Flow
-                </CardTitle>
-              </CardHeader>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={budgetFlowData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border, #e5e7eb)" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--color-text-secondary, #6b7280)" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: "var(--color-text-tertiary, #9ca3af)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                    <ReTooltip content={<CustomTooltip />} />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={56}>
-                      {budgetFlowData.map((_, i) => (
-                        <Cell key={i} fill={["#2d6a4f", "#40916c", "#457b9d", "#e9c46a", "#52b788"][i]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex gap-4 text-[10px] mt-2">
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-                  <span className="text-text-tertiary">Paid</span>
-                  <span className="font-medium text-text-primary">{formatCurrency(summary.totalSpent)}</span>
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block h-2 w-2 rounded-full bg-blue-400" />
-                  <span className="text-text-tertiary">Committed</span>
-                  <span className="font-medium text-text-primary">{formatCurrency(summary.totalCommitted)}</span>
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: "#e5e7eb" }} />
-                  <span className="text-text-tertiary">Unallocated</span>
-                  <span className="font-medium text-text-primary">{formatCurrency(summary.unallocated)}</span>
-                </span>
-              </div>
-            </Card>
-          )}
-
-          {/* Quick stats row */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Card>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Active Campaigns</p>
-              <p className="mt-1 text-lg font-bold text-text-primary">{summary.activeCampaignCount}</p>
-              <p className="text-xs text-text-tertiary">{summary.completedCampaignCount} completed</p>
-            </Card>
-            <Card>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Shoot Days</p>
-              <p className="mt-1 text-lg font-bold text-text-primary">{summary.totalShootDays}</p>
-              {summary.avgCostPerShootDay !== null && (
-                <p className="text-xs text-text-tertiary">{formatCurrency(summary.avgCostPerShootDay)} avg cost</p>
-              )}
-            </Card>
-            <Card>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Vendor Concentration</p>
-              <p className={`mt-1 text-lg font-bold ${
-                summary.vendorConcentrationPct > 70 ? "text-amber-600" : "text-text-primary"
-              }`}>
-                {summary.vendorConcentrationPct}%
-              </p>
-              <p className="text-xs text-text-tertiary">top 3 vendors</p>
-            </Card>
-            <Card>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Budget Adjustments</p>
-              <p className="mt-1 text-lg font-bold text-text-primary">{formatCurrency(overageSummary.totalApproved)}</p>
-              <p className="text-xs text-text-tertiary">
-                {overageSummary.approvedCount} approved, {overageSummary.declinedCount} declined
-              </p>
-            </Card>
-          </div>
-
-          {/* Quarterly Trend */}
-          {quarterlyTrend.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-text-tertiary" />
-                  Quarterly Spend Trend
-                </CardTitle>
-              </CardHeader>
-              <div className="space-y-2.5">
-                {quarterlyTrend.map((q) => {
-                  const maxVal = Math.max(...quarterlyTrend.map((qt) => Math.max(qt.estimated, qt.invoiced, qt.paid))) || 1;
-                  return (
-                    <div key={q.quarter}>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-medium text-text-primary w-16">{q.quarter}</span>
-                        <div className="flex gap-4">
-                          <span className="text-text-tertiary">Est: <span className="text-text-primary font-medium">{formatCurrency(q.estimated)}</span></span>
-                          <span className="text-text-tertiary">Inv: <span className="text-text-primary font-medium">{formatCurrency(q.invoiced)}</span></span>
-                          <span className="text-text-tertiary">Paid: <span className="text-emerald-600 font-medium">{formatCurrency(q.paid)}</span></span>
-                        </div>
-                      </div>
-                      <div className="h-2 rounded-full bg-surface-tertiary overflow-hidden">
-                        <div className="h-full flex">
-                          <div className="bg-emerald-500" style={{ width: `${(q.paid / maxVal) * 100}%` }} />
-                          <div className="bg-blue-300" style={{ width: `${((q.estimated - q.paid) / maxVal) * 100}%` }} />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          )}
-
-          {/* Pool Health Cards */}
-          {poolHealth.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-text-tertiary" />
-                  Pool Health
-                </CardTitle>
-              </CardHeader>
-              <div className="space-y-3">
-                {poolHealth.map((pool) => (
-                  <div key={pool.id} className="rounded-lg border border-border p-3.5">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="text-sm font-semibold text-text-primary">{pool.name}</p>
-                        <p className="text-xs text-text-tertiary">{pool.periodStart} — {pool.periodEnd} &middot; {pool.campaignCount} campaigns</p>
-                      </div>
-                      <Badge variant={pool.utilizationPct > 95 ? "error" : pool.utilizationPct > 80 ? "warning" : "success"}>
-                        {pool.utilizationPct}% allocated
-                      </Badge>
-                    </div>
-                    <div className="h-2 rounded-full bg-surface-tertiary overflow-hidden mb-2">
-                      <div className="h-full flex">
-                        <div className="bg-emerald-500" style={{ width: `${Math.min((pool.spent / pool.totalAmount) * 100, 100)}%` }} />
-                        <div className="bg-blue-400" style={{ width: `${Math.min(((pool.committed - pool.spent) / pool.totalAmount) * 100, 100)}%` }} />
-                        <div className="bg-gray-200" style={{ width: `${Math.min(((pool.allocated - pool.committed) / pool.totalAmount) * 100, 100)}%` }} />
-                      </div>
-                    </div>
-                    <div className="flex gap-4 text-[10px] text-text-tertiary">
-                      <span>Total: <span className="font-medium text-text-primary">{formatCurrency(pool.totalAmount)}</span></span>
-                      <span>Remaining: <span className="font-medium text-emerald-600">{formatCurrency(pool.remaining)}</span></span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* ─── Category View ─── */}
-      {view === "category" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-text-secondary">
-              Spending breakdown across {categoryBreakdown.length} cost categories
-            </p>
-            <div className="flex gap-1.5">
-              <button
-                onClick={() => setCategorySort("invoiced")}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  categorySort === "invoiced" ? "bg-primary/10 text-primary" : "text-text-tertiary hover:text-text-primary"
-                }`}
-              >
-                By Spend
-              </button>
-              <button
-                onClick={() => setCategorySort("variance")}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  categorySort === "variance" ? "bg-primary/10 text-primary" : "text-text-tertiary hover:text-text-primary"
-                }`}
-              >
-                By Variance
-              </button>
-            </div>
-          </div>
-
-          {/* Donut Chart */}
-          {categoryPieData.length > 0 && (
-            <Card>
-              <div className="flex flex-col lg:flex-row items-center gap-6">
-                <div className="h-52 w-52 shrink-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={categoryPieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={80}
-                        paddingAngle={2}
-                        dataKey="value"
-                      >
-                        {categoryPieData.map((_, i) => (
-                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <ReTooltip content={<CustomTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-1.5">
-                  {categoryPieData.map((cat, i) => (
-                    <div key={cat.name} className="flex items-center gap-2">
-                      <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                      <span className="text-xs text-text-secondary truncate">{cat.name}</span>
-                      <span className="text-xs font-medium text-text-primary ml-auto">{formatCurrency(cat.value)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {sortedCategories.length === 0 ? (
-            <EmptyState
-              icon={<Layers className="h-5 w-5" />}
-              title="No category data yet"
-              description="Category spending will appear as estimates and invoices are processed."
-            />
-          ) : (
-            <div className="rounded-2xl overflow-hidden bg-surface border border-border shadow-xs">
-              <div className="flex items-center gap-3 px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border">
-                <div className="flex-1">Category</div>
-                <div className="w-24 shrink-0 text-right">Estimated</div>
-                <div className="w-24 shrink-0 text-right">Invoiced</div>
-                <div className="w-20 shrink-0 text-right">Variance</div>
-                <div className="w-32 shrink-0">Share</div>
-              </div>
-              {sortedCategories.map((cat) => {
-                const pct = (cat.invoiced / totalCategorySpend) * 100;
-                return (
-                  <div
-                    key={cat.category}
-                    className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-secondary/50 transition-colors cursor-pointer"
-                    onClick={() => setDrilldown({ type: "category", id: cat.category, label: cat.category })}
-                  >
-                    <div className="flex-1">
-                      <span className="text-sm font-medium text-text-primary">{cat.category}</span>
-                    </div>
-                    <div className="w-24 shrink-0 text-right text-sm text-text-secondary">
-                      {formatCurrency(cat.estimated)}
-                    </div>
-                    <div className="w-24 shrink-0 text-right text-sm font-semibold text-text-primary">
-                      {formatCurrency(cat.invoiced)}
-                    </div>
-                    <div className="w-20 shrink-0 text-right">
-                      {cat.variance !== 0 && (
-                        <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-                          cat.variance > 0 ? "text-red-600" : "text-emerald-600"
-                        }`}>
-                          {cat.variance > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                          {cat.variancePct > 0 ? "+" : ""}{cat.variancePct}%
-                        </span>
-                      )}
-                    </div>
-                    <div className="w-32 shrink-0">
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 rounded-full bg-surface-tertiary overflow-hidden">
-                          <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-[10px] text-text-tertiary w-8 text-right">{pct.toFixed(0)}%</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ─── Vendor View ─── */}
-      {view === "vendor" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-text-secondary">
-              {vendorBreakdown.length} vendor{vendorBreakdown.length !== 1 ? "s" : ""} with activity
-            </p>
-            <div className="flex gap-1.5">
-              {(["spend", "variance", "campaigns"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setVendorSort(s)}
-                  className={`rounded-lg px-2.5 py-1.5 text-xs font-medium capitalize transition-colors ${
-                    vendorSort === s ? "bg-primary/10 text-primary" : "text-text-tertiary hover:text-text-primary"
-                  }`}
-                >
-                  By {s === "campaigns" ? "Usage" : s.charAt(0).toUpperCase() + s.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Vendor Spend Chart */}
-          {vendorBarData.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-text-tertiary" />
-                  Top Vendors — Estimate vs. Invoice vs. Paid
-                </CardTitle>
-              </CardHeader>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={vendorBarData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border, #e5e7eb)" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--color-text-tertiary, #9ca3af)" }} axisLine={false} tickLine={false} interval={0} angle={-20} textAnchor="end" height={50} />
-                    <YAxis tick={{ fontSize: 10, fill: "var(--color-text-tertiary, #9ca3af)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                    <ReTooltip content={<CustomTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="Estimated" fill="#95d5b2" radius={[2, 2, 0, 0]} maxBarSize={28} />
-                    <Bar dataKey="Invoiced" fill="#457b9d" radius={[2, 2, 0, 0]} maxBarSize={28} />
-                    <Bar dataKey="Paid" fill="#2d6a4f" radius={[2, 2, 0, 0]} maxBarSize={28} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          )}
-
-          {sortedVendors.length === 0 ? (
-            <EmptyState
-              icon={<Users className="h-5 w-5" />}
-              title="No vendor data yet"
-              description="Vendor spending will appear as estimates and invoices are processed."
-            />
-          ) : (
-            <div className="rounded-2xl overflow-hidden bg-surface border border-border shadow-xs">
-              <div className="flex items-center gap-3 px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border">
-                <div className="flex-1">Vendor</div>
-                <div className="w-16 shrink-0 text-center">Campaigns</div>
-                <div className="w-24 shrink-0 text-right">Estimated</div>
-                <div className="w-24 shrink-0 text-right">Invoiced</div>
-                <div className="w-24 shrink-0 text-right">Paid</div>
-                <div className="w-20 shrink-0 text-right">Accuracy</div>
-              </div>
-              {sortedVendors.map((v) => (
-                <div
-                  key={v.id}
-                  className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-secondary/50 transition-colors cursor-pointer"
-                  onClick={() => setDrilldown({ type: "vendor", id: v.id, label: v.name })}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text-primary truncate">{v.name}</p>
-                    <p className="text-xs text-text-tertiary">{v.category}</p>
-                  </div>
-                  <div className="w-16 shrink-0 text-center text-sm text-text-secondary">{v.campaignCount}</div>
-                  <div className="w-24 shrink-0 text-right text-sm text-text-secondary">{formatCurrency(v.estimateTotal)}</div>
-                  <div className="w-24 shrink-0 text-right text-sm text-text-secondary">{formatCurrency(v.invoiceTotal)}</div>
-                  <div className="w-24 shrink-0 text-right text-sm font-semibold text-text-primary">{formatCurrency(v.paidTotal)}</div>
-                  <div className="w-20 shrink-0 text-right">
-                    {v.estimateTotal > 0 && v.invoiceTotal > 0 ? (
-                      <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-                        Math.abs(v.variancePct) <= 5 ? "text-emerald-600" :
-                        Math.abs(v.variancePct) <= 15 ? "text-amber-600" : "text-red-600"
-                      }`}>
-                        {v.variancePct > 0 ? "+" : ""}{v.variancePct}%
-                      </span>
-                    ) : (
-                      <span className="text-xs text-text-tertiary">—</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ─── Campaign View ─── */}
-      {view === "campaign" && (
-        <div className="space-y-4">
-          <p className="text-sm text-text-secondary">
-            Budget vs. actual across {campaignAnalysis.length} campaigns
-          </p>
-
-          {/* Campaign Budget Chart */}
-          {campaignBarData.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <LayoutList className="h-4 w-4 text-text-tertiary" />
-                  Budget vs. Committed vs. Spent
-                </CardTitle>
-              </CardHeader>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={campaignBarData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border, #e5e7eb)" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--color-text-tertiary, #9ca3af)" }} axisLine={false} tickLine={false} interval={0} angle={-20} textAnchor="end" height={50} />
-                    <YAxis tick={{ fontSize: 10, fill: "var(--color-text-tertiary, #9ca3af)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                    <ReTooltip content={<CustomTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="Budget" fill="#95d5b2" radius={[2, 2, 0, 0]} maxBarSize={28} />
-                    <Bar dataKey="Committed" fill="#457b9d" radius={[2, 2, 0, 0]} maxBarSize={28} />
-                    <Bar dataKey="Spent" fill="#2d6a4f" radius={[2, 2, 0, 0]} maxBarSize={28} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          )}
-
-          {sortedCampaigns.length === 0 ? (
-            <EmptyState
-              icon={<LayoutList className="h-5 w-5" />}
-              title="No campaign data"
-              description="Campaign budget analysis will appear here."
-            />
-          ) : (
-            <div className="rounded-2xl overflow-hidden bg-surface border border-border shadow-xs">
-              <div className="flex items-center gap-3 px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border">
-                <button className="w-16 shrink-0 text-left flex items-center gap-1" onClick={() => toggleCampaignSort("name")}>
-                  WF# <SortIcon field="name" />
-                </button>
-                <div className="flex-1">Campaign</div>
-                <div className="w-20 shrink-0">Status</div>
-                <button className="w-20 shrink-0 text-right flex items-center justify-end gap-1" onClick={() => toggleCampaignSort("budget")}>
-                  Budget <SortIcon field="budget" />
-                </button>
-                <button className="w-20 shrink-0 text-right flex items-center justify-end gap-1" onClick={() => toggleCampaignSort("committed")}>
-                  Commit <SortIcon field="committed" />
-                </button>
-                <button className="w-20 shrink-0 text-right flex items-center justify-end gap-1" onClick={() => toggleCampaignSort("spent")}>
-                  Spent <SortIcon field="spent" />
-                </button>
-                <button className="w-16 shrink-0 text-right flex items-center justify-end gap-1" onClick={() => toggleCampaignSort("variancePct")}>
-                  Var <SortIcon field="variancePct" />
-                </button>
-                <button className="w-14 shrink-0 text-right flex items-center justify-end gap-1" onClick={() => toggleCampaignSort("shootDays")}>
-                  Days <SortIcon field="shootDays" />
-                </button>
-                <button className="w-20 shrink-0 text-right flex items-center justify-end gap-1" onClick={() => toggleCampaignSort("costPerShootDay")}>
-                  $/Day <SortIcon field="costPerShootDay" />
-                </button>
-              </div>
-              {sortedCampaigns.map((c) => (
-                <div key={c.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-border last:border-b-0 hover:bg-surface-secondary/50 transition-colors">
-                  <div className="w-16 shrink-0 text-xs text-text-tertiary">{c.wfNumber}</div>
-                  <div className="flex-1 min-w-0">
-                    <Link href={`/campaigns/${c.id}`} className="text-sm font-medium text-text-primary hover:text-primary transition-colors truncate block">
-                      {c.name}
-                    </Link>
-                  </div>
-                  <div className="w-20 shrink-0">
-                    <Badge variant={c.status === "In Production" ? "success" : c.status === "Post" ? "info" : c.status === "Complete" ? "default" : "default"}>
-                      {c.status}
-                    </Badge>
-                  </div>
-                  <div className="w-20 shrink-0 text-right text-sm text-text-secondary">{formatCurrency(c.budget)}</div>
-                  <div className="w-20 shrink-0 text-right text-sm text-text-secondary">{formatCurrency(c.committed)}</div>
-                  <div className="w-20 shrink-0 text-right text-sm font-semibold text-text-primary">{formatCurrency(c.spent)}</div>
-                  <div className="w-16 shrink-0 text-right">
-                    {c.committed > 0 ? (
-                      <span className={`text-xs font-medium ${
-                        c.variancePct > 0 ? "text-red-600" : c.variancePct < -10 ? "text-emerald-600" : "text-text-secondary"
-                      }`}>
-                        {c.variancePct > 0 ? "+" : ""}{c.variancePct}%
-                      </span>
-                    ) : (
-                      <span className="text-xs text-text-tertiary">—</span>
-                    )}
-                  </div>
-                  <div className="w-14 shrink-0 text-right text-sm text-text-secondary">{c.shootDays || "—"}</div>
-                  <div className="w-20 shrink-0 text-right text-sm text-text-secondary">
-                    {c.costPerShootDay ? formatCurrency(c.costPerShootDay) : "—"}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Transaction Drilldown Modal */}
-      {drilldown && (
-        <TransactionDrilldownModal
-          type={drilldown.type}
-          id={drilldown.id}
-          label={drilldown.label}
-          onClose={() => setDrilldown(null)}
-        />
-      )}
-    </div>
-  );
-}
 
 // ─── Transaction Drilldown Modal ───
 function TransactionDrilldownModal({
@@ -1527,20 +1645,6 @@ function TransactionDrilldownModal({
   );
 }
 
-// ─── Spending Tab ───
-const PAYMENT_STATUS_COLOR: Record<string, string> = {
-  "Pending Approval": "text-amber-600 bg-amber-50",
-  "Approved": "text-green-700 bg-green-50",
-  "Sent to Paymaster": "text-blue-700 bg-blue-50",
-  "Paid": "text-text-secondary bg-surface-secondary",
-};
-
-const BOOKING_STATUS_COLOR: Record<string, string> = {
-  "Confirmed": "text-green-700 bg-green-50",
-  "Completed": "text-blue-700 bg-blue-50",
-  "Pending Approval": "text-amber-600 bg-amber-50",
-  "Draft": "text-text-tertiary bg-surface-secondary",
-};
 
 // ─── Onboarding Tab ───
 function OnboardingTab() {
@@ -1712,256 +1816,6 @@ type CrewBookingRow = {
 
 const CLASSIFICATIONS = ["1099", "Paymaster", "W-2 via Paymaster", "Loan Out"];
 
-function SpendingTab() {
-  const { data: spending, isLoading } = useSWR<
-    Array<{ category: string; total: number }>
-  >("/api/budget?type=spending", fetcher);
-
-  const { data: crewBookings = [], isLoading: crewLoading, mutate: mutateBookings } = useSWR<CrewBookingRow[]>(
-    "/api/budget?type=crew",
-    fetcher
-  );
-
-  const { toast } = useToast();
-  const [editingBooking, setEditingBooking] = useState<CrewBookingRow | null>(null);
-  const [draft, setDraft] = useState<{ role: string; dayRate: string; classification: string; notes: string }>({
-    role: "", dayRate: "", classification: "", notes: "",
-  });
-  const [saving, setSaving] = useState(false);
-
-  const CATEGORY_COLORS: Record<string, string> = {
-    "Crew Labor": "#10442B",
-    Talent: "#6366f1",
-    Styling: "#ec4899",
-    "Equipment Rental": "#f59e0b",
-    "Studio Space": "#10b981",
-    "Post-Production": "#8b5cf6",
-    Travel: "#06b6d4",
-    Catering: "#f97316",
-    Props: "#84cc16",
-    Wardrobe: "#14b8a6",
-    "Set Design": "#a855f7",
-    Other: "#94a3b8",
-  };
-
-  const hasData = spending && spending.length > 0;
-  const totalSpent = hasData ? spending.reduce((s, c) => s + c.total, 0) : 0;
-
-  function startEdit(booking: CrewBookingRow) {
-    setEditingBooking(booking);
-    setDraft({
-      role: booking.role,
-      dayRate: String(booking.dayRate),
-      classification: booking.classification,
-      notes: booking.notes || "",
-    });
-  }
-
-  function cancelEdit() {
-    setEditingBooking(null);
-  }
-
-  async function saveEdit() {
-    if (!editingBooking) return;
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/crew-bookings/${editingBooking.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role: draft.role,
-          dayRate: Number(draft.dayRate),
-          classification: draft.classification,
-          notes: draft.notes,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-      toast("success", "Deal memo updated");
-      setEditingBooking(null);
-      mutateBookings();
-    } catch {
-      toast("error", "Failed to save changes");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  // Locked = payment already in progress, can't edit core fields
-  function isLocked(booking: CrewBookingRow) {
-    const payStatus = booking.payment?.status;
-    return payStatus === "Approved" || payStatus === "Sent to Paymaster" || payStatus === "Paid";
-  }
-
-  const editingPersonName = editingBooking?.vendor
-    ? editingBooking.vendor.contactName || editingBooking.vendor.companyName
-    : editingBooking?.user?.name || "";
-
-  return (
-    <div className="space-y-6">
-      {/* Edit modal — rendered outside the table so nothing shifts */}
-      <Modal open={!!editingBooking} onClose={cancelEdit} title={`Edit Deal Memo — ${editingPersonName}`}>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">Role</label>
-              <input
-                type="text"
-                value={draft.role}
-                onChange={(e) => setDraft((d) => ({ ...d, role: e.target.value }))}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">Day Rate</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-tertiary">$</span>
-                <input
-                  type="number"
-                  value={draft.dayRate}
-                  onChange={(e) => setDraft((d) => ({ ...d, dayRate: e.target.value }))}
-                  className="w-full rounded-lg border border-border bg-surface pl-6 pr-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-            </div>
-          </div>
-          <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">Classification</label>
-            <select
-              value={draft.classification}
-              onChange={(e) => setDraft((d) => ({ ...d, classification: e.target.value }))}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              {CLASSIFICATIONS.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">Notes</label>
-            <input
-              type="text"
-              value={draft.notes}
-              onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
-              placeholder="Optional notes…"
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-        </div>
-        <ModalFooter>
-          <Button variant="ghost" onClick={cancelEdit} disabled={saving}>Cancel</Button>
-          <Button onClick={saveEdit} disabled={saving}>
-            <Check className="h-3.5 w-3.5" />
-            {saving ? "Saving…" : "Save Changes"}
-          </Button>
-        </ModalFooter>
-      </Modal>
-
-      {/* Individual crew deal memos */}
-      <Card padding="none">
-        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
-          <HardHat className="h-4 w-4 shrink-0 text-primary" />
-          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Crew Deal Memos</span>
-        </div>
-
-        {crewLoading ? (
-          <div className="h-16 animate-pulse rounded-lg bg-surface-secondary m-3" />
-        ) : crewBookings.length === 0 ? (
-          <div className="px-3.5 py-6">
-            <EmptyState
-              icon={<HardHat className="h-5 w-5" />}
-              title="No crew booked"
-              description="Crew bookings will appear here once added to campaigns."
-            />
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {crewBookings.map((booking) => {
-              const personName = booking.vendor
-                ? booking.vendor.contactName || booking.vendor.companyName
-                : booking.user?.name || "Unknown";
-              const days = booking.payment?.totalDays ?? booking.confirmedDays ?? booking.plannedDays ?? 0;
-              const amount = booking.payment?.totalAmount ?? booking.totalAmount ?? 0;
-              const statusLabel = booking.payment?.status ?? booking.status;
-              const statusClass = booking.payment
-                ? (PAYMENT_STATUS_COLOR[booking.payment.status] ?? "text-text-tertiary bg-surface-secondary")
-                : (BOOKING_STATUS_COLOR[booking.status] ?? "text-text-tertiary bg-surface-secondary");
-              const locked = isLocked(booking);
-
-              return (
-                <div
-                  key={booking.id}
-                  className={`group px-3.5 py-2 space-y-0.5 transition-colors ${locked ? "" : "hover:bg-surface-secondary cursor-pointer"}`}
-                  onClick={() => !locked && startEdit(booking)}
-                >
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-text-primary">{personName}</span>
-                    <span className="text-xs text-text-tertiary">{booking.role}</span>
-                    <span className="text-sm font-bold text-text-primary tabular-nums">{formatCurrency(amount)}</span>
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusClass}`}>
-                      {statusLabel}
-                    </span>
-                    {!locked && (
-                      <Pencil className="h-3 w-3 text-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity" />
-                    )}
-                  </div>
-                  <p className="text-xs text-text-tertiary" onClick={(e) => e.stopPropagation()}>
-                    {booking.classification} &middot; <Link href={`/campaigns/${booking.campaignId}`} className="hover:text-primary transition-colors">{booking.wfNumber}</Link> &middot; {formatCurrency(booking.dayRate)}/day &times; {days} day{days !== 1 ? "s" : ""}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
-
-      {/* Summary + Category breakdown */}
-      <Card padding="none">
-        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
-          <BarChart3 className="h-4 w-4 shrink-0 text-primary" />
-          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Spending by Category</span>
-          {hasData && (
-            <span className="ml-auto text-xs text-text-tertiary">Total <span className="font-semibold text-text-primary">{formatCurrency(totalSpent)}</span> across {spending.length} categories</span>
-          )}
-        </div>
-        {isLoading ? (
-          <div className="h-24 animate-pulse rounded-lg bg-surface-secondary m-3" />
-        ) : !hasData ? (
-          <div className="px-3.5 py-6">
-            <EmptyState
-              icon={<BarChart3 className="h-5 w-5" />}
-              title="No spending data yet"
-              description="Crew labor and vendor spending by category will appear here as bookings and invoices are processed."
-            />
-          </div>
-        ) : (
-          <div className="px-3.5 py-3 space-y-2">
-            {spending.map((cat) => {
-              const pct = totalSpent > 0 ? (cat.total / totalSpent) * 100 : 0;
-              const color = CATEGORY_COLORS[cat.category] || CATEGORY_COLORS.Other;
-              return (
-                <div key={cat.category}>
-                  <div className="flex items-center justify-between text-xs mb-0.5">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                      <span className="font-medium text-text-primary">{cat.category}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-text-tertiary">{pct.toFixed(0)}%</span>
-                      <span className="font-semibold text-text-primary tabular-nums">{formatCurrency(cat.total)}</span>
-                    </div>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-surface-tertiary overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
-    </div>
-  );
-}
 
 // ─── Add Pool Modal ───
 function AddPoolModal({
