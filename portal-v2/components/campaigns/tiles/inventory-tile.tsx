@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { ShoppingBasket, Package, Wrench, Plus, X } from "lucide-react";
-import type { CampaignProduct, CampaignGearLink, Product } from "@/types/domain";
+import type { CampaignProduct, CampaignGearLink, CampaignProductRole, Product } from "@/types/domain";
 import { ProductDrawer } from "@/components/products/product-drawer";
 import { useToast } from "@/components/ui/toast";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 interface Props {
   campaignProducts: CampaignProduct[];
@@ -22,6 +23,22 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
   const [tab, setTab] = useState<Tab>("products");
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const { toast } = useToast();
+  const { user } = useCurrentUser();
+  const canSetRole = user?.role === "Brand Marketing Manager" || user?.role === "Admin";
+
+  const setRole = useCallback(async (campaignProductId: string, campaignId: string, role: CampaignProductRole | null) => {
+    try {
+      const res = await fetch(`/api/campaigns/${campaignId}/products/${campaignProductId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      onMutate?.();
+    } catch {
+      toast("error", "Failed to update role");
+    }
+  }, [onMutate, toast]);
 
   async function removeProp(id: string) {
     try {
@@ -74,22 +91,61 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
               <p className="text-sm text-text-tertiary py-1">No products added.</p>
             ) : (
               campaignProducts.map((cp) => (
-                <button
+                <div
                   key={cp.id}
-                  type="button"
-                  onClick={() => cp.product && setViewProduct(cp.product)}
-                  className="w-full flex items-start gap-2 rounded-md border border-border bg-surface-secondary/40 px-2.5 py-2 text-left hover:bg-surface-secondary transition-colors"
+                  className="flex items-center gap-2 rounded-md border border-border bg-surface-secondary/40 px-2.5 py-2"
                 >
-                  <div className="flex-1 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => cp.product && setViewProduct(cp.product)}
+                    className="flex-1 min-w-0 text-left"
+                  >
                     <p className="text-sm font-medium text-text-primary truncate">{cp.product?.name || "Unknown product"}</p>
                     {cp.product?.department && (
-                      <p className="text-[10px] text-text-tertiary">{cp.product.department}</p>
+                      <p className="text-[10px] text-text-tertiary">{cp.product.department === "Meat-Seafood" ? "Meat & Seafood" : cp.product.department}</p>
                     )}
-                    {cp.notes && (
-                      <p className="text-[10px] text-text-secondary mt-0.5">{cp.notes}</p>
+                  </button>
+                  {/* Role badge — always visible, clickable only for BMM/Admin */}
+                  <div className="shrink-0 flex items-center gap-1">
+                    {cp.role && (
+                      <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${
+                        cp.role === "hero"
+                          ? "bg-amber-50 text-amber-700"
+                          : "bg-slate-100 text-slate-500"
+                      }`}>
+                        {cp.role === "hero" ? "Hero" : "Secondary"}
+                      </span>
+                    )}
+                    {canSetRole && (
+                      <div className="flex items-center gap-0.5 ml-1">
+                        <button
+                          type="button"
+                          title="Hero"
+                          onClick={() => setRole(cp.id, cp.campaignId, cp.role === "hero" ? null : "hero")}
+                          className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                            cp.role === "hero"
+                              ? "bg-amber-500 text-white"
+                              : "bg-surface text-text-tertiary border border-border hover:bg-amber-50 hover:text-amber-700"
+                          }`}
+                        >
+                          H
+                        </button>
+                        <button
+                          type="button"
+                          title="Secondary"
+                          onClick={() => setRole(cp.id, cp.campaignId, cp.role === "secondary" ? null : "secondary")}
+                          className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                            cp.role === "secondary"
+                              ? "bg-slate-500 text-white"
+                              : "bg-surface text-text-tertiary border border-border hover:bg-slate-100 hover:text-slate-600"
+                          }`}
+                        >
+                          S
+                        </button>
+                      </div>
                     )}
                   </div>
-                </button>
+                </div>
               ))
             )}
             {canEdit && (

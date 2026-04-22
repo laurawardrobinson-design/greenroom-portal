@@ -3,6 +3,7 @@ import type {
   Product,
   ProductDepartment,
   CampaignProduct,
+  CampaignProductRole,
   CampaignGearLink,
   GearItem,
 } from "@/types/domain";
@@ -36,6 +37,7 @@ function toCampaignProduct(row: Record<string, unknown>): CampaignProduct {
     productId: row.product_id as string,
     notes: row.notes as string,
     sortOrder: Number(row.sort_order) || 0,
+    role: (row.role as CampaignProductRole) || null,
     product: productData ? toProduct(productData as Record<string, unknown>) : undefined,
   };
 }
@@ -194,6 +196,21 @@ export async function linkProductToCampaign(
     .select("*, products(*)")
     .single();
 
+  if (error) throw error;
+  return toCampaignProduct(data as Record<string, unknown>);
+}
+
+export async function setCampaignProductRole(
+  id: string,
+  role: CampaignProductRole | null
+): Promise<CampaignProduct> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("campaign_products")
+    .update({ role })
+    .eq("id", id)
+    .select("*, products(*)")
+    .single();
   if (error) throw error;
   return toCampaignProduct(data as Record<string, unknown>);
 }

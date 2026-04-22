@@ -11,7 +11,8 @@ export type UserRole =
   | "Art Director"
   | "Creative Director"
   | "Post Producer"
-  | "Designer";
+  | "Designer"
+  | "Brand Marketing Manager";
 
 export interface AppUser {
   id: string;
@@ -637,12 +638,15 @@ export interface Product {
   updatedAt: string;
 }
 
+export type CampaignProductRole = "hero" | "secondary";
+
 export interface CampaignProduct {
   id: string;
   campaignId: string;
   productId: string;
   notes: string;
   sortOrder: number;
+  role: CampaignProductRole | null;
   product?: Product;
 }
 
@@ -1792,6 +1796,92 @@ export interface AuditLogEvent {
   metadata: Record<string, unknown>;
   createdAt: string;
 }
+
+// --- Product Request Documents (v2) ---
+
+export type PRDocStatus = "draft" | "submitted" | "forwarded" | "fulfilled" | "cancelled";
+
+export type PRDepartment = "Bakery" | "Produce" | "Deli" | "Meat-Seafood" | "Grocery";
+
+export const PR_DEPARTMENTS: PRDepartment[] = [
+  "Bakery",
+  "Produce",
+  "Deli",
+  "Meat-Seafood",
+  "Grocery",
+];
+
+export const PR_DEPARTMENT_LABELS: Record<PRDepartment, string> = {
+  Bakery: "Bakery",
+  Produce: "Produce",
+  Deli: "Deli",
+  "Meat-Seafood": "Meat & Seafood",
+  Grocery: "Grocery",
+};
+
+export interface PRItem {
+  id: string;
+  sectionId: string;
+  productId: string | null;
+  quantity: number;
+  size: string;
+  specialInstructions: string;
+  fromShotList: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  product?: Product;
+}
+
+export interface PRDeptSection {
+  id: string;
+  docId: string;
+  department: PRDepartment;
+  dateNeeded: string | null;
+  timeNeeded: string;
+  pickupPerson: string;
+  sortOrder: number;
+  createdAt: string;
+  items: PRItem[];
+}
+
+export interface PRDoc {
+  id: string;
+  docNumber: string;
+  campaignId: string;
+  shootDate: string;
+  status: PRDocStatus;
+  submittedBy: string | null;
+  submittedAt: string | null;
+  forwardedBy: string | null;
+  forwardedAt: string | null;
+  fulfilledAt: string | null;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  sections: PRDeptSection[];
+  campaign?: { id: string; name: string; wfNumber: string };
+  submittedByName?: string | null;
+}
+
+export interface PREvent {
+  id: string;
+  docId: string;
+  actorId: string | null;
+  actorName?: string | null;
+  fromStatus: PRDocStatus | null;
+  toStatus: PRDocStatus | null;
+  comment: string;
+  createdAt: string;
+}
+
+export const PR_STATUS_LABELS: Record<PRDocStatus, string> = {
+  draft: "Draft",
+  submitted: "Submitted",
+  forwarded: "Forwarded to RBU",
+  fulfilled: "Fulfilled",
+  cancelled: "Cancelled",
+};
 
 // --- Asset Studio dashboard summary ---
 
