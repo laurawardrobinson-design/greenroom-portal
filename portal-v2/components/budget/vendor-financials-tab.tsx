@@ -107,19 +107,14 @@ const PROGRESS_STAGES = [
 function VendorProgressBar({ status }: { status: string }) {
   const currentIdx = STATUS_ORDER.indexOf(status);
   return (
-    <div className="flex items-center gap-0 px-1 pb-1.5 pt-0.5">
+    <div className="flex items-center gap-0 px-1 pb-1 pt-0.5" aria-label={`Progress: ${status}`}>
       {PROGRESS_STAGES.map((stage, i) => {
         const stageIdx = STATUS_ORDER.indexOf(stage.reachedAt);
         const reached = currentIdx >= stageIdx;
         const isLast = i === PROGRESS_STAGES.length - 1;
         return (
-          <div key={stage.label} className="flex items-center flex-1 min-w-0">
-            <div className="flex flex-col items-center gap-0.5 shrink-0">
-              <div className={`h-2 w-2 rounded-full transition-colors ${reached ? "bg-primary" : "bg-surface-tertiary border border-border"}`} />
-              <span className={`text-[10px] leading-tight ${reached ? "text-primary font-medium" : "text-text-tertiary"}`}>
-                {stage.label}
-              </span>
-            </div>
+          <div key={stage.label} className="flex items-center flex-1 min-w-0" title={stage.label}>
+            <div className={`h-1.5 w-1.5 rounded-full shrink-0 transition-colors ${reached ? "bg-primary" : "bg-surface-tertiary border border-border"}`} />
             {!isLast && (
               <div className={`flex-1 h-px mx-0.5 transition-colors ${
                 currentIdx >= STATUS_ORDER.indexOf(PROGRESS_STAGES[i + 1].reachedAt)
