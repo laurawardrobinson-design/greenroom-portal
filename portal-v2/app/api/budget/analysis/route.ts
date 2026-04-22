@@ -328,31 +328,41 @@ export async function GET() {
 
     const totalEfc = Array.from(campaignEfc.values()).reduce((s, v) => s + v, 0);
 
-    return NextResponse.json({
-      summary: {
-        totalBudgeted,
-        totalAllocated,
-        totalCommitted,
-        totalInvoiced,
-        totalSpent,
-        totalEfc,
-        unallocated: totalBudgeted - totalAllocated,
-        activeCampaignCount: activeCampaigns.length,
-        completedCampaignCount: completedCampaigns.length,
-        totalShootDays,
-        avgCostPerShootDay,
-        vendorConcentrationPct,
-        estimateAccuracyPct: totalCommitted > 0
-          ? Math.round(((totalInvoiced - totalCommitted) / totalCommitted) * 100)
-          : 0,
+    return NextResponse.json(
+      {
+        summary: {
+          totalBudgeted,
+          totalAllocated,
+          totalCommitted,
+          totalInvoiced,
+          totalSpent,
+          totalEfc,
+          unallocated: totalBudgeted - totalAllocated,
+          activeCampaignCount: activeCampaigns.length,
+          completedCampaignCount: completedCampaigns.length,
+          totalShootDays,
+          avgCostPerShootDay,
+          vendorConcentrationPct,
+          estimateAccuracyPct: totalCommitted > 0
+            ? Math.round(((totalInvoiced - totalCommitted) / totalCommitted) * 100)
+            : 0,
+        },
+        poolHealth,
+        categoryBreakdown,
+        vendorBreakdown,
+        campaignAnalysis,
+        quarterlyTrend,
+        overageSummary,
       },
-      poolHealth,
-      categoryBreakdown,
-      vendorBreakdown,
-      campaignAnalysis,
-      quarterlyTrend,
-      overageSummary,
-    });
+      {
+        // Short private cache — tab switches and quick revisits return
+        // instantly. SWR=60 means we keep serving the cached payload for
+        // another minute while we refetch in the background.
+        headers: {
+          "Cache-Control": "private, max-age=15, stale-while-revalidate=60",
+        },
+      }
+    );
   } catch (error) {
     return authErrorResponse(error);
   }

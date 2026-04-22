@@ -1607,31 +1607,31 @@ function TransactionDrilldownModal({
             </div>
           ))
         ) : (
-          /* ─── Category transactions: flat list of line items ─── */
-          <div className="rounded-xl border border-border bg-surface overflow-hidden">
-            <div className="flex items-center gap-3 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border">
-              <div className="flex-1">Description</div>
-              <div className="w-28 shrink-0">Vendor</div>
-              <div className="w-36 shrink-0">Campaign</div>
-              <div className="w-20 shrink-0 text-right">Amount</div>
-            </div>
+          /* ─── Category transactions: one card per line item ─── */
+          <div className="rounded-xl border border-border bg-surface divide-y divide-border overflow-hidden">
             {transactions.map((t: any, idx: number) => (
-              <div key={idx} className="flex items-center gap-3 px-4 py-2.5 border-b border-border last:border-b-0 hover:bg-surface-secondary/30 transition-colors">
-                <div className="flex-1 min-w-0">
-                  <span className={`text-sm ${t.flagged ? "text-amber-600 font-medium" : "text-text-primary"}`}>
-                    {t.flagged && <AlertTriangle className="inline h-3 w-3 mr-1" />}
+              <div key={idx} className="px-4 py-3 hover:bg-surface-secondary/30 transition-colors">
+                <div className="flex items-start justify-between gap-4">
+                  <p className={`text-sm font-medium flex-1 min-w-0 ${t.flagged ? "text-amber-600" : "text-text-primary"}`}>
+                    {t.flagged && <AlertTriangle className="inline h-3 w-3 mr-1 shrink-0" />}
                     {t.description || "Line item"}
+                  </p>
+                  <span className="text-sm font-semibold text-text-primary shrink-0 tabular-nums">
+                    {formatCurrency(t.amount)}
                   </span>
+                </div>
+                <div className="mt-1 flex items-center gap-2 text-[10px] text-text-tertiary flex-wrap">
+                  <span>{t.vendorName}</span>
+                  <span className="text-text-tertiary/50">·</span>
+                  <Link href={`/campaigns/${t.campaignId}`} className="hover:text-primary transition-colors">
+                    {t.wfNumber ? `${t.wfNumber} ` : ""}{t.campaignName}
+                  </Link>
                   {t.invoiceFileName && (
-                    <p className="text-[10px] text-text-tertiary truncate">{t.invoiceFileName}</p>
+                    <>
+                      <span className="text-text-tertiary/50">·</span>
+                      <span className="truncate">{t.invoiceFileName}</span>
+                    </>
                   )}
-                </div>
-                <div className="w-28 shrink-0 text-xs text-text-secondary truncate">{t.vendorName}</div>
-                <div className="w-36 shrink-0 text-xs text-text-secondary truncate">
-                  {t.wfNumber ? `${t.wfNumber} ` : ""}{t.campaignName}
-                </div>
-                <div className="w-20 shrink-0 text-right text-sm font-medium text-text-primary">
-                  {formatCurrency(t.amount)}
                 </div>
               </div>
             ))}
