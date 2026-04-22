@@ -71,6 +71,24 @@ export async function GET() {
       "Invoice Submitted", "Invoice Pre-Approved", "Invoice Approved", "Paid",
     ];
 
+    // Compute per-campaign EFC inline so it can be aggregated into pools.
+    // EFC (Estimated Final Cost): for active campaigns, project the larger of
+    // committed-to-date vs. budgeted (assumes uncommitted budget headroom is
+    // still going to be spent). For complete campaigns, EFC = paid (it's done).
+    const campaignEfc = new Map<string, number>();
+    for (const c of allCampaigns) {
+      const cVAs = allVendorAssignments.filter((va) => va.campaign_id === c.id);
+      const cCommitted = cVAs
+        .filter((va) => COMMITTED_STATUSES.includes(va.status))
+        .reduce((s, va) => s + (Number(va.estimate_total) || 0), 0);
+      const cPaid = cVAs
+        .filter((va) => va.status === "Paid")
+        .reduce((s, va) => s + (Number(va.payment_amount) || 0), 0);
+      const budget = Number(c.production_budget) || 0;
+      const efc = c.status === "Complete" ? cPaid : Math.max(cCommitted, budget);
+      campaignEfc.set(c.id, efc);
+    }
+
     const poolHealth = allPools.map((pool) => {
       const poolCampaigns = allCampaigns.filter((c) => c.budget_pool_id === pool.id);
       const poolCampaignIds = new Set(poolCampaigns.map((c) => c.id));
@@ -86,6 +104,7 @@ export async function GET() {
       const spent = poolVAs
         .filter((va) => va.status === "Paid")
         .reduce((s, va) => s + (Number(va.payment_amount) || 0), 0);
+      const efc = poolCampaigns.reduce((s, c) => s + (campaignEfc.get(c.id) || 0), 0);
 
       return {
         id: pool.id,
@@ -97,6 +116,7 @@ export async function GET() {
         committed,
         invoiced,
         spent,
+        efc,
         remaining: Number(pool.total_amount) - allocated,
         campaignCount: poolCampaigns.length,
         utilizationPct: Number(pool.total_amount) > 0
@@ -127,7 +147,10 @@ export async function GET() {
         const invoiced = invoiceByCategory[category] || 0;
         const variance = invoiced - estimated;
         const variancePct = estimated > 0 ? Math.round((variance / estimated) * 100) : 0;
-        return { category, estimated, invoiced, variance, variancePct };
+        // EFC for category: assume the higher of estimated or invoiced represents
+        // where this category will land. No "budget" concept exists per category.
+        const efc = Math.max(estimated, invoiced);
+        return { category, estimated, invoiced, efc, variance, variancePct };
       })
       .sort((a, b) => b.invoiced - a.invoiced);
 
@@ -170,6 +193,9 @@ export async function GET() {
         estimateTotal: vs.estimateTotal,
         invoiceTotal: vs.invoiceTotal,
         paidTotal: vs.paidTotal,
+        // EFC for vendor: take the largest of committed/invoiced/paid as the
+        // landing total — captures both projected and actual spend.
+        efc: Math.max(vs.estimateTotal, vs.invoiceTotal, vs.paidTotal),
         campaignCount: vs.campaignIds.size,
         assignmentCount: vs.assignmentCount,
         variance: vs.invoiceTotal - vs.estimateTotal,
@@ -205,6 +231,7 @@ export async function GET() {
           (sd: any) => sd.shoots?.campaign_id === c.id
         );
 
+        const efc = campaignEfc.get(c.id) || 0;
         return {
           id: c.id,
           wfNumber: c.wf_number,
@@ -214,8 +241,11 @@ export async function GET() {
           committed,
           invoiced,
           spent,
+          efc,
           remaining: budget - committed,
-          variancePct: budget > 0 ? Math.round(((committed - budget) / budget) * 100) : 0,
+          // Variance reframed to EFC vs. budget — that's the production-accountant
+          // framing (forecast vs. plan), not history vs. plan.
+          variancePct: budget > 0 ? Math.round(((efc - budget) / budget) * 100) : 0,
           vendorCount: cVAs.length,
           shootDays: campaignShootDates.length,
           costPerShootDay: campaignShootDates.length > 0
@@ -295,6 +325,8 @@ export async function GET() {
       ? Math.round((top3Spend / (totalSpent || totalCommitted)) * 100)
       : 0;
 
+    const totalEfc = Array.from(campaignEfc.values()).reduce((s, v) => s + v, 0);
+
     return NextResponse.json({
       summary: {
         totalBudgeted,
@@ -302,6 +334,7 @@ export async function GET() {
         totalCommitted,
         totalInvoiced,
         totalSpent,
+        totalEfc,
         unallocated: totalBudgeted - totalAllocated,
         activeCampaignCount: activeCampaigns.length,
         completedCampaignCount: completedCampaigns.length,
