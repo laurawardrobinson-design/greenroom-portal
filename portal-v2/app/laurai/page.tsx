@@ -544,6 +544,7 @@ export default function LaurAIPage() {
   const showBeach = activeFlavor === "head-in-sand";
   const showDarkNight = activeFlavor === "dark-night";
   const showBubbleGum = activeFlavor === "bubble-gum";
+  const showBubbleGumLaserLights = false;
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-black select-none">
@@ -583,7 +584,7 @@ export default function LaurAIPage() {
             durationMs={3000}
             filter="brightness(1.25) saturate(1.15)"
           />
-          <SweepingPinkLights audio={currentAudioEl} />
+          {showBubbleGumLaserLights && <SweepingPinkLights audio={currentAudioEl} />}
         </>
       )}
 
