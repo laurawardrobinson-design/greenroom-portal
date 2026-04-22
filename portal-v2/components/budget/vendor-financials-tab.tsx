@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency } from "@/lib/utils/format";
-import { Receipt, Loader2, FileText, FilePlus, PenLine } from "lucide-react";
+import { Loader2, FileText, FilePlus, PenLine, Building2 } from "lucide-react";
 import Link from "next/link";
 import { LineItemComparisonPanel } from "@/components/budget/line-item-comparison-panel";
 import { PdfPreviewModal } from "@/components/budget/pdf-preview-modal";
@@ -95,39 +95,190 @@ const DOC_COLOR_CLASSES: Record<DocColor, string> = {
   green: "text-emerald-500 hover:text-emerald-600",
 };
 
-// Estimate process progress bar shown per vendor
-const PROGRESS_STAGES = [
+// Vendor lifecycle stages shown as a labeled 7-step progress bar, one segment
+// per stage with the label underneath. Matches the approved mockup.
+const LIFECYCLE_STAGES: Array<{ label: string; reachedAt: string }> = [
+  { label: "Invited", reachedAt: "Invited" },
   { label: "Estimate", reachedAt: "Estimate Submitted" },
   { label: "Approved", reachedAt: "Estimate Approved" },
-  { label: "PO", reachedAt: "PO Signed" },
-  { label: "Invoiced", reachedAt: "Invoice Submitted" },
+  { label: "PO Sent", reachedAt: "PO Uploaded" },
+  { label: "PO Signed", reachedAt: "PO Signed" },
+  { label: "Invoice", reachedAt: "Invoice Submitted" },
   { label: "Paid", reachedAt: "Paid" },
 ];
 
-function VendorProgressBar({ status }: { status: string }) {
+function LifecycleProgress({ status }: { status: string }) {
   const currentIdx = STATUS_ORDER.indexOf(status);
+  // The "current" stage is the last one whose reachedAt has been hit but whose
+  // next stage has not — that's the ring highlight.
+  let currentStageIdx = -1;
+  for (let i = LIFECYCLE_STAGES.length - 1; i >= 0; i--) {
+    const sIdx = STATUS_ORDER.indexOf(LIFECYCLE_STAGES[i].reachedAt);
+    if (currentIdx >= sIdx) { currentStageIdx = i; break; }
+  }
   return (
-    <div className="flex items-center gap-0 px-1 pb-1 pt-0.5" aria-label={`Progress: ${status}`}>
-      {PROGRESS_STAGES.map((stage, i) => {
-        const stageIdx = STATUS_ORDER.indexOf(stage.reachedAt);
-        const reached = currentIdx >= stageIdx;
-        const isLast = i === PROGRESS_STAGES.length - 1;
+    <div className="grid grid-cols-7 gap-1.5" aria-label={`Progress: ${status}`}>
+      {LIFECYCLE_STAGES.map((stage, idx) => {
+        const stageReachedIdx = STATUS_ORDER.indexOf(stage.reachedAt);
+        const reached = currentIdx >= stageReachedIdx;
+        const isCurrent = idx === currentStageIdx;
         return (
-          <div key={stage.label} className="flex items-center flex-1 min-w-0" title={stage.label}>
-            <div className={`h-1.5 w-1.5 rounded-full shrink-0 transition-colors ${reached ? "bg-primary" : "bg-surface-tertiary border border-border"}`} />
-            {!isLast && (
-              <div className={`flex-1 h-px mx-0.5 transition-colors ${
-                currentIdx >= STATUS_ORDER.indexOf(PROGRESS_STAGES[i + 1].reachedAt)
-                  ? "bg-primary"
-                  : reached
-                  ? "bg-primary/40"
-                  : "bg-surface-tertiary"
-              }`} />
-            )}
+          <div key={stage.label} className="flex flex-col items-center gap-1 min-w-0">
+            <div className={`h-1 w-full rounded-full transition-colors ${
+              reached ? "bg-primary" : "bg-surface-tertiary"
+            } ${isCurrent ? "ring-2 ring-primary/30" : ""}`} />
+            <span className={`text-[10px] leading-tight truncate w-full text-center ${
+              reached ? "text-text-secondary" : "text-text-tertiary/60"
+            }`}>
+              {stage.label}
+            </span>
           </div>
         );
       })}
     </div>
+  );
+}
+
+// ─── Labeled document chips shown in the expanded row ───
+// Takes the place of the cramped single-icon columns — readable in the
+// expanded card where space is available.
+
+function DocActionChip({
+  label,
+  icon,
+  color,
+  url,
+  fileName,
+  onOpen,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  color: DocColor;
+  url: string | null;
+  fileName: string | null;
+  onOpen: (url: string, fileName: string) => void;
+}) {
+  const toneClass =
+    color === "green" ? "text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100" :
+    color === "amber" ? "text-amber-700 border-amber-200 bg-amber-50 hover:bg-amber-100" :
+    color === "dim"   ? "text-text-tertiary/50 border-border bg-surface-secondary cursor-default" :
+                        "text-text-secondary border-border bg-surface-secondary hover:bg-surface";
+  if (!url) {
+    return (
+      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${toneClass}`}>
+        {icon}
+        {label}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onOpen(url, fileName || label); }}
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 transition-colors ${toneClass}`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function PoActionChip({
+  status,
+  poFileUrl,
+  poSignedAt,
+  onClick,
+}: {
+  status: string;
+  poFileUrl: string | null;
+  poSignedAt: string | null;
+  onClick: () => void;
+}) {
+  const isSigned = !!poSignedAt;
+  const hasPo = !!poFileUrl;
+  if (!isAtOrPast(status, "Estimate Approved")) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-secondary px-2 py-0.5 text-text-tertiary/50">
+        <FileText className="h-3.5 w-3.5" />
+        PO
+      </span>
+    );
+  }
+  if (isSigned) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-600 hover:bg-emerald-100 transition-colors"
+      >
+        <FileText className="h-3.5 w-3.5" />
+        PO uploaded
+      </button>
+    );
+  }
+  if (status === "Estimate Approved" && !hasPo) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700 hover:bg-amber-100 transition-colors"
+      >
+        <FilePlus className="h-3.5 w-3.5" />
+        Send PO
+      </button>
+    );
+  }
+  if (hasPo) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700 hover:bg-amber-100 transition-colors"
+      >
+        <FileText className="h-3.5 w-3.5" />
+        PO awaiting signature
+      </button>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-secondary px-2 py-0.5 text-text-tertiary/50">
+      <FileText className="h-3.5 w-3.5" />
+      PO
+    </span>
+  );
+}
+
+function PoSignedChip({
+  status,
+  poSignedFileUrl,
+  poSignedAt,
+  onOpen,
+}: {
+  status: string;
+  poSignedFileUrl: string | null;
+  poSignedAt: string | null;
+  onOpen: (url: string, fileName: string) => void;
+}) {
+  void status;
+  const isSigned = !!poSignedAt;
+  if (!isSigned) return null;
+  if (poSignedFileUrl) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onOpen(poSignedFileUrl, "Signed PO"); }}
+        className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-600 hover:bg-emerald-100 transition-colors"
+      >
+        <PenLine className="h-3.5 w-3.5" />
+        Signed PO
+      </button>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-600">
+      <PenLine className="h-3.5 w-3.5" />
+      Signed
+    </span>
   );
 }
 
@@ -343,172 +494,147 @@ export function VendorFinancialsTab() {
 
   return (
     <>
-      <Card padding="none" className="max-w-2xl">
-        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
-          <Receipt className="h-4 w-4 shrink-0 text-primary" />
-          <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Vendor Financials</span>
-          <select
-            value={campaignFilter}
-            onChange={(e) => {
-              setCampaignFilter(e.target.value);
-              setOpenId(null);
-            }}
-            className="ml-auto text-xs bg-surface-secondary border border-border rounded-md px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="all">All campaigns</option>
-            {campaignOptions.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.wfNumber} — {c.name}
-              </option>
-            ))}
-          </select>
+      {/* Filter bar */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Campaign:</span>
+        <select
+          value={campaignFilter}
+          onChange={(e) => {
+            setCampaignFilter(e.target.value);
+            setOpenId(null);
+          }}
+          className="text-xs bg-surface-secondary border border-border rounded-md px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        >
+          <option value="all">All campaigns</option>
+          {campaignOptions.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.wfNumber} — {c.name}
+            </option>
+          ))}
+        </select>
+        <span className="ml-auto text-[10px] text-text-tertiary">{groups.length} campaign{groups.length !== 1 ? "s" : ""}</span>
+      </div>
+
+      {!data ? (
+        <div className="flex items-center justify-center py-10 text-text-tertiary">
+          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          <span className="text-sm">Loading…</span>
         </div>
+      ) : groups.length === 0 ? (
+        <EmptyState
+          title="No vendor financials"
+          description="Vendor estimates will appear here once submitted."
+        />
+      ) : (
+        <div className="space-y-4">
+          {groups.map((group) => (
+            <Card key={group.campaignId} padding="none">
+              <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+                <Building2 className="h-4 w-4 shrink-0 text-primary" />
+                <Link
+                  href={`/campaigns/${group.campaignId}`}
+                  className="text-sm font-semibold uppercase tracking-wider text-text-primary hover:text-primary transition-colors"
+                >
+                  {group.campaignName}
+                </Link>
+                <span className="ml-auto text-[10px] font-mono text-text-tertiary">{group.wfNumber}</span>
+              </div>
 
-        {!data ? (
-          <div className="flex items-center justify-center py-10 text-text-tertiary">
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            <span className="text-sm">Loading…</span>
-          </div>
-        ) : groups.length === 0 ? (
-          <EmptyState
-            title="No vendor financials"
-            description="Vendor estimates will appear here once submitted."
-          />
-        ) : (
-          <>
-            {/* Column headers */}
-            <div className="grid grid-cols-[1fr_130px_64px_20px_20px_20px_64px_20px] gap-x-2 px-4 py-1.5 border-b border-border">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Vendor</span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary text-center">Status</span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary text-right">Estimate</span>
-              <span />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary text-center">PO</span>
-              <span />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary text-right">Invoice</span>
-              <span />
-            </div>
+              <div className="divide-y divide-border">
+                {group.vendors.map((v) => {
+                  const isOpen = openId === v.id;
+                  const hasInvoice = v.invoiceTotal != null && v.invoiceTotal > 0;
+                  const isOver = hasInvoice && v.invoiceTotal! > v.estimateTotal;
+                  const hasEstimate = v.estimateTotal > 0;
+                  const amountToShow = hasInvoice ? v.invoiceTotal! : hasEstimate ? v.estimateTotal : null;
 
-            <div className="divide-y divide-border">
-              {groups.map((group) => (
-                <div key={group.campaignId} className="px-4 py-3">
-                  <div className="flex items-baseline gap-2 mb-2">
-                    <Link
-                      href={`/campaigns/${group.campaignId}`}
-                      className="text-sm font-semibold text-text-primary hover:text-primary transition-colors"
-                    >
-                      {group.campaignName}
-                    </Link>
-                    <span className="text-xs text-text-tertiary">{group.wfNumber}</span>
-                  </div>
-
-                  <div className="space-y-0.5">
-                    {group.vendors.map((v) => {
-                      const isOpen = openId === v.id;
-                      const hasInvoice = v.invoiceTotal != null && v.invoiceTotal > 0;
-                      const isOver = hasInvoice && v.invoiceTotal! > v.estimateTotal;
-                      const hasEstimate = v.estimateTotal > 0;
-
-                      return (
-                        <div key={v.id}>
-                          <div className="grid grid-cols-[1fr_130px_64px_20px_20px_20px_64px_20px] items-center gap-x-2 py-1.5 px-1 -mx-1 rounded-md">
-                            {/* Vendor name */}
-                            <span className="text-xs font-medium text-text-primary truncate">
-                              {v.vendorName}
-                            </span>
-
-                            {/* Status badge */}
-                            <Badge
-                              variant="custom"
-                              className={`text-[10px] justify-center ${STATUS_COLOR[v.status] || "bg-surface-secondary text-text-secondary"}`}
-                            >
+                  return (
+                    <div key={v.id} className="px-3.5 py-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleRow(v.id)}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-text-primary truncate">{v.vendorName}</p>
+                            <p className="text-[10px] text-text-tertiary mt-0.5">
                               {STATUS_LABEL[v.status] || v.status}
-                            </Badge>
-
-                            {/* Estimate $ */}
-                            {hasEstimate ? (
-                              <button
-                                className={`text-xs text-right font-medium w-full transition-colors ${isOpen ? "text-primary" : "text-text-primary hover:text-primary"}`}
-                                onClick={() => toggleRow(v.id)}
-                              >
-                                {formatCurrency(v.estimateTotal)}
-                              </button>
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            {amountToShow !== null ? (
+                              <>
+                                <p className={`text-sm font-semibold ${isOver ? "text-red-600" : "text-text-primary"}`}>
+                                  {formatCurrency(amountToShow)}
+                                </p>
+                                {hasInvoice && hasEstimate && (
+                                  <p className="text-[10px] text-text-tertiary">
+                                    est {formatCurrency(v.estimateTotal)}
+                                  </p>
+                                )}
+                              </>
                             ) : (
-                              <span className="text-xs text-right text-text-tertiary">—</span>
+                              <p className="text-xs text-text-tertiary">—</p>
                             )}
+                          </div>
+                        </div>
+                        <div className="mt-2.5">
+                          <LifecycleProgress status={v.status} />
+                        </div>
+                      </button>
 
-                            {/* Estimate PDF icon */}
-                            <DocIcon
+                      {/* Expanded: document actions + line-item comparison */}
+                      {isOpen && (
+                        <div className="mt-3 pt-3 border-t border-border space-y-3">
+                          <div className="flex flex-wrap items-center gap-3 text-[10px]">
+                            <DocActionChip
+                              label="Estimate PDF"
+                              icon={<FileText className="h-3.5 w-3.5" />}
+                              color={estimatePdfColor(v)}
                               url={v.estimateFileUrl}
                               fileName={v.estimateFileName}
-                              title="View estimate PDF"
-                              color={estimatePdfColor(v)}
                               onOpen={openPdf}
                             />
-
-                            {/* PO action icon */}
-                            <PoActionIcon
+                            <PoActionChip
                               status={v.status}
                               poFileUrl={v.poFileUrl}
                               poSignedAt={v.poSignedAt}
                               onClick={() => setPoModal(v)}
                             />
-
-                            {/* PO signed icon */}
-                            <PoSignedIcon
+                            <PoSignedChip
                               status={v.status}
                               poSignedFileUrl={v.poSignedFileUrl}
                               poSignedAt={v.poSignedAt}
                               onOpen={openPdf}
                             />
-
-                            {/* Invoice $ */}
-                            {hasInvoice ? (
-                              <button
-                                className={`text-xs text-right font-medium w-full transition-colors ${isOpen ? "text-primary" : isOver ? "text-red-600 hover:text-red-500" : "text-text-primary hover:text-primary"}`}
-                                onClick={() => toggleRow(v.id)}
-                              >
-                                {formatCurrency(v.invoiceTotal!)}
-                              </button>
-                            ) : (
-                              <span className="text-xs text-right text-text-tertiary">—</span>
-                            )}
-
-                            {/* Invoice PDF icon */}
-                            <DocIcon
+                            <DocActionChip
+                              label="Invoice PDF"
+                              icon={<FileText className="h-3.5 w-3.5" />}
+                              color={invoicePdfColor(v)}
                               url={v.invoiceFileUrl}
                               fileName={v.invoiceFileName}
-                              title="View invoice PDF"
-                              color={invoicePdfColor(v)}
                               onOpen={openPdf}
                             />
                           </div>
-
-                          {/* Status progress track */}
-                          <VendorProgressBar status={v.status} />
-
-                          {/* Line item comparison panel */}
-                          {isOpen && (
-                            <div className="ml-1 mb-2 border-t border-border">
-                              <LineItemComparisonPanel
-                                campaignVendorId={v.id}
-                                status={v.status}
-                                onStatusChange={() => {
-                                  setOpenId(null);
-                                  mutate();
-                                }}
-                              />
-                            </div>
-                          )}
+                          <LineItemComparisonPanel
+                            campaignVendorId={v.id}
+                            status={v.status}
+                            onStatusChange={() => {
+                              setOpenId(null);
+                              mutate();
+                            }}
+                          />
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </Card>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* PDF preview modal */}
       <PdfPreviewModal

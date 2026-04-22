@@ -237,6 +237,7 @@ export async function GET() {
           wfNumber: c.wf_number,
           name: c.name,
           status: c.status,
+          budgetPoolId: c.budget_pool_id,
           budget,
           committed,
           invoiced,

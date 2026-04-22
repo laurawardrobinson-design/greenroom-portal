@@ -35,6 +35,9 @@ import {
   CheckCircle2,
   Circle,
   UserCheck,
+  Inbox,
+  FileSignature,
+  Banknote,
 } from "lucide-react";
 import Link from "next/link";
 import { VendorFinancialsTab } from "@/components/budget/vendor-financials-tab";
@@ -94,7 +97,7 @@ export default function BudgetPage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "queue" && <ApprovalsTab />}
+      {activeTab === "queue" && <QueueSection />}
       {activeTab === "program" && <ProgramSection isAdmin={isAdmin} />}
       {activeTab === "cost-report" && <CostReportSection />}
       {activeTab === "vendors" && <VendorsSection />}
@@ -102,17 +105,278 @@ export default function BudgetPage() {
   );
 }
 
-// ─── Program Section ───
-// Pools at the top, the campaigns they fund underneath. Reuses the existing
-// pool list and campaign-budget table — just stacks them so the relationship
-// reads top-down instead of being split across two tabs.
-function ProgramSection({ isAdmin }: { isAdmin: boolean }) {
+// ─── Queue Section ───
+// Counter strip on top, then the existing ApprovalsTab underneath. The counters
+// give an at-a-glance read of what's waiting for the HOP — matches the mockup.
+function QueueSection() {
+  const { data } = useSWR<{
+    budgetRequests: Array<{ amount: number }>;
+    pendingInvoices: Array<{ invoiceTotal: number }>;
+    pendingCrewBookings: Array<{ totalAmount: number }>;
+    pendingCrewPayments: Array<{ totalAmount: number }>;
+  }>("/api/approvals", fetcher);
+
+  const overages = {
+    count: data?.budgetRequests.length || 0,
+    amount: (data?.budgetRequests || []).reduce((s, r) => s + Number(r.amount), 0),
+  };
+  const invoices = {
+    count: data?.pendingInvoices.length || 0,
+    amount: (data?.pendingInvoices || []).reduce((s, i) => s + Number(i.invoiceTotal), 0),
+  };
+  const rates = {
+    count: data?.pendingCrewBookings.length || 0,
+    amount: (data?.pendingCrewBookings || []).reduce((s, b) => s + Number(b.totalAmount), 0),
+  };
+  const payments = {
+    count: data?.pendingCrewPayments.length || 0,
+    amount: (data?.pendingCrewPayments || []).reduce((s, p) => s + Number(p.totalAmount), 0),
+  };
+
+  const counters = [
+    { label: "Overages", icon: AlertTriangle, tone: "warning", ...overages },
+    { label: "Invoices", icon: Receipt, tone: "info", ...invoices },
+    { label: "Rate Approvals", icon: FileSignature, tone: "warning", ...rates },
+    { label: "Crew Payments", icon: Banknote, tone: "info", ...payments },
+  ] as const;
+
   return (
     <div className="space-y-6">
-      <BudgetPoolsTab isAdmin={isAdmin} />
-      <CampaignBudgetsTab />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {counters.map((c) => {
+          const Icon = c.icon;
+          const toneColor = c.tone === "warning" ? "text-amber-600" : "text-blue-600";
+          return (
+            <Card key={c.label} padding="none">
+              <div className="px-3.5 py-3">
+                <div className="flex items-center justify-between">
+                  <Icon className={`h-4 w-4 ${toneColor}`} />
+                  <span className={`text-[10px] font-semibold uppercase tracking-wider ${c.count > 0 ? toneColor : "text-text-tertiary"}`}>
+                    {c.count} open
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xl font-bold text-text-primary">
+                  {formatCurrency(c.amount)}
+                </p>
+                <p className="text-xs text-text-tertiary">{c.label}</p>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+      <ApprovalsTab />
     </div>
   );
+}
+
+// ─── Program Section ───
+// Pool cards expand/collapse to reveal the campaigns they fund. Matches the
+// mockup: top-down pool → campaign relationship, nested in one view.
+function ProgramSection({ isAdmin }: { isAdmin: boolean }) {
+  const { data, mutate } = useSWR<AnalysisData>("/api/budget/analysis", fetcher);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [showAdd, setShowAdd] = useState(false);
+  const [selectedPool, setSelectedPool] = useState<AnalysisData["poolHealth"][number] | null>(null);
+
+  const pools = data?.poolHealth || [];
+  const allCampaigns = data?.campaignAnalysis || [];
+  const campaignsByPool = new Map<string, AnalysisData["campaignAnalysis"]>();
+  for (const c of allCampaigns) {
+    const key = c.budgetPoolId || "unassigned";
+    if (!campaignsByPool.has(key)) campaignsByPool.set(key, []);
+    campaignsByPool.get(key)!.push(c);
+  }
+  // Default: first pool expanded on first load
+  const defaultExpandKey = pools[0]?.id;
+
+  function isOpen(id: string) {
+    if (id in expanded) return expanded[id];
+    return id === defaultExpandKey;
+  }
+  function toggle(id: string) {
+    setExpanded((e) => ({ ...e, [id]: !isOpen(id) }));
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-text-secondary">
+          {pools.length} pool{pools.length !== 1 ? "s" : ""} · {allCampaigns.length} campaign{allCampaigns.length !== 1 ? "s" : ""}
+        </p>
+        {isAdmin && (
+          <Button size="sm" onClick={() => setShowAdd(true)}>
+            <Plus className="h-3.5 w-3.5" />
+            New Pool
+          </Button>
+        )}
+      </div>
+
+      {pools.length === 0 ? (
+        <EmptyState
+          icon={<DollarSign className="h-5 w-5" />}
+          title="No budget pools"
+          description="Create a budget pool for a fiscal period to start tracking production spending."
+          action={isAdmin ? (
+            <Button size="sm" onClick={() => setShowAdd(true)}>
+              <Plus className="h-3.5 w-3.5" />
+              New Pool
+            </Button>
+          ) : undefined}
+        />
+      ) : (
+        <div className="space-y-4">
+          {pools.map((pool) => {
+            const poolCampaigns = campaignsByPool.get(pool.id) || [];
+            const open = isOpen(pool.id);
+            const spentPct = pool.totalAmount > 0 ? (pool.spent / pool.totalAmount) * 100 : 0;
+            const committedPct = pool.totalAmount > 0 ? ((pool.committed - pool.spent) / pool.totalAmount) * 100 : 0;
+            const allocPct = pool.totalAmount > 0 ? ((pool.allocated - pool.committed) / pool.totalAmount) * 100 : 0;
+            const fmtPeriod = (d: string) => {
+              const [y, m, day] = d.split("-");
+              return new Date(Number(y), Number(m) - 1, Number(day)).toLocaleDateString("en-US", {
+                month: "short", day: "numeric", year: "numeric",
+              });
+            };
+
+            return (
+              <Card key={pool.id} padding="none">
+                <button
+                  type="button"
+                  onClick={() => toggle(pool.id)}
+                  className="w-full text-left hover:bg-surface-secondary/40 transition-colors"
+                >
+                  <div className="flex items-start gap-3 px-3.5 py-3 border-b border-border">
+                    {open ? (
+                      <ChevronDown className="h-4 w-4 mt-0.5 text-text-tertiary shrink-0" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 mt-0.5 text-text-tertiary shrink-0" />
+                    )}
+                    <DollarSign className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">{pool.name}</span>
+                        <Badge variant={pool.utilizationPct > 95 ? "error" : pool.utilizationPct > 80 ? "warning" : "default"}>
+                          {pool.utilizationPct}% allocated
+                        </Badge>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => { e.stopPropagation(); setSelectedPool(pool); }}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setSelectedPool(pool); } }}
+                          className="ml-auto text-[10px] text-text-tertiary hover:text-primary cursor-pointer"
+                        >
+                          Edit pool →
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-text-tertiary">
+                        {fmtPeriod(pool.periodStart)} — {fmtPeriod(pool.periodEnd)} · {pool.campaignCount} campaign{pool.campaignCount !== 1 ? "s" : ""}
+                      </p>
+                      <div className="mt-2 h-2 rounded-full bg-surface-tertiary overflow-hidden">
+                        <div className="h-full flex">
+                          <div className="bg-emerald-500" style={{ width: `${Math.min(spentPct, 100)}%` }} />
+                          <div className="bg-blue-400" style={{ width: `${Math.min(committedPct, 100)}%` }} />
+                          <div className="bg-slate-300" style={{ width: `${Math.min(allocPct, 100)}%` }} />
+                        </div>
+                      </div>
+                      <div className="mt-1.5 flex gap-4 text-[10px] text-text-tertiary flex-wrap">
+                        <span>Paid <span className="font-semibold text-emerald-600">{formatCurrency(pool.spent)}</span></span>
+                        <span>Committed <span className="font-semibold text-text-primary">{formatCurrency(pool.committed)}</span></span>
+                        <span>Allocated <span className="font-semibold text-text-primary">{formatCurrency(pool.allocated)}</span></span>
+                        <span>Remaining <span className="font-semibold text-emerald-600">{formatCurrency(pool.remaining)}</span></span>
+                        <span className="ml-auto">Total <span className="font-semibold text-text-primary">{formatCurrency(pool.totalAmount)}</span></span>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {open && (
+                  <>
+                    <div className="hidden md:grid grid-cols-[88px_1fr_110px_100px_100px_100px_100px_100px_80px] gap-3 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border bg-surface-secondary/40">
+                      <div>WF#</div>
+                      <div>Campaign</div>
+                      <div>Status</div>
+                      <div className="text-right">Budget</div>
+                      <div className="text-right">Committed</div>
+                      <div className="text-right">Invoiced</div>
+                      <div className="text-right">Paid</div>
+                      <div className="text-right">EFC</div>
+                      <div className="text-right">Var</div>
+                    </div>
+                    {poolCampaigns.length === 0 ? (
+                      <div className="px-3.5 py-6 text-center text-xs text-text-tertiary">
+                        No campaigns in this pool yet.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {poolCampaigns.map((c) => {
+                          const varTone = Math.abs(c.variancePct) < 3
+                            ? "text-text-secondary"
+                            : c.variancePct > 0 ? "text-red-600" : "text-emerald-600";
+                          return (
+                            <Link
+                              key={c.id}
+                              href={`/campaigns/${c.id}`}
+                              className="grid grid-cols-2 md:grid-cols-[88px_1fr_110px_100px_100px_100px_100px_100px_80px] gap-3 px-3.5 py-2.5 items-center hover:bg-surface-secondary/40 transition-colors"
+                            >
+                              <div className="text-[10px] font-mono text-text-tertiary">{c.wfNumber}</div>
+                              <div className="col-span-2 md:col-span-1 min-w-0">
+                                <p className="text-sm font-medium text-text-primary truncate">{c.name}</p>
+                              </div>
+                              <div><CampaignStatusBadge status={c.status} /></div>
+                              <div className="text-right text-sm text-text-secondary">{formatCurrency(c.budget)}</div>
+                              <div className="text-right text-sm text-text-secondary">{formatCurrency(c.committed)}</div>
+                              <div className="text-right text-sm text-text-secondary">{formatCurrency(c.invoiced)}</div>
+                              <div className="text-right text-sm text-text-secondary">{formatCurrency(c.spent)}</div>
+                              <div className="text-right text-sm font-semibold text-text-primary">{formatCurrency(c.efc)}</div>
+                              <div className={`text-right text-xs font-medium ${varTone}`}>
+                                {c.variancePct !== 0 && (<>{c.variancePct > 0 ? "+" : ""}{c.variancePct}%</>)}
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <AddPoolModal open={showAdd} onClose={() => setShowAdd(false)} onCreated={() => { mutate(); setShowAdd(false); }} />
+      {selectedPool && (
+        <PoolDetailModal
+          pool={{
+            id: selectedPool.id,
+            name: selectedPool.name,
+            periodStart: selectedPool.periodStart,
+            periodEnd: selectedPool.periodEnd,
+            totalAmount: selectedPool.totalAmount,
+            allocated: selectedPool.allocated,
+            committed: selectedPool.committed,
+            spent: selectedPool.spent,
+            remaining: selectedPool.remaining,
+          } as BudgetPoolSummary}
+          open={!!selectedPool}
+          onClose={() => setSelectedPool(null)}
+          onUpdated={() => { mutate(); setSelectedPool(null); }}
+          isAdmin={isAdmin}
+        />
+      )}
+    </>
+  );
+}
+
+function CampaignStatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; variant: "default" | "info" | "success" | "warning" }> = {
+    "Planning": { label: "Planning", variant: "default" },
+    "In Production": { label: "In Production", variant: "info" },
+    "Post": { label: "Post", variant: "warning" },
+    "Complete": { label: "Complete", variant: "success" },
+  };
+  const m = map[status] || { label: status, variant: "default" as const };
+  return <Badge variant={m.variant}>{m.label}</Badge>;
 }
 
 // ─── Vendors Section ───
@@ -1235,6 +1499,7 @@ interface AnalysisData {
   }>;
   campaignAnalysis: Array<{
     id: string; wfNumber: string; name: string; status: string;
+    budgetPoolId: string | null;
     budget: number; committed: number; invoiced: number; spent: number; efc: number;
     remaining: number; variancePct: number; vendorCount: number;
     shootDays: number; costPerShootDay: number | null;
