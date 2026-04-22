@@ -12,8 +12,9 @@ import {
   Forward,
   CheckCircle,
   XCircle,
+  X,
 } from "lucide-react";
-import { Drawer } from "@/components/ui/drawer";
+import { Modal } from "@/components/ui/modal";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PRStatusPill } from "@/components/product-requests/pr-status-pill";
@@ -412,7 +413,7 @@ export function PRDocContent({
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
+        <div className="space-y-1 flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-text-tertiary">{doc.docNumber}</span>
             <PRStatusPill status={doc.status} />
@@ -427,7 +428,7 @@ export function PRDocContent({
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions + close */}
         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
           {doc.status === "draft" && (
             <button
@@ -476,6 +477,15 @@ export function PRDocContent({
             >
               <XCircle className="h-4 w-4" />
               Cancel
+            </button>
+          )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="rounded-lg p-2 text-text-tertiary hover:bg-surface-secondary hover:text-text-secondary transition-colors"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -545,7 +555,7 @@ export function PRDocContent({
   );
 }
 
-// --- Drawer wrapper ---
+// --- Modal wrapper ---
 export function PRDocDrawer({
   id,
   onClose,
@@ -554,8 +564,8 @@ export function PRDocDrawer({
   onClose: () => void;
 }) {
   return (
-    <Drawer open={!!id} onClose={onClose} size="2xl">
+    <Modal open={!!id} onClose={onClose} size="3xl">
       {id && <PRDocContent id={id} onClose={onClose} />}
-    </Drawer>
+    </Modal>
   );
 }
