@@ -112,70 +112,74 @@ function ItemRow({
   onDelete: () => void;
 }) {
   return (
-    <tr className="group border-t border-border/50">
-      <td className="py-2 pl-3 pr-2 text-[11px] text-text-tertiary font-medium w-[90px] shrink-0">
-        {item.product?.itemCode ?? "—"}
-      </td>
-      <td className="py-2 px-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm text-text-primary truncate max-w-[200px]">
+    <div className="group border-t border-border/50 px-3.5 py-2.5 flex items-start gap-3">
+      {/* Left: product info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start gap-2">
+          <span className="text-sm text-text-primary leading-snug flex-1">
             {item.product?.name ?? "(no product)"}
           </span>
           {item.fromShotList && (
-            <span className="text-[10px] bg-sky-50 text-sky-600 rounded px-1 py-0.5 shrink-0">Shot list</span>
+            <span className="text-[10px] bg-sky-50 text-sky-600 border border-sky-100 rounded px-1.5 py-0.5 whitespace-nowrap shrink-0 leading-none mt-0.5">
+              Shot list
+            </span>
           )}
         </div>
-      </td>
-      <td className="py-2 px-2 w-[80px]">
-        {editable ? (
-          <input
-            type="number"
-            min={1}
-            value={item.quantity}
-            onChange={(e) => onUpdate("quantity", Number(e.target.value))}
-            className="w-full rounded border border-border bg-surface px-2 py-1 text-sm text-center focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
-          />
-        ) : (
-          <span className="text-sm text-text-primary text-center block">{item.quantity}</span>
-        )}
-      </td>
-      <td className="py-2 px-2 w-[100px]">
-        {editable ? (
-          <input
-            type="text"
-            value={item.size}
-            onChange={(e) => onUpdate("size", e.target.value)}
-            placeholder="e.g. 8-ct"
-            className="w-full rounded border border-border bg-surface px-2 py-1 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
-          />
-        ) : (
-          <span className="text-sm text-text-tertiary">{item.size || "—"}</span>
-        )}
-      </td>
-      <td className="py-2 px-2">
-        {editable ? (
+        {/* Code + instructions on line 2 */}
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          {item.product?.itemCode && (
+            <span className="text-[11px] text-text-tertiary">{item.product.itemCode}</span>
+          )}
+          {item.specialInstructions && !editable && (
+            <span className="text-[11px] text-text-secondary italic">{item.specialInstructions}</span>
+          )}
+        </div>
+        {editable && (
           <input
             type="text"
             value={item.specialInstructions}
             onChange={(e) => onUpdate("specialInstructions", e.target.value)}
-            placeholder="Instructions…"
-            className="w-full rounded border border-border bg-surface px-2 py-1 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+            placeholder="Special instructions…"
+            className="mt-1.5 w-full rounded border border-border bg-surface px-2 py-1 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
           />
-        ) : (
-          <span className="text-sm text-text-tertiary">{item.specialInstructions || "—"}</span>
         )}
-      </td>
-      {editable && (
-        <td className="py-2 pl-2 pr-3 w-8">
+      </div>
+
+      {/* Right: qty × size */}
+      <div className="flex items-center gap-2 shrink-0 pt-0.5">
+        {editable ? (
+          <>
+            <input
+              type="number"
+              min={1}
+              value={item.quantity}
+              onChange={(e) => onUpdate("quantity", Number(e.target.value))}
+              className="w-14 rounded border border-border bg-surface px-2 py-1 text-sm text-center focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+            />
+            <input
+              type="text"
+              value={item.size}
+              onChange={(e) => onUpdate("size", e.target.value)}
+              placeholder="Size"
+              className="w-20 rounded border border-border bg-surface px-2 py-1 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+            />
+          </>
+        ) : (
+          <span className="text-sm text-text-secondary tabular-nums">
+            {item.quantity}
+            {item.size ? <span className="text-text-tertiary"> × {item.size}</span> : null}
+          </span>
+        )}
+        {editable && (
           <button
             onClick={onDelete}
             className="opacity-0 group-hover:opacity-100 text-text-tertiary hover:text-error transition-all"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
-        </td>
-      )}
-    </tr>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -299,29 +303,22 @@ function DeptSection({
 
       <div className="px-3.5 py-3">
         {section.items.length > 0 ? (
-          <table className="w-full">
-            <thead>
-              <tr>
-                <th className="text-left text-[10px] uppercase tracking-wider text-text-tertiary font-medium pb-1.5 pl-3 pr-2 w-[90px]">Item Code</th>
-                <th className="text-left text-[10px] uppercase tracking-wider text-text-tertiary font-medium pb-1.5 px-2">Product</th>
-                <th className="text-left text-[10px] uppercase tracking-wider text-text-tertiary font-medium pb-1.5 px-2 w-[80px]">Qty</th>
-                <th className="text-left text-[10px] uppercase tracking-wider text-text-tertiary font-medium pb-1.5 px-2 w-[100px]">Size</th>
-                <th className="text-left text-[10px] uppercase tracking-wider text-text-tertiary font-medium pb-1.5 px-2">Instructions</th>
-                {editable && <th className="w-8" />}
-              </tr>
-            </thead>
-            <tbody>
-              {section.items.map((item) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  editable={editable}
-                  onUpdate={(field, value) => updateItem(item.id, field, value)}
-                  onDelete={() => deleteItem(item.id)}
-                />
-              ))}
-            </tbody>
-          </table>
+          <div>
+            <div className="flex items-center px-3.5 pb-1.5 gap-3">
+              <span className="flex-1 text-[10px] uppercase tracking-wider text-text-tertiary font-medium">Product</span>
+              <span className="shrink-0 text-[10px] uppercase tracking-wider text-text-tertiary font-medium">Qty × Size</span>
+              {editable && <span className="w-3.5" />}
+            </div>
+            {section.items.map((item) => (
+              <ItemRow
+                key={item.id}
+                item={item}
+                editable={editable}
+                onUpdate={(field, value) => updateItem(item.id, field, value)}
+                onDelete={() => deleteItem(item.id)}
+              />
+            ))}
+          </div>
         ) : (
           <p className="text-sm text-text-tertiary py-2">No items yet.</p>
         )}
@@ -412,24 +409,34 @@ export function PRDocContent({
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1 flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-text-tertiary">{doc.docNumber}</span>
-            <PRStatusPill status={doc.status} />
+      <div className="space-y-3">
+        {/* Title row */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-text-tertiary">{doc.docNumber}</span>
+              <PRStatusPill status={doc.status} />
+            </div>
+            <h2 className="text-lg font-semibold text-text-primary leading-snug">
+              {doc.campaign?.name ?? "Product Request"}
+            </h2>
+            <p className="text-sm text-text-secondary">
+              {doc.campaign?.wfNumber} · Shoot {formatDate(doc.shootDate)}
+            </p>
           </div>
-          <h2 className="text-lg font-semibold text-text-primary">
-            {doc.campaign?.name ?? "Product Request"}
-          </h2>
-          <div className="flex items-center gap-3 text-sm text-text-secondary">
-            <span>{doc.campaign?.wfNumber}</span>
-            <span>·</span>
-            <span>Shoot: {formatDate(doc.shootDate)}</span>
-          </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="shrink-0 rounded-lg p-1.5 text-text-tertiary hover:bg-surface-secondary hover:text-text-secondary transition-colors"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
-        {/* Actions + close */}
-        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+        {/* Action buttons row */}
+        <div className="flex items-center gap-2 flex-wrap">
           {doc.status === "draft" && (
             <button
               onClick={() => transition("submitted")}
@@ -477,15 +484,6 @@ export function PRDocContent({
             >
               <XCircle className="h-4 w-4" />
               Cancel
-            </button>
-          )}
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="rounded-lg p-2 text-text-tertiary hover:bg-surface-secondary hover:text-text-secondary transition-colors"
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
             </button>
           )}
         </div>
