@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import { PackageSearch, Plus, ChevronRight } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { PRStatusPill } from "@/components/product-requests/pr-status-pill";
+import { PRDocDrawer } from "@/components/product-requests/pr-doc-drawer";
 import type { PRDoc } from "@/types/domain";
 
 async function fetcher<T>(url: string): Promise<T> {
@@ -42,7 +44,9 @@ function deptSummary(doc: PRDoc): string {
 }
 
 export default function ProductRequestsPage() {
-  const { data: docs, isLoading } = useSWR<PRDoc[]>(
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const { data: docs, isLoading, mutate } = useSWR<PRDoc[]>(
     "/api/product-requests",
     fetcher,
     { refreshInterval: 30000 }
@@ -107,10 +111,10 @@ export default function ProductRequestsPage() {
           </CardHeader>
           <div className="divide-y divide-border">
             {campaignDocs.map((doc) => (
-              <Link
+              <button
                 key={doc.id}
-                href={`/product-requests/${doc.id}`}
-                className="flex items-center gap-4 px-3.5 py-3 hover:bg-surface-secondary transition-colors group"
+                onClick={() => setSelectedId(doc.id)}
+                className="flex w-full items-center gap-4 px-3.5 py-3 hover:bg-surface-secondary transition-colors group text-left"
               >
                 <div className="flex-1 min-w-0 space-y-0.5">
                   <div className="flex items-center gap-2">
@@ -125,11 +129,16 @@ export default function ProductRequestsPage() {
                   </p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-text-tertiary group-hover:text-text-secondary transition-colors shrink-0" />
-              </Link>
+              </button>
             ))}
           </div>
         </Card>
       ))}
+
+      <PRDocDrawer
+        id={selectedId}
+        onClose={() => { setSelectedId(null); mutate(); }}
+      />
     </div>
   );
 }
