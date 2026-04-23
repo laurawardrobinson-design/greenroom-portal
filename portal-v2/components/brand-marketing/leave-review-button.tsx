@@ -106,7 +106,8 @@ export function LeaveReviewButton({
           <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
             <Button
               variant="secondary"
-              className="text-red-700 border-red-200 hover:bg-red-50"
+              className="text-error hover:bg-error/5"
+              style={{ borderColor: "var(--status-rejected-border)" }}
               onClick={() => leaveReview("rejected")}
               disabled={submitting !== null}
             >

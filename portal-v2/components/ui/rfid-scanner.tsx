@@ -136,7 +136,7 @@ export function RfidScanner({ active, onScan, hint }: RfidScannerProps) {
             <Radio
               className={`h-5 w-5 ${
                 flash
-                  ? "text-emerald-600"
+                  ? "text-success"
                   : focused
                   ? "text-primary"
                   : "text-text-tertiary"
@@ -149,7 +149,7 @@ export function RfidScanner({ active, onScan, hint }: RfidScannerProps) {
           <p
             className={`text-sm font-semibold ${
               flash
-                ? "text-emerald-700"
+                ? "text-success"
                 : focused
                 ? "text-text-primary"
                 : "text-text-secondary"

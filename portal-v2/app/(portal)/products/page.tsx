@@ -12,6 +12,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { useToast } from "@/components/ui/toast";
 import { PRODUCT_DEPARTMENTS } from "@/lib/validation/products.schema";
 import { ProductDrawer, DEPT_COLORS } from "@/components/products/product-drawer";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Flag,
   Plus,
@@ -76,10 +77,7 @@ export default function ProductDirectoryPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-0">
-        {/* Header */}
-        <div className="pb-4 border-b border-border">
-          <h1 className="text-2xl font-bold text-text-primary">Products</h1>
-        </div>
+        <PageHeader title="Products" />
 
         <PageTabs
           tabs={[
@@ -112,7 +110,7 @@ export default function ProductDirectoryPage() {
                     href="/products/flags"
                     className={`flex items-center gap-1.5 rounded-md border px-2.5 h-8 text-xs font-medium transition-colors ${
                       openFlagTotal > 0
-                        ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                        ? "border-amber-300 bg-amber-50 text-warning hover:bg-amber-100"
                         : "border-border text-text-secondary hover:bg-surface-secondary"
                     }`}
                     title="RBU flags"
@@ -217,7 +215,7 @@ export default function ProductDirectoryPage() {
                 >
                   {flagCount > 0 && (
                     <span
-                      className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium"
+                      className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-amber-50 text-warning border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium"
                       title={`${flagCount} open flag${flagCount === 1 ? "" : "s"}`}
                     >
                       <Flag className="h-2.5 w-2.5" />
@@ -287,7 +285,7 @@ export default function ProductDirectoryPage() {
                     </Badge>
                   </div>
                   <div className="hidden sm:flex items-center">
-                    <span className="text-xs text-orange-700 font-medium truncate">{product.restrictions || "—"}</span>
+                    <span className="text-xs text-warning font-medium truncate">{product.restrictions || "—"}</span>
                   </div>
                 </div>
               ))}
@@ -321,5 +319,4 @@ export default function ProductDirectoryPage() {
     </div>
   );
 }
-
 

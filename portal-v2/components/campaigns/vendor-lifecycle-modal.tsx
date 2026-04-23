@@ -55,10 +55,10 @@ function proxyDocUrl(resolved: string | null): string | null {
   return resolved;
 }
 
-const SEVERITY_STYLE: Record<string, string> = {
-  high: "bg-red-50 text-red-700",
-  medium: "bg-amber-50 text-amber-700",
-  low: "bg-blue-50 text-blue-700",
+const SEVERITY_STYLE: Record<string, { color: string; backgroundColor: string }> = {
+  high: { color: "var(--status-rejected-fg)", backgroundColor: "var(--status-rejected-tint)" },
+  medium: { color: "var(--status-pending-fg)", backgroundColor: "var(--status-pending-tint)" },
+  low: { color: "var(--status-info-fg)", backgroundColor: "var(--status-info-tint)" },
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -76,13 +76,20 @@ function StepHeader({
       disabled={!canClick}
       className={`w-full flex items-center gap-3 text-left transition-colors ${canClick ? "hover:text-primary" : "cursor-default"}`}
     >
-      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-        state === "done"
-          ? "bg-emerald-100 text-emerald-700"
-          : state === "active"
-          ? selected ? "bg-primary text-white" : "bg-primary/10 text-primary"
-          : "bg-surface-tertiary text-text-disabled"
-      }`}>
+      <div
+        style={
+          state === "done"
+            ? { color: "var(--status-approved-fg)", backgroundColor: "var(--status-approved-tint)" }
+            : undefined
+        }
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+          state === "done"
+            ? ""
+            : state === "active"
+            ? selected ? "bg-primary text-white" : "bg-primary/10 text-primary"
+            : "bg-surface-tertiary text-text-disabled"
+        }`}
+      >
         {state === "done" ? <Check className="h-3.5 w-3.5" /> : state === "locked" ? <Lock className="h-3 w-3" /> : number}
       </div>
       <span className={`text-sm font-semibold uppercase tracking-wider ${
@@ -899,7 +906,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
           {localStatus === "Paid" && cv.paymentAmount > 0 && (
             <div className="flex items-center gap-2 mt-1">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              <p className="text-xs font-medium text-emerald-700">
+              <p className="text-xs font-medium text-success">
                 Paid {formatCurrency(cv.paymentAmount)}{cv.paymentDate ? ` on ${new Date(cv.paymentDate).toLocaleDateString("en-US")}` : ""}
               </p>
             </div>
@@ -948,12 +955,12 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
         <div className="mt-3 pt-3 border-t border-border space-y-3">
           {/* Approval status — linear flow */}
           <div className="flex items-center gap-2 text-xs">
-            <span className={`flex items-center gap-1 ${isProducerApproved ? "text-emerald-600 font-medium" : "text-text-tertiary"}`}>
+            <span className={`flex items-center gap-1 ${isProducerApproved ? "text-success font-medium" : "text-text-tertiary"}`}>
               {isProducerApproved ? <CheckCircle2 className="h-3.5 w-3.5" /> : <span className="h-3.5 w-3.5 rounded-full border border-current inline-block" />}
               Producer
             </span>
             <span className="text-text-tertiary">→</span>
-            <span className={`flex items-center gap-1 ${isHopApproved ? "text-emerald-600 font-medium" : "text-text-tertiary"}`}>
+            <span className={`flex items-center gap-1 ${isHopApproved ? "text-success font-medium" : "text-text-tertiary"}`}>
               {isHopApproved ? <CheckCircle2 className="h-3.5 w-3.5" /> : <span className="h-3.5 w-3.5 rounded-full border border-current inline-block" />}
               Finance
             </span>
@@ -967,7 +974,12 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
                   <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="custom" className={SEVERITY_STYLE[flag.severity]}>{flag.severity}</Badge>
+                      <span
+                        className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium tracking-wide"
+                        style={SEVERITY_STYLE[flag.severity]}
+                      >
+                        {flag.severity}
+                      </span>
                       <span className="text-xs font-medium text-text-primary">{flag.type}</span>
                     </div>
                     <p className="text-xs text-text-secondary mt-0.5">{flag.message}</p>
@@ -989,7 +1001,11 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
                 </thead>
                 <tbody>
                   {invoiceItems.map((item) => (
-                    <tr key={item.id} className={`border-b border-border-light ${item.flagged ? "bg-red-50/50" : ""}`}>
+                    <tr
+                      key={item.id}
+                      className="border-b border-border-light"
+                      style={item.flagged ? { backgroundColor: "var(--status-rejected-tint)" } : undefined}
+                    >
                       <td className="py-1.5 text-text-primary">
                         {item.description}{item.flagged && <span className="ml-1 text-red-500">⚑</span>}
                       </td>
@@ -1006,7 +1022,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
               </table>
               {/* vs. estimate summary */}
               {estimateTotal > 0 && (
-                <div className={`mt-2 text-xs flex items-center gap-1.5 ${diff > 0 ? "text-red-600" : diff < 0 ? "text-emerald-600" : "text-text-tertiary"}`}>
+                <div className={`mt-2 text-xs flex items-center gap-1.5 ${diff > 0 ? "text-error" : diff < 0 ? "text-success" : "text-text-tertiary"}`}>
                   {diff > 0 ? <AlertTriangle className="h-3 w-3 shrink-0" /> : <CheckCircle2 className="h-3 w-3 shrink-0" />}
                   {diff === 0
                     ? `Matches estimate (${formatCurrency(estimateTotal)})`
@@ -1051,7 +1067,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
           {isHopApproved && (
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              <p className="text-xs text-emerald-700 font-medium">Fully approved</p>
+              <p className="text-xs text-success font-medium">Fully approved</p>
             </div>
           )}
           {sendingBack && (

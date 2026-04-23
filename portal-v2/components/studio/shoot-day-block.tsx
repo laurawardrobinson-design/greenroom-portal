@@ -98,7 +98,7 @@ export function ShootDayBlock({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {pendingCount > 0 && (
-            <Badge variant="custom" className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px]">
+            <Badge variant="custom" className="bg-amber-50 text-warning border border-amber-200 text-[10px]">
               {pendingCount} pending
             </Badge>
           )}

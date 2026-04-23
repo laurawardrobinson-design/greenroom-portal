@@ -28,19 +28,19 @@ interface GearNote {
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  Available: "bg-emerald-50 text-emerald-700",
+  Available: "bg-emerald-50 text-success",
   Reserved: "bg-blue-50 text-blue-700",
-  "Checked Out": "bg-amber-50 text-amber-700",
+  "Checked Out": "bg-amber-50 text-warning",
   "Under Maintenance": "bg-purple-50 text-purple-700",
-  "In Repair": "bg-red-50 text-red-600",
+  "In Repair": "bg-red-50 text-error",
 };
 
 const CONDITION_BADGE: Record<string, string> = {
-  Excellent: "bg-emerald-50 text-emerald-700",
+  Excellent: "bg-emerald-50 text-success",
   Good: "bg-blue-50 text-blue-700",
-  Fair: "bg-amber-50 text-amber-700",
-  Poor: "bg-orange-50 text-orange-700",
-  Damaged: "bg-red-50 text-red-600",
+  Fair: "bg-amber-50 text-warning",
+  Poor: "bg-orange-50 text-warning",
+  Damaged: "bg-red-50 text-error",
 };
 
 const CONDITIONS: GearCondition[] = [
@@ -540,9 +540,9 @@ export function GearDetailModal({
               {maintenanceLogs.map((m) => {
                 const statusColor: Record<string, string> = {
                   Scheduled: "text-blue-600",
-                  "In Progress": "text-amber-600",
+                  "In Progress": "text-warning",
                   "Sent for Repair": "text-purple-600",
-                  Completed: "text-emerald-600",
+                  Completed: "text-success",
                   Cancelled: "text-slate-400",
                 };
                 return (
@@ -577,7 +577,7 @@ export function GearDetailModal({
                 type="button"
                 onClick={handleRemoveRfid}
                 disabled={savingRfid}
-                className="text-xs text-text-tertiary hover:text-red-600 transition-colors"
+                className="text-xs text-text-tertiary hover:text-error transition-colors"
               >
                 Remove
               </button>

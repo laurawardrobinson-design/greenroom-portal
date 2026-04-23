@@ -64,7 +64,14 @@ export function RailApprovalQueue() {
                         {a.subjectLabel}
                       </span>
                       {age >= 2 && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-800 ring-1 ring-inset ring-orange-200/60">
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset"
+                          style={{
+                            color: "var(--status-pending-fg)",
+                            backgroundColor: "var(--status-pending-tint)",
+                            boxShadow: "inset 0 0 0 1px var(--status-pending-border)",
+                          }}
+                        >
                           <Clock className="h-3 w-3" />
                           {age}d
                         </span>

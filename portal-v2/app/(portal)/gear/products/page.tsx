@@ -29,10 +29,10 @@ import { PageHeader } from "@/components/ui/page-header";
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
 
 const DEPT_COLORS: Record<string, string> = {
-  Deli: "bg-orange-50 text-orange-700",
-  Bakery: "bg-amber-50 text-amber-700",
-  "Meat-Seafood": "bg-red-50 text-red-700",
-  Produce: "bg-emerald-50 text-emerald-700",
+  Deli: "bg-orange-50 text-warning",
+  Bakery: "bg-amber-50 text-warning",
+  "Meat-Seafood": "bg-red-50 text-error",
+  Produce: "bg-emerald-50 text-success",
   Grocery: "bg-blue-50 text-blue-700",
   Floral: "bg-pink-50 text-pink-700",
   Other: "bg-slate-50 text-slate-600",
@@ -184,7 +184,7 @@ export default function ProductDirectoryPage() {
                 </p>
               )}
               {product.restrictions && (
-                <p className="mt-1 text-xs text-amber-600 font-medium">
+                <p className="mt-1 text-xs text-warning font-medium">
                   {product.restrictions}
                 </p>
               )}
@@ -475,7 +475,7 @@ function ProductDetailDrawer({
             <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1">
               Restrictions
             </p>
-            <p className="text-sm text-amber-700 font-medium">
+            <p className="text-sm text-warning font-medium">
               {product.restrictions}
             </p>
           </div>

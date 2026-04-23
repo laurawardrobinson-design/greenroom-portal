@@ -22,8 +22,8 @@ import {
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const SEVERITY_BADGE: Record<string, string> = {
-  high: "bg-red-50 text-red-700",
-  medium: "bg-amber-50 text-amber-700",
+  high: "bg-red-50 text-error",
+  medium: "bg-amber-50 text-warning",
   low: "bg-blue-50 text-blue-700",
 };
 
@@ -160,13 +160,13 @@ export function InvoiceReviewPanel({
         {/* Approval actions — right side of header */}
         <div className="flex items-center gap-2 shrink-0">
           {isProducerApproved && (
-            <div className="flex items-center gap-1 text-xs text-emerald-600">
+            <div className="flex items-center gap-1 text-xs text-success">
               <CheckCircle2 className="h-3.5 w-3.5" />
               Approved
             </div>
           )}
           {isHopApproved && (
-            <div className="flex items-center gap-1 text-xs text-emerald-600">
+            <div className="flex items-center gap-1 text-xs text-success">
               <CheckCircle2 className="h-3.5 w-3.5" />
               Approved
             </div>
@@ -293,7 +293,7 @@ export function InvoiceReviewPanel({
                     <td className="py-2 text-text-primary">
                       {item.description}
                       {item.flagged && (
-                        <span className="ml-1 text-red-600">⚑</span>
+                        <span className="ml-1 text-error">⚑</span>
                       )}
                     </td>
                     <td className="py-2 text-right font-medium text-text-primary">
@@ -305,9 +305,9 @@ export function InvoiceReviewPanel({
                     <td
                       className={`py-2 text-right font-medium ${
                         itemDiff > 0
-                          ? "text-red-600"
+                          ? "text-error"
                           : itemDiff < 0
-                          ? "text-emerald-600"
+                          ? "text-success"
                           : "text-text-tertiary"
                       }`}
                     >
@@ -332,9 +332,9 @@ export function InvoiceReviewPanel({
                 <td
                   className={`py-2 text-right ${
                     diff > 0
-                      ? "text-red-600"
+                      ? "text-error"
                       : diff < 0
-                      ? "text-emerald-600"
+                      ? "text-success"
                       : "text-text-tertiary"
                   }`}
                 >

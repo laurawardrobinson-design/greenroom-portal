@@ -89,7 +89,7 @@ export function BudgetTab({
           </div>
           <div className="rounded-lg bg-surface-secondary p-3">
             <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Spent</p>
-            <p className="text-lg font-semibold text-emerald-600">{formatCurrency(financials.spent)}</p>
+            <p className="text-lg font-semibold text-success">{formatCurrency(financials.spent)}</p>
           </div>
         </div>
         {financials.budget > 0 && (
@@ -133,11 +133,11 @@ export function BudgetTab({
                     <span className="text-text-secondary">Est: {formatCurrency(cv.estimateTotal)}</span>
                   )}
                   {cv.paymentAmount > 0 && (
-                    <span className="text-emerald-600">Paid: {formatCurrency(cv.paymentAmount)}</span>
+                    <span className="text-success">Paid: {formatCurrency(cv.paymentAmount)}</span>
                   )}
                   <span className={`font-medium ${
                     ["Paid", "Invoice Approved"].includes(cv.status)
-                      ? "text-emerald-600"
+                      ? "text-success"
                       : "text-text-primary"
                   }`}>
                     {formatCurrency(cv.estimateTotal || cv.invoiceTotal || 0)}
@@ -175,10 +175,10 @@ export function BudgetTab({
                     variant="custom"
                     className={
                       req.status === "Approved"
-                        ? "bg-emerald-50 text-emerald-700"
+                        ? "bg-emerald-50 text-success"
                         : req.status === "Declined"
-                        ? "bg-red-50 text-red-700"
-                        : "bg-amber-50 text-amber-700"
+                        ? "bg-red-50 text-error"
+                        : "bg-amber-50 text-warning"
                     }
                   >
                     {req.status}
@@ -217,7 +217,7 @@ export function BudgetTab({
             {amount && Number(amount) > 0 && (
               <p className="mt-1.5 text-xs text-text-secondary">
                 New total if approved:{" "}
-                <span className={projectedOverBudget ? "font-semibold text-red-600" : "font-semibold text-emerald-600"}>
+                <span className={projectedOverBudget ? "font-semibold text-error" : "font-semibold text-success"}>
                   {formatCurrency(projectedTotal)}
                 </span>
                 {projectedOverBudget && (

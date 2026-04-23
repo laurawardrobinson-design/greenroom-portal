@@ -29,11 +29,11 @@ interface Props {
 }
 
 const STATUS_STYLE: Record<string, string> = {
-  Available: "bg-emerald-100 text-emerald-700",
+  Available: "bg-emerald-100 text-success",
   Reserved: "bg-blue-100 text-blue-700",
-  "Checked Out": "bg-amber-100 text-amber-700",
-  "Pending Backup/Wipe": "bg-orange-100 text-orange-700",
-  Retired: "bg-red-100 text-red-700",
+  "Checked Out": "bg-amber-100 text-warning",
+  "Pending Backup/Wipe": "bg-orange-100 text-warning",
+  Retired: "bg-red-100 text-error",
 };
 
 const ROLE_STYLE: Record<string, { label: string; style: string }> = {
@@ -44,7 +44,7 @@ const ROLE_STYLE: Record<string, { label: string; style: string }> = {
 function RetirementChip({ drive }: { drive: MediaDrive }) {
   if (drive.pastRetirement) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-error">
         <AlertTriangle className="h-3 w-3" />
         Past Retirement
       </span>
@@ -52,7 +52,7 @@ function RetirementChip({ drive }: { drive: MediaDrive }) {
   }
   if (drive.nearingRetirement) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-600">
+      <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-warning">
         <AlertTriangle className="h-3 w-3" />
         Retiring Soon
       </span>
@@ -130,7 +130,7 @@ export function DriveInventory({ user }: Props) {
             <RotateCcw className="h-4 w-4 shrink-0 text-primary" />
             <h3 className="flex-1 text-left text-sm font-semibold uppercase tracking-wider text-text-primary">
               Active Checkouts
-              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-warning">
                 {activeSessions.length}
               </span>
             </h3>
@@ -156,7 +156,7 @@ export function DriveInventory({ user }: Props) {
                       )}
                     </div>
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                      session.status === "partial_return" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
+                      session.status === "partial_return" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-warning"
                     }`}>
                       {session.status === "partial_return" ? "Partial Return" : "Active"}
                     </span>
@@ -188,7 +188,7 @@ export function DriveInventory({ user }: Props) {
                                   {roleInfo.label}
                                 </span>
                                 {returned && (
-                                  <span className="text-[10px] text-emerald-600 font-medium">Returned</span>
+                                  <span className="text-[10px] text-success font-medium">Returned</span>
                                 )}
                                 {shooterLocked && !returned && (
                                   <span className="text-[10px] text-text-tertiary">Waiting for backup</span>
@@ -282,10 +282,10 @@ export function DriveInventory({ user }: Props) {
                     <td className="px-4 py-2.5 text-text-secondary">{drive.driveType}</td>
                     <td className="px-4 py-2.5">
                       <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                        drive.condition === "Good" ? "bg-emerald-50 text-emerald-700" :
-                        drive.condition === "Fair" ? "bg-amber-50 text-amber-600" :
-                        drive.condition === "Poor" ? "bg-orange-50 text-orange-600" :
-                        "bg-red-50 text-red-700"
+                        drive.condition === "Good" ? "bg-emerald-50 text-success" :
+                        drive.condition === "Fair" ? "bg-amber-50 text-warning" :
+                        drive.condition === "Poor" ? "bg-orange-50 text-warning" :
+                        "bg-red-50 text-error"
                       }`}>
                         {drive.condition}
                       </span>
@@ -302,7 +302,7 @@ export function DriveInventory({ user }: Props) {
                     <td className="px-4 py-2.5">
                       {drive.retirementDate ? (
                         <div className="space-y-1">
-                          <p className={`text-[11px] ${drive.pastRetirement ? "text-red-600 font-semibold" : drive.nearingRetirement ? "text-orange-600 font-medium" : "text-text-secondary"}`}>
+                          <p className={`text-[11px] ${drive.pastRetirement ? "text-error font-semibold" : drive.nearingRetirement ? "text-warning font-medium" : "text-text-secondary"}`}>
                             {format(parseISO(drive.retirementDate), "MMM d, yyyy")}
                           </p>
                           <RetirementChip drive={drive} />

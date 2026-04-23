@@ -11,19 +11,19 @@ import { Camera, Pencil, Trash2, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 
 const STATUS_BADGE: Record<string, string> = {
-  Available: "bg-emerald-50 text-emerald-700",
+  Available: "bg-emerald-50 text-success",
   Reserved: "bg-blue-50 text-blue-700",
-  "Checked Out": "bg-amber-50 text-amber-700",
+  "Checked Out": "bg-amber-50 text-warning",
   "Under Maintenance": "bg-purple-50 text-purple-700",
-  "In Repair": "bg-red-50 text-red-600",
+  "In Repair": "bg-red-50 text-error",
 };
 
 const CONDITION_BADGE: Record<string, string> = {
-  Excellent: "bg-emerald-50 text-emerald-700",
+  Excellent: "bg-emerald-50 text-success",
   Good: "bg-blue-50 text-blue-700",
-  Fair: "bg-amber-50 text-amber-700",
-  Poor: "bg-orange-50 text-orange-700",
-  Damaged: "bg-red-50 text-red-600",
+  Fair: "bg-amber-50 text-warning",
+  Poor: "bg-orange-50 text-warning",
+  Damaged: "bg-red-50 text-error",
 };
 
 const CONDITIONS: GearCondition[] = ["Excellent", "Good", "Fair", "Poor", "Damaged"];
@@ -320,7 +320,7 @@ export function PropDetailModal({
             canEdit && (
               <div className="flex items-center justify-between w-full">
                 <Button type="button" variant="ghost" size="sm" onClick={handleDelete} loading={deleting}
-                  className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                  className="text-red-500 hover:text-error hover:bg-red-50">
                   <Trash2 className="h-3.5 w-3.5" />
                   Delete
                 </Button>

@@ -138,7 +138,7 @@ export function QrScanner({ active, onScan, onError }: QrScannerProps) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-surface-secondary p-6 text-center">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50">
-          <AlertTriangle className="h-5 w-5 text-amber-600" />
+          <AlertTriangle className="h-5 w-5 text-warning" />
         </div>
         <div>
           <p className="text-sm font-medium text-text-primary">

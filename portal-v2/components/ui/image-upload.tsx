@@ -128,7 +128,7 @@ export function ImageUpload({ value, onFileSelected, onRemove, onSourceUrl, onIm
             <button
               type="button"
               onClick={handleRemove}
-              className="rounded-lg bg-white/90 p-1.5 text-red-600 shadow-sm hover:bg-white transition-colors"
+              className="rounded-lg bg-white/90 p-1.5 text-error shadow-sm hover:bg-white transition-colors"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -167,7 +167,7 @@ export function ImageUpload({ value, onFileSelected, onRemove, onSourceUrl, onIm
       )}
 
       {error && (
-        <p className="mt-1.5 text-xs text-red-600">{error}</p>
+        <p className="mt-1.5 text-xs text-error">{error}</p>
       )}
     </div>
   );

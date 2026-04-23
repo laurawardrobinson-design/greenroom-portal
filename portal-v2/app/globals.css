@@ -38,8 +38,8 @@
   --color-border: #D9D9D9;
   --color-border-light: #CFCFCF;
   --color-text-primary: #1F1F1F;
-  --color-text-secondary: #6b7280;
-  --color-text-tertiary: #9ca3af;
+  --color-text-secondary: #4b5563;
+  --color-text-tertiary: #6b7280;
   --color-text-inverse: #ffffff;
 
   /* Status colors */
@@ -58,8 +58,76 @@
      the next/font CSS variable so the bundled webfont is used, not whatever
      "Inter" the user happens to have installed locally. */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --text-xs: 0.833333rem;
+  --text-xs--line-height: 1.35;
 
   /* Spacing grid: 8px base (Tailwind's default scale aligns) */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+
+  /* Radius scale */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+
+  /* Z-index scale */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-tooltip: 70;
+  --z-toast: 80;
+  --z-lightbox: 90;
+
+  /* Status tints (single source of truth for StatusPill / Badge / Toast) */
+  --status-draft-fg: #6b7280;
+  --status-draft-tint: rgba(107, 114, 128, 0.08);
+  --status-draft-border: rgba(107, 114, 128, 0.20);
+  --status-submitted-fg: #2563eb;
+  --status-submitted-tint: rgba(37, 99, 235, 0.08);
+  --status-submitted-border: rgba(37, 99, 235, 0.20);
+  --status-pending-fg: #b45309;
+  --status-pending-tint: rgba(217, 119, 6, 0.08);
+  --status-pending-border: rgba(217, 119, 6, 0.20);
+  --status-approved-fg: #047857;
+  --status-approved-tint: rgba(5, 150, 105, 0.08);
+  --status-approved-border: rgba(5, 150, 105, 0.20);
+  --status-rejected-fg: #b91c1c;
+  --status-rejected-tint: rgba(220, 38, 38, 0.08);
+  --status-rejected-border: rgba(220, 38, 38, 0.20);
+  --status-info-fg: #2563eb;
+  --status-info-tint: rgba(37, 99, 235, 0.08);
+  --status-info-border: rgba(37, 99, 235, 0.20);
+
+  /* Role tints (single source of truth for RoleBadge) */
+  --role-admin-fg: #6b21a8;
+  --role-admin-tint: rgba(107, 33, 168, 0.08);
+  --role-producer-fg: #1e40af;
+  --role-producer-tint: rgba(30, 64, 175, 0.08);
+  --role-studio-fg: #0f766e;
+  --role-studio-tint: rgba(15, 118, 110, 0.08);
+  --role-art-director-fg: #b45309;
+  --role-art-director-tint: rgba(180, 83, 9, 0.08);
+  --role-creative-director-fg: #9a3412;
+  --role-creative-director-tint: rgba(154, 52, 18, 0.08);
+  --role-designer-fg: #6b21a8;
+  --role-designer-tint: rgba(107, 33, 168, 0.08);
+  --role-bmm-fg: #047857;
+  --role-bmm-tint: rgba(4, 120, 87, 0.08);
+  --role-vendor-fg: #4b5563;
+  --role-vendor-tint: rgba(75, 85, 99, 0.08);
+  --role-post-producer-fg: #0369a1;
+  --role-post-producer-tint: rgba(3, 105, 161, 0.08);
+
   /* Animation */
   --duration-fast: 150ms;
   --duration-normal: 200ms;
@@ -72,6 +140,18 @@
    ============================================================ */
 
 :root {
+  --font-size-min-readable: 10pt;
+  --line-height-readable: 1.5;
+  --line-height-dense-readable: 1.35;
+  --ui-tab-text-size: 0.875rem;
+  --ui-tab-line-height: 1.25;
+  --ui-tab-icon-size: 0.875rem;
+  --ui-tab-underline-height: 0.125rem;
+  --ui-page-title-size: clamp(1.5rem, 1.35rem + 0.3vw, 1.75rem);
+  --ui-page-title-line-height: 1.2;
+  --ui-page-title-weight: 700;
+  --ui-page-header-padding-bottom: var(--density-page-header-pb);
+
   --density-form-stack-gap: 0.375rem;
   --density-control-radius: 0.5rem;
   --density-control-px: 0.875rem;
@@ -238,6 +318,7 @@
    ============================================================ */
 
 html {
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -245,9 +326,168 @@ html {
 
 body {
   font-family: var(--font-sans);
+  font-size: max(var(--font-size-min-readable), 0.875rem);
   color: var(--color-text-primary);
   background: var(--color-surface);
-  line-height: 1.6;
+  line-height: var(--line-height-readable);
+}
+
+/* ============================================================
+   Shared UI primitives — headers + tabs + radios
+   ============================================================ */
+
+.ui-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--density-page-header-gap);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--ui-page-header-padding-bottom);
+}
+
+.ui-page-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--density-page-header-row-gap);
+}
+
+.ui-page-title {
+  flex: 1 1 auto;
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--ui-page-title-size);
+  font-weight: var(--ui-page-title-weight);
+  line-height: var(--ui-page-title-line-height);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.ui-page-actions {
+  display: flex;
+  margin-left: auto;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--density-page-header-action-gap);
+}
+
+@media (max-width: 768px) {
+  .ui-page-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}
+
+.ui-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+}
+
+.ui-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  gap: var(--density-tabs-gap);
+  padding: var(--density-tabs-py) var(--density-tabs-px);
+  min-height: 2.25rem;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  text-decoration: none;
+  font-size: max(var(--font-size-min-readable), var(--ui-tab-text-size));
+  font-weight: 600;
+  line-height: var(--ui-tab-line-height);
+  color: var(--color-text-secondary);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.ui-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.ui-tab[data-state="active"] {
+  color: var(--color-text-primary);
+}
+
+.ui-tab-icon {
+  width: var(--ui-tab-icon-size);
+  height: var(--ui-tab-icon-size);
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.ui-tab[data-state="active"] .ui-tab-icon {
+  color: var(--color-primary);
+}
+
+.ui-tab-underline {
+  position: absolute;
+  left: var(--density-tabs-px);
+  right: var(--density-tabs-px);
+  bottom: 0;
+  height: var(--ui-tab-underline-height);
+  border-radius: 999px;
+  background: var(--color-primary);
+}
+
+/* Global radio treatment with readable hit target; custom accent utilities can still override color. */
+input[type="radio"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+input[type="radio"]:not([class*="accent-"]) {
+  accent-color: var(--color-primary);
+}
+
+input[type="radio"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+p,
+li,
+td,
+th,
+label,
+small {
+  line-height: var(--line-height-readable);
+}
+
+/* Keep readable text floor globally, including legacy arbitrary text-size utilities. */
+:where(
+  .text-xs,
+  [class*="text-[10px]"],
+  [class*="text-[11px]"],
+  [class*="text-[12px]"],
+  [class*="text-[13px]"]
+) {
+  font-size: var(--font-size-min-readable) !important;
+  line-height: var(--line-height-dense-readable) !important;
+}
+
+/* Normalize legacy gray text classes to app tokens for consistency and contrast. */
+.text-gray-400 {
+  color: var(--color-text-tertiary) !important;
+}
+
+.text-gray-500 {
+  color: var(--color-text-secondary) !important;
+}
+
+.text-gray-600,
+.text-gray-700,
+.text-gray-800,
+.text-gray-900 {
+  color: var(--color-text-primary) !important;
 }
 
 /* ============================================================

@@ -739,7 +739,7 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
                     <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
                     <div className="flex flex-wrap gap-1">
                       {allergyTags.map((tag) => (
-                        <span key={tag} className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                        <span key={tag} className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-warning">
                           {tag}
                         </span>
                       ))}

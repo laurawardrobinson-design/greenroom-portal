@@ -73,12 +73,12 @@ export function ShootManagementTab({
           <span className="flex items-center gap-1.5">
             <span>{shoots.length} {shoots.length !== 1 ? "shoots" : "shoot"}</span>
             {shoots.some(s => !s.dates || s.dates.length === 0) && (
-              <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+              <span className="text-[10px] font-medium text-warning bg-amber-50 px-1.5 py-0.5 rounded">
                 dates missing
               </span>
             )}
             {shoots.some(s => !s.crew || s.crew.length === 0) && (
-              <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+              <span className="text-[10px] font-medium text-warning bg-amber-50 px-1.5 py-0.5 rounded">
                 no crew
               </span>
             )}
@@ -131,7 +131,7 @@ export function ShootManagementTab({
                   ["Invited", "Estimate Submitted", "PO Uploaded", "Invoice Submitted", "Invoice Pre-Approved"].includes(v.status)
                 );
                 return actionVendors.length > 0 ? (
-                  <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-medium text-warning bg-amber-50 px-1.5 py-0.5 rounded">
                     {actionVendors.length} action needed
                   </span>
                 ) : null;
@@ -252,10 +252,10 @@ export function ShootManagementTab({
                     </div>
                     <Badge variant="custom" className={
                       cg.gearItem?.status === "Available"
-                        ? "bg-emerald-50 text-emerald-700"
+                        ? "bg-emerald-50 text-success"
                         : cg.gearItem?.status === "Checked Out"
                         ? "bg-blue-50 text-blue-700"
-                        : "bg-amber-50 text-amber-700"
+                        : "bg-amber-50 text-warning"
                     }>
                       {cg.gearItem?.status}
                     </Badge>

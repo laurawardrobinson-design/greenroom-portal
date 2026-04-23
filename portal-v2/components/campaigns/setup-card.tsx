@@ -191,19 +191,32 @@ export function FlatShotRow({
     .map((link) => deliverables.find((d) => d.id === link.deliverableId))
     .filter(Boolean);
 
+  const shotPillStyle =
+    shot.status === "Complete"
+      ? { color: "var(--status-approved-fg)", backgroundColor: "var(--status-approved-tint)" }
+      : shot.status === "Needs Retouching"
+      ? { color: "var(--status-pending-fg)", backgroundColor: "var(--status-pending-tint)" }
+      : { color: "var(--status-draft-fg)", backgroundColor: "var(--status-draft-tint)" };
+
   return (
-    <tr className={`transition-colors hover:bg-surface-secondary/50 ${
-      shot.status === "Complete" ? "bg-emerald-50/30" : ""
-    }`}>
+    <tr
+      className="transition-colors hover:bg-surface-secondary/50"
+      style={shot.status === "Complete" ? { backgroundColor: "var(--status-approved-tint)" } : undefined}
+    >
       <td className="px-2 py-2">
         {canComplete && (
           <button
             onClick={toggleStatus}
-            className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${
+            style={
               shot.status === "Complete"
-                ? "border-emerald-500 bg-emerald-500 text-white"
+                ? { backgroundColor: "var(--color-success)", borderColor: "var(--color-success)", color: "#fff" }
                 : shot.status === "Needs Retouching"
-                ? "border-amber-400 bg-amber-400 text-white"
+                ? { backgroundColor: "var(--color-warning)", borderColor: "var(--color-warning)", color: "#fff" }
+                : undefined
+            }
+            className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${
+              shot.status === "Complete" || shot.status === "Needs Retouching"
+                ? ""
                 : "border-border hover:border-primary"
             }`}
           >
@@ -215,13 +228,10 @@ export function FlatShotRow({
       <td className="px-3 py-2 text-xs text-text-tertiary whitespace-nowrap">{setupName}</td>
       <td className="px-3 py-2 text-sm font-medium text-text-primary">{shot.description || `Shot ${shotNumber}`}</td>
       <td className="px-3 py-2">
-        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-          shot.status === "Complete"
-            ? "bg-emerald-50 text-emerald-700"
-            : shot.status === "Needs Retouching"
-            ? "bg-amber-50 text-amber-700"
-            : "bg-slate-100 text-slate-600"
-        }`}>
+        <span
+          className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+          style={shotPillStyle}
+        >
           {shot.status}
         </span>
       </td>
@@ -376,15 +386,25 @@ export function SetupCard({
             <p className="text-xs text-text-secondary mb-2">{setup.description}</p>
           )}
 
-          {setup.shots.map((shot) => (
+          {setup.shots.map((shot) => {
+            const shotRowBg =
+              shot.status === "Complete"
+                ? "var(--status-approved-tint)"
+                : shot.status === "Needs Retouching"
+                ? "var(--status-pending-tint)"
+                : undefined;
+            const shotCheckStyle =
+              shot.status === "Complete"
+                ? { backgroundColor: "var(--color-success)", borderColor: "var(--color-success)", color: "#fff" }
+                : shot.status === "Needs Retouching"
+                ? { backgroundColor: "var(--color-warning)", borderColor: "var(--color-warning)", color: "#fff" }
+                : undefined;
+            return (
             <div
               key={shot.id}
+              style={shotRowBg ? { backgroundColor: shotRowBg } : undefined}
               className={`flex items-start gap-2.5 rounded-lg p-2.5 transition-colors ${
-                shot.status === "Complete"
-                  ? "bg-emerald-50/50"
-                  : shot.status === "Needs Retouching"
-                  ? "bg-amber-50/50"
-                  : "bg-surface-secondary"
+                shotRowBg ? "" : "bg-surface-secondary"
               } ${onSetMode ? "min-h-[44px]" : ""} ${selectMode && selectedShots.has(shot.id) ? "ring-1 ring-primary/40" : ""}`}
             >
               {selectMode && (
@@ -399,15 +419,10 @@ export function SetupCard({
                 <div className="flex flex-col items-center gap-0.5 mt-0.5 shrink-0">
                   <button
                     onClick={() => toggleShotStatus(shot.id, shot.status)}
+                    style={shotCheckStyle}
                     className={`flex items-center justify-center rounded border transition-colors ${
                       onSetMode ? "h-7 w-7" : "h-5 w-5"
-                    } ${
-                      shot.status === "Complete"
-                        ? "border-emerald-500 bg-emerald-500 text-white"
-                        : shot.status === "Needs Retouching"
-                        ? "border-amber-400 bg-amber-400 text-white"
-                        : "border-border hover:border-primary"
-                    }`}
+                    } ${shotCheckStyle ? "" : "border-border hover:border-primary"}`}
                     title={shot.status === "Complete" ? "Mark pending" : "Mark complete"}
                   >
                     {shot.status === "Complete" && <Check className="h-3 w-3" />}
@@ -425,7 +440,7 @@ export function SetupCard({
                           onMutate();
                         } catch { /* ignore */ }
                       }}
-                      className="text-text-tertiary hover:text-amber-500 transition-colors"
+                      className="text-text-tertiary transition-colors hover:text-warning"
                       title="Flag for retouching"
                     >
                       <AlertTriangle className="h-2.5 w-2.5" />
@@ -451,7 +466,7 @@ export function SetupCard({
                 />
 
                 {shot.status === "Needs Retouching" && (
-                  <Badge variant="custom" className="bg-amber-100 text-amber-700 mt-1 text-[10px]">
+                  <Badge variant="warning" className="mt-1 text-[10px]">
                     Needs Retouching
                   </Badge>
                 )}
@@ -465,7 +480,8 @@ export function SetupCard({
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
 
           {canEdit && (
             addingShot ? (

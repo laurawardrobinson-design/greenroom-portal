@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { GEAR_CATEGORIES } from "@/lib/constants/categories";
@@ -78,11 +79,11 @@ const fetcher = (url: string) =>
   });
 
 const STATUS_BADGE: Record<string, string> = {
-  Available: "bg-emerald-50 text-emerald-700",
+  Available: "bg-emerald-50 text-success",
   Reserved: "bg-blue-50 text-blue-700",
-  "Checked Out": "bg-amber-50 text-amber-700",
+  "Checked Out": "bg-amber-50 text-warning",
   "Under Maintenance": "bg-purple-50 text-purple-700",
-  "In Repair": "bg-red-50 text-red-600",
+  "In Repair": "bg-red-50 text-error",
 };
 
 const CONDITIONS: GearCondition[] = [
@@ -414,14 +415,15 @@ export default function InventoryPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-0">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 pb-4 border-b border-border">
-          <h1 className="text-2xl font-bold text-text-primary">Gear</h1>
-          <Button variant="secondary" onClick={() => setShowScanner(true)}>
-            <ScanLine className="h-4 w-4" />
-            Scan Gear
-          </Button>
-        </div>
+        <PageHeader
+          title="Gear"
+          actions={(
+            <Button variant="secondary" onClick={() => setShowScanner(true)}>
+              <ScanLine className="h-4 w-4" />
+              Scan Gear
+            </Button>
+          )}
+        />
 
         <PageTabs
           tabs={[
@@ -814,7 +816,7 @@ export default function InventoryPage() {
                         <Package className="h-3 w-3" />
                         {totalCount} item{totalCount !== 1 ? "s" : ""}
                       </span>
-                      <Badge variant="custom" className="bg-emerald-50 text-emerald-700">
+                      <Badge variant="custom" className="bg-emerald-50 text-success">
                         {availCount} available
                       </Badge>
                     </div>
@@ -1008,9 +1010,9 @@ export default function InventoryPage() {
                 const gearItem = allItems.find((i) => i.id === m.gearItemId);
                 const statusColor: Record<string, string> = {
                   Scheduled: "bg-blue-50 text-blue-700",
-                  "In Progress": "bg-amber-50 text-amber-700",
+                  "In Progress": "bg-amber-50 text-warning",
                   "Sent for Repair": "bg-purple-50 text-purple-700",
-                  Completed: "bg-emerald-50 text-emerald-700",
+                  Completed: "bg-emerald-50 text-success",
                   Cancelled: "bg-slate-100 text-slate-500",
                 };
                 return (
@@ -1018,7 +1020,7 @@ export default function InventoryPage() {
                     key={m.id}
                     className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4"
                   >
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${m.type === "Repair" ? "bg-red-50 text-red-600" : "bg-purple-50 text-purple-700"}`}>
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${m.type === "Repair" ? "bg-red-50 text-error" : "bg-purple-50 text-purple-700"}`}>
                       <Wrench className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -1223,7 +1225,7 @@ export default function InventoryPage() {
             {cartItems.filter((i) => conflictIds.has(i.id)).map((item) => (
               <li key={item.id} className="flex items-center gap-3 px-3.5 py-2.5">
                 <span className="text-sm font-medium text-text-primary flex-1 truncate">{item.name}</span>
-                <span className="text-xs text-amber-600 font-medium">{item.status}</span>
+                <span className="text-xs text-warning font-medium">{item.status}</span>
               </li>
             ))}
           </ul>

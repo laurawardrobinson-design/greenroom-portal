@@ -58,7 +58,7 @@ export function CampaignQuickStats({
         ) : (
           <p
             className={`text-base font-semibold leading-tight cursor-pointer transition-colors ${
-              isOverdue ? "text-red-600" : assetsDeliveryDate ? "text-text-primary hover:text-primary" : "text-text-tertiary hover:text-primary"
+              isOverdue ? "text-error" : assetsDeliveryDate ? "text-text-primary hover:text-primary" : "text-text-tertiary hover:text-primary"
             }`}
             onClick={() => onUpdateAssetsDate && setEditingDate(true)}
           >

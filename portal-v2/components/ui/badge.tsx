@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 type BadgeVariant =
   | "default"
@@ -14,13 +14,27 @@ interface BadgeProps {
   children: ReactNode;
 }
 
-const variantStyles: Record<BadgeVariant, string> = {
-  default: "bg-slate-100 text-slate-700",
-  success: "bg-emerald-50 text-emerald-700",
-  warning: "bg-amber-50 text-amber-700",
-  error: "bg-red-50 text-red-600",
-  info: "bg-blue-50 text-blue-700",
-  custom: "",
+const variantStyle: Record<Exclude<BadgeVariant, "custom">, CSSProperties> = {
+  default: {
+    color: "var(--status-draft-fg)",
+    backgroundColor: "var(--status-draft-tint)",
+  },
+  success: {
+    color: "var(--status-approved-fg)",
+    backgroundColor: "var(--status-approved-tint)",
+  },
+  warning: {
+    color: "var(--status-pending-fg)",
+    backgroundColor: "var(--status-pending-tint)",
+  },
+  error: {
+    color: "var(--status-rejected-fg)",
+    backgroundColor: "var(--status-rejected-tint)",
+  },
+  info: {
+    color: "var(--status-info-fg)",
+    backgroundColor: "var(--status-info-tint)",
+  },
 };
 
 export function Badge({
@@ -28,14 +42,12 @@ export function Badge({
   className = "",
   children,
 }: BadgeProps) {
+  const style = variant === "custom" ? undefined : variantStyle[variant];
   return (
     <span
-      className={`
-        inline-flex items-center rounded-full px-2.5 py-0.5
-        text-xs font-medium tracking-wide
-        ${variantStyles[variant]}
-        ${className}
-      `}
+      data-variant={variant}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium tracking-wide ${className}`}
+      style={style}
     >
       {children}
     </span>

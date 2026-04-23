@@ -1,21 +1,27 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { StatusPill, type StatusVariant } from "@/components/ui/status-pill";
 import type { PRDocStatus } from "@/types/domain";
 import { PR_STATUS_LABELS } from "@/types/domain";
 
-const statusStyles: Record<PRDocStatus, string> = {
-  draft: "bg-slate-100 text-slate-600",
-  submitted: "bg-amber-50 text-amber-700",
-  forwarded: "bg-sky-50 text-sky-700",
-  fulfilled: "bg-emerald-50 text-emerald-700",
-  cancelled: "bg-slate-100 text-slate-400",
+const VARIANT: Record<PRDocStatus, StatusVariant> = {
+  draft: "draft",
+  submitted: "pending",
+  forwarded: "info",
+  fulfilled: "approved",
+  cancelled: "draft",
 };
 
-export function PRStatusPill({ status }: { status: PRDocStatus }) {
+export function PRStatusPill({
+  status,
+  className = "",
+}: {
+  status: PRDocStatus;
+  className?: string;
+}) {
   return (
-    <Badge variant="custom" className={statusStyles[status]}>
+    <StatusPill variant={VARIANT[status]} className={className}>
       {PR_STATUS_LABELS[status]}
-    </Badge>
+    </StatusPill>
   );
 }

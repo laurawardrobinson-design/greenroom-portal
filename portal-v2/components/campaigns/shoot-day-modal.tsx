@@ -29,13 +29,13 @@ const SHOOT_ROLES = [
 const ROLE_COLORS: Record<string, string> = {
   Photographer: "bg-blue-50 text-blue-700",
   "Art Director": "bg-purple-50 text-purple-700",
-  Producer: "bg-amber-50 text-amber-700",
+  Producer: "bg-amber-50 text-warning",
   "Digital Tech": "bg-cyan-50 text-cyan-700",
   Stylist: "bg-pink-50 text-pink-700",
   "Food Stylist": "bg-pink-50 text-pink-700",
-  "Prop Stylist": "bg-rose-50 text-rose-700",
+  "Prop Stylist": "bg-rose-50 text-error",
   PA: "bg-slate-100 text-slate-600",
-  "Studio Manager": "bg-emerald-50 text-emerald-700",
+  "Studio Manager": "bg-emerald-50 text-success",
   Coordinator: "bg-indigo-50 text-indigo-700",
 };
 

@@ -15,6 +15,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { PUBLIX_PRODUCTS, getProductIcon } from "@/components/onboarding/onboarding-modal";
@@ -48,12 +49,6 @@ const fetcher = (url: string) =>
 
 type Tab = "team" | "vendors";
 
-const ROLE_BADGE: Record<string, string> = {
-  Admin: "bg-purple-50 text-purple-700",
-  Producer: "bg-blue-50 text-blue-700",
-  Studio: "bg-teal-50 text-teal-700",
-};
-
 const ROLES = ["Admin", "Producer", "Studio"] as const;
 
 export default function ContactsPage() {
@@ -77,10 +72,7 @@ export default function ContactsPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-0">
-        {/* Header */}
-        <div className="pb-4 border-b border-border">
-          <h1 className="text-2xl font-bold text-text-primary">Contacts</h1>
-        </div>
+        <PageHeader title="Contacts" />
 
         <PageTabs
           tabs={[
@@ -318,7 +310,7 @@ function TeamSection({
                         <AlertCircle className="h-3 w-3 shrink-0 mt-1 text-amber-500" />
                         <div className="flex flex-wrap gap-1">
                           {person.dietaryRestrictions.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                            <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700">{item}</span>
+                            <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-warning">{item}</span>
                           ))}
                         </div>
                       </div>
@@ -328,7 +320,7 @@ function TeamSection({
                         <AlertCircle className="h-3 w-3 shrink-0 mt-1 text-red-500" />
                         <div className="flex flex-wrap gap-1">
                           {person.allergies.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                            <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] text-red-700">{item}</span>
+                            <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] text-error">{item}</span>
                           ))}
                         </div>
                       </div>
@@ -728,7 +720,7 @@ function ContactDetailModal({
                 ) : (
                   <div className="flex flex-wrap gap-1">
                     {person.dietaryRestrictions ? person.dietaryRestrictions.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                      <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700">{item}</span>
+                      <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-warning">{item}</span>
                     )) : <span className="text-xs text-text-tertiary">—</span>}
                   </div>
                 )}
@@ -756,7 +748,7 @@ function ContactDetailModal({
                 ) : (
                   <div className="flex flex-wrap gap-1">
                     {person.allergies ? person.allergies.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                      <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700">{item}</span>
+                      <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-error">{item}</span>
                     )) : <span className="text-xs text-text-tertiary">—</span>}
                   </div>
                 )}
@@ -892,7 +884,7 @@ function ContactDetailModal({
                         type="button"
                         onClick={handleClearGoal}
                         disabled={savingGoal}
-                        className="text-[10px] text-red-500 hover:text-red-600 transition-colors px-2 py-1"
+                        className="text-[10px] text-red-500 hover:text-error transition-colors px-2 py-1"
                       >
                         Clear goal
                       </button>
@@ -1049,7 +1041,7 @@ function VendorSection({
                         <AlertCircle className="h-3 w-3 shrink-0 mt-1 text-amber-500" />
                         <div className="flex flex-wrap gap-1">
                           {vendor.dietaryRestrictions.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                            <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700">{item}</span>
+                            <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-warning">{item}</span>
                           ))}
                         </div>
                       </div>
@@ -1059,7 +1051,7 @@ function VendorSection({
                         <AlertCircle className="h-3 w-3 shrink-0 mt-1 text-red-500" />
                         <div className="flex flex-wrap gap-1">
                           {vendor.allergies.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                            <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] text-red-700">{item}</span>
+                            <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] text-error">{item}</span>
                           ))}
                         </div>
                       </div>
@@ -1334,7 +1326,7 @@ function VendorDetailModal({
               ) : (
                 <div className="flex flex-wrap gap-1">
                   {vendor.allergies ? vendor.allergies.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                    <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700">{item}</span>
+                    <span key={item} className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-error">{item}</span>
                   )) : <span className="text-xs text-text-tertiary">—</span>}
                 </div>
               )}
@@ -1357,7 +1349,7 @@ function VendorDetailModal({
               </div>
               <div className="flex flex-wrap gap-1">
                 {vendor.dietaryRestrictions.split(",").map((s) => s.trim()).filter(Boolean).map((item) => (
-                  <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700">{item}</span>
+                  <span key={item} className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-warning">{item}</span>
                 ))}
               </div>
             </div>

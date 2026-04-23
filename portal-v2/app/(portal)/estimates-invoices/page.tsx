@@ -32,16 +32,16 @@ const STATUS_LABEL: Partial<Record<CampaignVendorStatus, string>> = {
 };
 
 const STATUS_STYLE: Partial<Record<CampaignVendorStatus, string>> = {
-  "Estimate Submitted":  "bg-amber-50 text-amber-700 border-amber-200",
-  "Estimate Approved":   "bg-amber-50 text-amber-700 border-amber-200",
-  "Rejected":            "bg-red-50 text-red-700 border-red-200",
+  "Estimate Submitted":  "bg-amber-50 text-warning border-amber-200",
+  "Estimate Approved":   "bg-amber-50 text-warning border-amber-200",
+  "Rejected":            "bg-red-50 text-error border-red-200",
   "PO Uploaded":         "bg-blue-50 text-blue-700 border-blue-200",
-  "PO Signed":           "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "PO Signed":           "bg-emerald-50 text-success border-emerald-200",
   "Shoot Complete":      "bg-surface-secondary text-text-secondary border-border",
-  "Invoice Submitted":   "bg-amber-50 text-amber-700 border-amber-200",
+  "Invoice Submitted":   "bg-amber-50 text-warning border-amber-200",
   "Invoice Pre-Approved":"bg-blue-50 text-blue-700 border-blue-200",
-  "Invoice Approved":    "bg-emerald-50 text-emerald-700 border-emerald-200",
-  "Paid":                "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Invoice Approved":    "bg-emerald-50 text-success border-emerald-200",
+  "Paid":                "bg-emerald-50 text-success border-emerald-200",
 };
 
 // ── Active/Past tab switcher ──────────────────────────────────────────────────
@@ -110,15 +110,15 @@ function DocRow({ row, onOpen }: { row: PendingRow; onOpen: () => void }) {
             Inv:{" "}
             <span className="font-medium text-text-primary">{formatCurrency(row.invoiceTotal)}</span>
             {isOver && (
-              <span className="text-[10px] font-semibold text-amber-600">+{formatCurrency(diff)}</span>
+              <span className="text-[10px] font-semibold text-warning">+{formatCurrency(diff)}</span>
             )}
             {isUnder && (
-              <span className="text-[10px] font-semibold text-emerald-600">{formatCurrency(diff)}</span>
+              <span className="text-[10px] font-semibold text-success">{formatCurrency(diff)}</span>
             )}
           </span>
         )}
         {row.paymentAmount > 0 && (
-          <span className="text-text-tertiary">Paid: <span className="font-medium text-emerald-700">{formatCurrency(row.paymentAmount)}</span></span>
+          <span className="text-text-tertiary">Paid: <span className="font-medium text-success">{formatCurrency(row.paymentAmount)}</span></span>
         )}
       </div>
 

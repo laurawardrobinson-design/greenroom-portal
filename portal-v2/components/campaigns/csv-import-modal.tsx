@@ -129,7 +129,7 @@ export function CsvImportModal({ open, onClose, onImported }: Props) {
               {result.errorDetails.map((err, i) => (
                 <div key={i} className="flex items-start gap-2 text-xs rounded-lg bg-red-50 p-2">
                   <AlertTriangle className="h-3.5 w-3.5 text-red-500 mt-0.5 shrink-0" />
-                  <span className="text-red-700">
+                  <span className="text-error">
                     Row {err.row} ({err.wfNumber}): {err.error}
                   </span>
                 </div>
@@ -148,12 +148,12 @@ export function CsvImportModal({ open, onClose, onImported }: Props) {
             </p>
             <div className="flex gap-2">
               {validRows.length > 0 && (
-                <Badge variant="custom" className="bg-emerald-50 text-emerald-700">
+                <Badge variant="custom" className="bg-emerald-50 text-success">
                   {validRows.length} valid
                 </Badge>
               )}
               {errorRows.length > 0 && (
-                <Badge variant="custom" className="bg-red-50 text-red-700">
+                <Badge variant="custom" className="bg-red-50 text-error">
                   {errorRows.length} errors
                 </Badge>
               )}
@@ -194,11 +194,11 @@ export function CsvImportModal({ open, onClose, onImported }: Props) {
                     </td>
                     <td className="px-3 py-2">
                       {row.errors.length > 0 ? (
-                        <span className="text-red-600" title={row.errors.join(", ")}>
+                        <span className="text-error" title={row.errors.join(", ")}>
                           {row.errors.join(", ")}
                         </span>
                       ) : (
-                        <span className="text-emerald-600">Ready</span>
+                        <span className="text-success">Ready</span>
                       )}
                     </td>
                   </tr>

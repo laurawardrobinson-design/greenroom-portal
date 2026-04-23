@@ -40,7 +40,7 @@ function stageLabel(stage: string): string {
 function stageClass(stage: string): string {
   const base = "rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider";
   if (stage === "template_ready") return `${base} border-primary/30 bg-primary/10 text-primary`;
-  if (stage === "drafting") return `${base} border-amber-400/30 bg-amber-400/10 text-amber-700 dark:text-amber-400`;
+  if (stage === "drafting") return `${base} border-amber-400/30 bg-amber-400/10 text-warning dark:text-amber-400`;
   if (stage === "needs_template") return `${base} border-border bg-surface-2 text-text-secondary`;
   return `${base} border-border bg-surface-2 text-text-tertiary`;
 }

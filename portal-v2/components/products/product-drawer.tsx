@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import useSWR from "swr";
-import type { Product, ProductDepartment } from "@/types/domain";
+import type { Product, ProductDepartment, ProductLifecyclePhase } from "@/types/domain";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { PRODUCT_DEPARTMENTS } from "@/lib/validation/products.schema";
 import { Button } from "@/components/ui/button";
@@ -31,13 +31,27 @@ const fetcher = (url: string) =>
   });
 
 export const DEPT_COLORS: Record<string, string> = {
-  Deli: "bg-orange-50 text-orange-700",
-  Bakery: "bg-amber-50 text-amber-700",
-  "Meat-Seafood": "bg-red-50 text-red-700",
-  Produce: "bg-emerald-50 text-emerald-700",
+  Deli: "bg-orange-50 text-warning",
+  Bakery: "bg-amber-50 text-warning",
+  "Meat-Seafood": "bg-red-50 text-error",
+  Produce: "bg-emerald-50 text-success",
   Grocery: "bg-blue-50 text-blue-700",
   Floral: "bg-pink-50 text-pink-700",
   Other: "bg-slate-50 text-slate-600",
+};
+
+export const PHASE_COLORS: Record<ProductLifecyclePhase, string> = {
+  planning: "bg-violet-50 text-violet-700",
+  coming_soon: "bg-sky-50 text-sky-700",
+  live: "bg-emerald-50 text-success",
+  discontinued: "bg-slate-100 text-slate-500",
+};
+
+export const PHASE_LABELS: Record<ProductLifecyclePhase, string> = {
+  planning: "Planning",
+  coming_soon: "Coming Soon",
+  live: "Live",
+  discontinued: "Discontinued",
 };
 
 // Auto-expanding textarea
@@ -102,6 +116,12 @@ export function ProductDrawer({
       user?.role === "Post Producer" ||
       user?.role === "Brand Marketing Manager");
 
+  const canChangePhase =
+    user?.role === "Admin" ||
+    user?.role === "Producer" ||
+    user?.role === "Post Producer" ||
+    user?.role === "Brand Marketing Manager";
+
   // Form state
   const [name, setName] = useState(product?.name ?? "");
   const [department, setDepartment] = useState<ProductDepartment | "">(product?.department ?? "");
@@ -117,6 +137,11 @@ export function ProductDrawer({
   const [deleting, setDeleting] = useState(false);
   const [showDeptDropdown, setShowDeptDropdown] = useState(false);
   const deptDropdownRef = useRef<HTMLDivElement>(null);
+  const [phase, setPhase] = useState<ProductLifecyclePhase>(
+    product?.lifecyclePhase ?? "live"
+  );
+  const [showPhaseDropdown, setShowPhaseDropdown] = useState(false);
+  const phaseDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dept dropdown on outside click
   useEffect(() => {
@@ -129,6 +154,17 @@ export function ProductDrawer({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [showDeptDropdown]);
+
+  useEffect(() => {
+    if (!showPhaseDropdown) return;
+    function handler(e: MouseEvent) {
+      if (phaseDropdownRef.current && !phaseDropdownRef.current.contains(e.target as Node)) {
+        setShowPhaseDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showPhaseDropdown]);
 
   // Pcom import
   const [pcomUrl, setPcomUrl] = useState("");
@@ -196,6 +232,7 @@ export function ProductDrawer({
     setPcomLink(p?.pcomLink ?? "");
     setRpGuideUrl(p?.rpGuideUrl ?? "");
     setImageUrl(p?.imageUrl ?? null);
+    setPhase(p?.lifecyclePhase ?? "live");
     imageFileRef.current = null;
   }
 
@@ -240,6 +277,7 @@ export function ProductDrawer({
         pcomLink: pcomLink || null,
         rpGuideUrl: rpGuideUrl || null,
         imageUrl: finalImageUrl || null,
+        lifecyclePhase: phase,
       };
 
       const url = current ? `/api/products/${current.id}` : "/api/products";
@@ -275,6 +313,25 @@ export function ProductDrawer({
       toast("error", "Failed to delete product");
     } finally {
       setDeleting(false);
+    }
+  }
+
+  async function savePhase(next: ProductLifecyclePhase) {
+    setPhase(next);
+    setShowPhaseDropdown(false);
+    if (!current) return;
+    try {
+      const res = await fetch(`/api/products/${current.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lifecyclePhase: next }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const saved: Product = await res.json();
+      setCurrent(saved);
+      onSaved(saved);
+    } catch {
+      toast("error", "Failed to update phase");
     }
   }
 
@@ -368,6 +425,38 @@ export function ProductDrawer({
               </div>
             )}
           </div>
+          <div ref={phaseDropdownRef} className="relative">
+            <button
+              type="button"
+              onClick={() => canChangePhase && !isNew && setShowPhaseDropdown((v) => !v)}
+              disabled={!canChangePhase || isNew}
+              className={`text-xs font-medium rounded-full px-2 py-0.5 inline-flex items-center gap-1 transition-opacity ${canChangePhase && !isNew ? "hover:opacity-80" : ""} ${PHASE_COLORS[phase]}`}
+              title={canChangePhase ? "Change lifecycle phase" : "Lifecycle phase"}
+            >
+              {PHASE_LABELS[phase]}
+              {canChangePhase && !isNew && (
+                <svg className="h-2.5 w-2.5 opacity-60" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M1 1l4 4 4-4"/>
+                </svg>
+              )}
+            </button>
+            {showPhaseDropdown && (
+              <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-lg border border-border bg-surface shadow-lg py-1">
+                {(["planning","coming_soon","live","discontinued"] as ProductLifecyclePhase[]).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => savePhase(p)}
+                    className={`w-full text-left px-3 py-1.5 text-xs font-medium transition-colors hover:bg-surface-secondary ${phase === p ? "opacity-100" : "opacity-70 hover:opacity-100"}`}
+                  >
+                    <span className={`inline-flex rounded-full px-2 py-0.5 ${PHASE_COLORS[p]}`}>
+                      {PHASE_LABELS[p]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <input
             type="text"
             value={itemCode}
@@ -393,7 +482,7 @@ export function ProductDrawer({
             <div className="flex items-center gap-2">
               <Link2 className="h-4 w-4 text-primary shrink-0" />
               <span className="text-sm font-semibold text-text-primary">Add from link</span>
-              {pcomFetched && <CheckCircle2 className="h-4 w-4 text-emerald-600 ml-auto shrink-0" />}
+              {pcomFetched && <CheckCircle2 className="h-4 w-4 text-success ml-auto shrink-0" />}
             </div>
             <div className="flex gap-2">
               <input
@@ -413,9 +502,9 @@ export function ProductDrawer({
                 {pcomFetching ? "Fetching…" : "Import"}
               </button>
             </div>
-            {pcomError && <p className="text-xs text-red-600">{pcomError}</p>}
+            {pcomError && <p className="text-xs text-error">{pcomError}</p>}
             {pcomFetched && (
-              <p className="text-xs text-emerald-700 font-medium">
+              <p className="text-xs text-success font-medium">
                 Imported: {pcomImportedFields.join(", ")}.
                 {!pcomImportedFields.includes("image") && " Add an image manually below."}
               </p>
@@ -552,7 +641,7 @@ export function ProductDrawer({
               onChange={(e) => setRestrictions(e.target.value)}
               readOnly={!editMode}
               placeholder={editMode ? "None" : "None"}
-              className={`w-full bg-transparent text-sm font-medium placeholder:text-text-tertiary italic focus:outline-none resize-none ${!editMode ? "pointer-events-none" : ""} ${restrictions ? "text-orange-700" : "text-text-primary"}`}
+              className={`w-full bg-transparent text-sm font-medium placeholder:text-text-tertiary italic focus:outline-none resize-none ${!editMode ? "pointer-events-none" : ""} ${restrictions ? "text-warning" : "text-text-primary"}`}
             />
           </div>
 

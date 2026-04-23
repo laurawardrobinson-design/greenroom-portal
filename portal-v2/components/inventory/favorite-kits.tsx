@@ -17,8 +17,8 @@ import {
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const STATUS_BADGE: Record<string, string> = {
-  Available: "bg-emerald-50 text-emerald-700",
-  "Checked Out": "bg-amber-50 text-amber-700",
+  Available: "bg-emerald-50 text-success",
+  "Checked Out": "bg-amber-50 text-warning",
   Reserved: "bg-blue-50 text-blue-700",
   "Under Maintenance": "bg-purple-50 text-purple-700",
 };

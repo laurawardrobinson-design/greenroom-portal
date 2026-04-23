@@ -141,7 +141,7 @@ export function TodayView({ userRole, onReserveSpace }: TodayViewProps) {
   const SHOOT_TYPE_STYLES: Record<string, string> = {
     Photo: "bg-blue-50 text-blue-700 border-blue-200",
     Video: "bg-purple-50 text-purple-700 border-purple-200",
-    Hybrid: "bg-amber-50 text-amber-700 border-amber-200",
+    Hybrid: "bg-amber-50 text-warning border-amber-200",
     Other: "bg-slate-50 text-slate-600 border-slate-200",
   };
 
@@ -304,7 +304,7 @@ export function TodayView({ userRole, onReserveSpace }: TodayViewProps) {
               Food & Crafty
             </h3>
             {(meals ?? []).filter((m) => m.status === "pending").length > 0 && (
-              <Badge variant="custom" className="ml-auto text-[10px] bg-amber-50 text-amber-700 border border-amber-200">
+              <Badge variant="custom" className="ml-auto text-[10px] bg-amber-50 text-warning border border-amber-200">
                 {(meals ?? []).filter((m) => m.status === "pending").length} pending
               </Badge>
             )}

@@ -33,7 +33,7 @@ export const DEPT_COLORS: Record<
   Bakery: {
     bg: "bg-amber-50",
     border: "border-amber-200",
-    text: "text-amber-800",
+    text: "text-warning",
     dot: "bg-amber-500",
   },
   Produce: {
@@ -45,13 +45,13 @@ export const DEPT_COLORS: Record<
   Deli: {
     bg: "bg-orange-50",
     border: "border-orange-200",
-    text: "text-orange-800",
+    text: "text-warning",
     dot: "bg-orange-500",
   },
   "Meat-Seafood": {
     bg: "bg-rose-50",
     border: "border-rose-200",
-    text: "text-rose-800",
+    text: "text-error",
     dot: "bg-rose-500",
   },
   Grocery: {
@@ -270,7 +270,7 @@ function DayCellChips({
               title={`${e.campaign.name} · ${e.itemCount} items${e.pickupTime ? ` · ${e.pickupTime}` : ""}`}
             >
               <span className="font-medium tabular-nums leading-none">
-                {e.campaign.wfNumber || e.docNumber}
+                {e.campaign.wfNumber || "Request"}
               </span>
             </button>
           );
@@ -304,7 +304,7 @@ function DayCellChips({
             } · ${totalItems} items`}
           >
             <div className="text-[10px] font-semibold text-text-primary tabular-nums leading-tight truncate">
-              {first.campaign.wfNumber || first.docNumber}
+              {first.campaign.wfNumber || "Request"}
             </div>
             <div className="text-[10px] text-text-tertiary leading-tight truncate">
               {first.campaign.name}

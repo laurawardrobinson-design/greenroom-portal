@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import type { GearItem } from "@/types/domain";
 
 const STATUS_BADGE: Record<string, string> = {
-  Available: "bg-emerald-50 text-emerald-700",
-  "Checked Out": "bg-amber-50 text-amber-700",
+  Available: "bg-emerald-50 text-success",
+  "Checked Out": "bg-amber-50 text-warning",
   Reserved: "bg-blue-50 text-blue-700",
 };
 
@@ -65,7 +65,7 @@ export function BatchCart({
             <span className="text-xs text-text-tertiary">Clear all?</span>
             <button
               onClick={() => { onClear(); setConfirmClear(false); }}
-              className="text-xs text-red-600 font-medium hover:text-red-700 transition-colors"
+              className="text-xs text-error font-medium hover:text-error transition-colors"
             >
               Yes
             </button>
@@ -103,7 +103,7 @@ export function BatchCart({
                   {item.name}
                 </p>
                 {isConflict ? (
-                  <p className="text-xs text-amber-600">Status conflict — needs confirmation</p>
+                  <p className="text-xs text-warning">Status conflict — needs confirmation</p>
                 ) : (
                   <p className="text-xs text-text-tertiary">{item.brand} {item.model}</p>
                 )}
@@ -133,7 +133,7 @@ export function BatchCart({
             <ArrowUpFromLine className="h-4 w-4" />
             Check Out {availableCount + (cartMode === "checkout" ? conflictCount : 0)}
             {conflictCount > 0 && cartMode === "checkout" && (
-              <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400/30 text-[10px] font-bold text-amber-700">
+              <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400/30 text-[10px] font-bold text-warning">
                 !
               </span>
             )}
@@ -149,7 +149,7 @@ export function BatchCart({
             <ArrowDownToLine className="h-4 w-4" />
             Check In {checkedOutCount + (cartMode === "checkin" ? conflictCount : 0)}
             {conflictCount > 0 && cartMode === "checkin" && (
-              <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400/30 text-[10px] font-bold text-amber-700">
+              <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400/30 text-[10px] font-bold text-warning">
                 !
               </span>
             )}

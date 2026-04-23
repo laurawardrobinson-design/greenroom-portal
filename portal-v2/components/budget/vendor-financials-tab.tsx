@@ -65,15 +65,15 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  "Estimate Submitted": "bg-amber-50 text-amber-700",
+  "Estimate Submitted": "bg-amber-50 text-warning",
   "Estimate Approved": "bg-blue-50 text-blue-700",
   "PO Uploaded": "bg-blue-50 text-blue-700",
   "PO Signed": "bg-blue-50 text-blue-700",
   "Shoot Complete": "bg-purple-50 text-purple-700",
-  "Invoice Submitted": "bg-amber-50 text-amber-700",
-  "Invoice Pre-Approved": "bg-amber-50 text-amber-700",
-  "Invoice Approved": "bg-emerald-50 text-emerald-700",
-  "Paid": "bg-emerald-50 text-emerald-700",
+  "Invoice Submitted": "bg-amber-50 text-warning",
+  "Invoice Pre-Approved": "bg-amber-50 text-warning",
+  "Invoice Approved": "bg-emerald-50 text-success",
+  "Paid": "bg-emerald-50 text-success",
 };
 
 // Status ordering for "at or past" checks
@@ -91,8 +91,8 @@ type DocColor = "dim" | "default" | "amber" | "green";
 const DOC_COLOR_CLASSES: Record<DocColor, string> = {
   dim: "text-text-tertiary/20",
   default: "text-text-tertiary hover:text-primary",
-  amber: "text-amber-500 hover:text-amber-600",
-  green: "text-emerald-500 hover:text-emerald-600",
+  amber: "text-amber-500 hover:text-warning",
+  green: "text-emerald-500 hover:text-success",
 };
 
 // Vendor lifecycle stages shown as a labeled 7-step progress bar, one segment
@@ -159,8 +159,8 @@ function DocActionChip({
   onOpen: (url: string, fileName: string) => void;
 }) {
   const toneClass =
-    color === "green" ? "text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100" :
-    color === "amber" ? "text-amber-700 border-amber-200 bg-amber-50 hover:bg-amber-100" :
+    color === "green" ? "text-success border-emerald-200 bg-emerald-50 hover:bg-emerald-100" :
+    color === "amber" ? "text-warning border-amber-200 bg-amber-50 hover:bg-amber-100" :
     color === "dim"   ? "text-text-tertiary/50 border-border bg-surface-secondary cursor-default" :
                         "text-text-secondary border-border bg-surface-secondary hover:bg-surface";
   if (!url) {
@@ -209,7 +209,7 @@ function PoActionChip({
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onClick(); }}
-        className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-600 hover:bg-emerald-100 transition-colors"
+        className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-success hover:bg-emerald-100 transition-colors"
       >
         <FileText className="h-3.5 w-3.5" />
         PO uploaded
@@ -221,7 +221,7 @@ function PoActionChip({
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onClick(); }}
-        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700 hover:bg-amber-100 transition-colors"
+        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-warning hover:bg-amber-100 transition-colors"
       >
         <FilePlus className="h-3.5 w-3.5" />
         Send PO
@@ -233,7 +233,7 @@ function PoActionChip({
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onClick(); }}
-        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700 hover:bg-amber-100 transition-colors"
+        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-warning hover:bg-amber-100 transition-colors"
       >
         <FileText className="h-3.5 w-3.5" />
         PO awaiting signature
@@ -267,7 +267,7 @@ function PoSignedChip({
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onOpen(poSignedFileUrl, "Signed PO"); }}
-        className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-600 hover:bg-emerald-100 transition-colors"
+        className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-success hover:bg-emerald-100 transition-colors"
       >
         <PenLine className="h-3.5 w-3.5" />
         Signed PO
@@ -275,7 +275,7 @@ function PoSignedChip({
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-600">
+    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-success">
       <PenLine className="h-3.5 w-3.5" />
       Signed
     </span>
@@ -349,7 +349,7 @@ function PoActionIcon({
       <button
         title="PO signed — click to manage"
         onClick={(e) => { e.stopPropagation(); onClick(); }}
-        className="flex items-center justify-center text-emerald-500 hover:text-emerald-600 transition-colors"
+        className="flex items-center justify-center text-emerald-500 hover:text-success transition-colors"
       >
         <FileText className="h-3.5 w-3.5" />
       </button>
@@ -362,7 +362,7 @@ function PoActionIcon({
       <button
         title="Upload PO and send for signature"
         onClick={(e) => { e.stopPropagation(); onClick(); }}
-        className="flex items-center justify-center text-amber-500 hover:text-amber-600 transition-colors"
+        className="flex items-center justify-center text-amber-500 hover:text-warning transition-colors"
       >
         <FilePlus className="h-3.5 w-3.5" />
       </button>
@@ -375,7 +375,7 @@ function PoActionIcon({
       <button
         title="PO sent — awaiting signature"
         onClick={(e) => { e.stopPropagation(); onClick(); }}
-        className="flex items-center justify-center text-amber-500 hover:text-amber-600 transition-colors"
+        className="flex items-center justify-center text-amber-500 hover:text-warning transition-colors"
       >
         <FileText className="h-3.5 w-3.5" />
       </button>
@@ -417,7 +417,7 @@ function PoSignedIcon({
       <button
         title="View signed PO"
         onClick={(e) => { e.stopPropagation(); onOpen(poSignedFileUrl, "Signed PO"); }}
-        className="flex items-center justify-center text-emerald-500 hover:text-emerald-600 transition-colors"
+        className="flex items-center justify-center text-emerald-500 hover:text-success transition-colors"
       >
         <PenLine className="h-3.5 w-3.5" />
       </button>
@@ -565,7 +565,7 @@ export function VendorFinancialsTab() {
                           <div className="text-right shrink-0">
                             {amountToShow !== null ? (
                               <>
-                                <p className={`text-sm font-semibold ${isOver ? "text-red-600" : "text-text-primary"}`}>
+                                <p className={`text-sm font-semibold ${isOver ? "text-error" : "text-text-primary"}`}>
                                   {formatCurrency(amountToShow)}
                                 </p>
                                 {hasInvoice && hasEstimate && (

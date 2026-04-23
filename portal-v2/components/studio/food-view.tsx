@@ -116,7 +116,7 @@ export function FoodView({ userRole }: FoodViewProps) {
       {(meals ?? []).length > 0 && (
         <div className="flex flex-wrap gap-2">
           {totalPending > 0 && (
-            <div className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+            <div className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-warning">
               <AlertCircle className="h-3 w-3" />
               {totalPending} pending
             </div>
@@ -128,7 +128,7 @@ export function FoodView({ userRole }: FoodViewProps) {
             </div>
           )}
           {hasDietary && (
-            <div className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-700">
+            <div className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-error">
               <AlertCircle className="h-3 w-3" />
               Dietary restrictions on file
             </div>

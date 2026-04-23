@@ -38,13 +38,6 @@ import { RateCardManagement } from "@/components/settings/rate-card-management";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
 
-const ROLE_COLORS: Record<string, string> = {
-  Admin: "bg-purple-50 text-purple-700",
-  Producer: "bg-blue-50 text-blue-700",
-  Studio: "bg-teal-50 text-teal-700",
-  Vendor: "bg-amber-50 text-amber-700",
-};
-
 const ALL_ROLES = ["Admin", "Producer", "Post Producer", "Studio", "Art Director", "Designer", "Vendor"];
 
 // -------------------------------------------------------
@@ -165,7 +158,7 @@ function MyCard({ user }: { user: AppUser }) {
               {allergies.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700"
+                  className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-warning"
                 >
                   {tag}
                 </span>
@@ -639,8 +632,8 @@ function UserRow({
           variant="custom"
           className={
             appUser.active
-              ? "bg-emerald-50 text-emerald-700"
-              : "bg-red-50 text-red-600"
+              ? "bg-emerald-50 text-success"
+              : "bg-red-50 text-error"
           }
         >
           {appUser.active ? "Active" : "Inactive"}

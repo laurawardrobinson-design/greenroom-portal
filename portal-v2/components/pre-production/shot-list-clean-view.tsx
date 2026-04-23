@@ -338,7 +338,7 @@ function ProductPopover({
           <img src={product.imageUrl} alt="" className="h-10 w-10 rounded-lg object-cover border border-border shrink-0" />
         ) : (
           <div className="h-10 w-10 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
-            <span className="text-amber-600 text-sm font-bold">{product.name.charAt(0)}</span>
+            <span className="text-warning text-sm font-bold">{product.name.charAt(0)}</span>
           </div>
         )}
         <div className="min-w-0 flex-1">
@@ -376,7 +376,7 @@ function ProductPopover({
         <button
           type="button"
           onClick={onUnlink}
-          className="text-[10px] font-medium text-red-500 hover:text-red-600 transition-colors"
+          className="text-[10px] font-medium text-red-500 hover:text-error transition-colors"
         >
           Remove from shot
         </button>
@@ -554,7 +554,7 @@ function ProductTagCell({
               <span
                 key={p.cpId}
                 onClick={(e) => { e.stopPropagation(); setPopoverProduct(popoverProduct?.cpId === p.cpId ? null : p); }}
-                className="inline-flex items-center gap-0.5 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 max-w-full overflow-hidden cursor-pointer hover:border-amber-400 transition-colors"
+                className="inline-flex items-center gap-0.5 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-warning max-w-full overflow-hidden cursor-pointer hover:border-amber-400 transition-colors"
               >
                 <span className="truncate min-w-0">{p.name}</span>
                 {p.itemCode && <span className="opacity-60 shrink-0">{p.itemCode}</span>}
@@ -601,7 +601,7 @@ function ProductTagCell({
       <div className="flex flex-col gap-0.5 px-[var(--density-shotlist-chip-cell-px)] py-[var(--density-shotlist-chip-cell-py)] min-h-[32px] ring-2 ring-inset ring-primary bg-white overflow-hidden">
         {/* Linked product chips */}
         {linkedProducts.map((p) => (
-          <span key={p.cpId} className="inline-flex items-center gap-0.5 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 max-w-full overflow-hidden">
+          <span key={p.cpId} className="inline-flex items-center gap-0.5 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-warning max-w-full overflow-hidden">
             <span className="truncate min-w-0">{p.name}</span>
             {p.itemCode && <span className="opacity-60 shrink-0">{p.itemCode}</span>}
             <button type="button" onClick={() => unlinkProduct(p.cpId)} className="ml-0.5 shrink-0 hover:text-red-500 transition-colors">
@@ -992,7 +992,7 @@ function TalentCell({
             </div>
             <div className="px-3.5 py-2 border-t border-border">
               <button type="button" onClick={() => removeTalent(popover.id)}
-                className="text-[10px] font-medium text-red-500 hover:text-red-600 transition-colors">
+                className="text-[10px] font-medium text-red-500 hover:text-error transition-colors">
                 Remove from shot
               </button>
             </div>
@@ -2032,7 +2032,7 @@ function SetupHeader({
           <div className="flex items-center gap-2">
             <span className="text-xs text-red-500">Delete setup{shotCount > 0 ? ` and ${shotCount} shot${shotCount !== 1 ? "s" : ""}` : ""}?</span>
             <button type="button" onClick={onDelete}
-              className="text-xs font-semibold text-red-500 hover:text-red-600 transition-colors">
+              className="text-xs font-semibold text-red-500 hover:text-error transition-colors">
               Yes
             </button>
             <button type="button" onClick={() => setConfirmDelete(false)}

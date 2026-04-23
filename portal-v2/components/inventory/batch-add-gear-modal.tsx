@@ -301,7 +301,7 @@ export function BatchAddGearModal({
 
         {/* Error details */}
         {results.some((r) => r.status === "error") && (
-          <div className="mt-2 text-xs text-red-600 space-y-0.5">
+          <div className="mt-2 text-xs text-error space-y-0.5">
             {results
               .filter((r) => r.status === "error")
               .map((r) => (

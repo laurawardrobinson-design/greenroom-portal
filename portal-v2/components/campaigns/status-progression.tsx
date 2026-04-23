@@ -1,7 +1,7 @@
 "use client";
 
 import type { CampaignStatus } from "@/types/domain";
-import { CAMPAIGN_STATUS_ORDER } from "@/lib/constants/statuses";
+import { CAMPAIGN_STATUS_ORDER, campaignStatusStyle } from "@/lib/constants/statuses";
 import { Check } from "lucide-react";
 import { validateStatusTransition } from "@/lib/services/campaigns.validation";
 
@@ -10,13 +10,6 @@ interface Props {
   onStatusChange?: (status: CampaignStatus) => void;
   disabled?: boolean;
 }
-
-const STATUS_COLORS: Record<string, string> = {
-  Planning: "bg-slate-400",
-  "In Production": "bg-blue-500",
-  Post: "bg-purple-500",
-  Complete: "bg-emerald-500",
-};
 
 export function StatusProgression({ status, onStatusChange, disabled }: Props) {
   const currentIndex = CAMPAIGN_STATUS_ORDER.indexOf(status);
@@ -40,7 +33,8 @@ export function StatusProgression({ status, onStatusChange, disabled }: Props) {
       {CAMPAIGN_STATUS_ORDER.map((s, i) => {
         const isPast = !isCancelled && i < currentIndex;
         const isCurrent = !isCancelled && i === currentIndex;
-        const isFuture = isCancelled || i > currentIndex;
+        const stepStyle = campaignStatusStyle(s);
+        const stepColor = stepStyle.color;
 
         // Validate if this status can be clicked
         const canTransition = !disabled && onStatusChange && !isCurrent &&
@@ -51,21 +45,25 @@ export function StatusProgression({ status, onStatusChange, disabled }: Props) {
           <div key={s} className="flex items-center">
             {i > 0 && (
               <div
-                className={`h-px w-5 sm:w-8 transition-colors ${
-                  isPast ? STATUS_COLORS[s] || "bg-slate-300" : "bg-border"
-                }`}
+                className="h-px w-5 sm:w-8 transition-colors"
+                style={{ backgroundColor: isPast ? stepColor : "var(--color-border)" }}
               />
             )}
             <button
               type="button"
               disabled={!isClickable}
               onClick={() => isClickable && handleStatusClick(s)}
+              style={
+                isCurrent || isPast
+                  ? { backgroundColor: stepColor, color: "#fff" }
+                  : undefined
+              }
               className={`group relative flex items-center justify-center rounded-full transition-all ${
                 isCurrent
-                  ? `h-7 w-7 ${STATUS_COLORS[s]} text-white shadow-sm`
+                  ? "h-7 w-7 shadow-sm"
                   : isPast
-                  ? `h-5 w-5 ${STATUS_COLORS[s]} text-white`
-                  : `h-5 w-5 border-2 border-border bg-surface`
+                  ? "h-5 w-5"
+                  : "h-5 w-5 border-2 border-border bg-surface"
               } ${
                 isClickable
                   ? "cursor-pointer hover:ring-2 hover:ring-primary/30 hover:scale-110"
@@ -96,7 +94,10 @@ export function StatusProgression({ status, onStatusChange, disabled }: Props) {
       })}
 
       {isCancelled && (
-        <div className="ml-3 rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-semibold text-red-600">
+        <div
+          className="ml-3 rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
+          style={campaignStatusStyle("Cancelled")}
+        >
           Cancelled
         </div>
       )}

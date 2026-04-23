@@ -65,16 +65,16 @@ const CAL_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const SHOOT_TYPE_STYLES: Record<string, { pill: string; dot: string }> = {
   Photo: { pill: "bg-blue-100 text-blue-700", dot: "bg-blue-400" },
   Video: { pill: "bg-purple-100 text-purple-700", dot: "bg-purple-400" },
-  Hybrid: { pill: "bg-amber-100 text-amber-700", dot: "bg-amber-400" },
+  Hybrid: { pill: "bg-amber-100 text-warning", dot: "bg-amber-400" },
   Other: { pill: "bg-slate-100 text-slate-700", dot: "bg-slate-400" },
 };
 
 const PRODUCER_COLORS = [
-  { swatch: "bg-emerald-400", pill: "bg-emerald-100 text-emerald-700" },
+  { swatch: "bg-emerald-400", pill: "bg-emerald-100 text-success" },
   { swatch: "bg-sky-400",     pill: "bg-sky-100 text-sky-700" },
   { swatch: "bg-violet-400",  pill: "bg-violet-100 text-violet-700" },
-  { swatch: "bg-rose-400",    pill: "bg-rose-100 text-rose-700" },
-  { swatch: "bg-amber-400",   pill: "bg-amber-100 text-amber-700" },
+  { swatch: "bg-rose-400",    pill: "bg-rose-100 text-error" },
+  { swatch: "bg-amber-400",   pill: "bg-amber-100 text-warning" },
   { swatch: "bg-teal-400",    pill: "bg-teal-100 text-teal-700" },
 ];
 
@@ -188,7 +188,7 @@ export function HopDashboard({ user }: Props) {
           label="Total Budget"
           value={stats ? formatCurrency(stats.totalBudget) : "—"}
           icon={DollarSign}
-          accent="bg-emerald-50 text-emerald-600"
+          accent="bg-emerald-50 text-success"
         />
         <StatCard
           label="Committed"
@@ -200,7 +200,7 @@ export function HopDashboard({ user }: Props) {
           label="Pending Approvals"
           value={stats ? String(stats.pendingApprovals) : "—"}
           icon={AlertTriangle}
-          accent="bg-amber-50 text-amber-600"
+          accent="bg-amber-50 text-warning"
           href="/budget?tab=approvals"
         />
         <StatCard
@@ -214,7 +214,7 @@ export function HopDashboard({ user }: Props) {
           value={postStats ? `${postStats.drivesCheckedOut} out` : "—"}
           icon={Clapperboard}
           accent={postStats && (postStats.drivesPastRetirement > 0)
-            ? "bg-red-50 text-red-600"
+            ? "bg-red-50 text-error"
             : "bg-violet-50 text-violet-600"}
           href="/post-workflow"
         />

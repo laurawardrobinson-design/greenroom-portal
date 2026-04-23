@@ -261,7 +261,7 @@ export function ShotDetailModal({
                       <Camera className="h-3 w-3" />
                     </button>
                     <button type="button" onClick={removeRefImage}
-                      className="rounded bg-white/90 p-1 text-red-600 hover:bg-white transition-colors">
+                      className="rounded bg-white/90 p-1 text-error hover:bg-white transition-colors">
                       <X className="h-3 w-3" />
                     </button>
                   </div>
@@ -373,7 +373,7 @@ export function ShotDetailModal({
               <div className="flex items-center gap-2">
                 <span className="text-xs text-red-500">Delete this shot?</span>
                 <button type="button" onClick={handleDelete}
-                  className="text-xs font-semibold text-red-500 hover:text-red-600 transition-colors">
+                  className="text-xs font-semibold text-red-500 hover:text-error transition-colors">
                   Yes, delete
                 </button>
                 <button type="button" onClick={() => setConfirmDelete(false)}

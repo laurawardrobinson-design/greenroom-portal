@@ -103,7 +103,7 @@ function AssignmentRow({ cv, onOpen }: { cv: any; onOpen: () => void }) {
             <span>Inv: <span className="font-medium text-text-primary">{formatCurrency(cv.invoiceTotal)}</span></span>
           )}
           {cv.paymentAmount > 0 && (
-            <span>Paid: <span className="font-medium text-emerald-700">{formatCurrency(cv.paymentAmount)}</span></span>
+            <span>Paid: <span className="font-medium text-success">{formatCurrency(cv.paymentAmount)}</span></span>
           )}
         </div>
       </div>

@@ -173,9 +173,9 @@ export function BriefEditor({ campaignId, canEdit }: BriefEditorProps) {
           <span
             className={`text-[11px] font-medium tracking-wide ${
               filled === total
-                ? "text-emerald-700"
+                ? "text-success"
                 : filled > 0
-                  ? "text-amber-700"
+                  ? "text-warning"
                   : "text-text-tertiary"
             }`}
           >
@@ -242,7 +242,7 @@ export function BriefEditor({ campaignId, canEdit }: BriefEditorProps) {
                         <button
                           type="button"
                           onClick={() => removeReference(idx)}
-                          className="text-text-tertiary hover:text-red-600"
+                          className="text-text-tertiary hover:text-error"
                           aria-label="Remove reference"
                         >
                           <X className="h-3.5 w-3.5" />

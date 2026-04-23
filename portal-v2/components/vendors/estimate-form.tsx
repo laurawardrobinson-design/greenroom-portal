@@ -209,7 +209,7 @@ export function EstimateForm({ campaignVendorId, campaignId, onSubmitted, onCanc
               <p className="text-sm font-medium text-text-primary truncate">
                 {uploadedFile.name}
               </p>
-              <p className="text-xs text-emerald-600">Uploaded</p>
+              <p className="text-xs text-success">Uploaded</p>
             </div>
             <button
               type="button"

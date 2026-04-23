@@ -216,7 +216,7 @@ export function CheckoutDrivesModal({ open, onClose, campaigns, onSuccess }: Pro
           )}
 
           {avail.length < 2 && (
-            <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-warning">
               <AlertCircle className="h-4 w-4 shrink-0" />
               Less than 2 drives of this size are available. Consider a different size.
             </div>

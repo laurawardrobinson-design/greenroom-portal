@@ -186,7 +186,7 @@ export function EstimateReviewPanel({ campaignVendorId, status, onStatusChange }
       )}
 
       {error && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-warning">
           Could not load inline estimate details. Use <span className="font-semibold">Open Full Estimate</span> to review the submitted document.
         </div>
       )}

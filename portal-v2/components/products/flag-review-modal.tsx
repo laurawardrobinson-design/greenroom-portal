@@ -221,11 +221,20 @@ export function FlagReviewModal({
           </div>
         </div>
         <span
-          className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 ${
+          className="text-[10px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 border"
+          style={
             flag.status === "open"
-              ? "bg-amber-50 text-amber-800 border border-amber-200"
-              : "bg-emerald-50 text-emerald-800 border border-emerald-200"
-          }`}
+              ? {
+                  color: "var(--status-pending-fg)",
+                  backgroundColor: "var(--status-pending-tint)",
+                  borderColor: "var(--status-pending-border)",
+                }
+              : {
+                  color: "var(--status-approved-fg)",
+                  backgroundColor: "var(--status-approved-tint)",
+                  borderColor: "var(--status-approved-border)",
+                }
+          }
         >
           {flag.status}
         </span>
@@ -248,11 +257,13 @@ export function FlagReviewModal({
           </span>
           <span>·</span>
           <span
-            className={`font-medium ${
-              flag.reason === "about_to_change"
-                ? "text-sky-700"
-                : "text-rose-700"
-            }`}
+            className="font-medium"
+            style={{
+              color:
+                flag.reason === "about_to_change"
+                  ? "var(--status-info-fg)"
+                  : "var(--status-rejected-fg)",
+            }}
           >
             {reasonLabel(flag.reason)}
           </span>
@@ -379,7 +390,7 @@ export function FlagReviewModal({
                 rows={editMode ? 2 : 1}
                 placeholder={editMode ? "None" : "—"}
                 className={`w-full bg-transparent text-[13px] focus:outline-none resize-none ${
-                  restrictions ? "text-orange-700 font-medium" : "text-text-secondary"
+                  restrictions ? "font-medium text-warning" : "text-text-secondary"
                 } ${!editMode ? "pointer-events-none" : ""}`}
               />
             </FieldBlock>

@@ -128,9 +128,9 @@ export function CampaignRow({ campaign, onMutate, hideFinancials, readOnly }: Pr
       {/* Attention dot */}
       <div className="w-2.5 shrink-0 flex justify-center">
         {hasUrgent ? (
-          <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+          <span className="h-2.5 w-2.5 rounded-full bg-error" />
         ) : hasWarning ? (
-          <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+          <span className="h-2.5 w-2.5 rounded-full bg-warning" />
         ) : null}
       </div>
 
@@ -203,14 +203,14 @@ export function CampaignRow({ campaign, onMutate, hideFinancials, readOnly }: Pr
 
       {/* Next Shoot */}
       <div className="w-20 shrink-0 text-right">
-        <span className={`text-xs ${shootUrgent ? "text-red-600 font-medium" : "text-text-secondary"}`}>
+        <span className={`text-xs ${shootUrgent ? "text-error font-medium" : "text-text-secondary"}`}>
           {campaign.nextShootDate ? format(parseISO(campaign.nextShootDate), "MMM d") : "—"}
         </span>
       </div>
 
       {/* Assets Due */}
       <div className="w-20 shrink-0 text-right hidden lg:block">
-        <span className={`text-xs ${assetsOverdue ? "text-red-600 font-medium" : "text-text-secondary"}`}>
+        <span className={`text-xs ${assetsOverdue ? "text-error font-medium" : "text-text-secondary"}`}>
           {campaign.assetsDeliveryDate ? format(parseISO(campaign.assetsDeliveryDate), "MMM d") : "—"}
         </span>
       </div>
@@ -269,12 +269,12 @@ export function CampaignRow({ campaign, onMutate, hideFinancials, readOnly }: Pr
         {hasFunds ? (
           <div className={`space-y-0.5 cursor-pointer ${showFundsPopover ? "opacity-70" : ""}`}>
             {(campaign.additionalFundsRequested ?? 0) > 0 && (
-              <span className="text-xs font-medium text-amber-600 block">
+              <span className="text-xs font-medium text-warning block">
                 {formatCurrency(campaign.additionalFundsRequested)} pending
               </span>
             )}
             {(campaign.additionalFundsApproved ?? 0) > 0 && (
-              <span className="text-xs font-medium text-emerald-600 block">
+              <span className="text-xs font-medium text-success block">
                 {formatCurrency(campaign.additionalFundsApproved)} approved
               </span>
             )}
@@ -302,9 +302,9 @@ export function CampaignRow({ campaign, onMutate, hideFinancials, readOnly }: Pr
                     <div className="shrink-0 text-right">
                       <p className="text-xs font-semibold text-text-primary">{formatCurrency(req.amount)}</p>
                       <span className={`text-[10px] font-medium ${
-                        req.status === "Approved" ? "text-emerald-600" :
-                        req.status === "Declined" ? "text-red-500" :
-                        "text-amber-600"
+                        req.status === "Approved" ? "text-success" :
+                        req.status === "Declined" ? "text-error" :
+                        "text-warning"
                       }`}>
                         {req.status}
                       </span>

@@ -20,12 +20,12 @@ interface Props {
 const CHANNEL_COLORS: Record<string, string> = {
   Instagram:  "bg-pink-50 text-pink-700 border-pink-200",
   TikTok:     "bg-slate-100 text-slate-700 border-slate-200",
-  YouTube:    "bg-red-50 text-red-700 border-red-200",
+  YouTube:    "bg-red-50 text-error border-red-200",
   Facebook:   "bg-blue-50 text-blue-700 border-blue-200",
-  Pinterest:  "bg-red-50 text-red-700 border-red-200",
+  Pinterest:  "bg-red-50 text-error border-red-200",
   Web:        "bg-surface-secondary text-text-secondary border-border",
-  Print:      "bg-amber-50 text-amber-700 border-amber-200",
-  Email:      "bg-emerald-50 text-emerald-700 border-emerald-200",
+  Print:      "bg-amber-50 text-warning border-amber-200",
+  Email:      "bg-emerald-50 text-success border-emerald-200",
 };
 
 export function DeliverablesSection({ campaignId, deliverables, vendors, canEdit, onMutate }: Props) {

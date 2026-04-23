@@ -7,6 +7,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { RoleBadge } from "@/components/ui/role-badge";
 import { Modal } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
@@ -60,13 +61,6 @@ interface GoalDetailResponse {
   isPrivateViewer: boolean;
   milestoneProgress?: { total: number; completed: number };
 }
-
-const ROLE_BADGE: Record<string, string> = {
-  Admin: "bg-purple-50 text-purple-700",
-  Producer: "bg-blue-50 text-blue-700",
-  Studio: "bg-teal-50 text-teal-700",
-  "Art Director": "bg-amber-50 text-amber-700",
-};
 
 const FILTER_ROLES = ["Producer", "Studio"] as const;
 
@@ -222,9 +216,7 @@ function GoalCard({ user: u, onSelect }: { user: GoalOverviewUser; onSelect: () 
             <p className="text-sm font-semibold text-text-primary truncate">{u.name}</p>
             <p className="text-xs text-text-secondary truncate">{u.title || u.role}</p>
           </div>
-          <Badge variant="custom" className={ROLE_BADGE[u.role] || "bg-gray-50 text-gray-700"}>
-            {u.role}
-          </Badge>
+          <RoleBadge role={u.role} />
         </div>
 
         <div className="space-y-1">
@@ -429,9 +421,7 @@ function GoalDetailModal({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-base font-semibold text-text-primary">{goalUser.name}</p>
-              <Badge variant="custom" className={ROLE_BADGE[goalUser.role] || "bg-gray-50 text-gray-700"}>
-                {goalUser.role}
-              </Badge>
+              <RoleBadge role={goalUser.role} />
             </div>
             {goalUser.title && <p className="text-xs text-text-tertiary mt-0.5">{goalUser.title}</p>}
           </div>

@@ -42,6 +42,7 @@ import {
 import Link from "next/link";
 import { VendorFinancialsTab } from "@/components/budget/vendor-financials-tab";
 import { ApprovalsTab } from "@/components/budget/approvals-tab";
+import { PageHeader } from "@/components/ui/page-header";
 import { PageTabs } from "@/components/ui/page-tabs";
 
 const fetcher = (url: string) =>
@@ -78,9 +79,7 @@ export default function BudgetPage() {
   if (!isAdmin) {
     return (
       <div className="space-y-6">
-        <div className="pb-4 border-b border-border">
-          <h1 className="text-2xl font-bold text-text-primary">Budget</h1>
-        </div>
+        <PageHeader title="Budget" />
         <VendorFinancialsTab />
       </div>
     );
@@ -89,9 +88,7 @@ export default function BudgetPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-0">
-        <div className="pb-4 border-b border-border">
-          <h1 className="text-2xl font-bold text-text-primary">Budget</h1>
-        </div>
+        <PageHeader title="Budget" />
 
         <PageTabs tabs={TABS} activeTab={activeTab} onTabChange={(key) => setActiveTab(key as Tab)} />
       </div>
@@ -145,7 +142,7 @@ function QueueSection() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {counters.map((c) => {
           const Icon = c.icon;
-          const toneColor = c.tone === "warning" ? "text-amber-600" : "text-blue-600";
+          const toneColor = c.tone === "warning" ? "text-warning" : "text-blue-600";
           return (
             <Card key={c.label} padding="none">
               <div className="px-3.5 py-3">
@@ -279,10 +276,10 @@ function ProgramSection({ isAdmin }: { isAdmin: boolean }) {
                         </div>
                       </div>
                       <div className="mt-1.5 flex gap-4 text-[10px] text-text-tertiary flex-wrap">
-                        <span>Paid <span className="font-semibold text-emerald-600">{formatCurrency(pool.spent)}</span></span>
+                        <span>Paid <span className="font-semibold text-success">{formatCurrency(pool.spent)}</span></span>
                         <span>Committed <span className="font-semibold text-text-primary">{formatCurrency(pool.committed)}</span></span>
                         <span>Allocated <span className="font-semibold text-text-primary">{formatCurrency(pool.allocated)}</span></span>
-                        <span>Remaining <span className="font-semibold text-emerald-600">{formatCurrency(pool.remaining)}</span></span>
+                        <span>Remaining <span className="font-semibold text-success">{formatCurrency(pool.remaining)}</span></span>
                         <span className="ml-auto">Total <span className="font-semibold text-text-primary">{formatCurrency(pool.totalAmount)}</span></span>
                       </div>
                     </div>
@@ -311,7 +308,7 @@ function ProgramSection({ isAdmin }: { isAdmin: boolean }) {
                         {poolCampaigns.map((c) => {
                           const varTone = Math.abs(c.variancePct) < 3
                             ? "text-text-secondary"
-                            : c.variancePct > 0 ? "text-red-600" : "text-emerald-600";
+                            : c.variancePct > 0 ? "text-error" : "text-success";
                           return (
                             <Link
                               key={c.id}
@@ -523,7 +520,7 @@ function PoolDetailModal({
               </div>
             </div>
             <div className="flex items-center gap-4 text-xs">
-              <span className="text-text-tertiary">Remaining <span className="font-semibold text-emerald-600">{formatCurrency(pool.remaining)}</span></span>
+              <span className="text-text-tertiary">Remaining <span className="font-semibold text-success">{formatCurrency(pool.remaining)}</span></span>
               <span className="text-text-tertiary">Committed <span className="font-semibold text-text-primary">{formatCurrency(pool.committed)}</span></span>
               <span className="text-text-tertiary">Spent <span className="font-semibold text-text-primary">{formatCurrency(pool.spent)}</span></span>
             </div>
@@ -550,7 +547,7 @@ function PoolDetailModal({
                       <p className="text-sm text-text-primary truncate">{tx.description}</p>
                       <p className="text-xs text-text-tertiary">{formatTxDate(tx.date)}</p>
                     </div>
-                    <span className={`shrink-0 text-sm font-medium ${tx.amount < 0 ? "text-red-600" : "text-emerald-600"}`}>
+                    <span className={`shrink-0 text-sm font-medium ${tx.amount < 0 ? "text-error" : "text-success"}`}>
                       {tx.amount < 0 ? "-" : "+"}{formatCurrency(Math.abs(tx.amount))}
                     </span>
                   </div>
@@ -641,7 +638,7 @@ function BudgetPoolsTab({ isAdmin }: { isAdmin: boolean }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-xs">
-                    <span className="text-text-tertiary">Remaining <span className="font-semibold text-emerald-600">{formatCurrency(pool.remaining)}</span></span>
+                    <span className="text-text-tertiary">Remaining <span className="font-semibold text-success">{formatCurrency(pool.remaining)}</span></span>
                     <span className="text-text-tertiary">Committed <span className="font-semibold text-text-primary">{formatCurrency(pool.committed)}</span></span>
                     <span className="text-text-tertiary">Spent <span className="font-semibold text-text-primary">{formatCurrency(pool.spent)}</span></span>
                   </div>
@@ -891,10 +888,10 @@ function CampaignBudgetsTab() {
                       ))}
                     </select>
                     {c.additionalFundsRequested > 0 && (
-                      <span className="text-[10px] font-medium text-amber-600">+{formatCurrency(c.additionalFundsRequested)} pending</span>
+                      <span className="text-[10px] font-medium text-warning">+{formatCurrency(c.additionalFundsRequested)} pending</span>
                     )}
                     {c.additionalFundsApproved > 0 && (
-                      <span className="text-[10px] font-medium text-emerald-600">+{formatCurrency(c.additionalFundsApproved)} approved</span>
+                      <span className="text-[10px] font-medium text-success">+{formatCurrency(c.additionalFundsApproved)} approved</span>
                     )}
                   </div>
                 </div>
@@ -1075,9 +1072,9 @@ function CostKpi({
   caption?: string;
 }) {
   const toneColor =
-    tone === "success" ? "text-emerald-600" :
-    tone === "warning" ? "text-amber-600" :
-    tone === "error" ? "text-red-600" :
+    tone === "success" ? "text-success" :
+    tone === "warning" ? "text-warning" :
+    tone === "error" ? "text-error" :
     "text-text-primary";
   return (
     <Card padding="none">
@@ -1152,7 +1149,7 @@ function CategoryCostReport({
                   <div className="text-right text-sm text-text-secondary">{formatCurrency(r.invoiced)}</div>
                   <div className="text-right text-sm font-semibold text-text-primary">{formatCurrency(r.efc)}</div>
                   <div className={`text-right text-xs font-medium ${
-                    r.variancePct === 0 ? "text-text-secondary" : r.variancePct > 0 ? "text-red-600" : "text-emerald-600"
+                    r.variancePct === 0 ? "text-text-secondary" : r.variancePct > 0 ? "text-error" : "text-success"
                   }`}>
                     {r.variancePct !== 0 && (
                       <>
@@ -1175,7 +1172,7 @@ function CategoryCostReport({
             <div className="text-right text-sm font-semibold text-text-primary">{formatCurrency(totals.estimated)}</div>
             <div className="text-right text-sm font-semibold text-text-primary">{formatCurrency(totals.invoiced)}</div>
             <div className="text-right text-sm font-bold text-text-primary">{formatCurrency(totals.efc)}</div>
-            <div className={`text-right text-xs font-semibold ${totals.efc > totals.estimated ? "text-red-600" : "text-emerald-600"}`}>
+            <div className={`text-right text-xs font-semibold ${totals.efc > totals.estimated ? "text-error" : "text-success"}`}>
               {totals.estimated > 0 ? `${((totals.efc - totals.estimated) / totals.estimated * 100).toFixed(1)}%` : "—"}
             </div>
           </div>
@@ -1299,7 +1296,7 @@ function VendorCostReport({
               <div className="text-right text-sm text-text-secondary">{formatCurrency(v.paidTotal)}</div>
               <div className="text-right text-sm font-semibold text-text-primary">{formatCurrency(v.efc)}</div>
               <div className={`text-right text-xs font-medium ${
-                v.variancePct === 0 ? "text-text-secondary" : v.variancePct > 0 ? "text-red-600" : "text-emerald-600"
+                v.variancePct === 0 ? "text-text-secondary" : v.variancePct > 0 ? "text-error" : "text-success"
               }`}>
                 {v.variancePct !== 0 && <>{v.variancePct > 0 ? "+" : ""}{v.variancePct}%</>}
               </div>
@@ -1348,7 +1345,7 @@ function QuarterCostReport({ rows }: { rows: AnalysisData["quarterlyTrend"] }) {
               <div className="col-span-2 md:col-span-1 text-sm font-medium text-text-primary">{q.quarter}</div>
               <div className="text-right text-sm text-text-secondary">{formatCurrency(q.estimated)}</div>
               <div className="text-right text-sm text-text-secondary">{formatCurrency(q.invoiced)}</div>
-              <div className="text-right text-sm font-semibold text-emerald-600">{formatCurrency(q.paid)}</div>
+              <div className="text-right text-sm font-semibold text-success">{formatCurrency(q.paid)}</div>
             </div>
           ))
         )}
@@ -1569,7 +1566,7 @@ function TransactionDrilldownModal({
                   <span>Est: <strong className="text-text-primary">{formatCurrency(t.estimateTotal)}</strong></span>
                   <span>Inv: <strong className="text-text-primary">{formatCurrency(t.invoiceTotal)}</strong></span>
                   {t.paidAmount > 0 && (
-                    <span>Paid: <strong className="text-emerald-600">{formatCurrency(t.paidAmount)}</strong></span>
+                    <span>Paid: <strong className="text-success">{formatCurrency(t.paidAmount)}</strong></span>
                   )}
                   {t.paidDate && (
                     <span className="text-text-tertiary">
@@ -1592,7 +1589,7 @@ function TransactionDrilldownModal({
                       <div className="space-y-0.5">
                         {inv.lineItems.map((li: any, idx: number) => (
                           <div key={idx} className="flex items-center justify-between text-xs pl-5">
-                            <span className={`text-text-secondary ${li.flagged ? "text-amber-600" : ""}`}>
+                            <span className={`text-text-secondary ${li.flagged ? "text-warning" : ""}`}>
                               {li.flagged && <AlertTriangle className="inline h-2.5 w-2.5 mr-1" />}
                               {li.description || li.category || "Line item"}
                             </span>
@@ -1612,7 +1609,7 @@ function TransactionDrilldownModal({
             {transactions.map((t: any, idx: number) => (
               <div key={idx} className="px-4 py-3 hover:bg-surface-secondary/30 transition-colors">
                 <div className="flex items-start justify-between gap-4">
-                  <p className={`text-sm font-medium flex-1 min-w-0 ${t.flagged ? "text-amber-600" : "text-text-primary"}`}>
+                  <p className={`text-sm font-medium flex-1 min-w-0 ${t.flagged ? "text-warning" : "text-text-primary"}`}>
                     {t.flagged && <AlertTriangle className="inline h-3 w-3 mr-1 shrink-0" />}
                     {t.description || "Line item"}
                   </p>
@@ -1689,7 +1686,7 @@ function OnboardingTab() {
   }
 
   const STATUS_ICON = {
-    complete: <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />,
+    complete: <CheckCircle2 className="h-4 w-4 text-success shrink-0" />,
     partial:  <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />,
     none:     <Circle className="h-4 w-4 text-red-400 shrink-0" />,
   };
@@ -1701,9 +1698,9 @@ function OnboardingTab() {
   };
 
   const STATUS_STYLE = {
-    complete: "text-emerald-700 bg-emerald-50",
-    partial:  "text-amber-700 bg-amber-50",
-    none:     "text-red-700 bg-red-50",
+    complete: "text-success bg-emerald-50",
+    partial:  "text-warning bg-amber-50",
+    none:     "text-error bg-red-50",
   };
 
   const notComplete = overview.filter((v) => v.status !== "complete");
@@ -1770,7 +1767,7 @@ function OnboardingTab() {
                         className="shrink-0 transition-opacity disabled:opacity-50"
                       >
                         {item.completed
-                          ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          ? <CheckCircle2 className="h-4 w-4 text-success" />
                           : <Circle className="h-4 w-4 text-text-tertiary" />
                         }
                       </button>

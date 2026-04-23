@@ -43,9 +43,9 @@ const fetcher = (url: string) =>
   });
 
 const STATUS_BADGE: Record<string, string> = {
-  Available: "bg-emerald-50 text-emerald-700",
+  Available: "bg-emerald-50 text-success",
   Reserved: "bg-blue-50 text-blue-700",
-  "Checked Out": "bg-amber-50 text-amber-700",
+  "Checked Out": "bg-amber-50 text-warning",
 };
 
 type Tab = "items" | "reservations";

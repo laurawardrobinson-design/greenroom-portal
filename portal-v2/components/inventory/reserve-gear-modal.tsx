@@ -173,7 +173,7 @@ export function ReserveGearModal({
           />
         </div>
         {dateError && (
-          <p className="text-xs text-red-600">{dateError}</p>
+          <p className="text-xs text-error">{dateError}</p>
         )}
         {/* Campaign */}
         <div className="relative">

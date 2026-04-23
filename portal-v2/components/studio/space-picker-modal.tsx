@@ -131,7 +131,7 @@ export function SpacePickerModal({
                   <button
                     onClick={() => releaseSpace(existing!.id)}
                     disabled={isBusy}
-                    className="shrink-0 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+                    className="shrink-0 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-error hover:bg-red-100 transition-colors disabled:opacity-50"
                   >
                     {isBusy ? "..." : "Release"}
                   </button>

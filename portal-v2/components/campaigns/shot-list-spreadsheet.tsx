@@ -889,7 +889,7 @@ function ProductCell({
     <div ref={anchorRef} className="flex flex-wrap items-center gap-1 px-2 py-1.5 min-h-[32px] h-full">
       {/* Existing product chips */}
       {linked.map(({ lnk, cp }) => (
-        <span key={lnk.id} className="inline-flex items-center gap-1 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-xs font-medium text-amber-700 max-w-[160px]">
+        <span key={lnk.id} className="inline-flex items-center gap-1 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-xs font-medium text-warning max-w-[160px]">
           <button
             type="button"
             onClick={() => cp.product && onViewProduct(cp.product.id)}
@@ -922,7 +922,7 @@ function ProductCell({
         <button
           type="button"
           onClick={toggle}
-          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-text-tertiary border border-dashed border-border/70 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50/50 transition-colors"
+          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-text-tertiary border border-dashed border-border/70 hover:border-amber-400 hover:text-warning hover:bg-amber-50/50 transition-colors"
         >
           <Plus className="h-2.5 w-2.5" />
           {linked.length === 0 && <span>Add</span>}
@@ -995,7 +995,7 @@ function ProductCell({
                   className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-amber-50 transition-colors border-t border-border/60"
                 >
                   <Plus className="h-3 w-3 text-amber-500 shrink-0" />
-                  <span className="text-sm text-amber-700">Add &ldquo;{trimmedQuery}&rdquo;</span>
+                  <span className="text-sm text-warning">Add &ldquo;{trimmedQuery}&rdquo;</span>
                 </button>
               )}
 

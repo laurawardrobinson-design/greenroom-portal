@@ -47,13 +47,13 @@ interface ScheduleData {
 
 // Colors for setup badges
 const SETUP_BADGE_COLORS = [
-  "bg-amber-100 text-amber-700",
+  "bg-amber-100 text-warning",
   "bg-blue-100 text-blue-700",
-  "bg-rose-100 text-rose-700",
-  "bg-emerald-100 text-emerald-700",
+  "bg-rose-100 text-error",
+  "bg-emerald-100 text-success",
   "bg-violet-100 text-violet-700",
   "bg-yellow-100 text-yellow-700",
-  "bg-orange-100 text-orange-700",
+  "bg-orange-100 text-warning",
   "bg-sky-100 text-sky-700",
 ];
 

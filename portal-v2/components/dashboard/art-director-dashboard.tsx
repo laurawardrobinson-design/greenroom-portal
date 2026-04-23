@@ -139,7 +139,7 @@ export function ArtDirectorDashboard({ user }: { user: AppUser }) {
           label="Assets Due Soon"
           value={stats ? String(stats.assetsDueSoon) : undefined}
           icon={Clock}
-          accent="bg-amber-50 text-amber-600"
+          accent="bg-amber-50 text-warning"
         />
       </div>
 
@@ -222,12 +222,12 @@ export function ArtDirectorDashboard({ user }: { user: AppUser }) {
                       </p>
                     </div>
                     {s.confirmed === true && (
-                      <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                      <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-success">
                         Confirmed
                       </span>
                     )}
                     {s.confirmed === null && (
-                      <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                      <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-warning">
                         Pending
                       </span>
                     )}

@@ -25,16 +25,16 @@ const STAGE_BY_STATUS: Record<CampaignVendorStatus, (typeof STAGES)[number]["id"
 
 const STATUS_BADGE: Record<CampaignVendorStatus, { label: string; tone: string }> = {
   Invited: { label: "Action Needed", tone: "bg-slate-100 text-slate-700" },
-  "Estimate Submitted": { label: "In Review", tone: "bg-amber-50 text-amber-700" },
-  "Estimate Approved": { label: "Complete", tone: "bg-emerald-50 text-emerald-700" },
+  "Estimate Submitted": { label: "In Review", tone: "bg-amber-50 text-warning" },
+  "Estimate Approved": { label: "Complete", tone: "bg-emerald-50 text-success" },
   "PO Uploaded": { label: "Action Needed", tone: "bg-blue-50 text-blue-700" },
-  "PO Signed": { label: "Complete", tone: "bg-emerald-50 text-emerald-700" },
+  "PO Signed": { label: "Complete", tone: "bg-emerald-50 text-success" },
   "Shoot Complete": { label: "Ready", tone: "bg-purple-50 text-purple-700" },
-  "Invoice Submitted": { label: "In Review", tone: "bg-amber-50 text-amber-700" },
+  "Invoice Submitted": { label: "In Review", tone: "bg-amber-50 text-warning" },
   "Invoice Pre-Approved": { label: "Final Approval", tone: "bg-teal-50 text-teal-700" },
-  "Invoice Approved": { label: "Processing", tone: "bg-emerald-50 text-emerald-700" },
-  Paid: { label: "Paid", tone: "bg-emerald-100 text-emerald-800" },
-  Rejected: { label: "Declined", tone: "bg-red-50 text-red-700" },
+  "Invoice Approved": { label: "Processing", tone: "bg-emerald-50 text-success" },
+  Paid: { label: "Paid", tone: "bg-emerald-100 text-success" },
+  Rejected: { label: "Declined", tone: "bg-red-50 text-error" },
 };
 
 const STATUS_LABEL: Record<CampaignVendorStatus, string> = {
@@ -117,9 +117,9 @@ export function VendorStatusTimeline({ currentStatus }: Props) {
                 title={stage.label}
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold transition-all ${
                   isComplete
-                    ? "bg-emerald-100 text-emerald-600"
+                    ? "bg-emerald-100 text-success"
                     : isCurrent && isRejected
-                    ? "bg-red-100 text-red-600 ring-2 ring-red-300"
+                    ? "bg-red-100 text-error ring-2 ring-red-300"
                     : isCurrent
                     ? "bg-primary text-white ring-2 ring-primary/30"
                     : "bg-surface-tertiary text-text-tertiary"

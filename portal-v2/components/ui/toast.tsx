@@ -34,11 +34,27 @@ export function useToast() {
   return ctx;
 }
 
-const typeStyles: Record<ToastType, string> = {
-  success: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  error: "border-red-200 bg-red-50 text-red-800",
-  info: "border-blue-200 bg-blue-50 text-blue-800",
-  warning: "border-amber-200 bg-amber-50 text-amber-800",
+const typeStyles: Record<ToastType, { color: string; background: string; border: string }> = {
+  success: {
+    color: "var(--status-approved-fg)",
+    background: "var(--status-approved-tint)",
+    border: "var(--status-approved-border)",
+  },
+  error: {
+    color: "var(--status-rejected-fg)",
+    background: "var(--status-rejected-tint)",
+    border: "var(--status-rejected-border)",
+  },
+  info: {
+    color: "var(--status-info-fg)",
+    background: "var(--status-info-tint)",
+    border: "var(--status-info-border)",
+  },
+  warning: {
+    color: "var(--status-pending-fg)",
+    background: "var(--status-pending-tint)",
+    border: "var(--status-pending-border)",
+  },
 };
 
 const typeIcons: Record<ToastType, string> = {
@@ -79,12 +95,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             role="alert"
-            className={`
-              flex items-center gap-3 rounded-lg border px-4 py-3
-              shadow-md text-sm font-medium
-              animate-in slide-in-from-right fade-in duration-200
-              ${typeStyles[t.type]}
-            `}
+            data-type={t.type}
+            className="flex items-center gap-3 rounded-lg border px-4 py-3 shadow-md text-sm font-medium animate-in slide-in-from-right fade-in duration-200"
+            style={{
+              color: typeStyles[t.type].color,
+              backgroundColor: typeStyles[t.type].background,
+              borderColor: typeStyles[t.type].border,
+            }}
           >
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-current/10 text-xs">
               {typeIcons[t.type]}

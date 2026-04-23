@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
+import { PageHeader } from "@/components/ui/page-header";
 import { Drawer } from "@/components/ui/drawer";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
@@ -71,19 +72,19 @@ const fetcher = (url: string) =>
 
 const CATEGORY_COLORS: Record<string, string> = {
   Tops:        "bg-blue-50 text-blue-700",
-  Aprons:      "bg-emerald-50 text-emerald-700",
+  Aprons:      "bg-emerald-50 text-success",
   Headwear:    "bg-violet-50 text-violet-700",
   Bottoms:     "bg-slate-100 text-slate-700",
-  Outerwear:   "bg-amber-50 text-amber-700",
-  Footwear:    "bg-orange-50 text-orange-700",
+  Outerwear:   "bg-amber-50 text-warning",
+  Footwear:    "bg-orange-50 text-warning",
   Accessories: "bg-pink-50 text-pink-700",
   Other:       "bg-slate-50 text-slate-600",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  Available:    "bg-emerald-50 text-emerald-700",
+  Available:    "bg-emerald-50 text-success",
   Reserved:     "bg-blue-50 text-blue-700",
-  "Checked Out":"bg-amber-50 text-amber-700",
+  "Checked Out":"bg-amber-50 text-warning",
 };
 
 const CONDITIONS: WardrobeCondition[] = ["Excellent", "Good", "Fair", "Poor", "Damaged"];
@@ -214,16 +215,17 @@ export default function WardrobePage() {
   return (
     <div className="space-y-6">
       <div className="space-y-0">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 pb-4 border-b border-border">
-          <h1 className="text-2xl font-bold text-text-primary">Wardrobe</h1>
-          {tab === "backstock" && (
-            <Button variant="secondary" onClick={() => { setShowScanner(true); setScannerActive(true); }}>
-              <ScanLine className="h-4 w-4" />
-              Scan Units
-            </Button>
-          )}
-        </div>
+        <PageHeader
+          title="Wardrobe"
+          actions={
+            tab === "backstock" ? (
+              <Button variant="secondary" onClick={() => { setShowScanner(true); setScannerActive(true); }}>
+                <ScanLine className="h-4 w-4" />
+                Scan Units
+              </Button>
+            ) : undefined
+          }
+        />
 
         <PageTabs
           tabs={[
@@ -311,7 +313,7 @@ export default function WardrobePage() {
                     </div>
                   </div>
                   {item.shootingNotes && <p className="mt-2 text-xs text-text-secondary line-clamp-2">{item.shootingNotes}</p>}
-                  {item.restrictions && <p className="mt-1 text-xs text-orange-700 font-medium line-clamp-1">{item.restrictions}</p>}
+                  {item.restrictions && <p className="mt-1 text-xs text-warning font-medium line-clamp-1">{item.restrictions}</p>}
                 </button>
               ))}
             </div>
@@ -556,7 +558,7 @@ function WardrobeDrawer({ item, onClose, onSaved, onDeleted, canEdit }: {
           {item?.restrictions && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1">Restrictions</p>
-              <p className="text-sm text-amber-700 font-medium">{item.restrictions}</p>
+              <p className="text-sm text-warning font-medium">{item.restrictions}</p>
             </div>
           )}
           {item?.guideUrl && (
@@ -837,7 +839,7 @@ function ReservationsTab({ items, canEdit, onMutate }: { items: WardrobeItem[]; 
               </div>
               <Badge variant="custom" className="bg-blue-50 text-blue-700">Confirmed</Badge>
               {canEdit && (
-                <button onClick={() => handleCancel(r.id)} className="rounded p-1 text-text-tertiary hover:text-red-600 transition-colors"><X className="h-4 w-4" /></button>
+                <button onClick={() => handleCancel(r.id)} className="rounded p-1 text-text-tertiary hover:text-error transition-colors"><X className="h-4 w-4" /></button>
               )}
             </div>
           ))}
@@ -1577,7 +1579,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
                 </div>
               </div>
             ) : jc.restrictions ? (
-              <p className="text-sm text-amber-700 font-medium whitespace-pre-wrap leading-relaxed">{jc.restrictions}</p>
+              <p className="text-sm text-warning font-medium whitespace-pre-wrap leading-relaxed">{jc.restrictions}</p>
             ) : (
               <p className="text-sm text-text-tertiary/70 italic">No restrictions defined.{canEdit ? " Click edit to add." : ""}</p>
             )}
@@ -1682,7 +1684,7 @@ function JobClassItemRow({ ji, canEdit, onRemove, onSaveNotes, onSaveItem, compa
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-semibold text-text-primary truncate">{item?.name || "Unknown item"}</p>
-            {!ji.required && <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">optional</span>}
+            {!ji.required && <span className="text-[10px] font-semibold text-warning bg-amber-50 px-1.5 py-0.5 rounded-full">optional</span>}
           </div>
           <div className="flex items-center gap-1 mt-1 flex-wrap">
             {item && <Badge variant="custom" className={`text-[10px] ${CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Other}`}>{item.category}</Badge>}
@@ -1734,7 +1736,7 @@ function JobClassItemRow({ ji, canEdit, onRemove, onSaveNotes, onSaveItem, compa
             <button
               type="button"
               onClick={() => setRequired((r) => !r)}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${required ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${required ? "bg-emerald-50 text-success" : "bg-amber-50 text-warning"}`}
             >
               {required ? "Required" : "Optional"}
             </button>
@@ -1874,7 +1876,7 @@ function BackstockTab({ items, canEdit }: { items: WardrobeItem[]; canEdit: bool
                             {canEdit && (
                               <div className="flex items-center gap-1 justify-end">
                                 <button onClick={() => setEditUnit(unit)} className="rounded p-1 text-text-tertiary hover:text-text-secondary transition-colors"><Edit2 className="h-3.5 w-3.5" /></button>
-                                <button onClick={() => handleDeleteUnit(unit)} className="rounded p-1 text-text-tertiary hover:text-red-600 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => handleDeleteUnit(unit)} className="rounded p-1 text-text-tertiary hover:text-error transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                               </div>
                             )}
                           </div>

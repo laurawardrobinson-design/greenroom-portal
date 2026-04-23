@@ -209,22 +209,22 @@ export function SendPoModal({
             {/* Status banner */}
             {isSigned ? (
               <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2.5">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
                 <div>
-                  <p className="text-xs font-medium text-emerald-700">
+                  <p className="text-xs font-medium text-success">
                     Signed{signatureName ? ` by ${signatureName}` : ""}
                   </p>
-                  {signedDate && <p className="text-[10px] text-emerald-600">{signedDate}</p>}
+                  {signedDate && <p className="text-[10px] text-success">{signedDate}</p>}
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2.5">
-                <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+                <Clock className="h-4 w-4 text-warning shrink-0" />
                 <div>
-                  <p className="text-xs font-medium text-amber-700">
+                  <p className="text-xs font-medium text-warning">
                     {displayPoNumber} — awaiting vendor signature
                   </p>
-                  <p className="text-[10px] text-amber-600">
+                  <p className="text-[10px] text-warning">
                     The vendor will see a "Sign PO" prompt when they log in
                   </p>
                 </div>
@@ -415,12 +415,12 @@ function StepTab({
         active
           ? "border-primary text-primary"
           : done
-          ? "border-transparent text-emerald-600 cursor-pointer hover:text-primary"
+          ? "border-transparent text-success cursor-pointer hover:text-primary"
           : "border-transparent text-text-tertiary cursor-default"
       }`}
     >
       <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-        active ? "bg-primary text-white" : done ? "bg-emerald-100 text-emerald-700" : "bg-surface-tertiary text-text-disabled"
+        active ? "bg-primary text-white" : done ? "bg-emerald-100 text-success" : "bg-surface-tertiary text-text-disabled"
       }`}>
         {number}
       </span>

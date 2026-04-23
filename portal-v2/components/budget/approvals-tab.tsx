@@ -144,9 +144,9 @@ interface PaymentBatch {
 }
 
 const BATCH_STATUS_STYLE: Record<string, string> = {
-  Draft:     "text-amber-700 bg-amber-50",
+  Draft:     "text-warning bg-amber-50",
   Sent:      "text-blue-700 bg-blue-50",
-  Confirmed: "text-emerald-700 bg-emerald-50",
+  Confirmed: "text-success bg-emerald-50",
 };
 
 function SectionTabs({ active, onChange }: {
@@ -386,7 +386,7 @@ export function ApprovalsTab() {
                   <p className="text-xs text-text-secondary truncate flex-1">{req.rationale}</p>
                   <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(req.amount)}</span>
                   <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
-                    req.status === "Approved" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+                    req.status === "Approved" ? "bg-emerald-50 text-success" : "bg-red-50 text-error"
                   }`}>
                     {req.status}
                   </span>
@@ -420,7 +420,7 @@ export function ApprovalsTab() {
                   </div>
                   <div className="flex gap-4 text-xs flex-1">
                     <span className="text-text-tertiary">Est: <span className="font-medium text-text-primary">{formatCurrency(inv.estimateTotal)}</span></span>
-                    <span className="text-text-tertiary">Inv: <span className={`font-medium ${inv.invoiceTotal > inv.estimateTotal ? "text-red-600" : "text-text-primary"}`}>{formatCurrency(inv.invoiceTotal)}</span></span>
+                    <span className="text-text-tertiary">Inv: <span className={`font-medium ${inv.invoiceTotal > inv.estimateTotal ? "text-error" : "text-text-primary"}`}>{formatCurrency(inv.invoiceTotal)}</span></span>
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <Button
@@ -455,10 +455,10 @@ export function ApprovalsTab() {
                   </div>
                   <div className="flex gap-4 text-xs flex-1">
                     <span className="text-text-tertiary">Est: <span className="font-medium text-text-primary">{formatCurrency(inv.estimateTotal)}</span></span>
-                    <span className="text-text-tertiary">Inv: <span className={`font-medium ${inv.invoiceTotal > inv.estimateTotal ? "text-red-600" : "text-text-primary"}`}>{formatCurrency(inv.invoiceTotal)}</span></span>
+                    <span className="text-text-tertiary">Inv: <span className={`font-medium ${inv.invoiceTotal > inv.estimateTotal ? "text-error" : "text-text-primary"}`}>{formatCurrency(inv.invoiceTotal)}</span></span>
                   </div>
                   <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
-                    inv.status === "Paid" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"
+                    inv.status === "Paid" ? "bg-emerald-50 text-success" : "bg-blue-50 text-blue-700"
                   }`}>
                     {inv.status}
                   </span>
@@ -625,7 +625,7 @@ export function ApprovalsTab() {
                           </Button>
                         )}
                         {batch.status === "Confirmed" && (
-                          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700">
+                          <span className="inline-flex items-center gap-1.5 text-xs text-success">
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             Payments confirmed{batch.confirmedAt ? ` · ${new Date(batch.confirmedAt).toLocaleDateString()}` : ""}
                           </span>
@@ -699,7 +699,7 @@ export function ApprovalsTab() {
                   </div>
                   <span className="shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(booking.totalAmount)}</span>
                   <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
-                    booking.status === "Cancelled" ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"
+                    booking.status === "Cancelled" ? "bg-red-50 text-error" : "bg-emerald-50 text-success"
                   }`}>
                     {booking.status === "Cancelled" ? "Declined" : "Approved"}
                   </span>

@@ -299,7 +299,7 @@ function LogisticsTab({ campaignId, shoots }: { campaignId: string; shoots: Shoo
             const MEAL_LABEL: Record<string, string> = { crafty: "Crafty", breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snacks: "Snacks" };
             const STATUS_COLOR: Record<string, string> = {
               pending: "bg-slate-100 text-slate-600", ordered: "bg-blue-100 text-blue-700",
-              confirmed: "bg-amber-100 text-amber-700", received: "bg-violet-100 text-violet-700", set: "bg-emerald-100 text-emerald-700",
+              confirmed: "bg-amber-100 text-warning", received: "bg-violet-100 text-violet-700", set: "bg-emerald-100 text-success",
             };
             return (
               <div key={date} className="flex items-center gap-3 px-3.5 py-3">
@@ -473,8 +473,8 @@ Thank you.`;
         {/* Warning */}
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
           <div className="flex gap-2">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-            <p className="text-xs text-amber-800 leading-relaxed">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-warning mt-0.5" />
+            <p className="text-xs text-warning leading-relaxed">
               Production insurance does <strong>NOT</strong> automatically cover hazardous and/or unusual activity including wild animals, horses, stunts, racing, watercraft, aircraft, railroads, pyrotechnics, adverse weather, filming outside of the US or Canada. You must not generate any COI for these activities and notify HOP for unusual scenarios.
             </p>
           </div>
@@ -818,12 +818,12 @@ function AddInternalModal({
         )}
 
         {shoots.length === 0 && selectedUser && (
-          <p className="text-sm text-amber-600 bg-amber-50 rounded-md px-3 py-2">
+          <p className="text-sm text-warning bg-amber-50 rounded-md px-3 py-2">
             No shoot days exist yet. Add shoot dates to this campaign first.
           </p>
         )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-error">{error}</p>}
       </div>
       <ModalFooter>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -931,7 +931,7 @@ function AddVendorModal({
             )}
           </div>
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-error">{error}</p>}
       </div>
       <ModalFooter>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -1116,7 +1116,7 @@ function PeopleTab({
               {internalQuery && (
                 <div className="mt-1 rounded-md border border-border divide-y divide-border bg-surface">
                   {shoots.length === 0 ? (
-                    <p className="px-3 py-2 text-xs text-amber-600">Add shoot dates first.</p>
+                    <p className="px-3 py-2 text-xs text-warning">Add shoot dates first.</p>
                   ) : filteredInternal.length === 0 ? (
                     <p className="px-3 py-2 text-sm text-text-tertiary">No matches.</p>
                   ) : filteredInternal.map(u => (

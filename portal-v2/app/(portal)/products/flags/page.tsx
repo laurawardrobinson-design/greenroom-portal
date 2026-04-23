@@ -97,27 +97,29 @@ export default function ProductFlagsPage() {
           <ArrowLeft className="h-3 w-3" />
           All products
         </Link>
-        <div className="flex items-center justify-between gap-3">
-          <PageHeader title="Product Flags" />
-          <div className="flex items-center gap-1 rounded-lg border border-border p-0.5 bg-surface">
-            {(["open", "resolved"] as const).map((k) => (
-              <button
-                key={k}
-                onClick={() => setTab(k)}
-                className={`px-3 py-1 rounded-md text-[12px] font-medium capitalize transition-colors ${
-                  tab === k
-                    ? "bg-surface-secondary text-text-primary"
-                    : "text-text-tertiary hover:text-text-secondary"
-                }`}
-              >
-                {k}
-                {k === "open" && openCount !== null && openCount > 0 && (
-                  <span className="ml-1 tabular-nums">({openCount})</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        <PageHeader
+          title="Product Flags"
+          actions={(
+            <div className="flex items-center gap-1 rounded-lg border border-border p-0.5 bg-surface">
+              {(["open", "resolved"] as const).map((k) => (
+                <button
+                  key={k}
+                  onClick={() => setTab(k)}
+                  className={`px-3 py-1 rounded-md text-[12px] font-medium capitalize transition-colors ${
+                    tab === k
+                      ? "bg-surface-secondary text-text-primary"
+                      : "text-text-tertiary hover:text-text-secondary"
+                  }`}
+                >
+                  {k}
+                  {k === "open" && openCount !== null && openCount > 0 && (
+                    <span className="ml-1 tabular-nums">({openCount})</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        />
         <p className="text-[13px] text-text-tertiary mt-1">
           Click any flag to review the product and clear or reopen it.
         </p>
@@ -197,7 +199,7 @@ function FlagRow({
             <div className="flex items-center gap-2 min-w-0">
               <Flag
                 className={`h-3 w-3 shrink-0 ${
-                  flag.status === "open" ? "text-amber-600" : "text-emerald-600"
+                  flag.status === "open" ? "text-warning" : "text-success"
                 }`}
               />
               <span className="text-[13px] font-semibold text-text-primary truncate">
@@ -219,7 +221,7 @@ function FlagRow({
                 className={`font-medium ${
                   flag.reason === "about_to_change"
                     ? "text-sky-700"
-                    : "text-rose-700"
+                    : "text-error"
                 }`}
               >
                 {reasonLabel(flag.reason)}

@@ -151,7 +151,7 @@ export function ProductDetailModal({ productId, open, onClose }: Props) {
         {product.restrictions && (
           <div>
             <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary mb-1">Restrictions</h3>
-            <p className="text-xs font-medium text-red-600 italic">{product.restrictions}</p>
+            <p className="text-xs font-medium text-error italic">{product.restrictions}</p>
           </div>
         )}
 

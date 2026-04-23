@@ -25,13 +25,12 @@ import { BudgetSidebarTile } from "@/components/campaigns/tiles/budget-sidebar-t
 import { CopySectionTile } from "@/components/campaigns/tiles/copy-section-tile";
 import { DeliverableTemplatesTile } from "@/components/campaigns/tiles/deliverable-templates-tile";
 import { CreativeTeamTile } from "@/components/campaigns/tiles/creative-team-tile";
-import { BriefEditor } from "@/components/campaigns/brief-editor";
-import { CampaignProductRequestsTile } from "@/components/campaigns/tiles/campaign-product-requests-tile";
+import { CampaignSectionTabs } from "@/components/campaigns/campaign-section-tabs";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Bell, AlertCircle, Calendar, X, Info, FolderSync, Images } from "lucide-react";
+import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Bell, AlertCircle, Calendar, X, FolderSync } from "lucide-react";
 import { ShotListModal } from "@/components/campaigns/shot-list-modal";
 import useSWR from "swr";
 import type { AppUser } from "@/types/domain";
@@ -69,20 +68,6 @@ export default function CampaignDetailPage({
   const [selectedShootId, setSelectedShootId] = useState<string | null>(null);
   const [sameCrew, setSameCrew] = useState(true);
   const [sameLocation, setSameLocation] = useState(false);
-
-  // Notes editing
-  const [editingNotes, setEditingNotes] = useState(false);
-  const [notesValue, setNotesValue] = useState("");
-
-  function startNotesEdit() {
-    setNotesValue(campaign?.notes ?? "");
-    setEditingNotes(true);
-  }
-
-  async function saveNotes() {
-    await handleUpdate("notes", notesValue || null);
-    setEditingNotes(false);
-  }
 
   // Modal / drawer state
   const [showOverageRequest, setShowOverageRequest] = useState(false);
@@ -310,56 +295,22 @@ export default function CampaignDetailPage({
 
   return (
     <div className="space-y-2 -mt-3">
-      {/* Header + logline + top-right actions */}
-      <div className="flex items-start gap-4">
-        <div className="flex-1 space-y-1">
-        <CampaignDetailHeader
-          campaign={campaign}
-          canEdit={canEdit}
-          canDelete={canDelete}
-          onStatusChange={handleStatusChange}
-          onDelete={handleDelete}
-          deleting={deleting}
-          onUpdate={handleUpdate}
-        />
+      <CampaignDetailHeader
+        campaign={campaign}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        onStatusChange={handleStatusChange}
+        onDelete={handleDelete}
+        deleting={deleting}
+        onUpdate={handleUpdate}
+      />
 
-        {/* Logline — no box, aligned under title */}
-        {(campaign.notes || canEdit) && (
-          <div className="pl-11 max-w-5xl">
-            {editingNotes ? (
-              <textarea
-                autoFocus
-                value={notesValue}
-                onChange={(e) => setNotesValue(e.target.value)}
-                onBlur={saveNotes}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    setNotesValue(campaign.notes ?? "");
-                    setEditingNotes(false);
-                  }
-                }}
-                rows={1}
-                placeholder="Add a logline — one sentence about what this campaign is and why it exists."
-                className="w-full text-sm text-text-secondary bg-transparent focus:outline-none resize-none"
-              />
-            ) : campaign.notes ? (
-              <p
-                className={`text-sm text-text-secondary leading-relaxed whitespace-pre-wrap ${canEdit && campaign.status !== "Cancelled" ? "cursor-pointer hover:text-text-primary transition-colors" : ""}`}
-                onClick={() => { if (canEdit && campaign.status !== "Cancelled") startNotesEdit(); }}
-              >
-                {campaign.notes}
-              </p>
-            ) : (
-              <p
-                className="text-sm text-text-tertiary italic cursor-pointer hover:text-text-secondary transition-colors"
-                onClick={startNotesEdit}
-              >
-                Add a logline — one sentence about what this campaign is and why it exists.
-              </p>
-            )}
-          </div>
-        )}
-        </div>
+      {/* Section tab nav — Brief / Asset Studio / Pre-Production all live behind tabs */}
+      {!isVendor && <CampaignSectionTabs campaignId={id} />}
+
+      {/* Top-right actions */}
+      <div className="flex items-start gap-4">
+        <div className="flex-1" />
 
         {/* Status + Assets Due — top right */}
         <div className="shrink-0 space-y-2 pt-1">
@@ -370,14 +321,6 @@ export default function CampaignDetailPage({
               onStatusChange={canEdit && campaign.status !== "Cancelled" ? handleStatusChange : undefined}
               disabled={!canEdit || campaign.status === "Cancelled"}
             />
-            <Link
-              href={`/campaigns/${id}/asset-studio`}
-              title="Open Asset Studio for this campaign"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2 py-1.5 text-xs text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors shrink-0"
-            >
-              <Images className="h-3.5 w-3.5" />
-              Asset Studio
-            </Link>
             <button
               type="button"
               onClick={() => setShowDraftEmail(true)}
@@ -415,29 +358,6 @@ export default function CampaignDetailPage({
           )}
         </div>
       </div>
-
-      {/* === CAMPAIGN BRIEF — upstream source of truth for direction === */}
-      {!isVendor && (
-        <BriefEditor
-          campaignId={id}
-          canEdit={canEdit || user?.role === "Brand Marketing Manager"}
-        />
-      )}
-
-      {/* === PRODUCT REQUESTS — Producer → BMM routed process === */}
-      {!isVendor && user && (
-        <CampaignProductRequestsTile
-          campaignId={id}
-          user={user}
-          shootDates={(shoots ?? []).flatMap((s: any) =>
-            (s?.dates ?? []).map((d: any) => ({
-              id: d.id,
-              shoot_date: d.shootDate ?? d.shoot_date ?? "",
-              shoot_name: s.name ?? "",
-            }))
-          )}
-        />
-      )}
 
       {/* === ROW 1: Calendar + Shoot Days | Documents | Budget === */}
       <div className={`grid grid-cols-1 gap-4 items-stretch ${isVendor ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
@@ -707,7 +627,7 @@ export default function CampaignDetailPage({
             {overageAmount && Number(overageAmount) > 0 && (
               <p className="mt-1.5 text-xs text-text-secondary">
                 New total if approved:{" "}
-                <span className="font-semibold text-emerald-600">
+                <span className="font-semibold text-success">
                   {formatCurrency(financials.committed + Number(overageAmount))}
                 </span>
               </p>

@@ -406,7 +406,7 @@ export function EditRoomCalendar({ user }: Props) {
                   size="sm"
                   onClick={() => handleCancel(detail.groupId)}
                   disabled={cancelling}
-                  className="text-red-600 hover:bg-red-50"
+                  className="text-error hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4" />
                   {cancelling ? "Cancelling…" : "Cancel Booking"}

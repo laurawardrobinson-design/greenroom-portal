@@ -13,8 +13,8 @@ import { FileText, AlertTriangle, Check, CheckCircle2, CornerDownLeft, Loader2, 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const SEVERITY_BADGE: Record<string, string> = {
-  high: "bg-red-50 text-red-700",
-  medium: "bg-amber-50 text-amber-700",
+  high: "bg-red-50 text-error",
+  medium: "bg-amber-50 text-warning",
   low: "bg-blue-50 text-blue-700",
 };
 
@@ -196,13 +196,13 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
         <div className="flex items-center gap-2 shrink-0">
           {/* Approval badges */}
           {isProducerApproved && !isHopApproved && (
-            <div className="flex items-center gap-1 text-xs text-emerald-600">
+            <div className="flex items-center gap-1 text-xs text-success">
               <CheckCircle2 className="h-3.5 w-3.5" />
               Producer approved
             </div>
           )}
           {isHopApproved && (
-            <div className="flex items-center gap-1 text-xs text-emerald-600">
+            <div className="flex items-center gap-1 text-xs text-success">
               <CheckCircle2 className="h-3.5 w-3.5" />
               HOP approved
             </div>
@@ -434,7 +434,7 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
                     <span className="text-text-primary">{formatCurrency(invoiceTotal)}</span>
                     {diff !== 0 && (
                       <span
-                        className={`block text-[10px] font-normal ${diff > 0 ? "text-red-600" : "text-emerald-600"}`}
+                        className={`block text-[10px] font-normal ${diff > 0 ? "text-error" : "text-success"}`}
                       >
                         {diff > 0 ? "+" : ""}
                         {formatCurrency(diff)}

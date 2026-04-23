@@ -120,10 +120,10 @@ export function ProcessReturnModal({ open, onClose, session, item, onSuccess }: 
       {/* Shooter locked state */}
       {shooterLocked && (
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3">
-          <Lock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <Lock className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
           <div>
-            <p className="text-sm font-semibold text-amber-800">Waiting for backup confirmation</p>
-            <p className="mt-0.5 text-xs text-amber-700">
+            <p className="text-sm font-semibold text-warning">Waiting for backup confirmation</p>
+            <p className="mt-0.5 text-xs text-warning">
               The media manager drive must be returned with backup confirmed before the shooter drive can be returned.
             </p>
           </div>
@@ -165,7 +165,7 @@ export function ProcessReturnModal({ open, onClose, session, item, onSuccess }: 
               </div>
             </label>
             {dataOffloaded && (
-              <div className="flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              <div className="flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 text-sm text-success">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
                 Backup confirmed — shooter drive will be unlocked for return.
               </div>
@@ -177,7 +177,7 @@ export function ProcessReturnModal({ open, onClose, session, item, onSuccess }: 
         {isShooter && !shooterLocked && (
           <>
             {mmItem?.returnedAt && (
-              <div className="flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              <div className="flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 text-sm text-success">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
                 Backup confirmed on {mmItem.returnedAt ? format(parseISO(mmItem.returnedAt), "MMM d, yyyy") : "—"}
                 {mmItem.backupLocation ? ` via ${mmItem.backupLocation}` : ""}

@@ -91,7 +91,7 @@ export function StudioDashboard({ user }: Props) {
         </Card>
         <Card>
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-warning">
               <Package className="h-4.5 w-4.5" />
             </div>
             <div>
@@ -201,7 +201,7 @@ export function StudioDashboard({ user }: Props) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-red-500" />
-              <p className="text-sm font-semibold text-red-900">
+              <p className="text-sm font-semibold text-error">
                 {stats.overdueReturns} gear item{stats.overdueReturns !== 1 ? "s" : ""} overdue for return
               </p>
             </div>
@@ -302,7 +302,7 @@ export function StudioDashboard({ user }: Props) {
                     <p className="text-xs font-medium text-text-secondary">
                       {format(parseISO(res.startDate), "MMM d")}
                     </p>
-                    <Badge variant="custom" className="bg-amber-50 text-amber-700 mt-0.5">
+                    <Badge variant="custom" className="bg-amber-50 text-warning mt-0.5">
                       Prep
                     </Badge>
                   </div>
@@ -342,7 +342,7 @@ export function StudioDashboard({ user }: Props) {
                     </p>
                   </div>
                   {item.category && (
-                    <Badge variant="custom" className="bg-amber-50 text-amber-700">
+                    <Badge variant="custom" className="bg-amber-50 text-warning">
                       {item.category}
                     </Badge>
                   )}

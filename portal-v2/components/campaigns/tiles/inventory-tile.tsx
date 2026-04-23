@@ -110,7 +110,7 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
                     {cp.role && (
                       <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${
                         cp.role === "hero"
-                          ? "bg-amber-50 text-amber-700"
+                          ? "bg-amber-50 text-warning"
                           : "bg-slate-100 text-slate-500"
                       }`}>
                         {cp.role === "hero" ? "Hero" : "Secondary"}
@@ -125,7 +125,7 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
                           className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
                             cp.role === "hero"
                               ? "bg-amber-500 text-white"
-                              : "bg-surface text-text-tertiary border border-border hover:bg-amber-50 hover:text-amber-700"
+                              : "bg-surface text-text-tertiary border border-border hover:bg-amber-50 hover:text-warning"
                           }`}
                         >
                           H

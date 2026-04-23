@@ -126,8 +126,8 @@ export function CampaignDetailHeader({
       {/* Cancelled state banner */}
       {isCancelled && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-center gap-2">
-          <X className="h-5 w-5 text-red-600 shrink-0" />
-          <p className="text-base font-medium text-red-700">
+          <X className="h-5 w-5 text-error shrink-0" />
+          <p className="text-base font-medium text-error">
             This campaign has been cancelled and cannot be edited.
           </p>
         </div>

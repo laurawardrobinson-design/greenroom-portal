@@ -44,7 +44,7 @@ function StatCard({
     <div className="flex items-start justify-between min-h-[4.5rem]">
       <div>
         <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">{label}</p>
-        <p className={`mt-1.5 text-2xl font-semibold tracking-tight ${alert && Number(value) > 0 ? "text-red-600" : "text-text-primary"}`}>
+        <p className={`mt-1.5 text-2xl font-semibold tracking-tight ${alert && Number(value) > 0 ? "text-error" : "text-text-primary"}`}>
           {value}
         </p>
       </div>
@@ -113,7 +113,7 @@ export function PostProducerDashboard({ user }: Props) {
           label="Pending Backup / Wipe"
           value={summary ? summary.drivesPendingBackup : "—"}
           icon={Clock}
-          accent="bg-amber-50 text-amber-600"
+          accent="bg-amber-50 text-warning"
           href="/post-workflow?tab=drives"
         />
         <StatCard
@@ -122,7 +122,7 @@ export function PostProducerDashboard({ user }: Props) {
           icon={AlertTriangle}
           accent={
             summary && summary.drivesPastRetirement > 0
-              ? "bg-red-50 text-red-600"
+              ? "bg-red-50 text-error"
               : "bg-orange-50 text-orange-500"
           }
           href="/post-workflow?tab=drives"
@@ -157,7 +157,7 @@ export function PostProducerDashboard({ user }: Props) {
                     }`}
                   >
                     <div className="min-w-0">
-                      <p className={`text-sm font-medium ${alert.pastRetirement ? "text-red-700" : "text-orange-700"}`}>
+                      <p className={`text-sm font-medium ${alert.pastRetirement ? "text-error" : "text-warning"}`}>
                         {alert.brand} {alert.model ?? ""} · {alert.storageSize}
                       </p>
                       <p className={`text-xs ${alert.pastRetirement ? "text-red-500" : "text-orange-500"}`}>
@@ -169,8 +169,8 @@ export function PostProducerDashboard({ user }: Props) {
                     <span
                       className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
                         alert.pastRetirement
-                          ? "bg-red-100 text-red-700"
-                          : "bg-orange-100 text-orange-700"
+                          ? "bg-red-100 text-error"
+                          : "bg-orange-100 text-warning"
                       }`}
                     >
                       {alert.pastRetirement ? "Past Retirement" : "Retiring Soon"}

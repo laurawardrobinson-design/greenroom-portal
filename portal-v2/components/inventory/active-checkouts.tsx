@@ -97,7 +97,7 @@ export function ActiveCheckouts({
         {checkouts.map((co) => (
           <div key={co.id} className="flex items-center gap-3 px-4 py-2.5">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-50">
-              <User className="h-3.5 w-3.5 text-amber-700" />
+              <User className="h-3.5 w-3.5 text-warning" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-text-primary truncate">
@@ -117,7 +117,7 @@ export function ActiveCheckouts({
                   </span>
                 )}
                 {co.dueDate && (
-                  <span className={`flex items-center gap-1 text-[10px] font-medium ${isBefore(parseISO(co.dueDate), startOfDay(new Date())) ? "text-red-600" : "text-text-tertiary"}`}>
+                  <span className={`flex items-center gap-1 text-[10px] font-medium ${isBefore(parseISO(co.dueDate), startOfDay(new Date())) ? "text-error" : "text-text-tertiary"}`}>
                     <Calendar className="h-2.5 w-2.5" />
                     Due {format(parseISO(co.dueDate), "MMM d")}
                     {isBefore(parseISO(co.dueDate), startOfDay(new Date())) && " — overdue"}

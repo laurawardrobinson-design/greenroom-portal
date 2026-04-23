@@ -205,7 +205,7 @@ export function RateCardManagement() {
                     size="sm"
                     variant="ghost"
                     onClick={() => handleDelete(card.id, card.role)}
-                    className="text-text-tertiary hover:text-red-600"
+                    className="text-text-tertiary hover:text-error"
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
