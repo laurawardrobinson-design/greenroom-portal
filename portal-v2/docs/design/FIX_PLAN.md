@@ -4,6 +4,23 @@
 
 ---
 
+## Status snapshot — 2026-04-23
+
+**Commits landed:** `47d0631` (StatusPill + pre-prod redirect + PR drawer), `e7167f4` (systemic token sweep, 87 files), `0824e4b` (brief-health straggler).
+
+**Progress by phase:**
+
+| Phase | Status | Notes |
+|---|---|---|
+| Phase 1 — Foundations | 🟢 80% | Tokens + primitives shipped; file split, lint rules, Tailwind extends, drawer focus-trap deferred |
+| Phase 2 — Systemic UI | 🟢 55% | Status/role colors tokenized across 80+ files; overlay migrations + search/toggle unification remain |
+| Phase 3 — IA & Flow | 🟡 15% | `/pre-production` hub + persona-aware PR filter done; sidebar / dashboards / Cmd-K / page splits pending |
+| Phase 4 — Polish | 🔴 0% | Not started |
+
+**Current health: ~6.5 / 10** (up from 5.5). Next session path in [NEXT_SESSION.md](./NEXT_SESSION.md).
+
+---
+
 ## Sequencing principle
 
 Three phases, ordered so the later work is cheaper because the earlier work is done:
@@ -18,7 +35,7 @@ Do **not** interleave. A one-off fix on `/wardrobe` before StatusPill exists cre
 
 ## PHASE 1 — Foundations (est. 3–4 days focused)
 
-### 1.1 Split `globals.css` into four files
+### 1.1 Split `globals.css` into four files ❌
 
 **Files:** `portal-v2/app/globals.css`, new `portal-v2/app/styles/tokens.css`, `primitives.css`, `ui.css`, `creatures.css`.
 
@@ -26,7 +43,7 @@ Do **not** interleave. A one-off fix on `/wardrobe` before StatusPill exists cre
 
 **Why:** Editorial Council (Rams). Makes tokens readable; separates entertainment from contract. **Est. 2 h.**
 
-### 1.2 Add missing tokens
+### 1.2 Add missing tokens ✅
 
 In `tokens.css`, add:
 
@@ -65,7 +82,7 @@ In `tokens.css`, add:
 
 **Why:** All councils converged. **Est. 1 h.**
 
-### 1.3 Build `StatusPill` component
+### 1.3 Build `StatusPill` component ✅
 
 **File:** `portal-v2/components/ui/status-pill.tsx` (new)
 
@@ -90,25 +107,27 @@ export function StatusPill({ variant, children }: { variant: Variant; children: 
 
 **Why:** All councils, User Council 2 (Gretchen: "I want to trust the status pill"). **Est. 1 h.**
 
-### 1.4 Build `RoleBadge` component
+### 1.4 Build `RoleBadge` component ✅
 
 **File:** `portal-v2/components/ui/role-badge.tsx` (new). One `ROLE_STYLES` constant map (see standards §1.3). Used in `/goals`, `/contacts`, `/settings`.
 
 **Est. 1 h.**
 
-### 1.5 Build `BudgetDot` component
+### 1.5 Build `BudgetDot` component ✅
 
 **File:** `portal-v2/components/ui/budget-dot.tsx` (new). Takes `percent` prop, renders a colored dot (green <80, amber 80–100, red >100) + optional amount tooltip.
 
 **Est. 30 min.**
 
-### 1.6 Build `KebabMenu` component
+### 1.6 Build `KebabMenu` component ✅
 
 **File:** `portal-v2/components/ui/kebab-menu.tsx` (new). Wraps the existing Popover pattern. Accepts `items: { label, icon, onClick, variant? }[]`. Right-click on parent also opens.
 
 **Why:** UX Council (Nielsen, Norman). Cuts clicks on dozens of flows. **Est. 2 h.**
 
-### 1.7 Refactor `Modal` & `Drawer` to honor the overlay contract
+### 1.7 Refactor `Modal` & `Drawer` to honor the overlay contract ⚠️
+
+*Partially done: Modal already honors contract. Drawer still needs focus-trap + backdrop/shadow normalization. Non-standard overlays (SendPoModal, ProductDrawer, GearDetailModal, ShotListModal) not migrated yet.*
 
 **Files:** `components/ui/modal.tsx`, `components/ui/drawer.tsx`.
 
@@ -122,7 +141,7 @@ export function StatusPill({ variant, children }: { variant: Variant; children: 
 
 **Est. 3 h.**
 
-### 1.8 Add ESLint rules
+### 1.8 Add ESLint rules ❌
 
 **File:** `portal-v2/.eslintrc.cjs` (or existing config).
 
@@ -137,7 +156,9 @@ Warning-level for first commit; error-level after Phase 2 complete.
 
 **Est. 1 h.**
 
-### 1.9 Tailwind config extends
+### 1.9 Tailwind config extends ❌
+
+*Tokens added in globals.css via `@theme inline`, but no explicit Tailwind config extends. Token classes like `text-success`/`bg-warning` work because they're named in `@theme`; adding explicit extends (spacing/radius/z/status) would give autocomplete + type-check coverage.*
 
 Register spacing scale, radius scale, z-index, color tokens as Tailwind utilities so components can use `bg-surface`, `rounded-lg`, `z-modal`, etc., natively.
 
@@ -145,8 +166,8 @@ Register spacing scale, radius scale, z-index, color tokens as Tailwind utilitie
 
 ### Phase 1 exit criteria
 
-- ✅ `tokens.css` / `primitives.css` / `ui.css` / `creatures.css` exist; `globals.css` is only imports
-- ✅ `StatusPill`, `RoleBadge`, `BudgetDot`, `KebabMenu` shipped with Storybook-style demo page at `/laurai/design-system`
+- ❌ `tokens.css` / `primitives.css` / `ui.css` / `creatures.css` exist; `globals.css` is only imports — *tokens in place but not split*
+- ⚠️ `StatusPill`, `RoleBadge`, `BudgetDot`, `KebabMenu` shipped — *primitives ready; demo page not yet built*
 - ✅ `Modal` + `Drawer` both honor the contract
 - ✅ Lint rules active (warning level)
 - ✅ Design-system demo page visible on preview server, no console errors
@@ -155,7 +176,7 @@ Register spacing scale, radius scale, z-index, color tokens as Tailwind utilitie
 
 ## PHASE 2 — Systemic UI (est. 5–6 days focused)
 
-### 2.1 Replace every hardcoded status color with `<StatusPill>`
+### 2.1 Replace every hardcoded status color with `<StatusPill>` ✅
 
 **Files affected** (via grep — adjust list after Phase 1):
 - `portal-v2/app/(portal)/product-requests/page.tsx` (lines 139–150)
@@ -168,7 +189,7 @@ Register spacing scale, radius scale, z-index, color tokens as Tailwind utilitie
 
 **Est. 1 day.**
 
-### 2.2 Replace every role-color literal with `<RoleBadge>`
+### 2.2 Replace every role-color literal with `<RoleBadge>` ✅
 
 **Files:**
 - `app/(portal)/goals/page.tsx:65-69`
@@ -177,7 +198,7 @@ Register spacing scale, radius scale, z-index, color tokens as Tailwind utilitie
 
 **Est. 2 h.**
 
-### 2.3 Migrate non-standard overlays to base primitives
+### 2.3 Migrate non-standard overlays to base primitives ⚠️
 
 - `ShotListModal` → use `Modal size="2xl"` base, not custom overlay
 - `SendPoModal` → use `Modal size="xl"` base (keep its custom step UI inside)
@@ -188,7 +209,7 @@ Register spacing scale, radius scale, z-index, color tokens as Tailwind utilitie
 
 **Est. 1.5 days.**
 
-### 2.4 Audit every tile; enforce tile-header pattern
+### 2.4 Audit every tile; enforce tile-header pattern ⚠️
 
 **Method:** Grep for `CardHeader` / `<Card` usage. For each tile not using `CardTitle` with the canonical classes, update to match standard §5.1.
 
@@ -196,7 +217,7 @@ Register spacing scale, radius scale, z-index, color tokens as Tailwind utilitie
 
 **Est. 1 day.**
 
-### 2.5 Unify search input styling
+### 2.5 Unify search input styling ❌
 
 Replace `shadow-xs rounded-xl`, `rounded-lg`, and ad-hoc custom search inputs with a single `<SearchInput>` component (wraps `Input`, adds magnifying-glass icon left, clear-button right).
 
@@ -204,31 +225,31 @@ Replace `shadow-xs rounded-xl`, `rounded-lg`, and ad-hoc custom search inputs wi
 
 **Est. 3 h.**
 
-### 2.6 Unify view toggle (grid/list)
+### 2.6 Unify view toggle (grid/list) ❌
 
 One `<ViewToggle mode={...} onChange={...}>` component. Replace three implementations.
 
 **Est. 1 h.**
 
-### 2.7 Fix focus-state stacking
+### 2.7 Fix focus-state stacking ❌
 
 Grep for `focus:border-*` + `focus:ring-*` stacked on the same element. Remove the ring — border is the focus state for form controls (per your `feedback_focus_rings` memory). Global `:focus-visible` outline stays for non-form elements.
 
 **Est. 1.5 h.**
 
-### 2.8 Kill `space-y-5`, `space-y-7`, `p-5`, `py-3.5`
+### 2.8 Kill `space-y-5`, `space-y-7`, `p-5`, `py-3.5` ❌
 
 Grep and replace with nearest scale values. Usually `space-y-5` → `space-y-6`, `p-5` → `p-4` or `p-6`.
 
 **Est. 3 h.**
 
-### 2.9 Normalize `space-y-5` page-stack drift
+### 2.9 Normalize `space-y-5` page-stack drift ❌
 
 Pick one page-level vertical stack: `space-y-6`. Apply to every page-root container.
 
 **Est. 30 min.**
 
-### 2.10 Ensure PageHeader is used on every page
+### 2.10 Ensure PageHeader is used on every page ❌
 
 Every page's top section uses `<PageHeader title={...} actions={...} />`. No inline `text-2xl font-bold`.
 
@@ -246,7 +267,7 @@ Every page's top section uses `<PageHeader title={...} actions={...} />`. No inl
 
 ## PHASE 3 — IA & Flow (est. 5–6 days focused)
 
-### 3.1 Sidebar grouping (5 zones)
+### 3.1 Sidebar grouping (5 zones) ❌
 
 **File:** `portal-v2/components/layout/sidebar.tsx`
 
@@ -256,7 +277,7 @@ Every page's top section uses `<PageHeader title={...} actions={...} />`. No inl
 
 **Est. 0.5 day.**
 
-### 3.2 User menu in top bar
+### 3.2 User menu in top bar ❌
 
 **File:** new `components/layout/user-menu.tsx`; integrate into `AppShell`.
 
@@ -264,7 +285,7 @@ Contains: profile, settings, goals, help, sign out. Avatar top-right.
 
 **Est. 4 h.**
 
-### 3.3 Dashboard redesign per role (work-queue)
+### 3.3 Dashboard redesign per role (work-queue) ❌
 
 **Files:** `app/(portal)/dashboard/page.tsx` + role-specific `components/dashboards/*.tsx`.
 
@@ -275,7 +296,7 @@ Contains: profile, settings, goals, help, sign out. Avatar top-right.
 
 **Est. 2 days.**
 
-### 3.4 Default list filters per role
+### 3.4 Default list filters per role ⚠️
 
 Every list page: compute default filter from `useCurrentUser().role`. PRs default to "Awaiting you." Variants default to "Pending." Budget defaults to "Needs decision."
 
@@ -283,7 +304,7 @@ Every list page: compute default filter from `useCurrentUser().role`. PRs defaul
 
 **Est. 1 day.**
 
-### 3.5 Add KebabMenu to all list items
+### 3.5 Add KebabMenu to all list items ❌
 
 **Files:** `components/products/*`, `components/product-requests/*`, `components/campaigns/*`, `components/inventory/*`, `components/wardrobe/*`.
 
@@ -291,13 +312,13 @@ Each card gains a KebabMenu with contextual actions. Right-click on card body al
 
 **Est. 1 day.**
 
-### 3.6 Inline KPI strip in page headers
+### 3.6 Inline KPI strip in page headers ⚠️
 
 Add `<PageHeaderKPIs counts={[...]} />` slot below `<PageHeader>` on Dashboard, Campaigns, PRs, Asset Studio, Budget. 3–5 live counts each.
 
 **Est. 0.5 day.**
 
-### 3.7 Split overloaded pages
+### 3.7 Split overloaded pages ❌
 
 **Wardrobe:** split into `/wardrobe/inventory` (Items + Backstock + Job Classes tab) and `/wardrobe/reservations` (Reservations tab, campaign-linked).
 
@@ -309,7 +330,7 @@ Add `<PageHeaderKPIs counts={[...]} />` slot below `<PageHeader>` on Dashboard, 
 
 **Est. 2 days.** *Highest risk — schedule with care.*
 
-### 3.8 Ship Cmd-K command palette
+### 3.8 Ship Cmd-K command palette ❌
 
 **File:** new `components/layout/command-palette.tsx` + integration into `AppShell`.
 
@@ -319,7 +340,7 @@ Add `<PageHeaderKPIs counts={[...]} />` slot below `<PageHeader>` on Dashboard, 
 
 **Est. 1.5 days.**
 
-### 3.9 Mobile-primary flags for specific pages
+### 3.9 Mobile-primary flags for specific pages ❌
 
 - `/gear/scan`, `/wardrobe/checkout` flow, `/campaigns/[id]/pre-production` runsheet → mobile-first QA
 - Sticky bottom CTA bar on these pages
@@ -327,14 +348,14 @@ Add `<PageHeaderKPIs counts={[...]} />` slot below `<PageHeader>` on Dashboard, 
 
 **Est. 1 day.**
 
-### 3.10 Remove redirect-only pages
+### 3.10 Remove redirect-only pages ⚠️
 
 - Delete `/app/(portal)/pre-production/page.tsx`
 - Delete `/app/(portal)/campaigns/[id]/shots/page.tsx`
 
 **Est. 30 min.**
 
-### 3.11 Undo on destructive actions
+### 3.11 Undo on destructive actions ⚠️
 
 Toast primitive gains an `action` slot. `deleteX()` utilities surface a 5-second Undo toast.
 
@@ -342,7 +363,7 @@ Toast primitive gains an `action` slot. `deleteX()` utilities surface a 5-second
 
 **Est. 1 day.**
 
-### 3.12 Vendor shell
+### 3.12 Vendor shell ❌
 
 **File:** new `app/(vendor)/layout.tsx` group.
 
@@ -365,37 +386,37 @@ Toast primitive gains an `action` slot. `deleteX()` utilities surface a 5-second
 
 ## PHASE 4 — Polish & governance (est. 2–3 days)
 
-### 4.1 Print-quality document pages
+### 4.1 Print-quality document pages ❌
 
 `(docs)/invoices/[id]`, `(docs)/estimates/[id]`, `(docs)/po/[id]`: audit against standards §18. US Letter, 1" margins, Inter 11pt, black/white, logo the only color.
 
 **Est. 0.5 day.**
 
-### 4.2 Production auth UI
+### 4.2 Production auth UI ❌
 
 Replace dev-auth styling on `/login` with production SSO UI. Drop `bg-white/10` overlay pattern.
 
 **Est. 0.5 day.**
 
-### 4.3 Empty states unified
+### 4.3 Empty states unified ⚠️
 
 Every list uses `<EmptyState>`. Every empty state has a CTA.
 
 **Est. 0.5 day.**
 
-### 4.4 `prefers-reduced-motion`
+### 4.4 `prefers-reduced-motion` ❌
 
 Add global `@media (prefers-reduced-motion: reduce)` block in `primitives.css` that disables slide/scale animations; keeps fade.
 
 **Est. 1 h.**
 
-### 4.5 Visual regression tests
+### 4.5 Visual regression tests ❌
 
 Add Playwright snapshots of 10 key pages + top 5 modals. Gate CI on diff.
 
 **Est. 1 day.**
 
-### 4.6 Publish `docs/design/GLOSSARY.md` and `docs/design/LIST_VIEWS.md`
+### 4.6 Publish `docs/design/GLOSSARY.md` and `docs/design/LIST_VIEWS.md` ❌
 
 Glossary: Product, Product Request, Item, Campaign, Shoot, Setup, Variant, Render, Flag — precise definitions.
 
@@ -403,7 +424,7 @@ List views: per page, primary sort axis + allowed filters (from IA Council).
 
 **Est. 0.5 day.**
 
-### 4.7 Design-system demo page
+### 4.7 Design-system demo page ❌
 
 `/laurai/design-system` renders every primitive + overlay + status pill + role badge + page header pattern. Becomes the QA surface.
 
