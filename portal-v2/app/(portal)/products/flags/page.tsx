@@ -7,22 +7,21 @@ import {
   Apple,
   ArrowLeft,
   Beef,
-  Check,
   Cookie,
   Flag,
   Sandwich,
   ShoppingBasket,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import type {
   ProductFlag,
   ProductFlagStatus,
 } from "@/lib/services/product-flags.service";
 import type { PRDepartment } from "@/types/domain";
+import { FlagReviewModal } from "@/components/products/flag-review-modal";
 
 const DEPT_ICONS: Record<PRDepartment, LucideIcon> = {
   Bakery: Cookie,
@@ -60,6 +59,7 @@ function reasonLabel(reason: ProductFlag["reason"]) {
 export default function ProductFlagsPage() {
   const { user } = useCurrentUser();
   const [tab, setTab] = useState<ProductFlagStatus>("open");
+  const [activeFlagId, setActiveFlagId] = useState<string | null>(null);
 
   const { data, isLoading, mutate } = useSWR<ProductFlag[]>(
     `/api/product-flags?status=${tab}`,
@@ -71,27 +71,24 @@ export default function ProductFlagsPage() {
     user?.role === "Producer" ||
     user?.role === "Post Producer" ||
     user?.role === "Admin";
+  const canEdit = canResolve || user?.role === "Art Director" || user?.role === "Studio";
 
   const flags = useMemo(() => data ?? [], [data]);
   const openCount = useMemo(
     () => (tab === "open" ? flags.length : null),
     [flags, tab]
   );
-
-  const resolve = useCallback(
-    async (flagId: string, note: string) => {
-      await fetch(`/api/product-flags/${flagId}/resolve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note }),
-      });
-      mutate();
-    },
-    [mutate]
+  const activeFlag = useMemo(
+    () => flags.find((f) => f.id === activeFlagId) ?? null,
+    [flags, activeFlagId]
   );
 
+  const refresh = useCallback(() => {
+    mutate();
+  }, [mutate]);
+
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+    <div className="space-y-5">
       <div>
         <Link
           href="/products"
@@ -122,37 +119,46 @@ export default function ProductFlagsPage() {
           </div>
         </div>
         <p className="text-[13px] text-text-tertiary mt-1">
-          Flags raised by RBU departments on inventory items.{" "}
-          {canResolve
-            ? "You can clear flags once the underlying issue is addressed."
-            : "Only producers can clear flags."}
+          Click any flag to review the product and clear or reopen it.
         </p>
       </div>
 
-      {isLoading ? (
-        <div className="h-40 rounded-xl bg-surface-secondary animate-pulse" />
-      ) : flags.length === 0 ? (
-        <Card padding="none">
-          <div className="px-6 py-10 text-center">
-            <Flag className="h-6 w-6 text-text-tertiary mx-auto" />
-            <p className="mt-2 text-[13px] text-text-tertiary">
-              {tab === "open"
-                ? "No open flags. All clear."
-                : "No resolved flags yet."}
-            </p>
-          </div>
-        </Card>
-      ) : (
-        <ul className="space-y-3">
-          {flags.map((f) => (
-            <FlagRow
-              key={f.id}
-              flag={f}
-              canResolve={canResolve && f.status === "open"}
-              onResolve={resolve}
-            />
-          ))}
-        </ul>
+      <div className="max-w-xl">
+        {isLoading ? (
+          <div className="h-20 rounded-xl bg-surface-secondary animate-pulse" />
+        ) : flags.length === 0 ? (
+          <Card padding="none">
+            <div className="px-6 py-10 text-center">
+              <Flag className="h-6 w-6 text-text-tertiary mx-auto" />
+              <p className="mt-2 text-[13px] text-text-tertiary">
+                {tab === "open"
+                  ? "No open flags. All clear."
+                  : "No resolved flags yet."}
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <ul className="space-y-2">
+            {flags.map((f) => (
+              <FlagRow
+                key={f.id}
+                flag={f}
+                onClick={() => setActiveFlagId(f.id)}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {activeFlag && (
+        <FlagReviewModal
+          flag={activeFlag}
+          canResolve={canResolve && activeFlag.status === "open"}
+          canReopen={canResolve && activeFlag.status === "resolved"}
+          canEdit={canEdit}
+          onClose={() => setActiveFlagId(null)}
+          onChanged={refresh}
+        />
       )}
     </div>
   );
@@ -160,150 +166,75 @@ export default function ProductFlagsPage() {
 
 function FlagRow({
   flag,
-  canResolve,
-  onResolve,
+  onClick,
 }: {
   flag: ProductFlag;
-  canResolve: boolean;
-  onResolve: (flagId: string, note: string) => Promise<void>;
+  onClick: () => void;
 }) {
-  const [showResolve, setShowResolve] = useState(false);
-  const [note, setNote] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const DeptIcon = DEPT_ICONS[flag.flaggedByDept];
-
-  const submit = async () => {
-    setSubmitting(true);
-    try {
-      await onResolve(flag.id, note);
-      setShowResolve(false);
-      setNote("");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <li>
-      <Card padding="none">
-        <CardHeader>
-          <CardTitle>
-            <Flag />
-            <span className="truncate">{flag.product?.name ?? "Unknown"}</span>
-            <span className="text-[10px] font-medium text-text-tertiary normal-case tracking-normal ml-0.5">
-              · #{flag.product?.itemCode ?? "—"}
-            </span>
-          </CardTitle>
-          <span
-            className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
-              flag.status === "open"
-                ? "bg-amber-50 text-amber-800 border border-amber-200"
-                : "bg-emerald-50 text-emerald-800 border border-emerald-200"
-            }`}
-          >
-            {flag.status}
-          </span>
-        </CardHeader>
-        <div className="px-3.5 py-3 space-y-3">
-          <div className="flex items-start gap-3">
-            {flag.product?.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={flag.product.imageUrl}
-                alt={flag.product.name}
-                className="h-14 w-14 rounded-lg object-cover shrink-0 bg-surface-tertiary"
-              />
-            ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-surface-tertiary shrink-0">
-                <ShoppingBasket className="h-5 w-5 text-text-tertiary" />
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-text-tertiary">
-                <span className="inline-flex items-center gap-1">
-                  <DeptIcon className="h-3 w-3" />
-                  {flag.flaggedByDept} team
-                </span>
-                <span>·</span>
-                <span
-                  className={`font-medium ${
-                    flag.reason === "about_to_change"
-                      ? "text-sky-700"
-                      : "text-rose-700"
-                  }`}
-                >
-                  {reasonLabel(flag.reason)}
-                </span>
-                <span>·</span>
-                <span>{formatRelative(flag.createdAt)}</span>
-              </div>
-              {flag.comment && (
-                <p className="mt-1.5 text-[13px] text-text-primary whitespace-pre-wrap">
-                  {flag.comment}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {flag.status === "resolved" && (
-            <div className="text-[12px] text-text-tertiary border-t border-border/60 pt-2">
-              Resolved by{" "}
-              <span className="text-text-primary font-medium">
-                {flag.resolvedByName ?? "—"}
-              </span>
-              {flag.resolvedAt && ` · ${formatRelative(flag.resolvedAt)}`}
-              {flag.resolutionNote && (
-                <p className="mt-1 italic text-text-secondary">
-                  “{flag.resolutionNote}”
-                </p>
-              )}
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-left hover:bg-surface-secondary transition-colors"
+      >
+        <div className="flex items-start gap-2.5">
+          {flag.product?.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={flag.product.imageUrl}
+              alt={flag.product.name}
+              className="h-11 w-11 rounded-md object-cover shrink-0 bg-surface-tertiary"
+            />
+          ) : (
+            <div className="flex h-11 w-11 items-center justify-center rounded-md bg-surface-tertiary shrink-0">
+              <ShoppingBasket className="h-4 w-4 text-text-tertiary" />
             </div>
           )}
-
-          {canResolve &&
-            (showResolve ? (
-              <div className="border-t border-border/60 pt-3 space-y-2">
-                <textarea
-                  rows={2}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Resolution note (optional)"
-                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none resize-none"
-                />
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    onClick={() => {
-                      setShowResolve(false);
-                      setNote("");
-                    }}
-                    className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-[12px] text-text-secondary hover:bg-surface-secondary"
-                  >
-                    <X className="h-3 w-3" />
-                    Cancel
-                  </button>
-                  <button
-                    onClick={submit}
-                    disabled={submitting}
-                    className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-[12px] font-medium text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
-                  >
-                    <Check className="h-3 w-3" />
-                    {submitting ? "Clearing…" : "Clear flag"}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="border-t border-border/60 pt-2 flex justify-end">
-                <button
-                  onClick={() => setShowResolve(true)}
-                  className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1 text-[12px] font-medium text-white hover:bg-primary/90 transition-colors"
-                >
-                  <Check className="h-3 w-3" />
-                  Clear flag
-                </button>
-              </div>
-            ))}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <Flag
+                className={`h-3 w-3 shrink-0 ${
+                  flag.status === "open" ? "text-amber-600" : "text-emerald-600"
+                }`}
+              />
+              <span className="text-[13px] font-semibold text-text-primary truncate">
+                {flag.product?.name ?? "Unknown"}
+              </span>
+              {flag.product?.itemCode && (
+                <span className="text-[10px] text-text-tertiary shrink-0">
+                  #{flag.product.itemCode}
+                </span>
+              )}
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-tertiary">
+              <span className="inline-flex items-center gap-1">
+                <DeptIcon className="h-3 w-3" />
+                {flag.flaggedByDept}
+              </span>
+              <span>·</span>
+              <span
+                className={`font-medium ${
+                  flag.reason === "about_to_change"
+                    ? "text-sky-700"
+                    : "text-rose-700"
+                }`}
+              >
+                {reasonLabel(flag.reason)}
+              </span>
+              <span>·</span>
+              <span>{formatRelative(flag.createdAt)}</span>
+            </div>
+            {flag.comment && (
+              <p className="mt-1 text-[12px] text-text-secondary line-clamp-2">
+                {flag.comment}
+              </p>
+            )}
+          </div>
         </div>
-      </Card>
+      </button>
     </li>
   );
 }

@@ -136,9 +136,9 @@
   --density-shotlist-addshot-px: 0.875rem;
   --density-shotlist-addshot-py: 0.5rem;
 
-  --density-page-content-px: 1rem;
-  --density-page-content-px-lg: 1.5rem;
-  --density-page-content-py: 1.5rem;
+  --density-page-content-px: 0.75rem;
+  --density-page-content-px-lg: 1rem;
+  --density-page-content-py: 1.25rem;
 
   --density-modal-overlay-pad: 1rem;
   --density-modal-content-pad: 1.25rem;

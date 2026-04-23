@@ -12,6 +12,7 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import {
   ShoppingBasket,
   Edit2,
+  Flag,
   Trash2,
   ExternalLink,
   Link2,
@@ -20,6 +21,8 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { RaiseFlagDialog } from "@/components/products/raise-flag-dialog";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -85,10 +88,19 @@ export function ProductDrawer({
   canEdit: boolean;
 }) {
   const { toast } = useToast();
+  const { user } = useCurrentUser();
   const isNew = product === null;
   const [editMode, setEditMode] = useState(isNew);
   const [current, setCurrent] = useState<Product | null>(product);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [showRaiseFlag, setShowRaiseFlag] = useState(false);
+
+  const canRaiseFlag =
+    !!current &&
+    (user?.role === "Admin" ||
+      user?.role === "Producer" ||
+      user?.role === "Post Producer" ||
+      user?.role === "Brand Marketing Manager");
 
   // Form state
   const [name, setName] = useState(product?.name ?? "");
@@ -601,7 +613,7 @@ export function ProductDrawer({
           )}
 
           {/* Actions */}
-          {canEdit && (
+          {(canEdit || canRaiseFlag) && (
             <div className="flex gap-2 pt-1 border-t border-border">
               {editMode ? (
                 <>
@@ -610,18 +622,45 @@ export function ProductDrawer({
                 </>
               ) : (
                 <>
-                  <Button type="button" variant="secondary" onClick={() => setEditMode(true)} className="flex-1">
-                    <Edit2 className="h-3.5 w-3.5" />Edit
-                  </Button>
-                  <Button type="button" variant="danger" onClick={handleDelete} loading={deleting}>
-                    <Trash2 className="h-3.5 w-3.5" />Delete
-                  </Button>
+                  {canEdit && (
+                    <Button type="button" variant="secondary" onClick={() => setEditMode(true)} className="flex-1">
+                      <Edit2 className="h-3.5 w-3.5" />Edit
+                    </Button>
+                  )}
+                  {canRaiseFlag && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setShowRaiseFlag(true)}
+                      className={canEdit ? "" : "flex-1"}
+                      title="Flag for BMM + RBU review"
+                    >
+                      <Flag className="h-3.5 w-3.5" />
+                      Flag
+                    </Button>
+                  )}
+                  {canEdit && (
+                    <Button type="button" variant="danger" onClick={handleDelete} loading={deleting}>
+                      <Trash2 className="h-3.5 w-3.5" />Delete
+                    </Button>
+                  )}
                 </>
               )}
             </div>
           )}
         </form>
       ) : null}
+
+      {/* Raise flag dialog */}
+      {showRaiseFlag && current && (
+        <RaiseFlagDialog
+          productId={current.id}
+          productName={current.name}
+          productDept={current.department}
+          onClose={() => setShowRaiseFlag(false)}
+          onCreated={() => { /* toast handled inside dialog */ }}
+        />
+      )}
 
       {/* Lightbox */}
       {lightboxUrl && (
