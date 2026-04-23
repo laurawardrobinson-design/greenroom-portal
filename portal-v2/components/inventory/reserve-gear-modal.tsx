@@ -125,7 +125,7 @@ export function ReserveGearModal({
             }}
             onFocus={() => { if (!gearItemId) setShowDropdown(true); }}
             placeholder="Search by name, brand, or model..."
-            className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
           />
           {showDropdown && !gearItemId && (
             <>
@@ -190,7 +190,7 @@ export function ReserveGearModal({
             }}
             onFocus={() => { if (!campaignId) setShowCampaignDropdown(true); }}
             placeholder="Search campaigns..."
-            className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
           />
           {showCampaignDropdown && !campaignId && (
             <>
@@ -236,7 +236,7 @@ export function ReserveGearModal({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g., For Spring Campaign shoot"
-            className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
           />
         </div>
         <ModalFooter>

@@ -368,7 +368,7 @@ export default function RunDetailPage({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-[var(--as-text)]">
                 Latest render job{" "}
-                <span className="font-mono text-[11px] text-[var(--as-text-subtle)]">
+                <span className="text-[11px] text-[var(--as-text-subtle)]">
                   {latestRenderJob.id.slice(0, 8)}
                 </span>
               </p>
@@ -805,7 +805,7 @@ function RunVariantCard({
         </span>
         {variant.localeCode && variant.localeCode !== "en-US" && (
           <span
-            className="absolute left-2 top-2 rounded-md bg-black/60 px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-white"
+            className="absolute left-2 top-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white"
             title={`Locale: ${variant.localeCode}`}
           >
             {variant.localeCode}
@@ -820,7 +820,7 @@ function RunVariantCard({
         <p className="truncate text-[11px] text-[var(--as-text-subtle)]">
           {variant.outputSpec?.label ?? `${variant.width}×${variant.height}`}
           {variant.localeCode && variant.localeCode !== "en-US" && (
-            <> · <span className="font-mono">{variant.localeCode}</span></>
+            <> · <span>{variant.localeCode}</span></>
           )}
         </p>
 

@@ -87,6 +87,12 @@ Before merge/deploy, confirm dev-only toggles are off in production:
 
 - `NEXT_PUBLIC_DEV_AUTH` should be unset/false
 - `NEXT_PUBLIC_RESET_ENABLED` should be unset/false
+- `DEV_AUTH_ALLOW_PRODUCTION` should be unset/false
+- `RESET_ALLOW_PRODUCTION` should be unset/false
+
+Note:
+- Dev login now requires both `NEXT_PUBLIC_DEV_AUTH=true` and (in production-like envs) `DEV_AUTH_ALLOW_PRODUCTION=true`.
+- Reset endpoint now requires both `NEXT_PUBLIC_RESET_ENABLED=true` and (in production-like envs) `RESET_ALLOW_PRODUCTION=true`.
 
 ## 7) Merge and Release
 
@@ -119,4 +125,3 @@ If release issues are found:
    - How tested
    - Any migration/env requirements
 3. Keep unrelated refactors out of release branches.
-

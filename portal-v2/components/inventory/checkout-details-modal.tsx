@@ -107,7 +107,7 @@ export function CheckoutDetailsModal({
             <select
               value={campaignId}
               onChange={(e) => setCampaignId(e.target.value)}
-              className="h-9 w-full rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+              className="h-9 w-full rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary focus:border-primary focus:outline-none"
             >
               <option value="">No campaign (general checkout)</option>
               {upcoming.length > 0 && (
@@ -146,7 +146,7 @@ export function CheckoutDetailsModal({
               value={dueDate}
               min={new Date().toISOString().slice(0, 10)}
               onChange={(e) => setDueDate(e.target.value)}
-              className="h-9 w-full rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+              className="h-9 w-full rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary focus:border-primary focus:outline-none"
             />
             {!dueDate && (
               <p className="mt-1.5 text-xs text-text-tertiary">

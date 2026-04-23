@@ -72,7 +72,7 @@ export default function NewProductRequestPage() {
               value={campaignId}
               onChange={(e) => setCampaignId(e.target.value)}
               required
-              className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+              className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-primary focus:outline-none"
             >
               <option value="">Select a campaign…</option>
               {campaigns.map((c) => (
@@ -95,7 +95,7 @@ export default function NewProductRequestPage() {
             value={shootDate}
             onChange={(e) => setShootDate(e.target.value)}
             required
-            className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+            className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-primary focus:outline-none"
           />
           <p className="text-[11px] text-text-tertiary">
             Products from the campaign shot list will be pre-filled by department.

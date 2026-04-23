@@ -72,7 +72,7 @@ export function ProductDetailModal({ productId, open, onClose }: Props) {
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-xs font-medium text-primary">{product.department}</span>
               {product.itemCode && (
-                <span className="font-mono text-sm font-semibold text-text-primary">{product.itemCode}</span>
+                <span className="text-sm font-semibold text-text-primary">{product.itemCode}</span>
               )}
             </div>
           </div>
@@ -134,7 +134,7 @@ export function ProductDetailModal({ productId, open, onClose }: Props) {
               onChange={(e) => setNewNote(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleAddNote(); }}
               placeholder="Add a note..."
-              className="flex-1 rounded-md border border-border bg-surface px-2.5 py-1 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 rounded-md border border-border bg-surface px-2.5 py-1 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none"
             />
             <button
               type="button"
@@ -189,7 +189,7 @@ export function ProductDetailModal({ productId, open, onClose }: Props) {
               {campaigns.map((c) => (
                 <a key={c.campaignId} href={`/campaigns/${c.campaignId}`}
                   className="flex items-center gap-2 rounded-md bg-surface-secondary px-3 py-1.5 text-xs hover:bg-surface-tertiary transition-colors">
-                  {c.wfNumber && <span className="font-mono text-text-tertiary">{c.wfNumber}</span>}
+                  {c.wfNumber && <span className="text-text-tertiary">{c.wfNumber}</span>}
                   <span className="font-medium text-text-primary">{c.campaignName}</span>
                 </a>
               ))}

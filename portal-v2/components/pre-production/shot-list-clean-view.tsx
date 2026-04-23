@@ -344,7 +344,7 @@ function ProductPopover({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-text-primary leading-tight">{product.name}</p>
           <div className="flex items-center gap-2 mt-0.5">
-            {product.itemCode && <span className="text-[10px] font-mono text-text-tertiary">{product.itemCode}</span>}
+            {product.itemCode && <span className="text-[10px] text-text-tertiary">{product.itemCode}</span>}
             {product.department && <span className="text-[10px] text-text-tertiary">{product.department}</span>}
           </div>
         </div>
@@ -825,51 +825,51 @@ function AddTalentModal({
               <div>
                 <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Age Range</label>
                 <select value={ageRange} onChange={(e) => setAgeRange(e.target.value)}
-                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary focus:outline-none">
                   {AGE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Gender</label>
                 <select value={gender} onChange={(e) => setGender(e.target.value)}
-                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary focus:outline-none">
                   {GENDER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Ethnicity</label>
                 <input value={ethnicity} onChange={(e) => setEthnicity(e.target.value)} placeholder="Open — or per brief"
-                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none focus:ring-1 focus:ring-primary" />
+                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none" />
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Skin Tone</label>
                 <select value={skinTone} onChange={(e) => setSkinTone(e.target.value)}
-                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary focus:outline-none">
                   {SKIN_TONE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Hair</label>
                 <input value={hair} onChange={(e) => setHair(e.target.value)} placeholder="Open"
-                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none focus:ring-1 focus:ring-primary" />
+                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none" />
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Build</label>
                 <input value={build} onChange={(e) => setBuild(e.target.value)} placeholder="Open"
-                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none focus:ring-1 focus:ring-primary" />
+                  className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none" />
               </div>
             </div>
 
             <div>
               <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Wardrobe for this shot</label>
               <input value={wardrobeNotes} onChange={(e) => setWardrobeNotes(e.target.value)} placeholder="What they're wearing…"
-                className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none focus:ring-1 focus:ring-primary" />
+                className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none" />
             </div>
 
             <div>
               <label className="block text-[10px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Notes</label>
               <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Other casting notes…"
-                className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none focus:ring-1 focus:ring-primary" />
+                className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary/40 focus:outline-none" />
             </div>
 
             {/* Actions */}

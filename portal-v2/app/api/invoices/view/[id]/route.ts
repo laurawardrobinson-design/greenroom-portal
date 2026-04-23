@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authErrorResponse, getAuthUser } from "@/lib/auth/guards";
+import { authErrorResponse, getAuthUser, requireCampaignVendorAccess } from "@/lib/auth/guards";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // GET /api/invoices/view/[id] — full invoice view data for a campaign_vendor_id
@@ -8,8 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await getAuthUser();
+    const user = await getAuthUser();
     const { id } = await params;
+    await requireCampaignVendorAccess(user, id);
     const db = createAdminClient();
 
     // Campaign vendor with vendor + campaign info

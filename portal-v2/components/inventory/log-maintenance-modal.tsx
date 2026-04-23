@@ -105,7 +105,7 @@ export function LogMaintenanceModal({
             }}
             onFocus={() => setShowDropdown(true)}
             placeholder="Search by name, brand, or model..."
-            className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
           />
           {showDropdown && !gearItemId && (
             <>
@@ -139,7 +139,7 @@ export function LogMaintenanceModal({
             <select
               value={type}
               onChange={(e) => setType(e.target.value as "Scheduled" | "Repair")}
-              className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary focus:outline-none"
             >
               <option value="Scheduled">Scheduled</option>
               <option value="Repair">Repair</option>
@@ -151,7 +151,7 @@ export function LogMaintenanceModal({
               type="date"
               value={scheduledDate}
               onChange={(e) => setScheduledDate(e.target.value)}
-              className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary focus:outline-none"
             />
           </div>
         </div>
@@ -163,7 +163,7 @@ export function LogMaintenanceModal({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What needs to be done?"
             rows={2}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none"
           />
         </div>
 
@@ -177,7 +177,7 @@ export function LogMaintenanceModal({
               value={cost}
               onChange={(e) => setCost(e.target.value)}
               placeholder="0.00"
-              className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
             />
           </div>
           <div>
@@ -186,7 +186,7 @@ export function LogMaintenanceModal({
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
             />
           </div>
         </div>

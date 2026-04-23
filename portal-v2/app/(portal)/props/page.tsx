@@ -240,7 +240,7 @@ export default function PropsPage() {
                   placeholder="Search props..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                  className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
                 />
               </div>
               <div className="ml-auto flex items-center gap-1">
@@ -498,7 +498,7 @@ export default function PropsPage() {
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") handleManualEntry(); }}
-                className="h-9 flex-1 rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                className="h-9 flex-1 rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
               />
               <Button size="sm" onClick={handleManualEntry}>
                 Add
@@ -586,7 +586,7 @@ function CheckoutModal({
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
             placeholder="Which shoot, any handling notes..."
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none resize-none"
           />
         </div>
         <ModalFooter>
@@ -653,7 +653,7 @@ function CheckinModal({
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
             placeholder="Any damage or notes on return..."
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none resize-none"
           />
         </div>
         <ModalFooter>
@@ -783,7 +783,7 @@ function ReservationsTab({
                 value={selectedItemId}
                 onChange={(e) => setSelectedItemId(e.target.value)}
                 required
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none"
               >
                 <option value="">Select a prop...</option>
                 {items.filter((i) => i.status === "Available").map((i) => (

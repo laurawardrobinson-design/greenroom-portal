@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isResetEnabled } from "@/lib/auth/dev-access";
 
 // Dev-only: resets user preferences and onboarding status for ALL users
 // Allows all users to redo onboarding flow
 // Only works when NEXT_PUBLIC_DEV_AUTH=true
 
 export async function POST(request: Request) {
-  const allowed =
-    process.env.NODE_ENV === "development" ||
-    process.env.NEXT_PUBLIC_RESET_ENABLED === "true";
-
-  if (!allowed) {
+  if (!isResetEnabled()) {
     return NextResponse.json({ error: "Reset not enabled" }, { status: 403 });
   }
 

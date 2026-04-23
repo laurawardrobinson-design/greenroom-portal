@@ -6,6 +6,11 @@ import type {
   PREvent,
   PRDocStatus,
   PRDepartment,
+  PRSectionPublicView,
+  DeptCalendarEntry,
+  DeptCalendarView,
+  DeptCalendarTokenRow,
+  MasterCalendarView,
   Product,
   ProductDepartment,
 } from "@/types/domain";
@@ -54,6 +59,8 @@ function toSection(row: Record<string, unknown>, items: PRItem[] = []): PRDeptSe
     dateNeeded: (row.date_needed as string) || null,
     timeNeeded: (row.time_needed as string) || "",
     pickupPerson: (row.pickup_person as string) || "",
+    pickupPhone: (row.pickup_phone as string) || "",
+    publicToken: (row.public_token as string) || "",
     sortOrder: Number(row.sort_order) || 0,
     createdAt: row.created_at as string,
     items,
@@ -317,7 +324,12 @@ export async function transitionPRDoc(
 export async function upsertSection(
   docId: string,
   department: PRDepartment,
-  input: { dateNeeded?: string | null; timeNeeded?: string; pickupPerson?: string }
+  input: {
+    dateNeeded?: string | null;
+    timeNeeded?: string;
+    pickupPerson?: string;
+    pickupPhone?: string;
+  }
 ): Promise<PRDeptSection> {
   const db = createAdminClient();
 
@@ -333,6 +345,7 @@ export async function upsertSection(
     if (input.dateNeeded !== undefined) update.date_needed = input.dateNeeded;
     if (input.timeNeeded !== undefined) update.time_needed = input.timeNeeded;
     if (input.pickupPerson !== undefined) update.pickup_person = input.pickupPerson;
+    if (input.pickupPhone !== undefined) update.pickup_phone = input.pickupPhone;
     const { data, error } = await db
       .from("product_request_dept_sections")
       .update(update)
@@ -354,6 +367,7 @@ export async function upsertSection(
       date_needed: input.dateNeeded ?? null,
       time_needed: input.timeNeeded ?? "",
       pickup_person: input.pickupPerson ?? "",
+      pickup_phone: input.pickupPhone ?? "",
       sort_order: sortOrder,
     })
     .select("*")
@@ -503,6 +517,222 @@ export async function syncShotListProducts(
       });
     }
   }
+}
+
+// --- Public view by section token ---
+
+export async function getPRSectionByToken(
+  token: string
+): Promise<PRSectionPublicView | null> {
+  const db = createAdminClient();
+
+  const { data: sectionRow, error: sectionErr } = await db
+    .from("product_request_dept_sections")
+    .select("*")
+    .eq("public_token", token)
+    .maybeSingle();
+  if (sectionErr) throw sectionErr;
+  if (!sectionRow) return null;
+
+  const sectionRecord = sectionRow as Record<string, unknown>;
+  const docId = sectionRecord.doc_id as string;
+
+  const { data: docRow, error: docErr } = await db
+    .from("product_request_docs")
+    .select("*, campaigns(id, name, wf_number, brand)")
+    .eq("id", docId)
+    .single();
+  if (docErr) throw docErr;
+
+  const { data: itemRows, error: itemErr } = await db
+    .from("product_request_items")
+    .select(
+      "*, products(id, name, department, item_code, image_url, shooting_notes, restrictions, rp_guide_url)"
+    )
+    .eq("section_id", sectionRecord.id as string)
+    .order("sort_order", { ascending: true });
+  if (itemErr) throw itemErr;
+
+  const items = (itemRows || []).map((r) =>
+    toItem(r as Record<string, unknown>)
+  );
+  const section = toSection(sectionRecord, items);
+
+  const docData = docRow as Record<string, unknown>;
+  const campaignRow = (docData.campaigns as Record<string, unknown> | null) ?? null;
+  const campaignId = (docData.campaign_id as string) || "";
+
+  let callTime = "";
+  let location = "";
+  if (campaignId) {
+    const { data: shootDay } = await db
+      .from("shoot_days")
+      .select("call_time, location")
+      .eq("campaign_id", campaignId)
+      .eq("shoot_date", docData.shoot_date as string)
+      .maybeSingle();
+    if (shootDay) {
+      const sd = shootDay as Record<string, unknown>;
+      callTime = (sd.call_time as string) || "";
+      location = (sd.location as string) || "";
+    }
+  }
+
+  return {
+    docNumber: docData.doc_number as string,
+    status: docData.status as PRDocStatus,
+    campaign: {
+      id: (campaignRow?.id as string) || "",
+      name: (campaignRow?.name as string) || "",
+      wfNumber: (campaignRow?.wf_number as string) || "",
+      brand: (campaignRow?.brand as string) || "",
+    },
+    shoot: {
+      date: docData.shoot_date as string,
+      callTime,
+      location,
+    },
+    notes: (docData.notes as string) || "",
+    section,
+  };
+}
+
+// --- Department calendar (tokenized + master) ---
+
+// Statuses that should appear on a calendar shared with vendors.
+// Submitted PRs are internal (producer → BMM), so not included.
+const CALENDAR_STATUSES: PRDocStatus[] = ["forwarded", "fulfilled"];
+
+async function loadCalendarEntries(
+  department?: PRDepartment
+): Promise<DeptCalendarEntry[]> {
+  const db = createAdminClient();
+
+  let sectionQuery = db
+    .from("product_request_dept_sections")
+    .select(
+      `id, department, date_needed, time_needed, pickup_person, pickup_phone, public_token,
+       doc_id,
+       product_request_docs!inner(id, doc_number, status, shoot_date, campaign_id,
+         campaigns(id, name, wf_number, brand))`
+    )
+    .in("product_request_docs.status", CALENDAR_STATUSES);
+  if (department) sectionQuery = sectionQuery.eq("department", department);
+
+  const { data: sectionRows, error } = await sectionQuery;
+  if (error) throw error;
+
+  const rows = (sectionRows || []) as Array<Record<string, unknown>>;
+  if (rows.length === 0) return [];
+
+  const sectionIds = rows.map((r) => r.id as string);
+
+  // Item count per section
+  const { data: itemRows } = await db
+    .from("product_request_items")
+    .select("section_id")
+    .in("section_id", sectionIds);
+  const countBySection = new Map<string, number>();
+  for (const r of itemRows || []) {
+    const sid = (r as Record<string, unknown>).section_id as string;
+    countBySection.set(sid, (countBySection.get(sid) ?? 0) + 1);
+  }
+
+  // Shoot day details — campaign + shoot_date lookup
+  const shootKeys = new Set<string>();
+  for (const r of rows) {
+    const doc = r.product_request_docs as Record<string, unknown>;
+    const cid = doc.campaign_id as string;
+    const sd = doc.shoot_date as string;
+    if (cid && sd) shootKeys.add(`${cid}|${sd}`);
+  }
+  const shootMap = new Map<string, { callTime: string; location: string }>();
+  if (shootKeys.size > 0) {
+    const campaignIds = Array.from(
+      new Set(Array.from(shootKeys).map((k) => k.split("|")[0]))
+    );
+    const { data: shootDayRows } = await db
+      .from("shoot_days")
+      .select("campaign_id, shoot_date, call_time, location")
+      .in("campaign_id", campaignIds);
+    for (const sd of shootDayRows || []) {
+      const s = sd as Record<string, unknown>;
+      const key = `${s.campaign_id as string}|${s.shoot_date as string}`;
+      shootMap.set(key, {
+        callTime: (s.call_time as string) || "",
+        location: (s.location as string) || "",
+      });
+    }
+  }
+
+  const entries: DeptCalendarEntry[] = rows.map((r) => {
+    const doc = r.product_request_docs as Record<string, unknown>;
+    const campaign = doc.campaigns as Record<string, unknown> | null;
+    const shootDate = doc.shoot_date as string;
+    const campaignId = (doc.campaign_id as string) || "";
+    const shoot = shootMap.get(`${campaignId}|${shootDate}`);
+    return {
+      docId: doc.id as string,
+      docNumber: doc.doc_number as string,
+      status: doc.status as PRDocStatus,
+      department: r.department as PRDepartment,
+      shootDate,
+      campaign: {
+        id: (campaign?.id as string) || "",
+        name: (campaign?.name as string) || "",
+        wfNumber: (campaign?.wf_number as string) || "",
+        brand: (campaign?.brand as string) || "",
+      },
+      itemCount: countBySection.get(r.id as string) ?? 0,
+      pickupDate: (r.date_needed as string) || null,
+      pickupTime: (r.time_needed as string) || "",
+      pickupPerson: (r.pickup_person as string) || "",
+      pickupPhone: (r.pickup_phone as string) || "",
+      shootCallTime: shoot?.callTime ?? "",
+      shootLocation: shoot?.location ?? "",
+      sectionToken: (r.public_token as string) || "",
+    };
+  });
+
+  entries.sort((a, b) => a.shootDate.localeCompare(b.shootDate));
+  return entries;
+}
+
+export async function getDeptCalendarByToken(
+  token: string
+): Promise<DeptCalendarView | null> {
+  const db = createAdminClient();
+  const { data: calendarRow, error } = await db
+    .from("product_request_dept_calendars")
+    .select("department")
+    .eq("public_token", token)
+    .maybeSingle();
+  if (error) throw error;
+  if (!calendarRow) return null;
+  const department = (calendarRow as Record<string, unknown>)
+    .department as PRDepartment;
+  const entries = await loadCalendarEntries(department);
+  return { department, entries };
+}
+
+export async function getMasterCalendar(): Promise<MasterCalendarView> {
+  const db = createAdminClient();
+  const { data: tokenRows, error } = await db
+    .from("product_request_dept_calendars")
+    .select("department, public_token")
+    .order("department", { ascending: true });
+  if (error) throw error;
+
+  const tokens: DeptCalendarTokenRow[] = (tokenRows || []).map((r) => {
+    const row = r as Record<string, unknown>;
+    return {
+      department: row.department as PRDepartment,
+      publicToken: row.public_token as string,
+    };
+  });
+
+  const entries = await loadCalendarEntries();
+  return { tokens, entries };
 }
 
 // --- Email formatter for BMM "Forward to RBU" ---

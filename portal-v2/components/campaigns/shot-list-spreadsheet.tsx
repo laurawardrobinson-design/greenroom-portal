@@ -976,7 +976,7 @@ function ProductCell({
                       >
                         <span className="text-sm text-text-primary truncate">{product.name}</span>
                         {product.itemCode ? (
-                          <span className="text-[10px] text-text-tertiary shrink-0 ml-2 font-mono">{product.itemCode}</span>
+                          <span className="text-[10px] text-text-tertiary shrink-0 ml-2">{product.itemCode}</span>
                         ) : (
                           <span className="text-[10px] text-text-tertiary/50 shrink-0 ml-2">no code</span>
                         )}

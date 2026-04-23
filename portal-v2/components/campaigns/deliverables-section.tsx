@@ -199,7 +199,7 @@ export function DeliverablesSection({ campaignId, deliverables, vendors, canEdit
                             value={d.assignedVendorId ?? ""}
                             onChange={(e) => handleVendorAssign(d.id, e.target.value || null)}
                             disabled={updatingId === d.id}
-                            className="w-full appearance-none rounded-md border border-border bg-surface px-2.5 py-1.5 pr-7 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            className="w-full appearance-none rounded-md border border-border bg-surface px-2.5 py-1.5 pr-7 text-xs text-text-primary focus:outline-none"
                           >
                             <option value="">Unassigned</option>
                             {vendors.map((v) => (

@@ -3,6 +3,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ## Project Guides
 
 - [Release Playbook](./RELEASE_PLAYBOOK.md) - staged workflow for developing, validating, and shipping updates safely to production.
+- [Security Hardening Notes](./SECURITY_HARDENING.md) - implemented protections and deferred hardening rollout items.
 
 ## Getting Started
 

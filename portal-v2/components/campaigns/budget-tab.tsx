@@ -237,7 +237,7 @@ export function BudgetTab({
               onChange={(e) => setRationale(e.target.value)}
               placeholder="Why is the additional budget needed?"
               rows={3}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none"
             />
           </div>
           <ModalFooter>

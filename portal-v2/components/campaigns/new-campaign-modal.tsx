@@ -481,7 +481,7 @@ function CrewPicker({
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder="Type a name..."
-          className="w-full h-7 rounded-md border border-border bg-surface px-2.5 text-[11px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full h-7 rounded-md border border-border bg-surface px-2.5 text-[11px] text-text-primary placeholder:text-text-tertiary focus:outline-none"
         />
         {showDropdown && (
           <div className="absolute top-full left-0 right-0 z-10 mt-1 max-h-32 overflow-y-auto rounded-lg border border-border bg-surface shadow-lg">
@@ -511,7 +511,7 @@ function CrewPicker({
       <select
         value={role}
         onChange={(e) => setRole(e.target.value)}
-        className="h-7 rounded-md border border-border bg-surface px-1.5 text-[11px] font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+        className="h-7 rounded-md border border-border bg-surface px-1.5 text-[11px] font-medium focus:outline-none"
       >
         {SHOOT_ROLES.map((r) => (
           <option key={r} value={r}>

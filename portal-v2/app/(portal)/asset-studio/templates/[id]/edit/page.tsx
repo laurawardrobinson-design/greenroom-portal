@@ -2005,7 +2005,7 @@ function PropertiesPanel({
               <Input
                 key={`${layer.id}-font-color-${String(layer.props?.color ?? "#1F1F1F")}`}
                 defaultValue={String(layer.props?.color ?? "#1F1F1F")}
-                className="flex-1 font-mono text-xs"
+                className="flex-1 text-xs"
                 onKeyDown={onCommitEnter}
                 onBlur={(e) =>
                   void commitColorHex(e.currentTarget.value, e.currentTarget)

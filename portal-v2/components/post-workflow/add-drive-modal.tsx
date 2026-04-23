@@ -113,7 +113,7 @@ export function AddDriveModal({ open, onClose, onSuccess }: Props) {
         <div>
           <label className="mb-1.5 block text-sm font-medium text-text-primary">Notes (optional)</label>
           <textarea
-            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
             rows={2}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}

@@ -153,7 +153,7 @@ export function EstimateReviewPanel({ campaignVendorId, status, onStatusChange }
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Explain what needs to change…"
-            className="w-full text-xs rounded-md border border-border bg-surface-secondary px-3 py-2 text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            className="w-full text-xs rounded-md border border-border bg-surface-secondary px-3 py-2 text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none"
             rows={3}
             autoFocus
           />

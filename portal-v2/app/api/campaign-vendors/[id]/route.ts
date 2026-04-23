@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthUser, requireRole, requireVendorOwnership, authErrorResponse } from "@/lib/auth/guards";
+import { getAuthUser, requireRole, requireVendorOwnership, requireCampaignVendorAccess, authErrorResponse } from "@/lib/auth/guards";
 import {
   getCampaignVendor,
   transitionVendorStatus,
@@ -20,9 +20,7 @@ export async function GET(
     const user = await getAuthUser();
     const { id } = await params;
 
-    if (user.role === "Vendor") {
-      await requireVendorOwnership(user, id);
-    }
+    await requireCampaignVendorAccess(user, id);
 
     const [cv, estimateItems] = await Promise.all([
       getCampaignVendor(id),
@@ -96,6 +94,8 @@ export async function PATCH(
       if (vendorActions.includes(targetStatus)) {
         if (user.role === "Vendor") {
           await requireVendorOwnership(user, id);
+        } else {
+          await requireRole(["Admin", "Producer", "Post Producer"]);
         }
       } else if (producerActions.includes(targetStatus)) {
         await requireRole(["Admin", "Producer", "Post Producer"]);

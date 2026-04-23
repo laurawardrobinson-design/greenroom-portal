@@ -483,7 +483,7 @@ Thank you.`;
           <select
             value={selectedVendor}
             onChange={(e) => setSelectedVendor(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none/40"
           >
             <option value="">Select a vendor...</option>
             {vendorOptions.map((v) => (
@@ -532,7 +532,7 @@ Thank you.`;
             <select
               value=""
               onChange={(e) => setHolderAddress(e.target.value)}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary mb-2 focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary mb-2 focus:outline-none/40"
             >
               <option value="">Pick a shoot location...</option>
               {allShootDates.map((sd) => (
@@ -545,7 +545,7 @@ Thank you.`;
             value={holderAddress}
             onChange={(e) => setHolderAddress(e.target.value)}
             placeholder="Enter or select certificate holder address"
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none/40"
           />
         </div>
 
@@ -573,7 +573,7 @@ Thank you.`;
                         setSelectedShootDates((prev) => prev.filter((id) => id !== sd.id));
                       }
                     }}
-                    className="rounded border-border text-primary focus:ring-primary"
+                    className="rounded border-border text-primary"
                   />
                   <span className="text-sm text-text-primary">
                     {new Date(sd.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
@@ -744,7 +744,7 @@ function AddInternalModal({
             placeholder="Search by name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none/30"
           />
           <div className="max-h-40 overflow-y-auto rounded-md border border-border divide-y divide-border">
             {filtered.length === 0 ? (
@@ -781,7 +781,7 @@ function AddInternalModal({
               type="text"
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none/30"
             />
           </div>
         )}
@@ -898,7 +898,7 @@ function AddVendorModal({
             placeholder="Search by company or contact..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none/30"
           />
           <div className="max-h-48 overflow-y-auto rounded-md border border-border divide-y divide-border">
             {filtered.length === 0 ? (
@@ -1106,7 +1106,7 @@ function PeopleTab({
                 value={internalQuery}
                 onChange={e => setInternalQuery(e.target.value)}
                 onKeyDown={e => e.key === "Escape" && setInternalQuery("")}
-                className="w-full rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                className="w-full rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none/40"
               />
               {internalQuery && (
                 <div className="mt-1 rounded-md border border-border divide-y divide-border bg-surface">
@@ -1164,7 +1164,7 @@ function PeopleTab({
                 value={vendorQuery}
                 onChange={e => setVendorQuery(e.target.value)}
                 onKeyDown={e => e.key === "Escape" && setVendorQuery("")}
-                className="w-full rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                className="w-full rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none/40"
               />
               {vendorQuery && (
                 <div className="mt-1 rounded-md border border-border divide-y divide-border bg-surface">
@@ -1237,7 +1237,7 @@ function PeopleTab({
                 value={talentQuery}
                 onChange={e => setTalentQuery(e.target.value)}
                 onKeyDown={e => e.key === "Escape" && setTalentQuery("")}
-                className="w-full rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                className="w-full rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none/40"
               />
               {talentQuery && (
                 <div className="mt-1 rounded-md border border-border divide-y divide-border bg-surface">

@@ -116,7 +116,7 @@ export default function ProductDirectoryPage() {
             placeholder="Search products..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary shadow-xs focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none sm:w-56"
+            className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary shadow-xs focus:border-primary focus:outline-none sm:w-56"
           />
         </div>
       </div>
@@ -346,7 +346,7 @@ function ProductFormDrawer({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="General product description..."
             rows={2}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none"
           />
         </div>
         <div>
@@ -358,7 +358,7 @@ function ProductFormDrawer({
             onChange={(e) => setShootingNotes(e.target.value)}
             placeholder="How should this product be photographed? Angles, lighting, styling tips..."
             rows={3}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none"
           />
         </div>
         <div>
@@ -370,7 +370,7 @@ function ProductFormDrawer({
             onChange={(e) => setRestrictions(e.target.value)}
             placeholder="Seasonal availability, handling restrictions, legal notes..."
             rows={2}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none"
           />
         </div>
         <Input

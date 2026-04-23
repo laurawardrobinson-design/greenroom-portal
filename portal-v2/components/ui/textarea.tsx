@@ -30,7 +30,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             block w-full rounded-[var(--density-control-radius)] border bg-surface px-[var(--density-control-px)] py-[var(--density-control-py)]
             text-sm text-text-primary placeholder:text-text-tertiary
             shadow-xs transition-all resize-y min-h-[var(--density-textarea-min-h)]
-            focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none
+            focus:border-primary focus:outline-none
             disabled:bg-surface-secondary disabled:text-text-tertiary
             ${error ? "border-error" : "border-border"}
             ${className}

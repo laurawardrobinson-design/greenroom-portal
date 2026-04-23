@@ -443,7 +443,7 @@ export default function NewRunPage() {
             <select
               value={campaignId}
               onChange={(e) => setCampaignId(e.target.value)}
-              className="block w-full rounded-lg border border-[var(--as-border)] bg-[var(--as-surface)] px-3.5 py-2.5 text-sm text-[var(--as-text)] focus:border-[var(--as-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--as-accent)]"
+              className="block w-full rounded-lg border border-[var(--as-border)] bg-[var(--as-surface)] px-3.5 py-2.5 text-sm text-[var(--as-text)] focus:border-[var(--as-accent)] focus:outline-none"
               aria-label="Campaign"
             >
               <option value="">Select a campaign…</option>
@@ -592,7 +592,7 @@ export default function NewRunPage() {
                   }}
                   placeholder="001234\n001235\nBerry Chantilly Cake\n…"
                   rows={6}
-                  className="font-mono text-xs"
+                  className="text-xs"
                 />
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[11px] text-[var(--as-text-subtle)]">
@@ -1017,7 +1017,7 @@ export default function NewRunPage() {
                       } ${required ? "cursor-default" : "cursor-pointer"}`}
                       title={required ? "Always included" : undefined}
                     >
-                      <span className="font-mono text-[10px]">{code}</span>
+                      <span className="text-[10px]">{code}</span>
                       <span>{label}</span>
                       {selected && !required && <CheckSquare className="h-3 w-3" />}
                     </button>

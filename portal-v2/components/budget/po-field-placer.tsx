@@ -167,7 +167,7 @@ export function PoFieldPlacer({ campaignVendorId, poNumber, initial, onChange }:
             style={{ whiteSpace: "nowrap" }}
           >
             <GripVertical className="h-4 w-4 text-gray-400 shrink-0" />
-            <span className="text-sm font-mono font-semibold text-gray-900">{poNumber}</span>
+            <span className="text-sm font-semibold text-gray-900">{poNumber}</span>
           </div>
         </div>
       </div>

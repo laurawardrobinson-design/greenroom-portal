@@ -125,7 +125,7 @@ export function ShootsSection({ campaignId, campaignName, shoots, onMutate }: Pr
                 if (e.key === "Escape") setAddingNew(false);
               }}
               placeholder={`Day ${shoots.length + 1} (${campaignName || "Shoot"})`}
-              className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none"
             />
             <div className="flex rounded-lg border border-border overflow-hidden shrink-0">
               {["Photo", "Video", "Hybrid"].map((t) => (
@@ -557,7 +557,7 @@ function ShootCard({
                         });
                         onMutate();
                       }}
-                      className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                      className="rounded border-border text-primary h-3.5 w-3.5"
                     />
                     Different crew per day
                   </label>
@@ -902,7 +902,7 @@ function AddCrewInline({
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 150)}
             placeholder="Type a name..."
-            className="w-full h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none"
           />
           {showDropdown && (
             <div className="absolute top-full left-0 right-0 z-10 mt-1 max-h-36 overflow-y-auto rounded-lg border border-border bg-surface shadow-lg">
@@ -933,7 +933,7 @@ function AddCrewInline({
         <select
           value={role}
           onChange={(e) => setRole(e.target.value)}
-          className="h-8 rounded-lg border border-border bg-surface px-2 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+          className="h-8 rounded-lg border border-border bg-surface px-2 text-xs font-medium focus:outline-none"
         >
           {SHOOT_ROLES.map((r) => (
             <option key={r} value={r}>

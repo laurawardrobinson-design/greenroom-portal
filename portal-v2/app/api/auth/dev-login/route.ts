@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isDevAuthEnabled } from "@/lib/auth/dev-access";
 import type { UserRole } from "@/types/domain";
 
 // Dev-only: creates test users via admin API and signs them in.
@@ -18,14 +19,15 @@ const TEST_USERS: Record<
   creativedirector: { email: "creativedirector@test.local", name: "Morgan Vale", role: "Creative Director" },
   postproducer: { email: "postproducer@test.local", name: "Jessica", role: "Post Producer" },
   designer: { email: "designer@test.local", name: "Daniel", role: "Designer" },
+  bmm: { email: "bmm@test.local", name: "Nicole Lee", role: "Brand Marketing Manager" },
 };
 
 const TEST_PASSWORD = "testpass123456";
 
 export async function POST(request: Request) {
   // Guard: only works when DEV_AUTH is explicitly enabled.
-  // Remove the NEXT_PUBLIC_DEV_AUTH env var on Vercel to disable.
-  if (process.env.NEXT_PUBLIC_DEV_AUTH !== "true") {
+  // In production, a server-only opt-in is also required.
+  if (!isDevAuthEnabled()) {
     return NextResponse.json({ error: "Dev auth disabled" }, { status: 403 });
   }
 

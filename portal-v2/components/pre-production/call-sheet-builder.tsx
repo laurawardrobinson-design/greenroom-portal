@@ -330,7 +330,7 @@ export function CallSheetBuilder({
             <select
               value={selectedDateId}
               onChange={(e) => setSelectedDateId(e.target.value)}
-              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none"
             >
               {allDates.map((d, i) => (
                 <option key={d.id} value={d.id}>
@@ -400,25 +400,25 @@ export function CallSheetBuilder({
                     value={c.role}
                     onChange={(e) => updateCrew(c.id, "role", e.target.value)}
                     placeholder="Title"
-                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none"
                   />
                   <input
                     value={c.name}
                     onChange={(e) => updateCrew(c.id, "name", e.target.value)}
                     placeholder="Name"
-                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none"
                   />
                   <input
                     value={c.phone}
                     onChange={(e) => updateCrew(c.id, "phone", e.target.value)}
                     placeholder="Phone"
-                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none"
                   />
                   <input
                     value={c.callTime}
                     onChange={(e) => updateCrew(c.id, "callTime", e.target.value)}
                     placeholder="Call"
-                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none"
                   />
                   <button
                     type="button"
@@ -448,25 +448,25 @@ export function CallSheetBuilder({
                     value={t.name}
                     onChange={(e) => updateTalent(t.id, "name", e.target.value)}
                     placeholder="Name"
-                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none"
                   />
                   <input
                     value={t.phone}
                     onChange={(e) => updateTalent(t.id, "phone", e.target.value)}
                     placeholder="Phone"
-                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none"
                   />
                   <input
                     value={t.callTime}
                     onChange={(e) => updateTalent(t.id, "callTime", e.target.value)}
                     placeholder="Call"
-                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none"
                   />
                   <input
                     value={t.agency}
                     onChange={(e) => updateTalent(t.id, "agency", e.target.value)}
                     placeholder="Agency"
-                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="rounded border border-border bg-surface px-2 py-1.5 text-xs focus:outline-none"
                   />
                   <button
                     type="button"
@@ -678,7 +678,7 @@ function FormField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+        className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
       />
     </div>
   );
@@ -705,7 +705,7 @@ function FormTextarea({
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+        className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none resize-y"
       />
     </div>
   );

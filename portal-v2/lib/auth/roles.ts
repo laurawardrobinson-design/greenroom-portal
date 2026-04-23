@@ -47,7 +47,7 @@ export const PERMISSIONS = {
 
 // Route-level access control
 export const ROUTE_ROLES: Record<string, UserRole[]> = {
-  "/dashboard": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director", "Designer"],
+  "/dashboard": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director", "Designer", "Brand Marketing Manager"],
   "/campaigns": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director", "Designer"],
   "/vendors": ["Admin", "Producer", "Post Producer"],
   "/vendors/portal": ["Vendor"],
@@ -58,8 +58,11 @@ export const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/contacts": ["Admin", "Producer", "Post Producer", "Studio", "Art Director", "Creative Director", "Designer"],
   "/props": ["Admin", "Producer", "Post Producer", "Studio", "Art Director"],
   "/goals": ["Admin", "Producer", "Post Producer", "Studio"],
-  "/settings": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director", "Designer"],
+  "/settings": ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director", "Designer", "Brand Marketing Manager"],
   "/asset-studio": ["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"],
+  "/brand-marketing": ["Admin", "Brand Marketing Manager"],
+  "/product-requests": ["Admin", "Producer", "Post Producer", "Brand Marketing Manager", "Studio"],
+  "/products": ["Admin", "Producer", "Post Producer", "Studio", "Art Director", "Brand Marketing Manager"],
 };
 
 export function hasPermission(

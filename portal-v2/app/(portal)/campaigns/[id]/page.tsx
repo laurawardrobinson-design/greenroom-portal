@@ -25,6 +25,8 @@ import { BudgetSidebarTile } from "@/components/campaigns/tiles/budget-sidebar-t
 import { CopySectionTile } from "@/components/campaigns/tiles/copy-section-tile";
 import { DeliverableTemplatesTile } from "@/components/campaigns/tiles/deliverable-templates-tile";
 import { CreativeTeamTile } from "@/components/campaigns/tiles/creative-team-tile";
+import { BriefEditor } from "@/components/campaigns/brief-editor";
+import { CampaignProductRequestsTile } from "@/components/campaigns/tiles/campaign-product-requests-tile";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
 import { useRouter } from "next/navigation";
@@ -414,6 +416,29 @@ export default function CampaignDetailPage({
         </div>
       </div>
 
+      {/* === CAMPAIGN BRIEF — upstream source of truth for direction === */}
+      {!isVendor && (
+        <BriefEditor
+          campaignId={id}
+          canEdit={canEdit || user?.role === "Brand Marketing Manager"}
+        />
+      )}
+
+      {/* === PRODUCT REQUESTS — Producer → BMM routed process === */}
+      {!isVendor && user && (
+        <CampaignProductRequestsTile
+          campaignId={id}
+          user={user}
+          shootDates={(shoots ?? []).flatMap((s: any) =>
+            (s?.dates ?? []).map((d: any) => ({
+              id: d.id,
+              shoot_date: d.shootDate ?? d.shoot_date ?? "",
+              shoot_name: s.name ?? "",
+            }))
+          )}
+        />
+      )}
+
       {/* === ROW 1: Calendar + Shoot Days | Documents | Budget === */}
       <div className={`grid grid-cols-1 gap-4 items-stretch ${isVendor ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
 
@@ -520,7 +545,7 @@ export default function CampaignDetailPage({
       {!isVendor && <DeliverableTemplatesTile campaignId={id} />}
 
       {/* === CREATIVE TEAM (designer + AD + viewers for versioning) === */}
-      {!isVendor && (
+      {!isVendor && user?.role !== "Brand Marketing Manager" && (
         <CreativeTeamTile
           campaignId={id}
           canEdit={canEdit}
@@ -697,7 +722,7 @@ export default function CampaignDetailPage({
               onChange={(e) => setOverageRationale(e.target.value)}
               placeholder="Why is the additional budget needed?"
               rows={3}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-base text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none"
             />
           </div>
           <ModalFooter>

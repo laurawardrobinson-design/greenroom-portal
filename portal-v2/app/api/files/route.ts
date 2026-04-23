@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthUser, requireCampaignAccess, authErrorResponse } from "@/lib/auth/guards";
 import { listCampaignAssets, uploadCampaignAsset, deleteAsset } from "@/lib/services/files.service";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { AssetCategory } from "@/types/domain";
 
 // GET /api/files?campaignId=xxx&type=fun|boring
@@ -115,6 +116,21 @@ export async function DELETE(request: Request) {
     if (user.role === "Vendor") {
       return NextResponse.json({ error: "Vendors cannot delete files" }, { status: 403 });
     }
+
+    const db = createAdminClient();
+    const { data: asset, error } = await db
+      .from("campaign_assets")
+      .select("id, campaign_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!asset) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    await requireCampaignAccess(user, asset.campaign_id as string);
+
     await deleteAsset(id);
     return new NextResponse(null, { status: 204 });
   } catch (error) {

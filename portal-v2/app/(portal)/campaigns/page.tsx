@@ -89,7 +89,7 @@ export default function CampaignsPage() {
               placeholder="Search by name or Workfront ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-11 w-full rounded-xl border border-border bg-surface pl-11 pr-4 text-sm text-text-primary placeholder:text-text-tertiary shadow-xs focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+              className="h-11 w-full rounded-xl border border-border bg-surface pl-11 pr-4 text-sm text-text-primary placeholder:text-text-tertiary shadow-xs focus:border-primary/20 focus:outline-none"
             />
           </div>
 
@@ -97,7 +97,7 @@ export default function CampaignsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as CampaignStatus | "")}
-            className="h-11 rounded-xl border border-border bg-surface px-4 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="h-11 rounded-xl border border-border bg-surface px-4 text-sm text-text-primary focus:outline-none"
           >
             <option value="">All statuses</option>
             <option value="Planning">Planning</option>

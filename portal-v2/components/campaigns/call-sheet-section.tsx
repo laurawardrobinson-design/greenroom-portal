@@ -25,7 +25,7 @@ export function CallSheetSection({
         <select
           value={selectedShoot}
           onChange={(e) => setSelectedShoot(e.target.value)}
-          className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none"
         >
           {shoots.map((s) => (
             <option key={s.id} value={s.id}>{s.name || "Shoot"}</option>

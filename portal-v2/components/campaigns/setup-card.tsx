@@ -141,7 +141,7 @@ function ShotNotes({
           }
         }}
         placeholder="Add notes..."
-        className="mt-1 w-full rounded border border-border bg-surface px-2 py-1 text-xs text-text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
+        className="mt-1 w-full rounded border border-border bg-surface px-2 py-1 text-xs text-text-secondary focus:outline-none"
       />
     );
   }
@@ -479,7 +479,7 @@ export function SetupCard({
                     if (e.key === "Escape") setAddingShot(false);
                   }}
                   placeholder="Shot description..."
-                  className="flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none"
                 />
                 <Button size="sm" onClick={addShot}>Add</Button>
                 <button onClick={() => setAddingShot(false)} className="text-text-tertiary">

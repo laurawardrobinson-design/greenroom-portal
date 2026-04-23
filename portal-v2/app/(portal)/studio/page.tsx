@@ -187,7 +187,7 @@ function ReserveModal({ space, date, existingReservation, userRole, userId, onCl
               <select
                 value={campaignId}
                 onChange={(e) => setCampaignId(e.target.value)}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none/40"
               >
                 <option value="">Select a campaign...</option>
                 {activeCampaigns.mine.map((c) => (
@@ -213,7 +213,7 @@ function ReserveModal({ space, date, existingReservation, userRole, userId, onCl
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none/40"
                 />
               </div>
               <div>
@@ -222,7 +222,7 @@ function ReserveModal({ space, date, existingReservation, userRole, userId, onCl
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none/40"
                 />
               </div>
             </div>
@@ -233,7 +233,7 @@ function ReserveModal({ space, date, existingReservation, userRole, userId, onCl
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
                 placeholder="Setup requirements, special notes..."
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm resize-none focus:outline-none/40"
               />
             </div>
           </div>
@@ -536,7 +536,7 @@ function SpacesView({ userRole, userId }: SpacesViewProps) {
                   >
                     <div className="min-w-0">
                       {shoot.campaign?.wfNumber && (
-                        <p className="text-[10px] text-text-tertiary font-mono">{shoot.campaign.wfNumber}</p>
+                        <p className="text-[10px] text-text-tertiary">{shoot.campaign.wfNumber}</p>
                       )}
                       <p className="text-xs font-medium text-text-primary truncate">
                         {shoot.campaign?.name ?? shoot.shootName}

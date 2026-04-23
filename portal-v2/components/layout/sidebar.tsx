@@ -23,6 +23,8 @@ import {
   DollarSign,
   Clapperboard,
   Palette,
+  Sparkles,
+  PackageSearch,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -50,6 +52,18 @@ const NAV_ITEMS: NavItem[] = [
     href: "/campaigns",
     icon: Film,
     roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director"],
+  },
+  {
+    label: "Brand Marketing",
+    href: "/brand-marketing",
+    icon: Sparkles,
+    roles: ["Admin", "Brand Marketing Manager"],
+  },
+  {
+    label: "Product Requests",
+    href: "/product-requests",
+    icon: PackageSearch,
+    roles: ["Admin", "Producer", "Post Producer", "Brand Marketing Manager", "Studio"],
   },
   {
     label: "Estimates & Invoices",
@@ -115,7 +129,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Products",
     href: "/products",
     icon: Utensils,
-    roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director"],
+    roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director", "Brand Marketing Manager"],
   },
   {
     label: "Wardrobe",

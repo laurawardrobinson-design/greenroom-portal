@@ -19,6 +19,14 @@ export async function GET(request: Request) {
       if (user.role === "Vendor" && user.vendorId !== vendorId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
+      if (
+        user.role !== "Vendor" &&
+        user.role !== "Admin" &&
+        user.role !== "Producer" &&
+        user.role !== "Post Producer"
+      ) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
       const assignments = await listVendorAssignments(vendorId);
       return NextResponse.json(assignments);
     }

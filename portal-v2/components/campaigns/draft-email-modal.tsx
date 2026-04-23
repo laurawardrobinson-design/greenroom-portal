@@ -259,7 +259,7 @@ export function DraftEmailModal({
               value={customTo}
               onChange={(e) => setCustomTo(e.target.value)}
               placeholder="Enter email address(es), comma-separated..."
-              className="w-full rounded-lg border border-border bg-surface-secondary px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-lg border border-border bg-surface-secondary px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none"
             />
             {vendors.length > 0 && (
               <p className="text-[10px] text-text-tertiary">

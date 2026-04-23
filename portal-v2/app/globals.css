@@ -54,8 +54,10 @@
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
 
-  /* Typography — Inter */
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* Typography — Inter, loaded by next/font (see app/layout.tsx). Reference
+     the next/font CSS variable so the bundled webfont is used, not whatever
+     "Inter" the user happens to have installed locally. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
 
   /* Spacing grid: 8px base (Tailwind's default scale aligns) */
   /* Animation */
@@ -292,6 +294,17 @@ textarea {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Form controls define their own focus state via border — don't stack a global outline on top */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
 }
 
 /* ============================================================

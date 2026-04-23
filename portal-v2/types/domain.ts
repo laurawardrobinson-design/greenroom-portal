@@ -1840,6 +1840,8 @@ export interface PRDeptSection {
   dateNeeded: string | null;
   timeNeeded: string;
   pickupPerson: string;
+  pickupPhone: string;
+  publicToken: string;
   sortOrder: number;
   createdAt: string;
   items: PRItem[];
@@ -1882,6 +1884,65 @@ export const PR_STATUS_LABELS: Record<PRDocStatus, string> = {
   fulfilled: "Fulfilled",
   cancelled: "Cancelled",
 };
+
+// --- Unified contact picker (users + vendors) ---
+
+export type ContactPickerSource = "user" | "vendor";
+
+export interface ContactPickerResult {
+  id: string;
+  source: ContactPickerSource;
+  name: string;
+  phone: string;
+  email: string;
+  subtitle: string;
+}
+
+// --- Public (tokenized) PR section view ---
+// Shared between the server route and the public /pr/view/[token] page.
+
+export interface PRSectionPublicView {
+  docNumber: string;
+  status: PRDocStatus;
+  campaign: { id: string; name: string; wfNumber: string; brand: string };
+  shoot: { date: string; callTime: string; location: string };
+  notes: string;
+  section: PRDeptSection;
+}
+
+// --- Department calendar (one tokenized calendar per dept + master) ---
+
+export interface DeptCalendarEntry {
+  docId: string;
+  docNumber: string;
+  status: PRDocStatus;
+  department: PRDepartment;
+  shootDate: string;
+  campaign: { id: string; name: string; wfNumber: string; brand: string };
+  itemCount: number;
+  pickupDate: string | null;
+  pickupTime: string;
+  pickupPerson: string;
+  pickupPhone: string;
+  shootCallTime: string;
+  shootLocation: string;
+  sectionToken: string;
+}
+
+export interface DeptCalendarView {
+  department: PRDepartment;
+  entries: DeptCalendarEntry[];
+}
+
+export interface DeptCalendarTokenRow {
+  department: PRDepartment;
+  publicToken: string;
+}
+
+export interface MasterCalendarView {
+  tokens: DeptCalendarTokenRow[];
+  entries: DeptCalendarEntry[];
+}
 
 // --- Asset Studio dashboard summary ---
 

@@ -91,7 +91,7 @@ export function CreateKitModal({
             type="checkbox"
             checked={isFavorite}
             onChange={(e) => setIsFavorite(e.target.checked)}
-            className="rounded border-border text-primary focus:ring-primary"
+            className="rounded border-border text-primary"
           />
           <Star className="h-3.5 w-3.5 text-amber-500" />
           Mark as favorite
@@ -110,7 +110,7 @@ export function CreateKitModal({
                   type="checkbox"
                   checked={selectedIds.has(item.id)}
                   onChange={() => toggleItem(item.id)}
-                  className="rounded border-border text-primary focus:ring-primary"
+                  className="rounded border-border text-primary"
                 />
                 <span className="text-text-primary font-medium">
                   {item.name}

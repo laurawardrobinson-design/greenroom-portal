@@ -210,7 +210,7 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
             <select
               value={selectedDateId}
               onChange={(e) => setSelectedDateId(e.target.value)}
-              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none"
             >
               {allDates.map((d, i) => (
                 <option key={d.id} value={d.id}>
@@ -310,7 +310,7 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
                   <select
                     value={shot.estimated_duration_minutes || 15}
                     onChange={(e) => handleDurationChange(shot.id, Number(e.target.value))}
-                    className="w-full rounded border border-border bg-surface px-1 py-0.5 text-[10px] focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full rounded border border-border bg-surface px-1 py-0.5 text-[10px] focus:outline-none"
                   >
                     {[5, 10, 15, 20, 30, 45, 60, 90, 120].map((m) => (
                       <option key={m} value={m}>{m}m</option>

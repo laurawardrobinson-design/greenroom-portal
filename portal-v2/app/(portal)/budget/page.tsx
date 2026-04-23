@@ -318,7 +318,7 @@ function ProgramSection({ isAdmin }: { isAdmin: boolean }) {
                               href={`/campaigns/${c.id}`}
                               className="grid grid-cols-2 md:grid-cols-[88px_1fr_110px_100px_100px_100px_100px_100px_80px] gap-3 px-3.5 py-2.5 items-center hover:bg-surface-secondary/40 transition-colors"
                             >
-                              <div className="text-[10px] font-mono text-text-tertiary">{c.wfNumber}</div>
+                              <div className="text-[10px] text-text-tertiary">{c.wfNumber}</div>
                               <div className="col-span-2 md:col-span-1 min-w-0">
                                 <p className="text-sm font-medium text-text-primary truncate">{c.name}</p>
                               </div>
@@ -920,7 +920,7 @@ function CampaignBudgetsTab() {
                         }
                       }}
                       autoFocus={!editAll && editingId === c.id}
-                      className="w-full rounded-lg border border-primary bg-surface px-2 py-1 text-sm text-right text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-primary bg-surface px-2 py-1 text-sm text-right text-text-primary focus:outline-none/20"
                     />
                   ) : (
                     <span className="text-sm font-semibold text-text-primary tabular-nums">
@@ -1410,7 +1410,7 @@ function CrewBookingEditModal({
               type="text"
               value={draft.role}
               onChange={(e) => setDraft((d) => ({ ...d, role: e.target.value }))}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none"
             />
           </div>
           <div>
@@ -1421,7 +1421,7 @@ function CrewBookingEditModal({
                 type="number"
                 value={draft.dayRate}
                 onChange={(e) => setDraft((d) => ({ ...d, dayRate: e.target.value }))}
-                className="w-full rounded-lg border border-border bg-surface pl-6 pr-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-lg border border-border bg-surface pl-6 pr-3 py-2 text-sm text-text-primary focus:outline-none"
               />
             </div>
           </div>
@@ -1431,7 +1431,7 @@ function CrewBookingEditModal({
           <select
             value={draft.classification}
             onChange={(e) => setDraft((d) => ({ ...d, classification: e.target.value }))}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none"
           >
             {CLASSIFICATIONS.map((c) => (
               <option key={c} value={c}>{c}</option>
@@ -1445,7 +1445,7 @@ function CrewBookingEditModal({
             value={draft.notes}
             onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
             placeholder="Optional notes…"
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
           />
         </div>
       </div>

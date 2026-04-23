@@ -149,7 +149,7 @@ export function TagInput({
 
   return (
     <div
-      className="flex flex-wrap gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 min-h-[42px] focus-within:ring-2 focus-within:ring-primary/40 cursor-text"
+      className="flex flex-wrap gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 min-h-[42px] focus-within:border-primary cursor-text"
       onClick={() => inputRef.current?.focus()}
     >
       {tags.map((tag) => (
@@ -485,7 +485,7 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
                   value={energyBoost}
                   onChange={(e) => setEnergyBoost(e.target.value)}
                   placeholder="e.g. Iced coffee - 2 pumps sugar free vanilla, oat milk"
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none/40"
                 />
               </div>
             </div>
@@ -613,7 +613,7 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
                   value={phone}
                   onChange={(e) => setPhone(formatPhone(e.target.value))}
                   placeholder="(555) 000-0000"
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none/40"
                 />
               </div>
 

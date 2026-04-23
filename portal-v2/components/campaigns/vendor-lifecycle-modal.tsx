@@ -608,7 +608,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
                               type="text"
                               value={(item as typeof draftItems[number]).description}
                               onChange={(e) => updateDraftItem(idx, "description", e.target.value)}
-                              className="w-full text-xs bg-surface-secondary border border-border rounded px-1.5 py-0.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              className="w-full text-xs bg-surface-secondary border border-border rounded px-1.5 py-0.5 text-text-primary focus:outline-none"
                               placeholder="Description"
                             />
                           </td>
@@ -619,7 +619,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
                               step="1"
                               value={(item as typeof draftItems[number]).quantity}
                               onChange={(e) => updateDraftItem(idx, "quantity", e.target.value)}
-                              className="w-full text-xs bg-surface-secondary border border-border rounded px-1.5 py-0.5 text-right text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              className="w-full text-xs bg-surface-secondary border border-border rounded px-1.5 py-0.5 text-right text-text-primary focus:outline-none"
                             />
                           </td>
                           <td className="py-1 pr-1">
@@ -629,7 +629,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
                               step="0.01"
                               value={(item as typeof draftItems[number]).unitPrice}
                               onChange={(e) => updateDraftItem(idx, "unitPrice", e.target.value)}
-                              className="w-full text-xs bg-surface-secondary border border-border rounded px-1.5 py-0.5 text-right text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              className="w-full text-xs bg-surface-secondary border border-border rounded px-1.5 py-0.5 text-right text-text-primary focus:outline-none"
                             />
                           </td>
                           <td className="py-1 text-right font-medium text-text-primary tabular-nums">
@@ -703,7 +703,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
                 value={sendBackReason}
                 onChange={(e) => setSendBackReason(e.target.value)}
                 placeholder="Explain what needs to change…"
-                className="w-full text-xs rounded-md border border-border bg-surface-secondary px-3 py-2 text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                className="w-full text-xs rounded-md border border-border bg-surface-secondary px-3 py-2 text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none"
                 rows={3}
                 autoFocus
               />
@@ -1060,7 +1060,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
                 value={sendBackReason}
                 onChange={(e) => setSendBackReason(e.target.value)}
                 placeholder="Explain what needs to change…"
-                className="w-full text-xs rounded-md border border-border bg-surface-secondary px-3 py-2 text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                className="w-full text-xs rounded-md border border-border bg-surface-secondary px-3 py-2 text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none"
                 rows={3}
                 autoFocus
               />

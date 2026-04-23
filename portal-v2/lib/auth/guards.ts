@@ -79,7 +79,16 @@ export async function requireCampaignAccess(
   user: AppUser,
   campaignId: string
 ): Promise<void> {
-  if (user.role === "Admin" || user.role === "Producer" || user.role === "Post Producer" || user.role === "Art Director" || user.role === "Studio") {
+  if (
+    user.role === "Admin" ||
+    user.role === "Producer" ||
+    user.role === "Post Producer" ||
+    user.role === "Art Director" ||
+    user.role === "Studio" ||
+    user.role === "Creative Director" ||
+    user.role === "Designer" ||
+    user.role === "Brand Marketing Manager"
+  ) {
     return; // Full access
   }
 
@@ -99,7 +108,11 @@ export async function requireCampaignAccess(
     if (!data?.length) {
       throw new AuthError("No access to this campaign", 403);
     }
+    return;
   }
+
+  // Default-deny for any role not explicitly covered above.
+  throw new AuthError("No access to this campaign", 403);
 }
 
 // For vendor users: verify ownership of a campaign_vendor record
@@ -125,6 +138,37 @@ export async function requireVendorOwnership(
   if (!data || data.vendor_id !== user.vendorId) {
     throw new AuthError("Not your assignment", 403);
   }
+}
+
+// Verify access to a campaign_vendor record and return key ownership fields.
+export async function requireCampaignVendorAccess(
+  user: AppUser,
+  campaignVendorId: string
+): Promise<{ id: string; campaignId: string; vendorId: string | null }> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("campaign_vendors")
+    .select("id, campaign_id, vendor_id")
+    .eq("id", campaignVendorId)
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new AuthError("Not found", 404);
+  }
+
+  if (user.role === "Vendor") {
+    if (!user.vendorId || data.vendor_id !== user.vendorId) {
+      throw new AuthError("Not your assignment", 403);
+    }
+  } else {
+    await requireCampaignAccess(user, data.campaign_id);
+  }
+
+  return {
+    id: data.id as string,
+    campaignId: data.campaign_id as string,
+    vendorId: (data.vendor_id as string | null) ?? null,
+  };
 }
 
 // Helper to return a JSON error response.

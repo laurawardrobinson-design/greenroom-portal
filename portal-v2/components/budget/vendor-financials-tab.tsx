@@ -503,7 +503,7 @@ export function VendorFinancialsTab() {
             setCampaignFilter(e.target.value);
             setOpenId(null);
           }}
-          className="text-xs bg-surface-secondary border border-border rounded-md px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          className="text-xs bg-surface-secondary border border-border rounded-md px-2 py-1.5 text-text-primary focus:outline-none"
         >
           <option value="all">All campaigns</option>
           {campaignOptions.map((c) => (
@@ -537,7 +537,7 @@ export function VendorFinancialsTab() {
                 >
                   {group.campaignName}
                 </Link>
-                <span className="ml-auto text-[10px] font-mono text-text-tertiary">{group.wfNumber}</span>
+                <span className="ml-auto text-[10px] text-text-tertiary">{group.wfNumber}</span>
               </div>
 
               <div className="divide-y divide-border">

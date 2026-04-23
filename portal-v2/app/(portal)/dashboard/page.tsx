@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { HopDashboard } from "@/components/dashboard/hop-dashboard";
@@ -13,8 +15,17 @@ import { CreativeDirectorDashboard } from "@/components/dashboard/creative-direc
 
 export default function DashboardPage() {
   const { user, isLoading } = useCurrentUser();
+  const router = useRouter();
+
+  // BMM's dashboard IS the Brand Marketing home page; keep the URL honest.
+  useEffect(() => {
+    if (!isLoading && user?.role === "Brand Marketing Manager") {
+      router.replace("/brand-marketing");
+    }
+  }, [isLoading, user, router]);
 
   if (isLoading || !user) return <DashboardSkeleton />;
+  if (user.role === "Brand Marketing Manager") return <DashboardSkeleton />;
 
   switch (user.role) {
     case "Admin":

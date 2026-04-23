@@ -974,7 +974,7 @@ function AddCrewInline({
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 150)}
             placeholder="Search crew..."
-            className="w-full text-xs border border-border rounded-md px-2.5 py-1.5 bg-surface text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full text-xs border border-border rounded-md px-2.5 py-1.5 bg-surface text-text-primary placeholder:text-text-tertiary focus:outline-none"
           />
           {showDropdown && (
             <div className="absolute top-full left-0 mt-1 w-full z-20 rounded-lg border border-border bg-surface shadow-lg overflow-hidden">

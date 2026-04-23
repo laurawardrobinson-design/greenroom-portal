@@ -87,8 +87,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "URL required" }, { status: 400 });
     }
 
-    try { new URL(url); } catch {
+    let parsedUrl: URL;
+    try { parsedUrl = new URL(url); } catch {
       return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+    }
+    if (parsedUrl.protocol !== "https:") {
+      return NextResponse.json({ error: "Only https URLs are allowed" }, { status: 400 });
     }
 
     // Always try name from URL slug as a baseline

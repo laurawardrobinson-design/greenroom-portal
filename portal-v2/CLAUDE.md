@@ -23,3 +23,13 @@ The `CollapsibleSection` component already implements this pattern for sidebar s
 ## Minimum Text Size
 
 No text anywhere in the app should be smaller than 10px. The minimum Tailwind class is `text-[10px]`. Never use `text-[9px]` or smaller.
+
+## Typography — Inter only, no exceptions
+
+**Inter is the only typeface allowed anywhere in this app.** Not monospace for WF numbers, not monospace for IDs / amounts / PO numbers / filenames. Not serif. Everything — every label, every chip, every number, every ID — is Inter.
+
+- Loaded via `next/font/google` in `app/layout.tsx` as the CSS variable `--font-inter`.
+- In `app/globals.css`, `--font-sans` **must** reference `var(--font-inter)`, never a literal `"Inter"` string — a literal string resolves to whatever Inter happens to be installed on the user's machine, which can differ from the bundled webfont and reads as "a weird font."
+- Never use `font-mono`. Never use `font-serif`. Never introduce another `@font-face` or `next/font` import.
+- If you see `font-mono` in existing code, strip it.
+- If a rendering looks off, check the computed `font-family` with `preview_inspect` before assuming it's fine.

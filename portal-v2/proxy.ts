@@ -13,16 +13,24 @@ export async function proxy(request: NextRequest) {
   }
 
   // Public routes that don't require authentication
-  const publicRoutes = ["/login", "/", "/laurai"];
-  const isPublicRoute = publicRoutes.includes(pathname);
+  const publicRoutes = ["/login", "/", "/laurai", "/rbu"];
+  const publicPrefixes = ["/pr/"]; // tokenized PR views + dept calendars
+  const isPublicRoute =
+    publicRoutes.includes(pathname) ||
+    publicPrefixes.some((p) => pathname.startsWith(p));
 
   // Protect all non-public routes - redirect to login if not authenticated
   if (!isPublicRoute && !pathname.startsWith("/api") && !user) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Redirect authenticated users away from login to dashboard
-  if (pathname === "/login" && user) {
+  // Redirect authenticated users away from login to dashboard,
+  // unless they navigated to /login intentionally from a public page
+  // (e.g. to pick an RBU department).
+  const referer = request.headers.get("referer") || "";
+  const cameFromPublic =
+    referer.includes("/rbu") || referer.includes("/pr/");
+  if (pathname === "/login" && user && !cameFromPublic) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

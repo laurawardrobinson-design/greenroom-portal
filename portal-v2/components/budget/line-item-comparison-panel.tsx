@@ -256,7 +256,7 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Explain what needs to change…"
-            className="w-full text-xs rounded-md border border-border bg-surface-secondary px-3 py-2 text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            className="w-full text-xs rounded-md border border-border bg-surface-secondary px-3 py-2 text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none"
             rows={2}
             autoFocus
           />
@@ -333,7 +333,7 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
                       setEditRows(next);
                     }}
                     placeholder="Description"
-                    className="flex-1 min-w-0 text-xs rounded border border-border bg-white px-1.5 py-1 text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="flex-1 min-w-0 text-xs rounded border border-border bg-white px-1.5 py-1 text-text-primary placeholder:text-text-tertiary focus:outline-none"
                   />
                   <input
                     type="number"
@@ -344,7 +344,7 @@ export function LineItemComparisonPanel({ campaignVendorId, status, onStatusChan
                       setEditRows(next);
                     }}
                     placeholder="0.00"
-                    className="w-20 shrink-0 text-xs rounded border border-border bg-white px-1.5 py-1 text-right text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-20 shrink-0 text-xs rounded border border-border bg-white px-1.5 py-1 text-right text-text-primary placeholder:text-text-tertiary focus:outline-none"
                   />
                   <button
                     onClick={() => setEditRows(editRows.filter((_, j) => j !== i))}

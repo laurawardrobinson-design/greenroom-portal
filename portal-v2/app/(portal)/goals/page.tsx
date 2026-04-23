@@ -125,7 +125,7 @@ export default function GoalsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name or goal..."
-              className="w-full h-10 rounded-lg border border-border bg-surface pl-10 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+              className="w-full h-10 rounded-lg border border-border bg-surface pl-10 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors"
             />
           </div>
           <div className="flex gap-1.5 flex-wrap">
@@ -476,14 +476,14 @@ function GoalDetailModal({
                   onChange={(e) => setGoalText(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSaveGoal(); } }}
                   placeholder="e.g., Becoming a Designer, learning post-production..."
-                  className="w-full h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                  className="w-full h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors"
                 />
                 <input
                   type="text"
                   value={goalRoleContext}
                   onChange={(e) => setGoalRoleContext(e.target.value)}
                   placeholder="Current role (e.g. Production Assistant)"
-                  className="w-full h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                  className="w-full h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors"
                 />
                 <div className="flex gap-2 justify-end">
                   <button type="button" onClick={() => setGoalEditMode(false)} className="text-[10px] text-text-tertiary hover:text-text-secondary px-2 py-1 transition-colors">Cancel</button>
@@ -579,7 +579,7 @@ function GoalDetailModal({
                     onChange={(e) => setNewMilestone(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddMilestone(); } }}
                     placeholder="Add a step..."
-                    className="flex-1 h-7 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                    className="flex-1 h-7 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors"
                   />
                   <button
                     type="button"
@@ -681,7 +681,7 @@ function GoalDetailModal({
                       onChange={(e) => setHighlightText(e.target.value)}
                       placeholder="Share a progress update..."
                       rows={2}
-                      className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none"
+                      className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors resize-none"
                     />
                     {/* Pending file chips */}
                     {pendingFiles.length > 0 && (
@@ -765,7 +765,7 @@ function HighlightFeedbackInput({
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
         placeholder="Leave feedback..."
-        className="flex-1 h-6 rounded border border-border bg-surface px-2 text-[10px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+        className="flex-1 h-6 rounded border border-border bg-surface px-2 text-[10px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors"
       />
       <button
         type="button"

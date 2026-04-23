@@ -143,7 +143,7 @@ export default function PoPage({
                 Project
               </p>
               <p className="text-sm font-semibold text-gray-900">{campaign?.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5 font-mono">{campaign?.wf_number}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{campaign?.wf_number}</p>
             </div>
           </div>
 
@@ -245,7 +245,7 @@ export default function PoPage({
             <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">
               Purchase Order No.
             </p>
-            <p className="text-sm font-mono font-semibold text-gray-900">{poNumber}</p>
+            <p className="text-sm font-semibold text-gray-900">{poNumber}</p>
           </div>
 
           {/* Footer */}

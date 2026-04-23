@@ -14,7 +14,7 @@ const MEDIA_TYPE_OPTIONS = ["Still", "Video", "Stop Motion"];
 const LOCATION_OPTIONS = ["White seamless", "Lifestyle: Studio", "Lifestyle: Location"];
 const ANGLE_OPTIONS = ["Straight on", "Overhead", "3/4", "Various (video)"];
 
-const SELECT_CLASS = "w-full rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer";
+const SELECT_CLASS = "w-full rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-text-primary focus:outline-none appearance-none cursor-pointer";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -238,7 +238,7 @@ export function ShotDetailModal({
                 className="w-full text-sm font-semibold text-text-primary bg-transparent border-none outline-none focus:ring-0 p-0 placeholder:text-text-tertiary/40"
               />
               {fileName && (
-                <p className="font-mono text-[11px] text-text-tertiary mt-0.5">{fileName}</p>
+                <p className="text-[11px] text-text-tertiary mt-0.5">{fileName}</p>
               )}
             </div>
 

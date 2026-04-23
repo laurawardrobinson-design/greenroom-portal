@@ -122,7 +122,7 @@ export function RateCardManagement() {
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
                 autoFocus
-                className="w-full rounded border border-border bg-surface px-2 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded border border-border bg-surface px-2 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
               />
             </div>
             <div className="col-span-3">
@@ -135,7 +135,7 @@ export function RateCardManagement() {
                   onChange={(e) => setNewRate(e.target.value)}
                   min={0}
                   step="1"
-                  className="w-full rounded border border-border bg-surface pl-5 pr-2 py-1.5 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-full rounded border border-border bg-surface pl-5 pr-2 py-1.5 text-sm text-text-primary focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
             </div>
@@ -164,7 +164,7 @@ export function RateCardManagement() {
                     type="text"
                     value={editRole}
                     onChange={(e) => setEditRole(e.target.value)}
-                    className="w-full rounded border border-border bg-surface px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full rounded border border-border bg-surface px-2 py-1.5 text-sm text-text-primary focus:outline-none"
                   />
                 </div>
                 <div className="col-span-3">
@@ -176,7 +176,7 @@ export function RateCardManagement() {
                       onChange={(e) => setEditRate(e.target.value)}
                       min={0}
                       step="1"
-                      className="w-full rounded border border-border bg-surface pl-5 pr-2 py-1.5 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-full rounded border border-border bg-surface pl-5 pr-2 py-1.5 text-sm text-text-primary focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                 </div>

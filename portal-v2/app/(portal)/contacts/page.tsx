@@ -102,7 +102,7 @@ export default function ContactsPage() {
               placeholder={tab === "team" ? "Search team members..." : "Search vendors..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+              className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
             />
           </div>
           <div className="ml-auto flex items-center gap-1">
@@ -819,7 +819,7 @@ function ContactDetailModal({
                   onChange={(e) => setNewNote(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddNote(); } }}
                   placeholder="Say something nice..."
-                  className="flex-1 h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                  className="flex-1 h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors"
                 />
                 <button
                   type="button"
@@ -873,7 +873,7 @@ function ContactDetailModal({
                       onChange={(e) => setGoalText(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSaveGoal(); } }}
                       placeholder="e.g., Becoming a Designer, learning post-production..."
-                      className="w-full h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                      className="w-full h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors"
                     />
                   </div>
                   <div>
@@ -883,7 +883,7 @@ function ContactDetailModal({
                       value={goalRoleContext}
                       onChange={(e) => setGoalRoleContext(e.target.value)}
                       placeholder="e.g., Production Assistant"
-                      className="w-full h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                      className="w-full h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors"
                     />
                   </div>
                   <div className="flex gap-2 justify-end">
@@ -1418,7 +1418,7 @@ function VendorDetailModal({
                   onChange={(e) => setNewNote(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddNote(); } }}
                   placeholder="Say something nice..."
-                  className="flex-1 h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                  className="flex-1 h-8 rounded-lg border border-border bg-surface px-3 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors"
                 />
                 <button
                   type="button"

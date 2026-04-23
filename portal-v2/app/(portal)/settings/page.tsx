@@ -350,7 +350,7 @@ function PreferencesForm({
           value={energyBoost}
           onChange={(e) => setEnergyBoost(e.target.value)}
           placeholder="e.g. Iced coffee - 2 pumps sugar free vanilla, oat milk"
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none/40"
         />
       </div>
 
@@ -378,7 +378,7 @@ function PreferencesForm({
           value={dietaryRestrictions}
           onChange={(e) => setDietaryRestrictions(e.target.value)}
           placeholder="e.g. Vegetarian, Gluten-Free"
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none/40"
         />
       </div>
 
@@ -426,7 +426,7 @@ function PreferencesForm({
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="(555) 000-0000"
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none/40"
         />
       </div>
 
@@ -627,7 +627,7 @@ function UserRow({
           value={appUser.role}
           onChange={(e) => handleRoleChange(e.target.value)}
           disabled={updating || isCurrentUser}
-          className="h-7 w-full rounded border border-border bg-surface px-1.5 text-xs font-medium text-text-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+          className="h-7 w-full rounded border border-border bg-surface px-1.5 text-xs font-medium text-text-primary focus:outline-none disabled:opacity-50"
         >
           {ALL_ROLES.map((r) => (
             <option key={r} value={r}>{r}</option>

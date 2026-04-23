@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/toast";
 import { PRODUCT_DEPARTMENTS } from "@/lib/validation/products.schema";
 import { ProductDrawer, DEPT_COLORS } from "@/components/products/product-drawer";
 import {
+  Flag,
   Plus,
   Search,
   ShoppingBasket,
@@ -20,6 +21,7 @@ import {
   LayoutGrid,
   List,
 } from "lucide-react";
+import Link from "next/link";
 import { PageTabs } from "@/components/ui/page-tabs";
 
 const fetcher = (url: string) =>
@@ -51,11 +53,25 @@ export default function ProductDirectoryPage() {
   );
   const products: Product[] = Array.isArray(rawProducts) ? rawProducts : [];
 
+  const { data: flagCounts } = useSWR<Record<string, number>>(
+    "/api/product-flags/counts",
+    fetcher,
+    { refreshInterval: 30000 }
+  );
+  const openFlagTotal = flagCounts
+    ? Object.values(flagCounts).reduce((a, b) => a + b, 0)
+    : 0;
+
   const canEdit =
     user?.role === "Admin" ||
     user?.role === "Producer" || user?.role === "Post Producer" ||
     user?.role === "Art Director" ||
     user?.role === "Studio";
+  const canSeeFlags =
+    user?.role === "Admin" ||
+    user?.role === "Producer" ||
+    user?.role === "Post Producer" ||
+    user?.role === "Brand Marketing Manager";
 
   return (
     <div className="space-y-6">
@@ -87,10 +103,27 @@ export default function ProductDirectoryPage() {
                   placeholder="Search products..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                  className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
                 />
               </div>
               <div className="ml-auto flex items-center gap-1">
+                {canSeeFlags && (
+                  <Link
+                    href="/products/flags"
+                    className={`flex items-center gap-1.5 rounded-md border px-2.5 h-8 text-xs font-medium transition-colors ${
+                      openFlagTotal > 0
+                        ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                        : "border-border text-text-secondary hover:bg-surface-secondary"
+                    }`}
+                    title="RBU flags"
+                  >
+                    <Flag className="h-3.5 w-3.5" />
+                    Flags
+                    {openFlagTotal > 0 && (
+                      <span className="tabular-nums">({openFlagTotal})</span>
+                    )}
+                  </Link>
+                )}
                 {canEdit && (
                   <button
                     onClick={() => setDrawerProduct(NEW_PRODUCT)}
@@ -170,12 +203,27 @@ export default function ProductDirectoryPage() {
             />
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {products.map((product) => (
+              {products.map((product) => {
+                const flagCount = flagCounts?.[product.id] ?? 0;
+                return (
                 <button
                   key={product.id}
                   onClick={() => setDrawerProduct(product)}
-                  className="flex h-full flex-col rounded-xl border border-border bg-surface p-4 text-left hover:bg-surface-secondary transition-colors"
+                  className={`relative flex h-full flex-col rounded-xl border bg-surface p-4 text-left transition-colors ${
+                    flagCount > 0
+                      ? "border-amber-300 hover:bg-amber-50/40"
+                      : "border-border hover:bg-surface-secondary"
+                  }`}
                 >
+                  {flagCount > 0 && (
+                    <span
+                      className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium"
+                      title={`${flagCount} open flag${flagCount === 1 ? "" : "s"}`}
+                    >
+                      <Flag className="h-2.5 w-2.5" />
+                      {flagCount}
+                    </span>
+                  )}
                   <div className="flex items-start gap-3">
                     {product.imageUrl ? (
                       <img
@@ -206,7 +254,8 @@ export default function ProductDirectoryPage() {
                     </div>
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="rounded-xl border border-border overflow-hidden">

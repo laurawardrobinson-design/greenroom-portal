@@ -125,10 +125,14 @@ export async function POST(request: Request) {
     }
 
     // Validate it looks like a URL
+    let parsedUrl: URL;
     try {
-      new URL(url);
+      parsedUrl = new URL(url);
     } catch {
       return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+    }
+    if (parsedUrl.protocol !== "https:") {
+      return NextResponse.json({ error: "Only https URLs are allowed" }, { status: 400 });
     }
 
     // Publix fast path — use CDN image + slug-based name (higher quality)

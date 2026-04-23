@@ -254,7 +254,7 @@ export default function WardrobePage() {
                   placeholder="Search wardrobe..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                  className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
                 />
               </div>
               <div className="ml-auto flex items-center gap-1">
@@ -408,7 +408,7 @@ export default function WardrobePage() {
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") handleManualEntry(); }}
-                className="h-9 flex-1 rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                className="h-9 flex-1 rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
               />
               <Button size="sm" onClick={handleManualEntry}>Add</Button>
             </div>
@@ -514,15 +514,15 @@ function WardrobeDrawer({ item, onClose, onSaved, onDeleted, canEdit }: {
           <Select label="Category" value={category} onChange={(e) => setCategory(e.target.value as WardrobeCategory)} options={WARDROBE_CATEGORIES.map((c) => ({ value: c, label: c }))} />
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1.5">Description</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="General description..." rows={2} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="General description..." rows={2} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none" />
           </div>
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1.5">Styling Notes</label>
-            <textarea value={shootingNotes} onChange={(e) => setShootingNotes(e.target.value)} placeholder="How to wear on camera — tucked in, sleeves rolled, accessories..." rows={3} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+            <textarea value={shootingNotes} onChange={(e) => setShootingNotes(e.target.value)} placeholder="How to wear on camera — tucked in, sleeves rolled, accessories..." rows={3} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none" />
           </div>
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1.5">Restrictions</label>
-            <textarea value={restrictions} onChange={(e) => setRestrictions(e.target.value)} placeholder="Seasonal use, sizing, special handling..." rows={2} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+            <textarea value={restrictions} onChange={(e) => setRestrictions(e.target.value)} placeholder="Seasonal use, sizing, special handling..." rows={2} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none resize-none" />
           </div>
           <Input label="Brand Guide URL" placeholder="https://..." value={guideUrl} onChange={(e) => setGuideUrl(e.target.value)} />
           <div className="flex gap-2 pt-2">
@@ -606,7 +606,7 @@ function CheckoutModal({ item, onClose, onDone }: { item: WardrobeItem; onClose:
         <Select label="Condition" value={condition} onChange={(e) => setCondition(e.target.value)} options={CONDITIONS.map((c) => ({ value: c, label: c }))} />
         <div>
           <label className="block text-sm font-medium text-text-primary mb-1.5">Notes (optional)</label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Which shoot, any handling notes..." className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Which shoot, any handling notes..." className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none resize-none" />
         </div>
         <ModalFooter>
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
@@ -647,7 +647,7 @@ function CheckinModal({ item, onClose, onDone }: { item: WardrobeItem; onClose: 
         <Select label="Condition on return" value={condition} onChange={(e) => setCondition(e.target.value)} options={CONDITIONS.map((c) => ({ value: c, label: c }))} />
         <div>
           <label className="block text-sm font-medium text-text-primary mb-1.5">Notes (optional)</label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Any damage or notes on return..." className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Any damage or notes on return..." className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none resize-none" />
         </div>
         <ModalFooter>
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
@@ -848,7 +848,7 @@ function ReservationsTab({ items, canEdit, onMutate }: { items: WardrobeItem[]; 
           <form onSubmit={handleReserve} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1.5">Item</label>
-              <select value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value)} required className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+              <select value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value)} required className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none">
                 <option value="">Select an item...</option>
                 {items.filter((i) => i.status === "Available").map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
               </select>
@@ -1045,7 +1045,7 @@ function JobClassesTab({ canEdit, allItems }: { canEdit: boolean; allItems: Ward
                 <div>
                   <label className="block mt-px text-sm font-medium text-text-primary mb-1">Dress Code Reference URL</label>
                   <div className="flex gap-2">
-                    <div className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-surface px-3 focus-within:ring-1 focus-within:ring-primary focus-within:border-primary">
+                    <div className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-surface px-3 focus-within:border-primary">
                       <LinkIcon className="h-4 w-4 shrink-0 text-text-tertiary" />
                       <input
                         type="url"
@@ -1075,7 +1075,7 @@ function JobClassesTab({ canEdit, allItems }: { canEdit: boolean; allItems: Ward
                     value={newStandards}
                     onChange={(e) => setNewStandards(e.target.value)}
                     placeholder="Job duties, uniform requirements, presentation expectations…"
-                    className="w-full h-16 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none overflow-y-auto"
+                    className="w-full h-16 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none resize-none overflow-y-auto"
                   />
                 </div>
 
@@ -1086,7 +1086,7 @@ function JobClassesTab({ canEdit, allItems }: { canEdit: boolean; allItems: Ward
                     value={newRestrictions}
                     onChange={(e) => setNewRestrictions(e.target.value)}
                     placeholder="Items that must not be worn, brand restrictions, safety requirements…"
-                    className="w-full h-16 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none overflow-y-auto"
+                    className="w-full h-16 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm focus:outline-none resize-none overflow-y-auto"
                   />
                   <p className="mt-1 text-xs text-text-tertiary">Wardrobe items and shoot notes can be added after creating.</p>
                 </div>
@@ -1353,7 +1353,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
                   value={referenceUrl}
                   onChange={(e) => setReferenceUrl(e.target.value)}
                   placeholder="https://www.publix.org/dress-code/..."
-                  className="h-9 flex-1 rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                  className="h-9 flex-1 rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
                 />
               </div>
             </div>
@@ -1467,7 +1467,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
 
               {showAddItem && availableToAdd.length > 0 && (
                 <div className="flex gap-2 px-4 pb-4 pt-1">
-                  <select value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value)} className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+                  <select value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value)} className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none">
                     <option value="">Select an item...</option>
                     {availableToAdd.map((i) => <option key={i.id} value={i.id}>{i.name} — {i.category}</option>)}
                   </select>
@@ -1542,7 +1542,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
           <div className="px-4 py-3.5">
             {editingStandards ? (
               <div className="space-y-3">
-                <textarea value={standards} onChange={(e) => setStandards(e.target.value)} rows={4} placeholder="General uniform standards for this role — what's required, presentation expectations, approved variations..." className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+                <textarea value={standards} onChange={(e) => setStandards(e.target.value)} rows={4} placeholder="General uniform standards for this role — what's required, presentation expectations, approved variations..." className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none resize-none" />
                 <div className="flex gap-2">
                   <Button size="sm" variant="ghost" onClick={() => { setEditingStandards(false); setStandards(jc.standards); }}>Cancel</Button>
                   <Button size="sm" onClick={handleSaveStandards} loading={savingStandards}>Save</Button>
@@ -1570,7 +1570,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
           <div className="px-4 py-3.5">
             {editingRestrictions ? (
               <div className="space-y-3">
-                <textarea value={restrictions} onChange={(e) => setRestrictions(e.target.value)} rows={3} placeholder="Items that must not be worn, brand restrictions, safety requirements…" className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+                <textarea value={restrictions} onChange={(e) => setRestrictions(e.target.value)} rows={3} placeholder="Items that must not be worn, brand restrictions, safety requirements…" className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none resize-none" />
                 <div className="flex gap-2">
                   <Button size="sm" variant="ghost" onClick={() => { setEditingRestrictions(false); setRestrictions(jc.restrictions); }}>Cancel</Button>
                   <Button size="sm" onClick={handleSaveRestrictions} loading={savingRestrictions}>Save</Button>
@@ -1616,7 +1616,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
                 onChange={(e) => setNewNote(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddNote(); } }}
                 placeholder="Add a shoot note..."
-                className="h-9 flex-1 rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                className="h-9 flex-1 rounded-lg border border-border bg-surface pl-3 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
               />
               <Button size="sm" onClick={handleAddNote} loading={savingNote}>Add</Button>
             </div>
@@ -1709,7 +1709,7 @@ function JobClassItemRow({ ji, canEdit, onRemove, onSaveNotes, onSaveItem, compa
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Role-specific notes for this item…"
-            className="h-8 w-full rounded-lg border border-border bg-surface pl-3 pr-3 text-xs text-text-primary placeholder:text-text-tertiary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+            className="h-8 w-full rounded-lg border border-border bg-surface pl-3 pr-3 text-xs text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
             onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") handleCancel(); }}
             autoFocus
           />
@@ -1954,7 +1954,7 @@ function AddUnitModal({ item, allItems, onClose, onSaved }: {
         {/* Item type selector */}
         <div>
           <label className="block text-sm font-medium text-text-primary mb-1.5">Uniform Item Type</label>
-          <select value={itemId} onChange={(e) => setItemId(e.target.value)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+          <select value={itemId} onChange={(e) => setItemId(e.target.value)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none">
             {allItems.map((i) => <option key={i.id} value={i.id}>{i.name} — {i.category}</option>)}
           </select>
         </div>
@@ -1963,14 +1963,14 @@ function AddUnitModal({ item, allItems, onClose, onSaved }: {
           {/* Size */}
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1.5">Size</label>
-            <select value={size} onChange={(e) => setSize(e.target.value as UnitSize)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            <select value={size} onChange={(e) => setSize(e.target.value as UnitSize)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none">
               {UNIT_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           {/* Gender */}
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1.5">Gender Cut</label>
-            <select value={gender} onChange={(e) => setGender(e.target.value as UnitGender)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            <select value={gender} onChange={(e) => setGender(e.target.value as UnitGender)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none">
               {UNIT_GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
@@ -1980,7 +1980,7 @@ function AddUnitModal({ item, allItems, onClose, onSaved }: {
           {/* Condition */}
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1.5">Condition</label>
-            <select value={condition} onChange={(e) => setCondition(e.target.value)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            <select value={condition} onChange={(e) => setCondition(e.target.value)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none">
               {CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -1993,7 +1993,7 @@ function AddUnitModal({ item, allItems, onClose, onSaved }: {
               max={50}
               value={quantity}
               onChange={(e) => setQuantity(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))}
-              className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm focus:outline-none"
             />
           </div>
         </div>
@@ -2004,7 +2004,7 @@ function AddUnitModal({ item, allItems, onClose, onSaved }: {
 
         <div>
           <label className="block text-sm font-medium text-text-primary mb-1.5">Notes (optional)</label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Any unit-specific notes..." className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Any unit-specific notes..." className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none resize-none" />
         </div>
 
         {quantity > 1 && (
@@ -2058,25 +2058,25 @@ function EditUnitModal({ unit, onClose, onSaved }: {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1.5">Size</label>
-            <select value={size} onChange={(e) => setSize(e.target.value as UnitSize)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            <select value={size} onChange={(e) => setSize(e.target.value as UnitSize)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none">
               {UNIT_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1.5">Gender Cut</label>
-            <select value={gender} onChange={(e) => setGender(e.target.value as UnitGender)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            <select value={gender} onChange={(e) => setGender(e.target.value as UnitGender)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none">
               {UNIT_GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1.5">Condition</label>
-            <select value={condition} onChange={(e) => setCondition(e.target.value as WardrobeCondition)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            <select value={condition} onChange={(e) => setCondition(e.target.value as WardrobeCondition)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none">
               {CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1.5">Status</label>
-            <select value={status} onChange={(e) => setStatus(e.target.value as WardrobeUnit["status"])} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            <select value={status} onChange={(e) => setStatus(e.target.value as WardrobeUnit["status"])} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none">
               <option>Available</option>
               <option>Reserved</option>
               <option>Checked Out</option>
@@ -2086,7 +2086,7 @@ function EditUnitModal({ unit, onClose, onSaved }: {
         <Input label="QR Code (optional)" placeholder="Unique code for scanning" value={qrCode} onChange={(e) => setQrCode(e.target.value)} />
         <div>
           <label className="block text-sm font-medium text-text-primary mb-1.5">Notes</label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none resize-none" />
         </div>
         <ModalFooter>
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>

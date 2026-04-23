@@ -12,7 +12,7 @@ import type { Product } from "@/types/domain";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error(); return r.json(); });
 
-const SELECT_CLASS = "w-full rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer";
+const SELECT_CLASS = "w-full rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-text-primary focus:outline-none appearance-none cursor-pointer";
 
 interface Props {
   open: boolean;

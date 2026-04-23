@@ -139,7 +139,7 @@ export default function InvoicePage({
               Project
             </p>
             <p className="text-sm font-semibold text-gray-900">{campaign?.name}</p>
-            <p className="text-xs text-gray-400 mt-0.5 font-mono">{campaign?.wf_number}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{campaign?.wf_number}</p>
           </div>
         </div>
 

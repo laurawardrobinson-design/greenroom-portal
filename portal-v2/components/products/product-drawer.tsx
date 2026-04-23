@@ -389,7 +389,7 @@ export function ProductDrawer({
                 value={pcomUrl}
                 onChange={(e) => { setPcomUrl(e.target.value); setPcomFetched(false); setPcomError(""); }}
                 placeholder="Paste any product link..."
-                className="flex-1 h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
               />
               <button
                 type="button"
@@ -523,7 +523,7 @@ export function ProductDrawer({
               <input type="text" value={newNote} onChange={(e) => setNewNote(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddNote(); } }}
                 placeholder="Add a note…"
-                className="flex-1 h-8 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 h-8 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
               />
               <button type="button" onClick={handleAddNote} disabled={!newNote.trim() || addingNote}
                 className="h-8 px-3 rounded-lg bg-primary text-white text-sm font-medium disabled:opacity-40 transition-opacity shrink-0">

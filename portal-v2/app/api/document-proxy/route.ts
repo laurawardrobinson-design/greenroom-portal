@@ -47,8 +47,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Invalid url" }, { status: 400 });
     }
 
-    if (!["http:", "https:"].includes(target.protocol)) {
-      return NextResponse.json({ error: "Unsupported protocol" }, { status: 400 });
+    if (target.protocol !== "https:") {
+      return NextResponse.json({ error: "Only https URLs are allowed" }, { status: 400 });
     }
 
     if (isPrivateHostname(target.hostname)) {
@@ -81,4 +81,3 @@ export async function GET(request: Request) {
     return authErrorResponse(error);
   }
 }
-
