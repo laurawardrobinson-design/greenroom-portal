@@ -41,8 +41,8 @@ export function RailBriefHealth({ briefHealth }: RailBriefHealthProps) {
               aria-valuemax={100}
             >
               <div
-                className="h-full bg-emerald-500 transition-all"
-                style={{ width: `${percent}%` }}
+                className="h-full transition-all"
+                style={{ width: `${percent}%`, backgroundColor: "var(--color-success)" }}
               />
             </div>
             {missing.length > 0 ? (
