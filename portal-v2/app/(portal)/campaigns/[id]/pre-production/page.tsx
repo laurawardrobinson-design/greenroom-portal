@@ -6,6 +6,7 @@ import { useCampaign, useCampaigns } from "@/hooks/use-campaigns";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import useSWR from "swr";
 import type { AppUser, Shoot, CampaignVendor, Vendor, StudioSpace, SpaceReservation, ShootMeal } from "@/types/domain";
 import {
@@ -36,6 +37,8 @@ import {
   type ScheduleSubViewId,
 } from "@/components/pre-production/schedule-tab";
 import { VendorAssignmentPanel } from "@/components/campaigns/vendor-assignment-panel";
+import { CampaignProductRequestsTile } from "@/components/campaigns/tiles/campaign-product-requests-tile";
+import { CampaignSectionTabs } from "@/components/campaigns/campaign-section-tabs";
 import { SpacePickerModal } from "@/components/studio/space-picker-modal";
 import { SPACE_TYPE_ICON, SPACE_TYPE_COLOR } from "@/lib/constants/studio";
 import { format, parseISO } from "date-fns";
@@ -46,6 +49,7 @@ const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new E
 // ─── Tab config ───────────────────────────────────────────────────────────────
 const TABS = [
   { id: "schedule",  label: "Schedule",  icon: CalendarDays },
+  { id: "products",  label: "Products",  icon: Package },
   { id: "logistics", label: "Logistics", icon: Truck },
   { id: "people",    label: "People",    icon: Users },
   { id: "contracts", label: "Contracts", icon: FileText },
@@ -91,15 +95,16 @@ function SectionDropdown({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="relative flex items-center gap-[var(--density-tabs-gap)] px-[var(--density-tabs-px)] py-[var(--density-tabs-py)] text-sm font-medium leading-none text-text-primary transition-colors hover:text-text-secondary"
+        className="ui-tab"
+        data-state="active"
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <ActiveIcon className="h-3.5 w-3.5 shrink-0 text-primary" />
+        <ActiveIcon className="ui-tab-icon" />
         <span>{active.label}</span>
         <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-text-tertiary transition-transform ${open ? "rotate-180" : ""}`} />
         {showActiveUnderline && (
-          <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-primary" />
+          <span className="ui-tab-underline" />
         )}
       </button>
 
@@ -1392,6 +1397,16 @@ export default function PreProductionWorkspacePage({
     }
   }, [tabFromUrl, activeTab]);
 
+  useEffect(() => {
+    if (id) {
+      try {
+        localStorage.setItem("last_preprod_campaign_id", id);
+      } catch {
+        /* storage disabled — ignore */
+      }
+    }
+  }, [id]);
+
   if (isLoading) return <DashboardSkeleton />;
   if (!campaign) {
     return (
@@ -1439,20 +1454,22 @@ export default function PreProductionWorkspacePage({
 
   return (
     <div className="space-y-0">
-      {/* Header */}
-      <div className="space-y-[var(--density-page-header-gap)] border-b border-border pb-[var(--density-page-header-pb)]">
-        <div className="flex items-start justify-between gap-[var(--density-page-header-row-gap)]">
-          <h1 className="text-2xl font-bold text-text-primary">Pre Production</h1>
+      <PageHeader
+        title={`${campaign.wfNumber ? `${campaign.wfNumber} · ` : ""}${campaign.name}`}
+        actions={(
           <CampaignSwitcher
             currentId={id}
             currentName={campaign.name}
             currentWf={campaign.wfNumber}
             activeTab={resolvedActiveTab}
           />
-        </div>
-      </div>
+        )}
+      />
 
-      {/* Section selector + contextual sub-tabs */}
+      {/* Campaign section tabs (Overview · Brief · Asset Studio · Pre-Production) */}
+      <CampaignSectionTabs campaignId={id} />
+
+      {/* Pre-Production sub-tabs */}
       <div className="border-b border-border">
         <div className="flex flex-wrap items-center gap-2">
           <SectionDropdown
@@ -1465,22 +1482,22 @@ export default function PreProductionWorkspacePage({
           {resolvedActiveTab === "schedule" && (
             <>
               <span className="h-5 w-px bg-border/70" aria-hidden />
-              <nav className="flex flex-wrap items-center gap-2">
+              <nav className="ui-tabs" role="tablist" aria-label="Schedule views">
               {visibleScheduleViews.map((view) => {
                 const active = resolvedScheduleView === view.id;
                 return (
                   <button
                     key={view.id}
                     type="button"
+                    role="tab"
+                    aria-selected={active}
                     onClick={() => setActiveScheduleView(view.id)}
-                    className={`
-                      relative px-[var(--density-tabs-px)] py-[var(--density-tabs-py)] text-sm font-medium leading-none transition-colors
-                      ${active ? "text-text-primary" : "text-text-tertiary hover:text-text-secondary"}
-                    `}
+                    className="ui-tab"
+                    data-state={active ? "active" : "inactive"}
                   >
                     {view.label}
                     {active && (
-                      <span className="absolute bottom-0 left-[var(--density-tabs-px)] right-[var(--density-tabs-px)] h-0.5 rounded-full bg-primary" />
+                      <span className="ui-tab-underline" />
                     )}
                   </button>
                 );
@@ -1506,6 +1523,19 @@ export default function PreProductionWorkspacePage({
             activeView={resolvedScheduleView}
             onActiveViewChange={setActiveScheduleView}
             showViewSwitcher={false}
+          />
+        )}
+        {resolvedActiveTab === "products" && (
+          <CampaignProductRequestsTile
+            campaignId={id}
+            user={user}
+            shootDates={(shoots ?? []).flatMap((s: any) =>
+              (s?.dates ?? []).map((d: any) => ({
+                id: d.id,
+                shoot_date: d.shootDate ?? d.shoot_date ?? "",
+                shoot_name: s.name ?? "",
+              }))
+            )}
           />
         )}
         {resolvedActiveTab === "logistics" && <LogisticsTab campaignId={id} shoots={shoots} />}

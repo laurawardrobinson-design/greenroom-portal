@@ -73,7 +73,7 @@ export function ContactPicker({
         onFocus={() => {
           if (results.length > 0) setOpen(true);
         }}
-        className="rounded border border-border bg-surface px-2 py-1 text-[13px] w-44 focus:border-primary focus:outline-none disabled:bg-surface-secondary disabled:text-text-tertiary"
+        className="w-full rounded-md border border-border bg-surface-secondary/20 px-2 py-1.5 text-sm focus:border-primary focus:outline-none disabled:bg-surface-secondary disabled:text-text-tertiary"
       />
       {open && !disabled && (
         <div className="absolute z-50 mt-1 w-72 rounded-lg border border-border bg-surface shadow-lg overflow-hidden">

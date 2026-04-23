@@ -2,10 +2,29 @@
 
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ClipboardList } from "lucide-react";
 import { useCampaigns } from "@/hooks/use-campaigns";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
-import { ClipboardList } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Card } from "@/components/ui/card";
+import type { CampaignListItem } from "@/types/domain";
+
+const PREP_STATUSES: Array<CampaignListItem["status"]> = [
+  "Planning",
+  "Upcoming",
+  "In Production",
+];
+
+const LAST_CAMPAIGN_KEY = "last_preprod_campaign_id";
+
+function readLastCampaignId(): string | null {
+  try {
+    return localStorage.getItem(LAST_CAMPAIGN_KEY);
+  } catch {
+    return null;
+  }
+}
 
 export default function PreProductionPage() {
   const router = useRouter();
@@ -16,43 +35,56 @@ export default function PreProductionPage() {
 
   const isLoading = userLoading || campaignsLoading;
 
-  const prepCampaigns = campaigns.filter(
-    (c) => c.status === "Planning" || c.status === "Upcoming" || c.status === "In Production"
-  );
-
-  // Prefer campaigns assigned to this producer, fall back to any prep campaign
-  const mine = prepCampaigns.filter(
-    (c) => c.producerIds.includes(user?.id ?? "") || c.createdBy === user?.id
-  );
-  const target = mine[0] ?? prepCampaigns[0];
-
   useEffect(() => {
-    if (!isLoading && target) {
-      const nextPath = tab
-        ? `/campaigns/${target.id}/pre-production?tab=${encodeURIComponent(tab)}`
-        : `/campaigns/${target.id}/pre-production`;
-      router.replace(nextPath);
-    }
-  }, [isLoading, target, router, tab]);
+    if (isLoading) return;
+
+    const prep = campaigns.filter((c) => PREP_STATUSES.includes(c.status));
+    if (prep.length === 0) return;
+
+    const mine = prep.filter(
+      (c) => c.producerIds.includes(user?.id ?? "") || c.createdBy === user?.id
+    );
+    const soonest = (list: CampaignListItem[]) =>
+      [...list].sort((a, b) => {
+        const aDate = a.nextShootDate ?? "9999-12-31";
+        const bDate = b.nextShootDate ?? "9999-12-31";
+        return aDate.localeCompare(bDate);
+      });
+
+    const lastId = readLastCampaignId();
+    const lastStillValid = lastId && prep.some((c) => c.id === lastId);
+
+    const targetId =
+      (lastStillValid ? lastId : null) ??
+      soonest(mine)[0]?.id ??
+      soonest(prep)[0]?.id;
+
+    if (!targetId) return;
+
+    const nextPath = tab
+      ? `/campaigns/${targetId}/pre-production?tab=${encodeURIComponent(tab)}`
+      : `/campaigns/${targetId}/pre-production`;
+    router.replace(nextPath);
+  }, [isLoading, campaigns, user, tab, router]);
 
   if (isLoading) return <DashboardSkeleton />;
 
-  if (!target) {
+  const hasAnyPrep = campaigns.some((c) => PREP_STATUSES.includes(c.status));
+
+  if (!hasAnyPrep) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-24 text-center">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-secondary">
-          <ClipboardList className="h-5 w-5 text-text-tertiary" />
-        </div>
-        <div>
-          <p className="text-sm font-medium text-text-secondary">No campaigns in pre-production</p>
-          <p className="text-xs text-text-tertiary mt-0.5">
-            Campaigns with Planning or In Production status will appear here.
-          </p>
-        </div>
+      <div className="mx-auto max-w-2xl px-4 py-10">
+        <Card padding="none">
+          <EmptyState
+            icon={<ClipboardList className="h-5 w-5" />}
+            title="No campaigns in pre-production"
+            description="Campaigns with status Planning, Upcoming, or In Production will land you here automatically."
+          />
+        </Card>
       </div>
     );
   }
 
-  // Target exists — redirect is firing via useEffect; show skeleton until it completes.
+  // Redirect is firing — show skeleton while it settles.
   return <DashboardSkeleton />;
 }

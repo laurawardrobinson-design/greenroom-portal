@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import useSWR from "swr";
 import {
   Apple,
@@ -13,11 +13,11 @@ import {
   Cookie,
   Copy,
   Forward,
-  Mail,
   Package,
   Phone,
   Plus,
   Sandwich,
+  Search,
   Send,
   ShoppingBasket,
   Trash2,
@@ -27,12 +27,20 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { PageTabs } from "@/components/ui/page-tabs";
 import { PRStatusPill } from "@/components/product-requests/pr-status-pill";
 import { ContactPicker } from "@/components/contacts/contact-picker";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import type { PRDoc, PRDeptSection, PRItem, PRDepartment, PRDocStatus } from "@/types/domain";
+import type {
+  PRDoc,
+  PRDeptSection,
+  PRItem,
+  PRDepartment,
+  PRDocStatus,
+  CampaignProduct,
+  Product,
+} from "@/types/domain";
 import { PR_DEPARTMENTS, PR_DEPARTMENT_LABELS } from "@/types/domain";
 
 const DEPT_ICONS: Record<PRDepartment, LucideIcon> = {
@@ -83,62 +91,11 @@ function earliestPickup(sections: PRDeptSection[]): { date: string; time: string
   return { date: candidates[0].date, time: candidates[0].time };
 }
 
-function ProductSearch({
-  onSelect,
-  placeholder = "Search products…",
-}: {
-  onSelect: (product: { id: string; name: string; itemCode: string | null; department: string }) => void;
-  placeholder?: string;
-}) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<
-    { id: string; name: string; itemCode: string | null; department: string }[]
-  >([]);
-  const [open, setOpen] = useState(false);
+const SHEET_CELL_CLASS = "border-b border-border/50 px-2 py-1.5 align-top text-sm text-text-primary";
+const SHEET_INPUT_CLASS =
+  "w-full rounded-sm border-0 bg-transparent px-1 py-1 text-sm text-text-primary placeholder:text-text-tertiary focus:bg-primary/5 focus:outline-none";
 
-  const search = useCallback(async (q: string) => {
-    if (q.length < 2) { setResults([]); setOpen(false); return; }
-    try {
-      const res = await fetch(`/api/products?search=${encodeURIComponent(q)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setResults(data);
-        setOpen(data.length > 0);
-      }
-    } catch { /* ignore */ }
-  }, []);
-
-  return (
-    <div className="relative">
-      <Input
-        placeholder={placeholder}
-        value={query}
-        onChange={(e) => { setQuery(e.target.value); search(e.target.value); }}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="text-sm"
-      />
-      {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-surface shadow-lg overflow-hidden">
-          {results.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-surface-secondary transition-colors"
-              onMouseDown={() => { onSelect(r); setQuery(""); setOpen(false); }}
-            >
-              <span className="text-sm text-text-primary truncate">{r.name}</span>
-              {r.itemCode && (
-                <span className="ml-auto text-[11px] text-text-tertiary shrink-0">#{r.itemCode}</span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ItemRow({
+function SpreadsheetItemRow({
   item,
   editable,
   onUpdate,
@@ -149,118 +106,222 @@ function ItemRow({
   onUpdate: (field: "quantity" | "size" | "specialInstructions", value: string | number) => void;
   onDelete: () => void;
 }) {
-  const inputCls =
-    "rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none";
-
-  if (!editable) {
-    return (
-      <div className="border-t border-border/50 px-3.5 py-3">
-        <div className="flex items-start gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <span className="text-sm font-medium text-text-primary leading-snug">
-                {item.product?.name ?? "(no product)"}
-              </span>
-              {item.product?.itemCode && (
-                <span className="text-[11px] text-text-tertiary tabular-nums">
-                  #{item.product.itemCode}
-                </span>
-              )}
-              {item.fromShotList && (
-                <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 rounded px-1.5 py-0.5 leading-none">
-                  Shot list
-                </span>
-              )}
-            </div>
-            {item.specialInstructions && (
-              <p className="mt-1 text-[12px] text-text-secondary italic leading-snug">
-                {item.specialInstructions}
-              </p>
-            )}
-          </div>
-          <span className="shrink-0 text-sm text-text-primary tabular-nums whitespace-nowrap pt-0.5">
-            {item.quantity}
-            {item.size ? <span className="text-text-secondary"> × {item.size}</span> : null}
-          </span>
+  return (
+    <tr className="hover:bg-surface-secondary/20 transition-colors">
+      <td className={`${SHEET_CELL_CLASS} w-20`}>
+        {editable ? (
+          <input
+            type="number"
+            min={1}
+            defaultValue={item.quantity}
+            onBlur={(e) => {
+              const parsed = Math.max(1, Number(e.target.value) || 1);
+              e.currentTarget.value = String(parsed);
+              if (parsed !== item.quantity) onUpdate("quantity", parsed);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            }}
+            className={`${SHEET_INPUT_CLASS} text-center tabular-nums`}
+            aria-label="Quantity"
+          />
+        ) : (
+          <span className="tabular-nums">{item.quantity}</span>
+        )}
+      </td>
+      <td className={`${SHEET_CELL_CLASS} w-32`}>
+        {editable ? (
+          <input
+            type="text"
+            defaultValue={item.size}
+            onBlur={(e) => {
+              const next = e.target.value.trim();
+              if (next !== item.size) onUpdate("size", next);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            }}
+            placeholder="Size"
+            className={SHEET_INPUT_CLASS}
+            aria-label="Size"
+          />
+        ) : (
+          <span>{item.size || "—"}</span>
+        )}
+      </td>
+      <td className={`${SHEET_CELL_CLASS} w-20 tabular-nums text-text-secondary`}>
+        {item.product?.itemCode ?? "—"}
+      </td>
+      <td className={SHEET_CELL_CLASS}>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="truncate">{item.product?.name ?? "(no product)"}</span>
+          {item.fromShotList && (
+            <span className="shrink-0 rounded border border-sky-100 bg-sky-50 px-1.5 py-0.5 text-sm text-sky-700">
+              Shot list
+            </span>
+          )}
         </div>
-      </div>
+      </td>
+      <td className={SHEET_CELL_CLASS}>
+        {editable ? (
+          <input
+            type="text"
+            defaultValue={item.specialInstructions}
+            onBlur={(e) => {
+              const next = e.target.value.trim();
+              if (next !== item.specialInstructions) {
+                onUpdate("specialInstructions", next);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            }}
+            placeholder="Notes"
+            className={SHEET_INPUT_CLASS}
+            aria-label="Notes"
+          />
+        ) : (
+          <span className="text-text-secondary">{item.specialInstructions || "—"}</span>
+        )}
+      </td>
+      <td className={`${SHEET_CELL_CLASS} w-10 text-right`}>
+        {editable && (
+          <button
+            onClick={onDelete}
+            className="rounded p-1 text-text-tertiary hover:bg-surface-secondary hover:text-error transition-colors"
+            aria-label="Remove item"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function AddItemMenu({
+  availableProducts,
+  onAdd,
+  disabled,
+}: {
+  availableProducts: Product[];
+  onAdd: (product: Product) => Promise<void> | void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleMouseDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) setQuery("");
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return availableProducts;
+    return availableProducts.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.itemCode ?? "").toLowerCase().includes(q)
     );
-  }
+  }, [availableProducts, query]);
+
+  const noneAvailable = availableProducts.length === 0;
 
   return (
-    <div className="group border-t border-border/50 px-3.5 py-3 space-y-2">
-      {/* Line 1: product header */}
-      <div className="flex items-baseline gap-2 flex-wrap">
-        <span className="text-sm font-medium text-text-primary leading-snug">
-          {item.product?.name ?? "(no product)"}
-        </span>
-        {item.product?.itemCode && (
-          <span className="text-[11px] text-text-tertiary tabular-nums">
-            #{item.product.itemCode}
-          </span>
-        )}
-        {item.fromShotList && (
-          <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 rounded px-1.5 py-0.5 leading-none">
-            Shot list
-          </span>
-        )}
-        <button
-          onClick={onDelete}
-          className="ml-auto opacity-0 group-hover:opacity-100 text-text-tertiary hover:text-error transition-all"
-          aria-label="Remove item"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
+    <div ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => !disabled && !noneAvailable && setOpen((v) => !v)}
+        disabled={disabled || noneAvailable}
+        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-dashed border-border bg-surface px-3 text-sm font-medium text-text-secondary transition-colors hover:border-primary hover:bg-primary-light hover:text-primary-hover disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border disabled:hover:bg-surface disabled:hover:text-text-secondary"
+      >
+        <Plus className="h-4 w-4" />
+        {noneAvailable ? "All catalog items added" : "Add item"}
+      </button>
 
-      {/* Line 2: qty × size + instructions */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <input
-          type="number"
-          min={1}
-          value={item.quantity}
-          onChange={(e) => onUpdate("quantity", Number(e.target.value))}
-          className={`${inputCls} w-16 text-center tabular-nums shrink-0`}
-          aria-label="Quantity"
-        />
-        <span className="text-text-tertiary text-sm shrink-0">×</span>
-        <input
-          type="text"
-          value={item.size}
-          onChange={(e) => onUpdate("size", e.target.value)}
-          placeholder="Size"
-          className={`${inputCls} w-28 shrink-0`}
-          aria-label="Size"
-        />
-        <input
-          type="text"
-          value={item.specialInstructions}
-          onChange={(e) => onUpdate("specialInstructions", e.target.value)}
-          placeholder="Special instructions (optional)"
-          className={`${inputCls} flex-1 min-w-[180px]`}
-          aria-label="Special instructions"
-        />
-      </div>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
+          <div className="border-b border-border p-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+              <input
+                autoFocus
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search products…"
+                className="w-full rounded-md border border-border bg-surface-secondary/20 py-1.5 pl-8 pr-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-3 text-sm italic text-text-tertiary">
+                {availableProducts.length === 0
+                  ? "No catalog products available."
+                  : "No products match that search."}
+              </p>
+            ) : (
+              filtered.map((product) => (
+                <button
+                  key={product.id}
+                  type="button"
+                  onClick={async () => {
+                    setOpen(false);
+                    await onAdd(product);
+                  }}
+                  className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-secondary"
+                >
+                  <span className="min-w-0 flex-1 truncate text-sm text-text-primary">
+                    {product.name}
+                  </span>
+                  {product.itemCode && (
+                    <span className="shrink-0 text-xs text-text-tertiary tabular-nums">
+                      {product.itemCode}
+                    </span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function DeptSection({
+function DepartmentSpreadsheet({
   section,
   editable,
   docId,
-  doc,
-  isBMM,
+  catalogProducts,
   onRefresh,
 }: {
   section: PRDeptSection;
   editable: boolean;
   docId: string;
-  doc: PRDoc;
-  isBMM: boolean;
+  catalogProducts: Product[];
   onRefresh: () => void;
 }) {
-  const DeptIcon = DEPT_ICONS[section.department];
+  const [sheetError, setSheetError] = useState<string>("");
+  const [creating, setCreating] = useState(false);
 
   const updateSection = useCallback(
     async (
@@ -281,56 +342,12 @@ function DeptSection({
     [docId, section.department, onRefresh]
   );
 
-  const canSendEmail =
-    isBMM &&
-    (doc.status === "submitted" || doc.status === "forwarded") &&
-    section.items.length > 0 &&
-    section.publicToken;
-
-  const openDeptEmailDraft = useCallback(() => {
-    const origin =
-      typeof window !== "undefined" ? window.location.origin : "";
-    const link = `${origin}/pr/view/${section.publicToken}`;
-    const deptLabel = PR_DEPARTMENT_LABELS[section.department];
-    const shootDateLabel = new Date(
-      doc.shootDate + "T12:00:00"
-    ).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-    const campaignLabel = [doc.campaign?.wfNumber, doc.campaign?.name]
-      .filter(Boolean)
-      .join(" — ");
-    const subject = `Product Request — ${campaignLabel} — ${deptLabel} — ${shootDateLabel}`;
-    const bodyLines = [
-      `Hi ${deptLabel} team,`,
-      "",
-      `Please see the attached product request for ${campaignLabel} on ${shootDateLabel}.`,
-      "",
-      `View the full request (pickup time, contact, and all items) here:`,
-      link,
-      "",
-      `Thank you,`,
-    ];
-    const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join("\r\n"))}`;
-    window.location.href = mailto;
-  }, [section.publicToken, section.department, doc.shootDate, doc.campaign]);
-
-  const addProduct = useCallback(
-    async (product: { id: string }) => {
-      await fetch(`/api/product-requests/${docId}/sections/${section.id}/items`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: product.id, quantity: 1 }),
-      });
-      onRefresh();
-    },
-    [docId, section.id, onRefresh]
-  );
-
   const updateItem = useCallback(
-    async (itemId: string, field: "quantity" | "size" | "specialInstructions", value: string | number) => {
+    async (
+      itemId: string,
+      field: "quantity" | "size" | "specialInstructions",
+      value: string | number
+    ) => {
       await fetch(`/api/product-requests/items/${itemId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -349,62 +366,95 @@ function DeptSection({
     [onRefresh]
   );
 
-  const deleteSection = useCallback(async () => {
-    await fetch(`/api/product-requests/${docId}/sections/${section.id}/items`, { method: "DELETE" });
-    onRefresh();
-  }, [docId, section.id, onRefresh]);
+  const hasPickupMeta =
+    section.dateNeeded || section.timeNeeded || section.pickupPerson || section.pickupPhone;
 
-  const itemCount = section.items.length;
+  const itemByProductId = useMemo(() => {
+    const map = new Map<string, PRItem>();
+    for (const item of section.items) {
+      if (item.productId) map.set(item.productId, item);
+    }
+    return map;
+  }, [section.items]);
+
+  const catalogProductIds = useMemo(
+    () => new Set(catalogProducts.map((product) => product.id)),
+    [catalogProducts]
+  );
+
+  const createItem = useCallback(
+    async (product: Product) => {
+      if (!editable || itemByProductId.has(product.id) || creating) return;
+
+      setCreating(true);
+      try {
+        const res = await fetch(`/api/product-requests/${docId}/sections/${section.id}/items`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            productId: product.id,
+            quantity: 1,
+            size: "",
+            specialInstructions: "",
+          }),
+        });
+
+        if (!res.ok) {
+          setSheetError("Could not add item. Please try again.");
+          return;
+        }
+
+        setSheetError("");
+        onRefresh();
+      } finally {
+        setCreating(false);
+      }
+    },
+    [editable, itemByProductId, creating, docId, section.id, onRefresh]
+  );
+
+  const availableCatalogProducts = useMemo(
+    () => catalogProducts.filter((p) => !itemByProductId.has(p.id)),
+    [catalogProducts, itemByProductId]
+  );
+
+  // Items to show in the table: everything currently in the section, catalog + non-catalog,
+  // sorted with catalog products first (then non-catalog / custom).
+  const visibleItems = useMemo(() => {
+    const catalog: PRItem[] = [];
+    const nonCatalog: PRItem[] = [];
+    for (const item of section.items) {
+      if (item.productId && catalogProductIds.has(item.productId)) catalog.push(item);
+      else nonCatalog.push(item);
+    }
+    return [...catalog, ...nonCatalog];
+  }, [section.items, catalogProductIds]);
 
   return (
-    <Card padding="none" className="overflow-hidden">
-      <CardHeader>
-        <CardTitle>
-          <DeptIcon />
-          <span>{PR_DEPARTMENT_LABELS[section.department]}</span>
-          <span className="text-[11px] font-medium text-text-tertiary normal-case tracking-normal ml-0.5">
-            · {itemCount} {itemCount === 1 ? "item" : "items"}
-          </span>
-        </CardTitle>
-        {editable && (
-          <button
-            onClick={deleteSection}
-            className="text-text-tertiary hover:text-error transition-colors"
-            title="Remove department"
-            aria-label="Remove department"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </CardHeader>
-
-      {/* Pickup meta band */}
-      <div className="px-3.5 py-2 border-b border-border/70 bg-surface-secondary/40">
+    <div className="space-y-2 px-3 py-3">
+      <div className="rounded-md border border-border/60 bg-surface p-2.5">
         {editable ? (
-          <div className="flex items-center gap-x-4 gap-y-2 flex-wrap text-[12px]">
-            <label className="flex items-center gap-1.5">
-              <CalendarDays className="h-3.5 w-3.5 text-text-tertiary" />
-              <span className="text-text-tertiary">Pickup date</span>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <label className="space-y-1">
+              <span className="text-sm font-medium text-text-secondary">Pickup Date</span>
               <input
                 type="date"
                 defaultValue={section.dateNeeded ?? ""}
                 onBlur={(e) => updateSection({ dateNeeded: e.target.value })}
-                className="rounded border border-border bg-surface px-2 py-1 text-[13px] focus:border-primary focus:outline-none"
+                className="w-full rounded-md border border-border bg-surface-secondary/20 px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
               />
             </label>
-            <label className="flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 text-text-tertiary" />
-              <span className="text-text-tertiary">Time</span>
+            <label className="space-y-1">
+              <span className="text-sm font-medium text-text-secondary">Pickup Time</span>
               <input
                 type="time"
                 defaultValue={section.timeNeeded}
                 onBlur={(e) => updateSection({ timeNeeded: e.target.value })}
-                className="rounded border border-border bg-surface px-2 py-1 text-[13px] focus:border-primary focus:outline-none"
+                className="w-full rounded-md border border-border bg-surface-secondary/20 px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
               />
             </label>
-            <label className="flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5 text-text-tertiary" />
-              <span className="text-text-tertiary">Pickup by</span>
+            <label className="space-y-1">
+              <span className="text-sm font-medium text-text-secondary">Pickup Contact</span>
               <ContactPicker
                 value={section.pickupPerson}
                 placeholder="Search contacts…"
@@ -417,99 +467,103 @@ function DeptSection({
                 onFreeText={(name) => updateSection({ pickupPerson: name })}
               />
             </label>
-            <label className="flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5 text-text-tertiary" />
-              <span className="text-text-tertiary">Cell</span>
+            <label className="space-y-1">
+              <span className="text-sm font-medium text-text-secondary">Pickup Phone</span>
               <input
                 type="tel"
                 defaultValue={section.pickupPhone}
                 onBlur={(e) => updateSection({ pickupPhone: e.target.value })}
                 placeholder="(###) ###-####"
-                className="rounded border border-border bg-surface px-2 py-1 text-[13px] w-36 focus:border-primary focus:outline-none"
+                className="w-full rounded-md border border-border bg-surface-secondary/20 px-2 py-1.5 text-sm tabular-nums focus:border-primary focus:outline-none"
               />
             </label>
           </div>
-        ) : (section.dateNeeded ||
-            section.timeNeeded ||
-            section.pickupPerson ||
-            section.pickupPhone) ? (
-          <div className="flex items-center gap-x-4 gap-y-1 flex-wrap text-[12px] text-text-secondary">
+        ) : hasPickupMeta ? (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-secondary">
             {(section.dateNeeded || section.timeNeeded) && (
-              <span className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5 text-text-tertiary" />
-                <span className="text-text-tertiary">Pickup</span>
-                <span className="text-text-primary font-medium">
-                  {section.dateNeeded && formatPickupDate(section.dateNeeded)}
-                  {section.dateNeeded && section.timeNeeded && " · "}
-                  {section.timeNeeded && formatTime(section.timeNeeded)}
+                <span className="font-medium text-text-primary">
+                  {section.dateNeeded ? formatPickupDate(section.dateNeeded) : "Date TBD"}
+                  {section.timeNeeded ? ` · ${formatTime(section.timeNeeded)}` : ""}
                 </span>
               </span>
             )}
             {section.pickupPerson && (
-              <span className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5">
                 <User className="h-3.5 w-3.5 text-text-tertiary" />
-                <span className="text-text-primary">{section.pickupPerson}</span>
+                <span>{section.pickupPerson}</span>
               </span>
             )}
             {section.pickupPhone && (
-              <span className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5 tabular-nums">
                 <Phone className="h-3.5 w-3.5 text-text-tertiary" />
-                <span className="text-text-primary tabular-nums">
-                  {section.pickupPhone}
-                </span>
+                <span>{section.pickupPhone}</span>
               </span>
-            )}
-            {canSendEmail && (
-              <button
-                onClick={openDeptEmailDraft}
-                className="ml-auto flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-[12px] text-text-secondary hover:border-primary hover:text-primary transition-colors"
-                title="Open an Outlook draft with a tamper-proof link to this department's section"
-              >
-                <Mail className="h-3.5 w-3.5" />
-                Email {PR_DEPARTMENT_LABELS[section.department]}
-              </button>
             )}
           </div>
         ) : (
-          <div className="flex items-center gap-x-4 flex-wrap text-[12px] text-text-tertiary">
-            <p className="italic">Pickup time not set</p>
-            {canSendEmail && (
-              <button
-                onClick={openDeptEmailDraft}
-                className="ml-auto flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-[12px] text-text-secondary hover:border-primary hover:text-primary transition-colors"
-              >
-                <Mail className="h-3.5 w-3.5" />
-                Email {PR_DEPARTMENT_LABELS[section.department]}
-              </button>
-            )}
-          </div>
+          <p className="text-sm italic text-text-tertiary">Pickup details not set.</p>
         )}
       </div>
 
-      {/* Items */}
-      <div>
-        {section.items.length > 0 ? (
-          <div>
-            {section.items.map((item) => (
-              <ItemRow
-                key={item.id}
+      <div className="rounded-md border border-border/60 bg-surface overflow-hidden">
+        <table className="w-full table-fixed border-collapse">
+          <thead>
+            <tr className="bg-surface-secondary/45">
+              <th className="border-b border-border/60 px-2 py-1.5 text-left text-sm font-semibold text-text-secondary w-20">Qty</th>
+              <th className="border-b border-border/60 px-2 py-1.5 text-left text-sm font-semibold text-text-secondary w-32">Size</th>
+              <th className="border-b border-border/60 px-2 py-1.5 text-left text-sm font-semibold text-text-secondary w-20">Item #</th>
+              <th className="border-b border-border/60 px-2 py-1.5 text-left text-sm font-semibold text-text-secondary">Item Name</th>
+              <th className="border-b border-border/60 px-2 py-1.5 text-left text-sm font-semibold text-text-secondary">Notes</th>
+              <th className="border-b border-border/60 px-2 py-1.5 text-right text-sm font-semibold text-text-secondary w-10"> </th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleItems.map((item) => (
+              <SpreadsheetItemRow
+                key={`${item.id}:${item.quantity}:${item.size}:${item.specialInstructions}`}
                 item={item}
                 editable={editable}
                 onUpdate={(field, value) => updateItem(item.id, field, value)}
                 onDelete={() => deleteItem(item.id)}
               />
             ))}
-          </div>
-        ) : (
-          <p className="text-sm text-text-tertiary px-3.5 py-3">No items yet.</p>
-        )}
-        {editable && (
-          <div className="px-3.5 py-3 border-t border-border/50 max-w-sm">
-            <ProductSearch placeholder="+ Add product…" onSelect={addProduct} />
-          </div>
-        )}
+
+            {visibleItems.length === 0 && (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-3 py-6 text-center text-sm italic text-text-tertiary"
+                >
+                  {editable
+                    ? "No items yet. Use Add item to start this department."
+                    : "No products in this department."}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-    </Card>
+
+      {editable && (
+        <div className="flex items-center gap-2 pt-1">
+          <AddItemMenu
+            availableProducts={availableCatalogProducts}
+            onAdd={createItem}
+            disabled={creating}
+          />
+          {creating && (
+            <span className="inline-flex items-center gap-1.5 text-sm text-text-tertiary">
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border border-primary border-t-transparent" />
+              Adding…
+            </span>
+          )}
+        </div>
+      )}
+
+      {sheetError && <p className="text-sm text-error">{sheetError}</p>}
+    </div>
   );
 }
 
@@ -524,29 +578,30 @@ export function PRDocContent({
   const { user } = useCurrentUser();
   const [copied, setCopied] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
+  const [selectedDept, setSelectedDept] = useState<PRDepartment | null>(null);
 
   const { data: doc, mutate } = useSWR<PRDoc>(
     id ? `/api/product-requests/${id}` : null,
     fetcher
   );
+  const { data: campaignProducts } = useSWR<CampaignProduct[]>(
+    doc?.campaignId ? `/api/campaigns/${doc.campaignId}/products` : null,
+    fetcher
+  );
 
   const refresh = useCallback(() => { mutate(); }, [mutate]);
 
-  const editable = doc?.status === "draft";
+  const isProducerEditor =
+    user?.role === "Producer" ||
+    user?.role === "Post Producer" ||
+    user?.role === "Admin";
+  const editable =
+    !!doc &&
+    isProducerEditor &&
+    doc.status !== "fulfilled" &&
+    doc.status !== "cancelled";
   const isBMM = user?.role === "Brand Marketing Manager" || user?.role === "Admin";
   const isStudio = user?.role === "Studio";
-
-  const addSection = useCallback(
-    async (dept: PRDepartment) => {
-      await fetch(`/api/product-requests/${id}/sections`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ department: dept }),
-      });
-      refresh();
-    },
-    [id, refresh]
-  );
 
   const transition = useCallback(
     async (to: PRDocStatus) => {
@@ -576,6 +631,56 @@ export function PRDocContent({
     }
   }, [id]);
 
+  const activeDept =
+    selectedDept && PR_DEPARTMENTS.includes(selectedDept)
+      ? selectedDept
+      : PR_DEPARTMENTS[0];
+  const orderedSections = [...(doc?.sections ?? [])].sort(
+    (a, b) =>
+      PR_DEPARTMENTS.indexOf(a.department) - PR_DEPARTMENTS.indexOf(b.department)
+  );
+  const sectionByDept = new Map(
+    orderedSections.map((section) => [section.department, section] as const)
+  );
+  const activeSection = sectionByDept.get(activeDept) ?? null;
+  const activeCatalogProducts = useMemo(
+    () =>
+      (campaignProducts ?? [])
+        .map((cp) => cp.product)
+        .filter(
+          (product): product is Product =>
+            Boolean(product) && product.department === activeDept
+        ),
+    [campaignProducts, activeDept]
+  );
+  const deptTabs = PR_DEPARTMENTS.map((department) => {
+    const section = sectionByDept.get(department);
+    return {
+      key: department,
+      label: `${PR_DEPARTMENT_LABELS[department]} (${section?.items.length ?? 0})`,
+      icon: DEPT_ICONS[department],
+    };
+  });
+
+  const ensureSection = useCallback(
+    async (dept: PRDepartment) => {
+      await fetch(`/api/product-requests/${id}/sections`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ department: dept }),
+      });
+      refresh();
+    },
+    [id, refresh]
+  );
+
+  useEffect(() => {
+    if (!doc) return;
+    if (!editable) return;
+    if (activeSection) return;
+    void ensureSection(activeDept);
+  }, [doc, editable, activeDept, activeSection, ensureSection]);
+
   if (!doc) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -584,27 +689,22 @@ export function PRDocContent({
     );
   }
 
-  const existingDepts = new Set(doc.sections.map((s) => s.department));
-  const availableDepts = PR_DEPARTMENTS.filter((d) => !existingDepts.has(d));
   const totalItems = doc.sections.reduce((n, s) => n + s.items.length, 0);
   const activeDepts = doc.sections.filter((s) => s.items.length > 0).length;
   const earliest = earliestPickup(doc.sections);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
-      <header className="space-y-4 pb-5 border-b border-border">
+      <header className="space-y-3 pb-4 border-b border-border/70">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">
-                Product Request · {doc.docNumber}
-              </span>
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-semibold text-text-primary leading-tight">
+                {doc.campaign?.name ?? "Product Request"}
+              </h2>
               <PRStatusPill status={doc.status} />
             </div>
-            <h2 className="text-xl font-semibold text-text-primary leading-tight">
-              {doc.campaign?.name ?? "Product Request"}
-            </h2>
             <p className="text-sm text-text-secondary flex items-center gap-1.5">
               <CalendarDays className="h-3.5 w-3.5 text-text-tertiary" />
               <span>Shoot {formatShootDate(doc.shootDate)}</span>
@@ -629,7 +729,7 @@ export function PRDocContent({
 
         {/* Summary line */}
         {(totalItems > 0 || earliest) && (
-          <div className="flex items-center gap-x-5 gap-y-1 flex-wrap text-[13px] text-text-secondary">
+          <div className="flex items-center gap-x-4 gap-y-1 flex-wrap text-sm text-text-secondary">
             <span className="flex items-center gap-1.5">
               <Package className="h-3.5 w-3.5 text-text-tertiary" />
               <span>
@@ -677,7 +777,7 @@ export function PRDocContent({
               className="flex items-center gap-1.5 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50 transition-colors"
             >
               <Forward className="h-4 w-4" />
-              Forward to RBU
+              Mark Sent
             </button>
           )}
           {doc.status === "forwarded" && (isBMM || isStudio) && (
@@ -712,64 +812,40 @@ export function PRDocContent({
         </div>
       </header>
 
-      {/* Department sections */}
-      {doc.sections.length > 0 ? (
-        <div className="space-y-4">
-          {doc.sections.map((section) => (
-            <DeptSection
-              key={section.id}
-              section={section}
-              editable={editable}
-              docId={id}
-              doc={doc}
-              isBMM={isBMM}
-              onRefresh={refresh}
-            />
-          ))}
-        </div>
-      ) : (
-        !editable && (
-          <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center">
-            <p className="text-sm text-text-tertiary">No departments have been added to this request.</p>
-          </div>
-        )
-      )}
+      {/* Department workbook */}
+      <Card padding="none" className="overflow-hidden border-border/70 bg-surface">
+        <PageTabs
+          tabs={deptTabs}
+          activeTab={activeDept}
+          onTabChange={(key) => setSelectedDept(key as PRDepartment)}
+          ariaLabel="Product request departments"
+        />
 
-      {/* Add department */}
-      {editable && availableDepts.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">
-            Add a department
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {availableDepts.map((dept) => {
-              const Icon = DEPT_ICONS[dept];
-              return (
-                <button
-                  key={dept}
-                  onClick={() => addSection(dept)}
-                  className="flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-text-secondary hover:border-primary hover:text-primary transition-colors"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <Icon className="h-3.5 w-3.5" />
-                  {PR_DEPARTMENT_LABELS[dept]}
-                </button>
-              );
-            })}
+        {activeSection ? (
+          <DepartmentSpreadsheet
+            section={activeSection}
+            editable={editable}
+            docId={id}
+            catalogProducts={activeCatalogProducts}
+            onRefresh={refresh}
+          />
+        ) : (
+          <div className="px-4 py-10 text-center text-sm text-text-tertiary">
+            Loading {PR_DEPARTMENT_LABELS[activeDept]}…
           </div>
-        </div>
-      )}
+        )}
+      </Card>
 
       {/* Notes */}
       {(doc.notes || editable) && (
-        <Card padding="none">
-          <CardHeader>
-            <CardTitle>
-              <ClipboardList />
+        <Card padding="none" className="border-border/70 overflow-hidden">
+          <div className="border-b border-border/70 px-4 py-2.5">
+            <h3 className="inline-flex items-center gap-1.5 text-sm font-semibold text-text-primary">
+              <ClipboardList className="h-4 w-4 text-primary" />
               Notes
-            </CardTitle>
-          </CardHeader>
-          <div className="px-3.5 py-3">
+            </h3>
+          </div>
+          <div className="px-4 py-3">
             {editable ? (
               <textarea
                 defaultValue={doc.notes}
@@ -783,7 +859,7 @@ export function PRDocContent({
                 }}
                 placeholder="Any notes for this request…"
                 rows={3}
-                className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none resize-none"
+                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none resize-none"
               />
             ) : (
               <p className="text-sm text-text-secondary whitespace-pre-wrap">{doc.notes}</p>
