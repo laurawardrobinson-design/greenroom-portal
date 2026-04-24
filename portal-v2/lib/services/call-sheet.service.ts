@@ -8,6 +8,7 @@ import type {
   CallSheetCrewRow,
   CallSheetTalentRow,
   CallSheetLocationRow,
+  CallSheetDeliveryBlock,
 } from "@/types/domain";
 import { randomBytes } from "crypto";
 
@@ -73,7 +74,8 @@ export function emptyCallSheetContent(): CallSheetContent {
 
 function rowToCallSheet(
   row: Record<string, unknown>,
-  currentVNumber: number | null = null
+  currentVNumber: number | null = null,
+  liveDeliveries: CallSheetDeliveryBlock[] = []
 ): CallSheetRow {
   const content = (row.content_draft as CallSheetContent) || emptyCallSheetContent();
   return {
@@ -85,6 +87,7 @@ function rowToCallSheet(
     contentDraft: { ...emptyCallSheetContent(), ...content },
     currentVersionId: (row.current_version_id as string | null) ?? null,
     currentVNumber,
+    liveDeliveries,
     createdBy: (row.created_by as string | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -102,6 +105,84 @@ async function fetchCurrentVNumber(
     .eq("id", currentVersionId)
     .maybeSingle();
   return (data as { v_number?: number } | null)?.v_number ?? null;
+}
+
+/**
+ * Pull the live Deliveries-Today block for a shoot_date: every non-cancelled
+ * PRDoc tied to this date, grouped by department section, flattened to a list
+ * of blocks the call sheet renders under "Deliveries Today". This is computed
+ * on every fetch (not stored on content_draft) so producers always see current
+ * PR state while editing the draft. On publish it gets snapshotted into the
+ * version payload.
+ */
+async function fetchDeliveriesForShootDate(
+  shootDateId: string | null,
+  db: AdminClient
+): Promise<CallSheetDeliveryBlock[]> {
+  if (!shootDateId) return [];
+
+  const { data: docs } = await db
+    .from("product_request_docs")
+    .select("id, doc_number, status")
+    .eq("shoot_date_id", shootDateId)
+    .neq("status", "cancelled");
+
+  const docRows = (docs || []) as Array<Record<string, unknown>>;
+  if (docRows.length === 0) return [];
+
+  const docIds = docRows.map((d) => d.id as string);
+
+  const { data: sections } = await db
+    .from("product_request_dept_sections")
+    .select("id, doc_id, department, time_needed, pickup_person, sort_order")
+    .in("doc_id", docIds)
+    .order("sort_order", { ascending: true });
+
+  const sectionRows = (sections || []) as Array<Record<string, unknown>>;
+  if (sectionRows.length === 0) return [];
+
+  const sectionIds = sectionRows.map((s) => s.id as string);
+
+  const { data: items } = await db
+    .from("product_request_items")
+    .select("section_id, name, quantity, special_instructions, sort_order, products(name)")
+    .in("section_id", sectionIds)
+    .order("sort_order", { ascending: true });
+
+  const itemRows = (items || []) as Array<Record<string, unknown>>;
+  const itemsBySection = new Map<string, CallSheetDeliveryBlock["items"]>();
+  for (const item of itemRows) {
+    const sectionId = item.section_id as string;
+    if (!itemsBySection.has(sectionId)) itemsBySection.set(sectionId, []);
+    const product = item.products as { name?: string } | null;
+    itemsBySection.get(sectionId)!.push({
+      name: (item.name as string) || product?.name || "—",
+      quantity: Number(item.quantity ?? 0),
+      notes: (item.special_instructions as string) || "",
+    });
+  }
+
+  const docsById = new Map<string, Record<string, unknown>>(
+    docRows.map((d) => [d.id as string, d])
+  );
+
+  const blocks: CallSheetDeliveryBlock[] = sectionRows
+    .map((s) => {
+      const doc = docsById.get(s.doc_id as string);
+      if (!doc) return null;
+      return {
+        docId: doc.id as string,
+        docNumber: (doc.doc_number as string) || "",
+        docStatus: (doc.status as string) || "",
+        department: (s.department as string) || "",
+        pickupTime: (s.time_needed as string) || "",
+        pickupPerson: (s.pickup_person as string) || "",
+        items: itemsBySection.get(s.id as string) ?? [],
+      } satisfies CallSheetDeliveryBlock;
+    })
+    .filter((b): b is CallSheetDeliveryBlock => b !== null && b.items.length > 0);
+
+  return blocks;
 }
 
 function rowToVersion(row: Record<string, unknown>): CallSheetVersion {
@@ -335,11 +416,11 @@ export async function getOrCreateDraftByShootDate(
     row = inserted as Record<string, unknown>;
   }
 
-  const currentVNumber = await fetchCurrentVNumber(
-    (row.current_version_id as string | null) ?? null,
-    db
-  );
-  const sheet = rowToCallSheet(row, currentVNumber);
+  const [currentVNumber, liveDeliveries] = await Promise.all([
+    fetchCurrentVNumber((row.current_version_id as string | null) ?? null, db),
+    fetchDeliveriesForShootDate(shootDateId, db),
+  ]);
+  const sheet = rowToCallSheet(row, currentVNumber, liveDeliveries);
 
   // Seed content on first fetch
   const contentIsEmpty =
@@ -364,11 +445,11 @@ export async function getCallSheet(id: string): Promise<CallSheetRow | null> {
   const { data } = await db.from("call_sheets").select("*").eq("id", id).maybeSingle();
   if (!data) return null;
   const row = data as Record<string, unknown>;
-  const currentVNumber = await fetchCurrentVNumber(
-    (row.current_version_id as string | null) ?? null,
-    db
-  );
-  return rowToCallSheet(row, currentVNumber);
+  const [currentVNumber, liveDeliveries] = await Promise.all([
+    fetchCurrentVNumber((row.current_version_id as string | null) ?? null, db),
+    fetchDeliveriesForShootDate((row.shoot_date_id as string | null) ?? null, db),
+  ]);
+  return rowToCallSheet(row, currentVNumber, liveDeliveries);
 }
 
 export async function updateDraft(
@@ -401,11 +482,11 @@ export async function updateDraft(
 
   if (error) throw error;
   const row = updated as Record<string, unknown>;
-  const currentVNumber = await fetchCurrentVNumber(
-    (row.current_version_id as string | null) ?? null,
-    db
-  );
-  return rowToCallSheet(row, currentVNumber);
+  const [currentVNumber, liveDeliveries] = await Promise.all([
+    fetchCurrentVNumber((row.current_version_id as string | null) ?? null, db),
+    fetchDeliveriesForShootDate((row.shoot_date_id as string | null) ?? null, db),
+  ]);
+  return rowToCallSheet(row, currentVNumber, liveDeliveries);
 }
 
 /**
@@ -438,6 +519,18 @@ export async function publishVersion(
     throw new Error("Cannot publish: general call time is required");
   }
 
+  // Snapshot live deliveries into the payload so the published version
+  // records what was going to be delivered at publish time, independent
+  // of any later edits to the underlying PRDocs.
+  const deliveries = await fetchDeliveriesForShootDate(
+    (row.shoot_date_id as string | null) ?? null,
+    db
+  );
+  const snapshotContent: CallSheetContent & { deliveries: CallSheetDeliveryBlock[] } = {
+    ...content,
+    deliveries,
+  };
+
   // Find next v_number
   const { data: latest } = await db
     .from("call_sheet_versions")
@@ -455,7 +548,7 @@ export async function publishVersion(
     .insert({
       call_sheet_id: callSheetId,
       v_number: nextV,
-      payload: content,
+      payload: snapshotContent,
       published_by: publishedBy,
     })
     .select("*")

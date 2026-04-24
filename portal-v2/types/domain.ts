@@ -985,6 +985,16 @@ export interface CallSheetContent {
   producer: { name: string; phone: string; email: string } | null;
 }
 
+export interface CallSheetDeliveryBlock {
+  docId: string;
+  docNumber: string;
+  docStatus: string;
+  department: string;
+  pickupTime: string;
+  pickupPerson: string;
+  items: Array<{ name: string; quantity: number; notes: string }>;
+}
+
 export interface CallSheetRow {
   id: string;
   campaignId: string;
@@ -994,6 +1004,7 @@ export interface CallSheetRow {
   contentDraft: CallSheetContent;
   currentVersionId: string | null;
   currentVNumber: number | null;
+  liveDeliveries: CallSheetDeliveryBlock[];
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;

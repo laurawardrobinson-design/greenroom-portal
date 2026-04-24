@@ -14,6 +14,7 @@ import {
   FileText,
   Info,
   Loader2,
+  Package,
   Plus,
   Send,
   ShieldAlert,
@@ -762,6 +763,44 @@ export function CallSheetBuilder({
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  )}
+
+                  {sheet && sheet.liveDeliveries.length > 0 && (
+                    <div className="border-t border-gray-200 pt-2">
+                      <p className="font-bold mb-1 flex items-center gap-1">
+                        <Package className="h-3 w-3" />
+                        Deliveries Today
+                      </p>
+                      <div className="space-y-2">
+                        {sheet.liveDeliveries.map((block) => (
+                          <div key={`${block.docId}-${block.department}`} className="border border-gray-200 rounded p-1.5">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <p className="font-semibold text-[10px]">
+                                {block.department}
+                                {block.pickupTime && (
+                                  <span className="font-normal text-gray-500"> · {block.pickupTime}</span>
+                                )}
+                                {block.pickupPerson && (
+                                  <span className="font-normal text-gray-500"> · pickup: {block.pickupPerson}</span>
+                                )}
+                              </p>
+                              <span className="text-[10px] text-gray-500">{block.docNumber}</span>
+                            </div>
+                            <table className="w-full border-collapse">
+                              <tbody>
+                                {block.items.map((item, i) => (
+                                  <tr key={i}>
+                                    <td className="py-0.5 text-[10px]">{item.name}</td>
+                                    <td className="py-0.5 text-[10px] text-right w-12">×{item.quantity}</td>
+                                    <td className="py-0.5 text-[10px] text-gray-500 pl-2">{item.notes}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
