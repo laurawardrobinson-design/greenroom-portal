@@ -1814,7 +1814,17 @@ export function ShotListCleanView({
                 }
               />
 
-              {/* Table */}
+              {/* On-Set density: fat cards, big thumbs, one-tap state cycle */}
+              {density === "on_set" ? (
+                <OnSetShotList
+                  shots={setupShots}
+                  onToggleHero={toggleHero}
+                  onApprove={approveShot}
+                  onUnapprove={unapproveShot}
+                  onStatus={(shotId, status) => patchShot(shotId, "status", status)}
+                />
+              ) : (
+              /* Table */
               <div className="overflow-x-auto">
                 <table className="text-left" style={{ tableLayout: "fixed", width: colWidths.reduce((a, b) => a + b, 0) }}>
                   <thead>
@@ -2124,6 +2134,7 @@ export function ShotListCleanView({
                   </tbody>
                 </table>
               </div>
+              )}
 
               {/* Add shot button */}
               <button
@@ -2138,6 +2149,157 @@ export function ShotListCleanView({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ─── On-Set shot list (Wave 2) ───────────────────────────────────────────────
+// Fat cards, big thumbnails, one-tap state cycle. No drag (touch devices
+// mis-trigger it). No ref image edit (producer isn't re-shooting mood boards
+// on set). Rendered when user has density = on_set.
+function OnSetShotList({
+  shots,
+  onToggleHero,
+  onApprove,
+  onUnapprove,
+  onStatus,
+}: {
+  shots: Array<ScheduleData["shots"][number]>;
+  onToggleHero: (shotId: string, next: boolean) => void;
+  onApprove: (shotId: string) => void;
+  onUnapprove: (shotId: string) => void;
+  onStatus: (shotId: string, status: string) => void;
+}) {
+  if (shots.length === 0) {
+    return (
+      <div className="px-4 py-6 text-center text-xs text-text-tertiary">
+        No shots in this setup yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="divide-y divide-border">
+      {shots.map((shot) => {
+        const isDone = shot.status === "Complete";
+        const isApproved = Boolean(shot.approved_at);
+        const isStale = Boolean(shot.needs_reapproval);
+
+        return (
+          <div
+            key={shot.id}
+            className="flex items-center gap-3 px-4 py-3"
+          >
+            {/* Big reference thumbnail */}
+            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md border border-border bg-surface-secondary">
+              {shot.reference_image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={shot.reference_image_url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-text-tertiary">
+                  No ref
+                </div>
+              )}
+            </div>
+
+            {/* Shot info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-text-primary truncate">
+                  {shot.name || "Untitled shot"}
+                </p>
+                {shot.is_hero && (
+                  <span className="shrink-0 rounded-full bg-[color:var(--color-warning)]/8 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[color:var(--color-warning)]">
+                    Hero
+                  </span>
+                )}
+                {isStale && (
+                  <span className="shrink-0 rounded-full bg-[color:var(--color-warning)]/8 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[color:var(--color-warning)]">
+                    Re-approve
+                  </span>
+                )}
+                {isApproved && !isStale && (
+                  <span className="shrink-0 rounded-full bg-[color:var(--color-success)]/8 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[color:var(--color-success)]">
+                    Approved
+                  </span>
+                )}
+              </div>
+              {shot.description && (
+                <p className="text-xs text-text-secondary truncate mt-0.5">
+                  {shot.description}
+                </p>
+              )}
+            </div>
+
+            {/* One-tap actions */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => onToggleHero(shot.id, !shot.is_hero)}
+                title={shot.is_hero ? "Unmark hero" : "Mark hero"}
+                className={`flex h-11 w-11 items-center justify-center rounded-lg border border-border transition-colors ${
+                  shot.is_hero
+                    ? "text-[color:var(--color-warning)] bg-[color:var(--color-warning)]/8"
+                    : "text-text-tertiary hover:bg-surface-secondary"
+                }`}
+              >
+                <Star className="h-5 w-5" fill={shot.is_hero ? "currentColor" : "none"} />
+              </button>
+
+              {isDone ? (
+                <button
+                  type="button"
+                  onClick={() => onStatus(shot.id, "Pending")}
+                  title="Mark not shot"
+                  className="flex h-11 items-center gap-1.5 rounded-lg border border-[color:var(--color-success)]/30 bg-[color:var(--color-success)]/8 px-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--color-success)] hover:bg-[color:var(--color-success)]/15 transition-colors"
+                >
+                  <Check className="h-4 w-4" />
+                  Shot
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onStatus(shot.id, "Complete")}
+                  title="Mark shot complete"
+                  className="flex h-11 items-center rounded-lg bg-primary px-3 text-xs font-semibold uppercase tracking-wider text-white hover:bg-primary/90 transition-colors"
+                >
+                  Mark shot
+                </button>
+              )}
+
+              {isStale ? (
+                <button
+                  type="button"
+                  onClick={() => onApprove(shot.id)}
+                  className="flex h-11 items-center rounded-lg border border-[color:var(--color-warning)]/40 bg-[color:var(--color-warning)]/8 px-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--color-warning)] hover:bg-[color:var(--color-warning)]/15 transition-colors"
+                >
+                  Re-approve
+                </button>
+              ) : isApproved ? (
+                <button
+                  type="button"
+                  onClick={() => onUnapprove(shot.id)}
+                  className="flex h-11 items-center rounded-lg border border-border px-3 text-xs font-semibold uppercase tracking-wider text-text-tertiary hover:text-text-secondary transition-colors"
+                >
+                  Revoke
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onApprove(shot.id)}
+                  className="flex h-11 items-center rounded-lg border border-border px-3 text-xs font-semibold uppercase tracking-wider text-text-secondary hover:border-primary/40 hover:text-primary transition-colors"
+                >
+                  Approve
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
