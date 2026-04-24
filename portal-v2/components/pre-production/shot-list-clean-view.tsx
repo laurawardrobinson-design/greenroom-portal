@@ -1428,7 +1428,46 @@ export function ShotListCleanView({
 
   // Drag state
   const [dragId, setDragId] = useState<string | null>(null);
+  const [dragSetupId, setDragSetupId] = useState<string | null>(null);
   const [expandedShots, setExpandedShots] = useState<Record<string, boolean>>({});
+
+  // ─── Setup reorder (Wave 2) ───────────────────────────────────────────────
+  const handleSetupDrop = useCallback(
+    async (targetSetupId: string) => {
+      if (!dragSetupId || !data || dragSetupId === targetSetupId) {
+        setDragSetupId(null);
+        return;
+      }
+      const sorted = [...data.setups].sort((a, b) => a.sort_order - b.sort_order);
+      const dragIdx = sorted.findIndex((s) => s.id === dragSetupId);
+      const targetIdx = sorted.findIndex((s) => s.id === targetSetupId);
+      if (dragIdx === -1 || targetIdx === -1) {
+        setDragSetupId(null);
+        return;
+      }
+
+      const reordered = [...sorted];
+      const [moved] = reordered.splice(dragIdx, 1);
+      reordered.splice(targetIdx, 0, moved);
+
+      try {
+        for (let i = 0; i < reordered.length; i++) {
+          if (reordered[i].sort_order !== i) {
+            await fetch(`/api/shot-list/setups/${reordered[i].id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sortOrder: i }),
+            });
+          }
+        }
+        globalMutate(swrKey);
+      } catch {
+        toast("error", "Failed to reorder setups");
+      }
+      setDragSetupId(null);
+    },
+    [dragSetupId, data, swrKey, toast]
+  );
 
   // ─── Column resize ──────────────────────────────────────────────────────────
   const COLUMNS = [
@@ -1801,6 +1840,10 @@ export function ShotListCleanView({
               <SetupHeader
                 setup={setup}
                 shotCount={setupShots.length}
+                isDragging={dragSetupId === setup.id}
+                onDragStart={() => setDragSetupId(setup.id)}
+                onDragEnd={() => setDragSetupId(null)}
+                onDropOnSetup={() => handleSetupDrop(setup.id)}
                 onSaveName={(name) =>
                   fetch(`/api/shot-list/setups/${setup.id}`, {
                     method: "PATCH",
@@ -2065,6 +2108,10 @@ export function ShotListCleanView({
                                           "Wardrobe",
                                           "Notes",
                                           "Retouching",
+                                          "Variant",
+                                          "Orient",
+                                          "Retouch Level",
+                                          "Hero SKU",
                                         ].map((label) => (
                                           <th
                                             key={label}
@@ -2120,6 +2167,75 @@ export function ShotListCleanView({
                                           value={shot.retouching_notes || ""}
                                           placeholder="Retouching"
                                           onSave={(v) => patchShot(shot.id, "retouchingNotes", v)}
+                                        />
+
+                                        {/* Variant */}
+                                        <td className="relative">
+                                          <select
+                                            value={shot.variant_type ?? ""}
+                                            onChange={(e) =>
+                                              patchShot(
+                                                shot.id,
+                                                "variantType",
+                                                e.target.value || ""
+                                              )
+                                            }
+                                            className="w-full px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs text-text-primary bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none"
+                                          >
+                                            <option value="">—</option>
+                                            <option value="hero_still">Hero still</option>
+                                            <option value="motion">Motion</option>
+                                            <option value="social_vertical">Social 9:16</option>
+                                            <option value="other">Other</option>
+                                          </select>
+                                        </td>
+
+                                        {/* Orientation */}
+                                        <td className="relative">
+                                          <select
+                                            value={shot.orientation ?? ""}
+                                            onChange={(e) =>
+                                              patchShot(
+                                                shot.id,
+                                                "orientation",
+                                                e.target.value || ""
+                                              )
+                                            }
+                                            className="w-full px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs text-text-primary bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none"
+                                          >
+                                            <option value="">—</option>
+                                            <option value="horizontal">Horizontal</option>
+                                            <option value="vertical">Vertical</option>
+                                            <option value="square">Square</option>
+                                            <option value="custom">Custom</option>
+                                          </select>
+                                        </td>
+
+                                        {/* Retouch Level */}
+                                        <td className="relative">
+                                          <select
+                                            value={shot.retouch_level ?? ""}
+                                            onChange={(e) =>
+                                              patchShot(
+                                                shot.id,
+                                                "retouchLevel",
+                                                e.target.value || ""
+                                              )
+                                            }
+                                            className="w-full px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs text-text-primary bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none"
+                                          >
+                                            <option value="">—</option>
+                                            <option value="comp">Comp</option>
+                                            <option value="light">Light</option>
+                                            <option value="heavy">Heavy</option>
+                                          </select>
+                                        </td>
+
+                                        {/* Hero SKU */}
+                                        <Cell
+                                          value={shot.hero_sku || ""}
+                                          placeholder="Hero SKU"
+                                          onSave={(v) => patchShot(shot.id, "heroSku", v)}
                                         />
                                       </tr>
                                     </tbody>
@@ -2308,11 +2424,19 @@ function OnSetShotList({
 function SetupHeader({
   setup,
   shotCount,
+  isDragging = false,
+  onDragStart,
+  onDragEnd,
+  onDropOnSetup,
   onSaveName,
   onDelete,
 }: {
   setup: { id: string; name: string; location: string };
   shotCount: number;
+  isDragging?: boolean;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  onDropOnSetup?: () => void;
   onSaveName: (name: string) => void;
   onDelete: () => void;
 }) {
@@ -2331,7 +2455,38 @@ function SetupHeader({
   }
 
   return (
-    <div className="flex items-center gap-[var(--density-shotlist-setup-gap)] border-b border-border bg-surface-secondary/60 px-[var(--density-shotlist-setup-px)] py-[var(--density-shotlist-setup-py)] group">
+    <div
+      draggable={Boolean(onDragStart) && !editing}
+      onDragStart={(e) => {
+        if (editing) {
+          e.preventDefault();
+          return;
+        }
+        onDragStart?.();
+      }}
+      onDragEnd={() => onDragEnd?.()}
+      onDragOver={(e) => {
+        if (onDropOnSetup) e.preventDefault();
+      }}
+      onDrop={(e) => {
+        if (!onDropOnSetup) return;
+        e.preventDefault();
+        onDropOnSetup();
+      }}
+      className={`flex items-center gap-[var(--density-shotlist-setup-gap)] border-b border-border bg-surface-secondary/60 px-[var(--density-shotlist-setup-px)] py-[var(--density-shotlist-setup-py)] group transition-colors ${
+        isDragging ? "opacity-40 bg-primary/5" : ""
+      }`}
+    >
+      {/* Setup drag handle (Wave 2) */}
+      {onDragStart && (
+        <span
+          className="flex items-center justify-center text-text-tertiary/30 cursor-grab active:cursor-grabbing group-hover:text-text-tertiary transition-colors"
+          title="Drag to reorder setup"
+          aria-hidden="true"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </span>
+      )}
       {editing ? (
         <input
           ref={inputRef}

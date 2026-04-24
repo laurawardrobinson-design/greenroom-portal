@@ -45,10 +45,28 @@ export const updateShotSchema = z.object({
   retouchingNotes: z.string().optional(),
   productTags: z.string().optional(),
   sortOrder: z.number().int().min(0).optional(),
-  // Wave 2 additions
-  variantType: z.enum(["hero_still", "motion", "social_vertical", "other"]).nullable().optional(),
-  orientation: z.enum(["horizontal", "vertical", "square", "custom"]).nullable().optional(),
-  retouchLevel: z.enum(["comp", "light", "heavy"]).nullable().optional(),
+  // Wave 2 additions. Empty-string is treated as clearing the value
+  // (the UI sends "" when the user picks the "—" option in a select).
+  variantType: z
+    .union([
+      z.enum(["hero_still", "motion", "social_vertical", "other"]),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional()
+    .transform((v) => (v === "" ? null : v)),
+  orientation: z
+    .union([
+      z.enum(["horizontal", "vertical", "square", "custom"]),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional()
+    .transform((v) => (v === "" ? null : v)),
+  retouchLevel: z
+    .union([z.enum(["comp", "light", "heavy"]), z.literal(""), z.null()])
+    .optional()
+    .transform((v) => (v === "" ? null : v)),
   heroSku: z.string().nullable().optional(),
   isHero: z.boolean().optional(),
 });
