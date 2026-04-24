@@ -11,6 +11,9 @@ import type {
   CallSheetDeliveryBlock,
   CallSheetAttachment,
   CallSheetAttachmentKind,
+  CallSheetDistribution,
+  CallSheetTier,
+  CallSheetChannel,
 } from "@/types/domain";
 import { randomBytes } from "crypto";
 
@@ -738,11 +741,196 @@ export async function removeAttachment(attachmentId: string): Promise<void> {
 }
 
 // ============================================================
-// Distribution (stubs for later sub-steps of Wave 1)
+// Distribution — per-recipient delivery + ack tracking
 // ============================================================
 
 export function generateAckToken(): string {
   return randomBytes(24).toString("base64url");
+}
+
+function rowToDistribution(row: Record<string, unknown>): CallSheetDistribution {
+  return {
+    id: row.id as string,
+    versionId: row.version_id as string,
+    recipientName: (row.recipient_name as string) || "",
+    recipientEmail: row.recipient_email as string,
+    tier: row.tier as CallSheetTier,
+    channel: row.channel as CallSheetChannel,
+    ackToken: row.ack_token as string,
+    sentAt: row.sent_at as string,
+    ackedAt: (row.acked_at as string | null) ?? null,
+    sentBy: (row.sent_by as string | null) ?? null,
+  };
+}
+
+export interface DistributionRecipientInput {
+  recipientName: string;
+  recipientEmail: string;
+  tier: CallSheetTier;
+  channel?: CallSheetChannel;
+}
+
+export async function createDistributions(
+  versionId: string,
+  recipients: DistributionRecipientInput[],
+  sentBy: string | null
+): Promise<CallSheetDistribution[]> {
+  if (recipients.length === 0) return [];
+
+  const db = createAdminClient();
+
+  const rows = recipients.map((r) => ({
+    version_id: versionId,
+    recipient_name: r.recipientName || "",
+    recipient_email: r.recipientEmail,
+    tier: r.tier,
+    channel: r.channel ?? ("email" as CallSheetChannel),
+    ack_token: generateAckToken(),
+    sent_by: sentBy,
+  }));
+
+  const { data, error } = await db
+    .from("call_sheet_distributions")
+    .insert(rows)
+    .select("*");
+
+  if (error) throw error;
+  return (data || []).map((r) => rowToDistribution(r as Record<string, unknown>));
+}
+
+export async function listDistributions(versionId: string): Promise<CallSheetDistribution[]> {
+  const db = createAdminClient();
+  const { data } = await db
+    .from("call_sheet_distributions")
+    .select("*")
+    .eq("version_id", versionId)
+    .order("sent_at", { ascending: false });
+  return (data || []).map((r) => rowToDistribution(r as Record<string, unknown>));
+}
+
+/**
+ * Resolve a signed-link token to a viewable call-sheet payload. Redacts
+ * crew phone numbers and emails (except the producer's) when tier='redacted'
+ * so talent / vendors / client see only the producer's direct line and
+ * route everything else through the production office.
+ */
+export async function resolveByAckToken(token: string): Promise<{
+  version: CallSheetVersion;
+  tier: CallSheetTier;
+  ackedAt: string | null;
+  distributionId: string;
+  campaignName: string;
+  wfNumber: string;
+  producerLine: string;
+  payload: CallSheetContent;
+} | null> {
+  const db = createAdminClient();
+
+  const { data: dist } = await db
+    .from("call_sheet_distributions")
+    .select("*")
+    .eq("ack_token", token)
+    .maybeSingle();
+
+  if (!dist) return null;
+
+  const distRow = dist as Record<string, unknown>;
+  const versionId = distRow.version_id as string;
+
+  const { data: version } = await db
+    .from("call_sheet_versions")
+    .select("*")
+    .eq("id", versionId)
+    .maybeSingle();
+
+  if (!version) return null;
+
+  const versionRow = version as Record<string, unknown>;
+  const callSheetId = versionRow.call_sheet_id as string;
+
+  const { data: sheet } = await db
+    .from("call_sheets")
+    .select("campaign_id")
+    .eq("id", callSheetId)
+    .maybeSingle();
+
+  const campaignId = (sheet as Record<string, unknown> | null)?.campaign_id as
+    | string
+    | undefined;
+
+  let campaignName = "";
+  let wfNumber = "";
+  if (campaignId) {
+    const { data: campaign } = await db
+      .from("campaigns")
+      .select("name, wf_number")
+      .eq("id", campaignId)
+      .maybeSingle();
+    if (campaign) {
+      campaignName = (campaign as Record<string, unknown>).name as string;
+      wfNumber = (campaign as Record<string, unknown>).wf_number as string;
+    }
+  }
+
+  const basePayload = versionRow.payload as CallSheetContent;
+  const tier = distRow.tier as CallSheetTier;
+
+  const producerLine =
+    basePayload.producer
+      ? `${basePayload.producer.name} · ${basePayload.producer.phone} · ${basePayload.producer.email}`
+      : "Contact producer via portal";
+
+  // Tier-based redaction: Full tier shows everything. Redacted tier strips
+  // crew phones/emails (except the producer's) and replaces with a pointer
+  // to the production office.
+  const payload: CallSheetContent =
+    tier === "full"
+      ? basePayload
+      : {
+          ...basePayload,
+          crew: basePayload.crew.map((c) => {
+            if (c.role === "Producer") return c;
+            return {
+              ...c,
+              phone: "",
+              email: "reach out to the Producer",
+            };
+          }),
+        };
+
+  const versionTyped: CallSheetVersion = {
+    id: versionRow.id as string,
+    callSheetId: versionRow.call_sheet_id as string,
+    vNumber: versionRow.v_number as number,
+    payload,
+    publishedBy: (versionRow.published_by as string | null) ?? null,
+    publishedAt: versionRow.published_at as string,
+    supersededAt: (versionRow.superseded_at as string | null) ?? null,
+  };
+
+  return {
+    version: versionTyped,
+    tier,
+    ackedAt: (distRow.acked_at as string | null) ?? null,
+    distributionId: distRow.id as string,
+    campaignName,
+    wfNumber,
+    producerLine,
+    payload,
+  };
+}
+
+export async function markAckedByToken(token: string): Promise<CallSheetDistribution | null> {
+  const db = createAdminClient();
+  const { data } = await db
+    .from("call_sheet_distributions")
+    .update({ acked_at: new Date().toISOString() })
+    .eq("ack_token", token)
+    .is("acked_at", null)
+    .select("*")
+    .maybeSingle();
+  if (!data) return null;
+  return rowToDistribution(data as Record<string, unknown>);
 }
 
 

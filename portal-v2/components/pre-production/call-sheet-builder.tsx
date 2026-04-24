@@ -9,11 +9,13 @@ import {
   CheckCircle2,
   CircleAlert,
   Cloud,
+  Copy,
   Download,
   Eye,
   EyeOff,
   FileText,
   Info,
+  Link2,
   Loader2,
   Package,
   Paperclip,
@@ -35,6 +37,8 @@ import type {
   CallSheetTalentRow,
   CallSheetAttachment,
   CallSheetAttachmentKind,
+  CallSheetDistribution,
+  CallSheetTier,
 } from "@/types/domain";
 
 const fetcher = async (url: string) => {
@@ -341,6 +345,14 @@ export function CallSheetBuilder({
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           Shoot is in under 48 hours and no release / permit / COI / safety bulletin is attached yet.
         </div>
+      )}
+
+      {/* Distribute panel — only visible after publish */}
+      {sheet?.currentVersionId && sheet.currentVNumber !== null && (
+        <DistributePanel
+          versionId={sheet.currentVersionId}
+          vNumber={sheet.currentVNumber}
+        />
       )}
 
       {/* Two-column: form + preview */}
@@ -864,6 +876,262 @@ export function CallSheetBuilder({
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Distribute panel ────────────────────────────────────────────────────────
+interface PendingRecipient {
+  recipientName: string;
+  recipientEmail: string;
+  tier: CallSheetTier;
+}
+
+function DistributePanel({
+  versionId,
+  vNumber,
+}: {
+  versionId: string;
+  vNumber: number;
+}) {
+  const key = `/api/call-sheets/versions/${versionId}/distribute`;
+  const { data: distributions = [], mutate } = useSWR<CallSheetDistribution[]>(
+    key,
+    fetcher
+  );
+
+  const [draftEmail, setDraftEmail] = useState("");
+  const [draftName, setDraftName] = useState("");
+  const [draftTier, setDraftTier] = useState<CallSheetTier>("full");
+  const [pending, setPending] = useState<PendingRecipient[]>([]);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  const stagedCount = pending.length;
+
+  const handleAdd = () => {
+    const email = draftEmail.trim();
+    if (!email) return;
+    setPending((prev) => [
+      ...prev,
+      {
+        recipientName: draftName.trim(),
+        recipientEmail: email,
+        tier: draftTier,
+      },
+    ]);
+    setDraftEmail("");
+    setDraftName("");
+  };
+
+  const handleRemovePending = (idx: number) =>
+    setPending((prev) => prev.filter((_, i) => i !== idx));
+
+  const handleSend = async () => {
+    if (pending.length === 0) return;
+    setSending(true);
+    setSendError(null);
+    try {
+      const r = await fetch(key, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipients: pending }),
+      });
+      if (!r.ok) {
+        const err = (await r.json().catch(() => ({}))) as { error?: string };
+        setSendError(err.error || "Send failed");
+        return;
+      }
+      setPending([]);
+      await mutate();
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : "Send failed");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const copyLink = (token: string) => {
+    const url = `${window.location.origin}/call-sheet/signed/${token}`;
+    void navigator.clipboard.writeText(url);
+  };
+
+  const copyAllLinks = () => {
+    const lines = distributions.map(
+      (d) =>
+        `${d.recipientName || d.recipientEmail}: ${window.location.origin}/call-sheet/signed/${d.ackToken}`
+    );
+    void navigator.clipboard.writeText(lines.join("\n"));
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-surface overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Send className="h-4 w-4 shrink-0 text-primary" />
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+            Distribute · v{vNumber}
+          </h3>
+        </div>
+        {distributions.length > 0 && (
+          <button
+            type="button"
+            onClick={copyAllLinks}
+            className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs text-text-secondary hover:bg-surface-secondary transition-colors"
+          >
+            <Copy className="h-3 w-3" /> Copy all links
+          </button>
+        )}
+      </div>
+
+      <div className="p-3.5 space-y-3">
+        {/* Add-recipient row */}
+        <div className="grid grid-cols-[1fr_1fr_140px_80px] gap-1.5 items-end">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
+              Email
+            </label>
+            <input
+              value={draftEmail}
+              onChange={(e) => setDraftEmail(e.target.value)}
+              placeholder="name@example.com"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAdd();
+              }}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
+              Name (optional)
+            </label>
+            <input
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              placeholder="Sarah Chen"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAdd();
+              }}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
+              Tier
+            </label>
+            <select
+              value={draftTier}
+              onChange={(e) => setDraftTier(e.target.value as CallSheetTier)}
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none"
+            >
+              <option value="full">Full (crew)</option>
+              <option value="redacted">Redacted (talent / vendor / client)</option>
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={handleAdd}
+            className="flex items-center justify-center gap-1 rounded-lg border border-border px-3 py-2 text-sm text-text-primary hover:bg-surface-secondary transition-colors"
+          >
+            <Plus className="h-4 w-4" /> Add
+          </button>
+        </div>
+
+        {/* Staged recipients */}
+        {pending.length > 0 && (
+          <div className="space-y-1.5">
+            {pending.map((p, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between gap-2 rounded border border-border bg-surface-secondary/30 px-2.5 py-1.5"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-text-secondary shrink-0 border border-border">
+                    {p.tier === "full" ? "Full" : "Redacted"}
+                  </span>
+                  <span className="text-xs text-text-primary truncate">
+                    {p.recipientName ? `${p.recipientName} · ` : ""}
+                    {p.recipientEmail}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemovePending(i)}
+                  className="flex items-center justify-center h-6 w-6 rounded hover:bg-surface text-text-tertiary transition-colors"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={sending}
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-60"
+            >
+              {sending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              Create {stagedCount} signed link{stagedCount === 1 ? "" : "s"}
+            </button>
+          </div>
+        )}
+
+        {sendError && (
+          <p className="text-xs text-[color:var(--color-error)]">{sendError}</p>
+        )}
+
+        {/* Distribution list */}
+        {distributions.length === 0 ? (
+          <p className="text-xs text-text-tertiary">
+            No recipients yet. Add above and create signed links; share via your email client.
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {distributions.map((d) => (
+              <div
+                key={d.id}
+                className="flex items-center justify-between gap-2 rounded border border-border bg-surface px-2.5 py-1.5"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider shrink-0 ${
+                      d.tier === "full"
+                        ? "bg-surface-secondary text-text-secondary"
+                        : "bg-surface-secondary text-text-tertiary"
+                    }`}
+                  >
+                    {d.tier === "full" ? "Full" : "Redacted"}
+                  </span>
+                  <span className="text-xs text-text-primary truncate">
+                    {d.recipientName ? `${d.recipientName} · ` : ""}
+                    {d.recipientEmail}
+                  </span>
+                  {d.ackedAt ? (
+                    <span className="flex items-center gap-1 rounded-full bg-[color:var(--color-success)]/8 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[color:var(--color-success)] shrink-0">
+                      <CheckCircle2 className="h-2.5 w-2.5" />
+                      Acked {format(parseISO(d.ackedAt), "MMM d h:mma")}
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-surface-secondary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-text-tertiary shrink-0">
+                      Unacked
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyLink(d.ackToken)}
+                  className="flex items-center gap-1 rounded hover:bg-surface-secondary px-2 py-1 text-xs text-text-secondary transition-colors"
+                >
+                  <Link2 className="h-3 w-3" /> Copy link
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
