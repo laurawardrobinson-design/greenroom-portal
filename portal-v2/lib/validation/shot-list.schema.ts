@@ -45,6 +45,12 @@ export const updateShotSchema = z.object({
   retouchingNotes: z.string().optional(),
   productTags: z.string().optional(),
   sortOrder: z.number().int().min(0).optional(),
+  // Wave 2 additions
+  variantType: z.enum(["hero_still", "motion", "social_vertical", "other"]).nullable().optional(),
+  orientation: z.enum(["horizontal", "vertical", "square", "custom"]).nullable().optional(),
+  retouchLevel: z.enum(["comp", "light", "heavy"]).nullable().optional(),
+  heroSku: z.string().nullable().optional(),
+  isHero: z.boolean().optional(),
 });
 
 export const linkDeliverableSchema = z.object({

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, Fragment } from "react";
 import { createPortal } from "react-dom";
-import { Download, List, GripVertical, Plus, Trash2, ChevronLeft, X, Upload, UserPlus, User } from "lucide-react";
+import { AlertTriangle, Check, Download, List, GripVertical, Plus, Star, Trash2, ChevronLeft, X, Upload, UserPlus, User } from "lucide-react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { useToast } from "@/components/ui/toast";
 import { generateShotListPdf } from "@/lib/utils/pdf-generator";
@@ -105,6 +105,17 @@ interface ScheduleData {
     sort_order: number;
     estimated_duration_minutes: number;
     shoot_date_id: string | null;
+    status?: string;
+    // Wave 2 additions
+    variant_type?: string | null;
+    orientation?: string | null;
+    retouch_level?: string | null;
+    hero_sku?: string | null;
+    is_hero?: boolean;
+    approved_by?: string | null;
+    approved_at?: string | null;
+    approved_snapshot?: Record<string, unknown> | null;
+    needs_reapproval?: boolean;
   }>;
   links: Array<{ shot_id: string; deliverable_id: string }>;
   productLinks: Array<{ shot_id: string; campaign_product_id: string }>;
@@ -1387,6 +1398,34 @@ export function ShotListCleanView({
   const swrKey = `/api/campaigns/${campaignId}/schedule`;
   const { data, isLoading } = useSWR<ScheduleData>(swrKey, fetcher);
 
+  // User campaign preferences — Shot List density (detailed / on_set)
+  const prefsKey = `/api/campaigns/${campaignId}/preferences`;
+  const { data: prefs, mutate: mutatePrefs } = useSWR<{
+    shotListDensity: "detailed" | "on_set";
+  }>(prefsKey, fetcher);
+  const density = prefs?.shotListDensity ?? "detailed";
+
+  const setDensity = useCallback(
+    async (next: "detailed" | "on_set") => {
+      // Optimistic
+      mutatePrefs(
+        (prev) => ({ ...(prev ?? {}), shotListDensity: next }) as { shotListDensity: "detailed" | "on_set" },
+        false
+      );
+      try {
+        await fetch(prefsKey, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ shotListDensity: next }),
+        });
+      } catch {
+        toast("error", "Failed to save preference");
+      }
+      mutatePrefs();
+    },
+    [prefsKey, mutatePrefs, toast]
+  );
+
   // Drag state
   const [dragId, setDragId] = useState<string | null>(null);
   const [expandedShots, setExpandedShots] = useState<Record<string, boolean>>({});
@@ -1403,6 +1442,7 @@ export function ShotListCleanView({
     { key: "channel", label: "Channel", minW: 84, defaultW: 118 },
     { key: "desc", label: "Description", minW: 150, defaultW: 260 },
     { key: "details", label: "Details", minW: 76, defaultW: 82 },
+    { key: "state", label: "Review", minW: 112, defaultW: 128 },
     { key: "delete", label: "", minW: 28, defaultW: 28 },
   ];
 
@@ -1462,6 +1502,55 @@ export function ShotListCleanView({
         globalMutate(swrKey);
       } catch {
         toast("error", "Failed to save");
+      }
+    },
+    [swrKey, toast]
+  );
+
+  // ─── Toggle hero (Wave 2) ─────────────────────────────────────────────────
+  const toggleHero = useCallback(
+    async (shotId: string, next: boolean) => {
+      try {
+        await fetch(`/api/shot-list/shots/${shotId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isHero: next }),
+        });
+        globalMutate(swrKey);
+      } catch {
+        toast("error", "Failed to toggle hero");
+      }
+    },
+    [swrKey, toast]
+  );
+
+  // ─── Approve / unapprove (Wave 2) ─────────────────────────────────────────
+  const approveShot = useCallback(
+    async (shotId: string) => {
+      try {
+        const r = await fetch(`/api/shot-list/shots/${shotId}/approve`, {
+          method: "POST",
+        });
+        if (!r.ok) throw new Error("approve failed");
+        globalMutate(swrKey);
+        toast("success", "Approved");
+      } catch {
+        toast("error", "Failed to approve");
+      }
+    },
+    [swrKey, toast]
+  );
+
+  const unapproveShot = useCallback(
+    async (shotId: string) => {
+      try {
+        const r = await fetch(`/api/shot-list/shots/${shotId}/approve`, {
+          method: "DELETE",
+        });
+        if (!r.ok) throw new Error("unapprove failed");
+        globalMutate(swrKey);
+      } catch {
+        toast("error", "Failed to revoke approval");
       }
     },
     [swrKey, toast]
@@ -1639,10 +1728,46 @@ export function ShotListCleanView({
     <div className={embedded ? "" : "space-y-[var(--density-shotlist-stack-gap)]"}>
       {/* Header */}
       <div className={`flex items-center justify-between ${embedded ? "border-b border-border pb-3" : ""}`}>
-        <p className="inline-flex items-center rounded-md bg-surface-secondary px-2.5 py-1 text-xs font-medium text-text-secondary">
-          {totalShots} shot{totalShots !== 1 ? "s" : ""} across{" "}
-          {data.setups.length} setup{data.setups.length !== 1 ? "s" : ""}
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="inline-flex items-center rounded-md bg-surface-secondary px-2.5 py-1 text-xs font-medium text-text-secondary">
+            {totalShots} shot{totalShots !== 1 ? "s" : ""} across{" "}
+            {data.setups.length} setup{data.setups.length !== 1 ? "s" : ""}
+          </p>
+
+          {/* Density toggle (Wave 2) — persisted per user × campaign */}
+          <div
+            role="tablist"
+            aria-label="Shot list density"
+            className="inline-flex rounded-md border border-border bg-surface-secondary/40 p-0.5"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={density === "detailed"}
+              onClick={() => setDensity("detailed")}
+              className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+                density === "detailed"
+                  ? "bg-surface text-text-primary shadow-xs"
+                  : "text-text-tertiary hover:text-text-secondary"
+              }`}
+            >
+              Detailed
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={density === "on_set"}
+              onClick={() => setDensity("on_set")}
+              className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+                density === "on_set"
+                  ? "bg-surface text-text-primary shadow-xs"
+                  : "text-text-tertiary hover:text-text-secondary"
+              }`}
+            >
+              On Set
+            </button>
+          </div>
+        </div>
         <div className="flex items-center gap-[var(--density-shotlist-actions-gap)]">
           <button
             type="button"
@@ -1848,6 +1973,58 @@ export function ShotListCleanView({
                               >
                                 {detailsOpen ? "Hide" : "Details"}
                               </button>
+                            </td>
+
+                            {/* Review: hero star + approve button + stale badge (Wave 2) */}
+                            <td className="px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)]">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleHero(shot.id, !shot.is_hero)}
+                                  title={shot.is_hero ? "Unmark hero" : "Mark hero"}
+                                  className={`flex items-center justify-center h-5 w-5 rounded hover:bg-surface-secondary transition-colors ${
+                                    shot.is_hero ? "text-[color:var(--color-warning)]" : "text-text-tertiary/60"
+                                  }`}
+                                >
+                                  <Star
+                                    className="h-3 w-3"
+                                    fill={shot.is_hero ? "currentColor" : "none"}
+                                  />
+                                </button>
+
+                                {shot.approved_at ? (
+                                  shot.needs_reapproval ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => approveShot(shot.id)}
+                                      title="Previously approved; changes detected. Click to re-approve."
+                                      className="inline-flex items-center gap-0.5 rounded-full border border-[color:var(--color-warning)]/30 bg-[color:var(--color-warning)]/8 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[color:var(--color-warning)] hover:bg-[color:var(--color-warning)]/15 transition-colors"
+                                    >
+                                      <AlertTriangle className="h-2.5 w-2.5" />
+                                      Stale
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => unapproveShot(shot.id)}
+                                      title="Approved. Click to revoke."
+                                      className="inline-flex items-center gap-0.5 rounded-full border border-[color:var(--color-success)]/30 bg-[color:var(--color-success)]/8 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[color:var(--color-success)] hover:bg-[color:var(--color-success)]/15 transition-colors"
+                                    >
+                                      <Check className="h-2.5 w-2.5" />
+                                      Approved
+                                    </button>
+                                  )
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => approveShot(shot.id)}
+                                    title="Approve this shot (snapshots current fields)"
+                                    className="inline-flex items-center rounded border border-border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-text-secondary hover:border-primary/40 hover:text-primary transition-colors"
+                                  >
+                                    Approve
+                                  </button>
+                                )}
+                              </div>
                             </td>
 
                             {/* Delete */}

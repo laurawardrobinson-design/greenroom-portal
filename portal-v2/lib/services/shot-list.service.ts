@@ -5,6 +5,11 @@ import type {
   ShotDeliverableLink,
   ShotProductLink,
   ShotStatus,
+  ShotVariantType,
+  ShotOrientation,
+  ShotRetouchLevel,
+  UserCampaignPreferences,
+  ShotListDensity,
 } from "@/types/domain";
 import type {
   CreateSetupInput,
@@ -57,6 +62,15 @@ function toShot(
     priority: (row.priority as string) || "",
     retouchingNotes: (row.retouching_notes as string) || "",
     sortOrder: Number(row.sort_order) || 0,
+    variantType: (row.variant_type as ShotVariantType | null) ?? null,
+    orientation: (row.orientation as ShotOrientation | null) ?? null,
+    retouchLevel: (row.retouch_level as ShotRetouchLevel | null) ?? null,
+    heroSku: (row.hero_sku as string | null) ?? null,
+    isHero: Boolean(row.is_hero),
+    approvedBy: (row.approved_by as string | null) ?? null,
+    approvedAt: (row.approved_at as string | null) ?? null,
+    approvedSnapshot: (row.approved_snapshot as Record<string, unknown> | null) ?? null,
+    needsReapproval: Boolean(row.needs_reapproval),
     deliverableLinks: links,
     productLinks,
     createdAt: row.created_at as string,
@@ -243,6 +257,11 @@ export async function updateShot(
   if (input.retouchingNotes !== undefined) update.retouching_notes = input.retouchingNotes;
   if (input.productTags !== undefined) update.product_tags = input.productTags;
   if (input.sortOrder !== undefined) update.sort_order = input.sortOrder;
+  if (input.variantType !== undefined) update.variant_type = input.variantType;
+  if (input.orientation !== undefined) update.orientation = input.orientation;
+  if (input.retouchLevel !== undefined) update.retouch_level = input.retouchLevel;
+  if (input.heroSku !== undefined) update.hero_sku = input.heroSku;
+  if (input.isHero !== undefined) update.is_hero = input.isHero;
   if (input.status !== undefined) {
     update.status = input.status;
     if (input.status === "Complete") {
@@ -461,6 +480,136 @@ export async function updateTalent(id: string, input: Partial<{
     .single();
   if (error) throw error;
   return toTalent(data as Record<string, unknown>);
+}
+
+// --- Approval workflow (Wave 2) ---
+
+/**
+ * Stamp an approval on a shot: record approved_by, approved_at, and freeze a
+ * jsonb snapshot of the load-bearing fields at approve-time. Clears any prior
+ * needs_reapproval flag. The staleness trigger re-flags needs_reapproval if
+ * any snapshotted field changes afterwards.
+ */
+export async function approveShot(
+  shotId: string,
+  approvedBy: string
+): Promise<ShotListShot> {
+  const db = createAdminClient();
+
+  const { data: current, error: fetchErr } = await db
+    .from("shot_list_shots")
+    .select("*")
+    .eq("id", shotId)
+    .single();
+  if (fetchErr || !current) throw new Error("Shot not found");
+
+  const row = current as Record<string, unknown>;
+  const snapshot = {
+    description: row.description,
+    referenceImageUrl: row.reference_image_url,
+    setupId: row.setup_id,
+    mediaType: row.media_type,
+    priority: row.priority,
+    retouchLevel: row.retouch_level,
+    orientation: row.orientation,
+    variantType: row.variant_type,
+  };
+
+  const { data: updated, error } = await db
+    .from("shot_list_shots")
+    .update({
+      approved_by: approvedBy,
+      approved_at: new Date().toISOString(),
+      approved_snapshot: snapshot,
+      needs_reapproval: false,
+    })
+    .eq("id", shotId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return toShot(updated as Record<string, unknown>);
+}
+
+export async function unapproveShot(shotId: string): Promise<ShotListShot> {
+  const db = createAdminClient();
+  const { data: updated, error } = await db
+    .from("shot_list_shots")
+    .update({
+      approved_by: null,
+      approved_at: null,
+      approved_snapshot: null,
+      needs_reapproval: false,
+    })
+    .eq("id", shotId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return toShot(updated as Record<string, unknown>);
+}
+
+export async function setShotHero(shotId: string, isHero: boolean): Promise<ShotListShot> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("shot_list_shots")
+    .update({ is_hero: isHero })
+    .eq("id", shotId)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return toShot(data as Record<string, unknown>);
+}
+
+// --- User campaign preferences (Wave 2) ---
+
+function toUserCampaignPrefs(row: Record<string, unknown>): UserCampaignPreferences {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    campaignId: row.campaign_id as string,
+    shotListDensity: (row.shot_list_density as ShotListDensity) || "detailed",
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
+export async function getUserCampaignPreferences(
+  userId: string,
+  campaignId: string
+): Promise<UserCampaignPreferences | null> {
+  const db = createAdminClient();
+  const { data } = await db
+    .from("user_campaign_preferences")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("campaign_id", campaignId)
+    .maybeSingle();
+  if (!data) return null;
+  return toUserCampaignPrefs(data as Record<string, unknown>);
+}
+
+export async function upsertUserCampaignPreferences(
+  userId: string,
+  campaignId: string,
+  prefs: Partial<Pick<UserCampaignPreferences, "shotListDensity">>
+): Promise<UserCampaignPreferences> {
+  const db = createAdminClient();
+
+  const update: Record<string, unknown> = {
+    user_id: userId,
+    campaign_id: campaignId,
+  };
+  if (prefs.shotListDensity) update.shot_list_density = prefs.shotListDensity;
+
+  const { data, error } = await db
+    .from("user_campaign_preferences")
+    .upsert(update, { onConflict: "user_id,campaign_id" })
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return toUserCampaignPrefs(data as Record<string, unknown>);
 }
 
 export async function removeTalentFromShot(id: string): Promise<void> {

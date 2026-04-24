@@ -574,6 +574,10 @@ export interface ShotListSetup {
   updatedAt: string;
 }
 
+export type ShotVariantType = "hero_still" | "motion" | "social_vertical" | "other";
+export type ShotOrientation = "horizontal" | "vertical" | "square" | "custom";
+export type ShotRetouchLevel = "comp" | "light" | "heavy";
+
 export interface ShotListShot {
   id: string;
   setupId: string;
@@ -596,8 +600,30 @@ export interface ShotListShot {
   priority: string;
   retouchingNotes: string;
   sortOrder: number;
+  // Wave 2 additions
+  variantType: ShotVariantType | null;
+  orientation: ShotOrientation | null;
+  retouchLevel: ShotRetouchLevel | null;
+  heroSku: string | null;
+  isHero: boolean;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  approvedSnapshot: Record<string, unknown> | null;
+  needsReapproval: boolean;
   deliverableLinks: ShotDeliverableLink[];
   productLinks: ShotProductLink[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// User per-campaign preferences (Wave 2)
+export type ShotListDensity = "detailed" | "on_set";
+
+export interface UserCampaignPreferences {
+  id: string;
+  userId: string;
+  campaignId: string;
+  shotListDensity: ShotListDensity;
   createdAt: string;
   updatedAt: string;
 }
