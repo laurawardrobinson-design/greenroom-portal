@@ -281,7 +281,7 @@ export default function PRViewPage({
                   key={item.id}
                   className="border-b border-neutral-200 align-top"
                 >
-                  <td className="py-2.5 pr-3 text-neutral-500 tabular-nums">
+                  <td className="py-2.5 pr-3 text-neutral-500">
                     {item.product?.itemCode || "—"}
                   </td>
                   <td className="py-2.5 pr-3">

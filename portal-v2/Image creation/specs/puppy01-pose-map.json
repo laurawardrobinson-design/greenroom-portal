@@ -1,0 +1,60 @@
+{
+  "characterId": "puppy-01",
+  "source": "references/pose_grids/ref-01",
+  "poses": [
+    {
+      "id": "side_stand",
+      "grid": "r1c1",
+      "file": "references/pose_grids/ref-01/pose-r1c1.png",
+      "suggestedUse": ["idle", "walk"]
+    },
+    {
+      "id": "scratch",
+      "grid": "r1c2",
+      "file": "references/pose_grids/ref-01/pose-r1c2.png",
+      "suggestedUse": ["idle_variant"]
+    },
+    {
+      "id": "back_view",
+      "grid": "r1c3",
+      "file": "references/pose_grids/ref-01/pose-r1c3.png",
+      "suggestedUse": ["turn_away", "twirl_mid"]
+    },
+    {
+      "id": "lying_down",
+      "grid": "r2c1",
+      "file": "references/pose_grids/ref-01/pose-r2c1.png",
+      "suggestedUse": ["nap_start", "nap_loop"]
+    },
+    {
+      "id": "front_yawn",
+      "grid": "r2c2",
+      "file": "references/pose_grids/ref-01/pose-r2c2.png",
+      "suggestedUse": ["beg", "happy_reaction"]
+    },
+    {
+      "id": "run_leap",
+      "grid": "r2c3",
+      "file": "references/pose_grids/ref-01/pose-r2c3.png",
+      "suggestedUse": ["run", "jump_air"]
+    },
+    {
+      "id": "angry_step",
+      "grid": "r3c1",
+      "file": "references/pose_grids/ref-01/pose-r3c1.png",
+      "suggestedUse": ["walk", "alert"]
+    },
+    {
+      "id": "eat_bowl",
+      "grid": "r3c2",
+      "file": "references/pose_grids/ref-01/pose-r3c2.png",
+      "suggestedUse": ["eat", "sniff_bowl"]
+    },
+    {
+      "id": "stretch",
+      "grid": "r3c3",
+      "file": "references/pose_grids/ref-01/pose-r3c3.png",
+      "suggestedUse": ["stretch", "jump_land"]
+    }
+  ]
+}

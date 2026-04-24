@@ -12,6 +12,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const campaignId = searchParams.get("campaignId") || undefined;
     const statusParam = searchParams.get("status");
+    const detail = searchParams.get("detail") === "full" ? "full" : "light";
 
     let status: PRDocStatus | PRDocStatus[] | undefined;
     if (statusParam) {
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
       else if (valid.length > 1) status = valid;
     }
 
-    const docs = await listPRDocs({ campaignId, status });
+    const docs = await listPRDocs({ campaignId, status, detail });
     return NextResponse.json(docs);
   } catch (error) {
     return authErrorResponse(error);

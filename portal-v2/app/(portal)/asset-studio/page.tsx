@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { PageTabs } from "@/components/ui/page-tabs";
 import {
   FileImage,
@@ -82,9 +83,7 @@ export default function AssetStudioPage() {
 
   return (
     <div className="space-y-5" data-area="asset-studio">
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">Asset Studio</h1>
-      </div>
+      <PageHeader title="Asset Studio" />
 
       <PageTabs
         tabs={TABS.map(({ id, label, icon }) => ({ key: id, label, icon }))}

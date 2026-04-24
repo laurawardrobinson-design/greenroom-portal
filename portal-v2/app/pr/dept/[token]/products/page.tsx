@@ -194,7 +194,7 @@ function ProductTile({
             {p.name}
           </p>
           {p.itemCode && (
-            <p className="text-[10px] text-neutral-500 tabular-nums mt-0.5">
+            <p className="text-[10px] text-neutral-500 mt-0.5">
               #{p.itemCode}
             </p>
           )}

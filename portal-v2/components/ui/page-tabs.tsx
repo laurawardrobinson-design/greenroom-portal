@@ -6,37 +6,41 @@ export interface PageTab {
   key: string;
   label: string;
   icon: ElementType<{ className?: string }>;
+  count?: number;
 }
 
 interface PageTabsProps {
   tabs: PageTab[];
   activeTab: string;
   onTabChange: (key: string) => void;
+  ariaLabel?: string;
 }
 
-export function PageTabs({ tabs, activeTab, onTabChange }: PageTabsProps) {
+export function PageTabs({ tabs, activeTab, onTabChange, ariaLabel = "Sections" }: PageTabsProps) {
   return (
     <div className="border-b border-border">
-      <nav className="flex gap-0">
-        {tabs.map(({ key, label, icon: Icon }) => {
+      <nav className="ui-tabs" role="tablist" aria-label={ariaLabel}>
+        {tabs.map(({ key, label, icon: Icon, count }) => {
           const active = activeTab === key;
+          const hasCount = count !== undefined;
           return (
             <button
               key={key}
               type="button"
+              role="tab"
+              aria-selected={active}
+              aria-current={active ? "page" : undefined}
               onClick={() => onTabChange(key)}
-              className={`
-                relative flex items-center gap-[var(--density-tabs-gap)] px-[var(--density-tabs-px)] py-[var(--density-tabs-py)] text-sm font-medium transition-colors
-                ${active
-                  ? "text-text-primary"
-                  : "text-text-tertiary hover:text-text-secondary"
-                }
-              `}
+              data-state={active ? "active" : "inactive"}
+              className="ui-tab"
             >
-              <Icon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-primary" : "text-text-tertiary/60"}`} />
+              <Icon className="ui-tab-icon" />
               {label}
+              {hasCount && count > 0 && (
+                <span>({count})</span>
+              )}
               {active && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-primary" />
+                <span className="ui-tab-underline" />
               )}
             </button>
           );

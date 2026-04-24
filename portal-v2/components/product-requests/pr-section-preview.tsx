@@ -60,7 +60,7 @@ export function PRSectionPreview({ token }: { token: string }) {
     );
   }
 
-  const { docNumber, campaign, shoot, notes, section } = data;
+  const { campaign, shoot, notes, section } = data;
   const deptLabel = PR_DEPARTMENT_LABELS[section.department];
 
   return (
@@ -69,7 +69,7 @@ export function PRSectionPreview({ token }: { token: string }) {
       <div className="px-5 py-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-            {deptLabel} · {docNumber}
+            {deptLabel}
           </div>
           <div className="text-[15px] font-semibold text-neutral-900 leading-snug mt-0.5 truncate">
             {[campaign.brand, campaign.name].filter(Boolean).join(" · ") ||
@@ -199,7 +199,7 @@ export function PRSectionPreview({ token }: { token: string }) {
                   key={item.id}
                   className="border-b border-neutral-100 last:border-b-0 align-top"
                 >
-                  <td className="py-1.5 pr-2 text-neutral-500 tabular-nums">
+                  <td className="py-1.5 pr-2 text-neutral-500">
                     {item.product?.itemCode || "—"}
                   </td>
                   <td className="py-1.5 pr-2">

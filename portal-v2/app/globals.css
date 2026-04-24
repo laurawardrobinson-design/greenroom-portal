@@ -372,7 +372,7 @@ body {
 }
 
 @media (max-width: 768px) {
-  .ui-page-actions {
+  .ui-page-actions--stack-mobile {
     width: 100%;
     margin-left: 0;
     justify-content: flex-start;
@@ -381,9 +381,10 @@ body {
 
 .ui-tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0;
+  overflow-x: auto;
 }
 
 .ui-tab {

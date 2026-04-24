@@ -18,7 +18,7 @@ export function DocumentsTabTile({ campaignId, isVendor, canEdit, uploading, onU
   const [tab, setTab] = useState<"creative" | "admin">("creative");
 
   return (
-    <div className="flex flex-col h-full border border-border rounded-lg bg-surface overflow-hidden">
+    <div className="flex flex-col border border-border rounded-lg bg-surface overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border shrink-0">
         <FileText className="h-4 w-4 shrink-0 text-primary" />

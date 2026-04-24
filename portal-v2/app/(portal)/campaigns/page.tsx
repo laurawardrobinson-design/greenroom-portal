@@ -190,15 +190,15 @@ export default function CampaignsPage() {
           </div>
         ) : (
           <div className="rounded-2xl overflow-hidden bg-surface border border-border shadow-xs">
-            <div className="flex items-center gap-4 px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary border-b border-border">
+            <div className="flex items-center gap-4 px-5 py-1.5 text-sm font-semibold uppercase tracking-wider text-text-primary border-b border-border">
               <div className="w-2.5 shrink-0" />
               <div className="w-20 shrink-0">WF#</div>
               <div className="flex-1">Campaign</div>
               <div className="w-28 shrink-0 hidden lg:block">Producer</div>
               <div className="w-28 shrink-0 hidden lg:block">Art Director</div>
-              <div className="w-24 shrink-0">Status</div>
-              <div className="w-20 shrink-0 text-right">Next Shoot</div>
-              <div className="w-20 shrink-0 text-right hidden lg:block">Assets Due</div>
+              <div className="w-20 shrink-0">Status</div>
+              <div className="w-20 shrink-0 text-right whitespace-nowrap">Next Shoot</div>
+              <div className="w-20 shrink-0 text-right hidden lg:block">Due</div>
               {user?.role === "Vendor" && <div className="w-36 shrink-0 text-right">Inventory</div>}
               {user?.role !== "Vendor" && <div className="w-20 shrink-0 text-right">Budget</div>}
               {user?.role !== "Vendor" && <div className="w-28 shrink-0 text-right hidden lg:block">Add&apos;l Funds</div>}

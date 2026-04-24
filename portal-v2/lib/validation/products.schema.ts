@@ -9,6 +9,13 @@ export const PRODUCT_DEPARTMENTS = [
   "Other",
 ] as const;
 
+export const PRODUCT_LIFECYCLE_PHASES = [
+  "planning",
+  "coming_soon",
+  "live",
+  "discontinued",
+] as const;
+
 export const createProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   department: z.enum(PRODUCT_DEPARTMENTS),
@@ -19,6 +26,7 @@ export const createProductSchema = z.object({
   pcomLink: z.string().url().nullable().default(null),
   rpGuideUrl: z.string().url().nullable().default(null),
   imageUrl: z.string().url().nullable().default(null),
+  lifecyclePhase: z.enum(PRODUCT_LIFECYCLE_PHASES).default("live"),
 });
 
 export const updateProductSchema = createProductSchema.partial();

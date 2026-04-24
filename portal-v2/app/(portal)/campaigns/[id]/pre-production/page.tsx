@@ -38,7 +38,6 @@ import {
 } from "@/components/pre-production/schedule-tab";
 import { VendorAssignmentPanel } from "@/components/campaigns/vendor-assignment-panel";
 import { CampaignProductRequestsTile } from "@/components/campaigns/tiles/campaign-product-requests-tile";
-import { CampaignSectionTabs } from "@/components/campaigns/campaign-section-tabs";
 import { SpacePickerModal } from "@/components/studio/space-picker-modal";
 import { SPACE_TYPE_ICON, SPACE_TYPE_COLOR } from "@/lib/constants/studio";
 import { format, parseISO } from "date-fns";
@@ -1456,6 +1455,7 @@ export default function PreProductionWorkspacePage({
     <div className="space-y-0">
       <PageHeader
         title={`${campaign.wfNumber ? `${campaign.wfNumber} · ` : ""}${campaign.name}`}
+        showDivider={false}
         actions={(
           <CampaignSwitcher
             currentId={id}
@@ -1465,9 +1465,6 @@ export default function PreProductionWorkspacePage({
           />
         )}
       />
-
-      {/* Campaign section tabs (Overview · Brief · Asset Studio · Pre-Production) */}
-      <CampaignSectionTabs campaignId={id} />
 
       {/* Pre-Production sub-tabs */}
       <div className="border-b border-border">

@@ -1,0 +1,120 @@
+{
+  "project": "puppy-sprite-animation",
+  "createdAt": "2026-04-13",
+  "notes": [
+    "ref-01..ref-08 were copied from user-provided local screenshots.",
+    "Candidate stock-vector source pages are tracked for licensing replacement.",
+    "Exact one-to-one listing match is still in progress for each screenshot."
+  ],
+  "references": [
+    {
+      "id": "ref-01",
+      "file": "references/source_screens/ref-01.png",
+      "description": "Brown puppy 9-pose sheet",
+      "status": "copied_local",
+      "sourceCandidates": [
+        {
+          "provider": "Vecteezy",
+          "url": "https://www.vecteezy.com/vector-art/57117586-a-cartoon-dog-with-different-poses-and-expressions",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "id": "ref-02",
+      "file": "references/source_screens/ref-02.png",
+      "description": "Dalmatian puppy 9-pose sheet",
+      "status": "copied_local",
+      "sourceCandidates": [
+        {
+          "provider": "Vecteezy",
+          "url": "https://www.vecteezy.com/vector-art/55395835-a-cartoon-dog-with-different-poses-and-expressions",
+          "confidence": "medium"
+        },
+        {
+          "provider": "Depositphotos",
+          "url": "https://depositphotos.com/vector/cartoon-character-pug-dog-poses-design-191300318.html",
+          "confidence": "low"
+        }
+      ]
+    },
+    {
+      "id": "ref-03",
+      "file": "references/source_screens/ref-03.png",
+      "description": "Tricolor beagle-like puppy 9-pose sheet",
+      "status": "copied_local",
+      "sourceCandidates": [
+        {
+          "provider": "Vecteezy",
+          "url": "https://www.vecteezy.com/vector-art/57117586-a-cartoon-dog-with-different-poses-and-expressions",
+          "confidence": "low"
+        }
+      ]
+    },
+    {
+      "id": "ref-04",
+      "file": "references/source_screens/ref-04.png",
+      "description": "Basset-style puppy 9-pose sheet",
+      "status": "copied_local",
+      "sourceCandidates": [
+        {
+          "provider": "Vecteezy",
+          "url": "https://www.vecteezy.com/vector-art/57117586-a-cartoon-dog-with-different-poses-and-expressions",
+          "confidence": "low"
+        }
+      ]
+    },
+    {
+      "id": "ref-05",
+      "file": "references/source_screens/ref-05.png",
+      "description": "Yorkie-style puppy 9-pose sheet",
+      "status": "copied_local",
+      "sourceCandidates": [
+        {
+          "provider": "Adobe Stock",
+          "url": "https://stock.adobe.com/images/vector-dog-character-black-poodle-with-red-bow-collection-in-five-different-poses/109150765",
+          "confidence": "low"
+        }
+      ]
+    },
+    {
+      "id": "ref-06",
+      "file": "references/source_screens/ref-06.png",
+      "description": "Multi-breed side profile lineup",
+      "status": "copied_local",
+      "sourceCandidates": [
+        {
+          "provider": "Unresolved",
+          "url": "",
+          "confidence": "unknown"
+        }
+      ]
+    },
+    {
+      "id": "ref-07",
+      "file": "references/source_screens/ref-07.png",
+      "description": "Multi-breed face lineup",
+      "status": "copied_local",
+      "sourceCandidates": [
+        {
+          "provider": "123RF",
+          "url": "https://cms.123rf.com/photo_226310319_different-type-of-vector-cartoon-dog-faces-for-design.html",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "id": "ref-08",
+      "file": "references/source_screens/ref-08.png",
+      "description": "Corgi-like puppy 9-pose sheet",
+      "status": "copied_local",
+      "sourceCandidates": [
+        {
+          "provider": "Vecteezy",
+          "url": "https://www.vecteezy.com/vector-art/57117586-a-cartoon-dog-with-different-poses-and-expressions",
+          "confidence": "medium"
+        }
+      ]
+    }
+  ]
+}

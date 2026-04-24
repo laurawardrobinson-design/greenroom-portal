@@ -1,13 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import {
-  AlertCircle,
   CalendarDays,
   ChevronRight,
-  Clock,
   PackageSearch,
   Plus,
 } from "lucide-react";
@@ -18,9 +16,9 @@ import { StatusPill, type StatusVariant } from "@/components/ui/status-pill";
 import { PRDocDrawer } from "@/components/product-requests/pr-doc-drawer";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type { PRDoc, PRDeptSection } from "@/types/domain";
-import { PR_DEPARTMENT_LABELS } from "@/types/domain";
+import { PR_DEPARTMENT_LABELS, PR_DEPARTMENTS } from "@/types/domain";
 
-type FilterId = "all" | "needs" | "ready" | "submitted" | "fulfilled";
+type FilterId = "needs" | "submitted" | "fulfilled";
 
 async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -116,21 +114,20 @@ function summarizeDoc(doc: PRDoc): SubmissionSummary {
   };
 }
 
-type WorkflowBucket = "needs" | "ready" | "submitted" | "fulfilled" | "cancelled";
+type WorkflowBucket = "needs" | "submitted" | "fulfilled" | "cancelled";
 
 function workflowBucket(doc: PRDoc, summary: SubmissionSummary): WorkflowBucket {
   if (doc.status === "cancelled") return "cancelled";
   if (doc.status === "fulfilled") return "fulfilled";
   if (doc.status === "submitted" || doc.status === "forwarded") return "submitted";
-  if (doc.status === "draft" && summary.readyToSubmit) return "ready";
   return "needs";
 }
 
 function workflowLabel(doc: PRDoc, summary: SubmissionSummary): string {
   if (doc.status === "draft") {
     if (!summary.hasItems) return "Needs items";
-    if (summary.missingPickupSections > 0) return "Needs pickup info";
-    return "Ready to submit";
+    if (summary.readyToSubmit) return "Ready to submit";
+    return "Draft";
   }
   if (doc.status === "submitted") return "Submitted";
   if (doc.status === "forwarded") return "Sent";
@@ -138,12 +135,19 @@ function workflowLabel(doc: PRDoc, summary: SubmissionSummary): string {
   return "Cancelled";
 }
 
+function workflowRowVariant(doc: PRDoc, summary: SubmissionSummary): StatusVariant {
+  if (doc.status === "draft") {
+    if (!summary.hasItems) return "pending";
+    if (summary.readyToSubmit) return "approved";
+    return "draft";
+  }
+  return workflowVariant(workflowBucket(doc, summary) as WorkflowBucket);
+}
+
 function workflowVariant(bucket: WorkflowBucket): StatusVariant {
   switch (bucket) {
     case "needs":
       return "pending";
-    case "ready":
-      return "approved";
     case "submitted":
       return "submitted";
     case "fulfilled":
@@ -164,38 +168,151 @@ function groupDocsByShootDate(docs: PRDoc[]) {
     .map(([shootDate, dayDocs]) => ({ shootDate, docs: dayDocs }));
 }
 
+function parse24h(hhmm: string): { time: string; period: "AM" | "PM" } {
+  if (!hhmm) return { time: "9:00", period: "AM" };
+  const [hStr, mStr = "00"] = hhmm.split(":");
+  const h = parseInt(hStr);
+  const period: "AM" | "PM" = h >= 12 ? "PM" : "AM";
+  const h12 = ((h + 11) % 12) + 1;
+  return { time: `${h12}:${mStr}`, period };
+}
+
+function to24h(time: string, period: "AM" | "PM"): string {
+  const digits = time.replace(/\D/g, "");
+  let normalized: string;
+  if (digits.length === 3) normalized = `${digits[0]}:${digits.slice(1)}`;
+  else if (digits.length === 4) normalized = `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  else normalized = `${digits}:00`;
+  const [hStr, mStr = "00"] = normalized.split(":");
+  let h = parseInt(hStr);
+  if (period === "AM" && h === 12) h = 0;
+  if (period === "PM" && h !== 12) h += 12;
+  return `${h.toString().padStart(2, "0")}:${mStr.padStart(2, "0")}`;
+}
+
+function rowFormatAsTyped(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 4);
+  if (digits.length <= 2) return digits;
+  if (digits.length === 3)
+    return parseInt(digits[0]) > 1 ? `${digits[0]}:${digits.slice(1)}` : `${digits.slice(0, 2)}:${digits[2]}`;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
+function RowDateChip({ value, onSave }: { value: string; onSave: (iso: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dateVal, setDateVal] = useState(value);
+  const display = dateVal
+    ? new Date(dateVal + "T12:00:00").toLocaleDateString("en-US", { month: "2-digit", day: "2-digit" })
+    : "MM/DD";
+  return (
+    <div className="relative inline-flex" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          (inputRef.current as HTMLInputElement & { showPicker?: () => void })?.showPicker?.();
+        }}
+        className="font-semibold text-text-primary tabular-nums hover:text-primary transition-colors"
+      >
+        {display}
+      </button>
+      <input
+        ref={inputRef}
+        type="date"
+        value={dateVal}
+        onChange={(e) => setDateVal(e.target.value)}
+        onBlur={(e) => { if (e.target.value && e.target.value !== value) onSave(e.target.value); }}
+        tabIndex={-1}
+        className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
+      />
+    </div>
+  );
+}
+
+function RowTimeChip({ value, onSave }: { value: string; onSave: (hhmm: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [timeVal, setTimeVal] = useState(() => (value ? parse24h(value).time : "9:00"));
+  const [period, setPeriod] = useState<"AM" | "PM">(() => (value ? parse24h(value).period : "AM"));
+
+  const display = value ? formatTime(value) : "TBD";
+
+  function save(t = timeVal, p = period) {
+    const hhmm = to24h(t, p);
+    if (hhmm !== value) onSave(hhmm);
+    setEditing(false);
+  }
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          const init = value ? parse24h(value) : { time: "9:00", period: "AM" as const };
+          setTimeVal(init.time);
+          setPeriod(init.period);
+          setEditing(true);
+        }}
+        className="font-medium text-text-primary tabular-nums hover:text-primary transition-colors"
+      >
+        {display}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <input
+        autoFocus
+        type="text"
+        value={timeVal}
+        onChange={(e) => setTimeVal(rowFormatAsTyped(e.target.value))}
+        onFocus={(e) => e.target.select()}
+        onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
+        onBlur={() => save()}
+        className="w-12 bg-transparent border-b border-primary focus:outline-none text-sm font-medium text-primary text-center p-0 tabular-nums"
+      />
+      <select
+        value={period}
+        onChange={(e) => { const p = e.target.value as "AM" | "PM"; setPeriod(p); save(timeVal, p); }}
+        className="bg-transparent text-sm font-medium text-primary focus:outline-none cursor-pointer"
+      >
+        <option>AM</option>
+        <option>PM</option>
+      </select>
+    </div>
+  );
+}
+
 function FilterPill({
   active,
   onClick,
   label,
-  count,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
-  count: number;
+  count?: number;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       data-active={active}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
+      className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
         active
           ? "border-primary bg-primary-light text-primary-hover"
           : "border-border bg-surface text-text-secondary hover:bg-surface-secondary"
       }`}
     >
-      <span>{label}</span>
-      <span className={`tabular-nums ${active ? "text-primary-hover" : "text-text-tertiary"}`}>
-        {count}
-      </span>
+      {label}
     </button>
   );
 }
 
 export default function ProductRequestsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [conflicts, setConflicts] = useState<Record<string, string[]>>({});
   const { user } = useCurrentUser();
   const isBMM =
     user?.role === "Brand Marketing Manager" || user?.role === "Admin";
@@ -207,11 +324,10 @@ export default function ProductRequestsPage() {
   );
 
   // Buckets by workflow state (once per render)
-  const { byBucket, counts, allDocs } = useMemo(() => {
+  const { byBucket, counts } = useMemo(() => {
     const list = docs ?? [];
     const byBucket: Record<WorkflowBucket, PRDoc[]> = {
       needs: [],
-      ready: [],
       submitted: [],
       fulfilled: [],
       cancelled: [],
@@ -223,26 +339,22 @@ export default function ProductRequestsPage() {
     return {
       byBucket,
       counts: {
-        all: list.length,
         needs: byBucket.needs.length,
-        ready: byBucket.ready.length,
         submitted: byBucket.submitted.length,
         fulfilled: byBucket.fulfilled.length,
       },
-      allDocs: list,
     };
   }, [docs]);
 
   // Default filter per persona:
   //   BMM/Admin → Submitted (what's waiting on them to forward)
-  //   Everyone else → Needs attention (their drafts that need work)
+  //   Everyone else → Planning (their drafts that need work)
   const defaultFilter: FilterId = isBMM ? "submitted" : "needs";
   const [filter, setFilter] = useState<FilterId>(defaultFilter);
 
   const visibleDocs = useMemo(() => {
-    if (filter === "all") return allDocs;
     return byBucket[filter] ?? [];
-  }, [filter, byBucket, allDocs]);
+  }, [filter, byBucket]);
 
   const campaignGroups = useMemo(() => {
     const byCampaign = new Map<string, { name: string; wfNumber?: string; docs: PRDoc[] }>();
@@ -270,8 +382,34 @@ export default function ProductRequestsPage() {
       });
   }, [visibleDocs]);
 
+  async function updateAllSections(doc: PRDoc, changes: { dateNeeded?: string; timeNeeded?: string }) {
+    if (changes.timeNeeded) {
+      const conflicting = doc.sections.filter(
+        (s) => s.items.length > 0 && s.timeNeeded && s.timeNeeded !== changes.timeNeeded
+      );
+      if (conflicting.length > 0) {
+        const names = conflicting.map(
+          (s) => `${PR_DEPARTMENT_LABELS[s.department]} (${formatTime(s.timeNeeded!)})`
+        );
+        setConflicts((prev) => ({ ...prev, [doc.id]: names }));
+      } else {
+        setConflicts((prev) => { const n = { ...prev }; delete n[doc.id]; return n; });
+      }
+    }
+    await Promise.all(
+      PR_DEPARTMENTS.map((dept) =>
+        fetch(`/api/product-requests/${doc.id}/sections`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ department: dept, ...changes }),
+        })
+      )
+    );
+    mutate();
+  }
+
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-5">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 pb-5">
       <PageHeader
         title="Product Requests"
         actions={(
@@ -296,19 +434,13 @@ export default function ProductRequestsPage() {
         )}
       />
 
-      {!isLoading && counts.all > 0 && (
+      {!isLoading && (counts.needs + counts.submitted + counts.fulfilled) > 0 && (
         <div className="flex flex-wrap gap-2">
           <FilterPill
             active={filter === "needs"}
             onClick={() => setFilter("needs")}
-            label="Needs attention"
+            label="Planning"
             count={counts.needs}
-          />
-          <FilterPill
-            active={filter === "ready"}
-            onClick={() => setFilter("ready")}
-            label="Ready to submit"
-            count={counts.ready}
           />
           <FilterPill
             active={filter === "submitted"}
@@ -319,14 +451,8 @@ export default function ProductRequestsPage() {
           <FilterPill
             active={filter === "fulfilled"}
             onClick={() => setFilter("fulfilled")}
-            label="Fulfilled"
+            label="Needs Review"
             count={counts.fulfilled}
-          />
-          <FilterPill
-            active={filter === "all"}
-            onClick={() => setFilter("all")}
-            label="All"
-            count={counts.all}
           />
         </div>
       )}
@@ -339,7 +465,7 @@ export default function ProductRequestsPage() {
         </div>
       )}
 
-      {!isLoading && counts.all === 0 && (
+      {!isLoading && (counts.needs + counts.submitted + counts.fulfilled) === 0 && (
         <Card padding="none">
           <EmptyState
             icon={<PackageSearch className="h-5 w-5" />}
@@ -358,7 +484,7 @@ export default function ProductRequestsPage() {
         </Card>
       )}
 
-      {!isLoading && counts.all > 0 && campaignGroups.length === 0 && (
+      {!isLoading && campaignGroups.length === 0 && (counts.needs + counts.submitted + counts.fulfilled) > 0 && (
         <Card padding="none">
           <EmptyState
             icon={<PackageSearch className="h-5 w-5" />}
@@ -370,19 +496,19 @@ export default function ProductRequestsPage() {
 
       <div className="space-y-4">
         {campaignGroups.map(({ campaignId, name, wfNumber, docs: campaignDocs }) => {
-          const shootDayGroups = groupDocsByShootDate(campaignDocs);
           const summaries = new Map(
             campaignDocs.map((doc) => [doc.id, summarizeDoc(doc)])
           );
+          const sortedUniqueDates = [...new Set(campaignDocs.map((d) => d.shootDate))].sort();
 
           return (
             <Card key={campaignId} padding="none" className="overflow-hidden">
               <CardHeader>
-                <CardTitle>
-                  <PackageSearch />
-                  <span className="truncate">{name}</span>
-                </CardTitle>
-                <div className="flex items-center gap-2 text-xs text-text-tertiary">
+                <div className="flex items-center gap-2 min-w-0">
+                  <PackageSearch className="h-4 w-4 shrink-0 text-primary" />
+                  <span className="text-sm font-semibold text-text-primary truncate">{name}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-text-tertiary shrink-0">
                   {wfNumber && <span className="tabular-nums">{wfNumber}</span>}
                   <span aria-hidden>·</span>
                   <span className="tabular-nums">
@@ -392,82 +518,94 @@ export default function ProductRequestsPage() {
               </CardHeader>
 
               <div>
-                {shootDayGroups.map(({ shootDate, docs: dayDocs }) => (
-                  <section key={shootDate}>
-                    <div className="flex items-center justify-between border-b border-border bg-surface-secondary px-4 py-2">
-                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-text-primary">
-                        <CalendarDays className="h-4 w-4 text-text-secondary" />
-                        {formatShootDate(shootDate)}
-                      </span>
-                      <span className="text-xs text-text-tertiary tabular-nums">
-                        {dayDocs.length} request{dayDocs.length === 1 ? "" : "s"}
-                      </span>
-                    </div>
+                {campaignDocs.map((doc) => {
+                  const summary = summaries.get(doc.id) as SubmissionSummary;
+                  const label = workflowLabel(doc, summary);
+                  const variant = workflowRowVariant(doc, summary);
+                  const rawPickupTime = summary.pickup?.time ?? "";
+                  const deptLine = departmentSummary(doc.sections);
+                  const hasItems = deptLine !== "No items yet";
+                  const dayNum = sortedUniqueDates.indexOf(doc.shootDate) + 1;
+                  const docConflicts = conflicts[doc.id];
+                  const editable = doc.status === "draft";
 
-                    <div>
-                      {dayDocs.map((doc) => {
-                        const summary = summaries.get(doc.id) as SubmissionSummary;
-                        const bucket = workflowBucket(doc, summary);
-                        const label = workflowLabel(doc, summary);
-                        const variant = workflowVariant(bucket);
-                        const pickupText = summary.pickup
-                          ? `${formatCompactDate(summary.pickup.date)} · ${formatTime(summary.pickup.time)}`
-                          : "TBD";
-                        const deptLine = departmentSummary(doc.sections);
+                  return (
+                    <div
+                      key={doc.id}
+                      className="group border-b border-border last:border-b-0"
+                    >
+                      <div
+                        onClick={() => setSelectedId(doc.id)}
+                        className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-surface-secondary"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+                            <span className="text-[10px] font-medium uppercase tracking-wide text-text-tertiary">
+                              Day {dayNum}
+                            </span>
+                            <span className="text-text-tertiary">·</span>
+                            {editable ? (
+                              <RowDateChip
+                                key={`date-${doc.id}-${doc.sections.map(s => s.dateNeeded).join()}`}
+                                value={summary.pickup?.date || doc.shootDate}
+                                onSave={(iso) => updateAllSections(doc, { dateNeeded: iso })}
+                              />
+                            ) : (
+                              <span className="font-semibold text-text-primary tabular-nums">
+                                {formatCompactDate(doc.shootDate)}
+                              </span>
+                            )}
+                            <span className="text-text-tertiary">·</span>
+                            {editable ? (
+                              <RowTimeChip
+                                key={`time-${doc.id}-${rawPickupTime}`}
+                                value={rawPickupTime}
+                                onSave={(hhmm) => updateAllSections(doc, { timeNeeded: hhmm })}
+                              />
+                            ) : (
+                              <span className="font-medium text-text-primary tabular-nums">
+                                {rawPickupTime ? formatTime(rawPickupTime) : "TBD"}
+                              </span>
+                            )}
+                            <span className="text-text-tertiary">·</span>
+                            <span className="text-text-secondary tabular-nums">
+                              {summary.totalItems} item{summary.totalItems === 1 ? "" : "s"}
+                            </span>
+                            {hasItems && (
+                              <>
+                                <span className="text-text-tertiary">·</span>
+                                <span className="truncate text-text-tertiary">{deptLine}</span>
+                              </>
+                            )}
+                            {!hasItems && (
+                              <span className="italic text-text-tertiary">No items yet</span>
+                            )}
+                          </div>
+                        </div>
 
-                        return (
+                        <div className="flex shrink-0 items-center gap-2">
+                          <StatusPill variant={variant}>{label}</StatusPill>
+                          <ChevronRight className="h-4 w-4 shrink-0 text-text-tertiary transition-colors group-hover:text-primary" />
+                        </div>
+                      </div>
+
+                      {docConflicts && docConflicts.length > 0 && (
+                        <div className="flex items-center gap-2 border-t border-border/50 bg-amber-50/60 px-4 py-1.5">
+                          <span className="text-[10px] text-amber-700">
+                            {docConflicts.join(", ")} {docConflicts.length === 1 ? "has" : "have"} a different pickup time — consider creating a separate PR for {docConflicts.length === 1 ? "that department" : "those departments"}.
+                          </span>
                           <button
-                            key={doc.id}
-                            onClick={() => setSelectedId(doc.id)}
-                            className="group flex w-full items-start gap-4 border-b border-border px-4 py-3 text-left last:border-b-0 transition-colors hover:bg-surface-secondary"
+                            type="button"
+                            onClick={() => setConflicts((prev) => { const n = { ...prev }; delete n[doc.id]; return n; })}
+                            className="ml-auto text-[10px] text-amber-600 hover:text-amber-800 transition-colors shrink-0"
                           >
-                            <div className="min-w-0 flex-1 space-y-1">
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
-                                <span className="inline-flex items-center gap-1 text-text-secondary">
-                                  <Clock className="h-3.5 w-3.5 text-text-tertiary" />
-                                  Pickup
-                                </span>
-                                <span className="font-semibold text-text-primary tabular-nums">
-                                  {pickupText}
-                                </span>
-                                <span className="text-text-tertiary">·</span>
-                                <span className="text-text-secondary tabular-nums">
-                                  {summary.totalItems} item{summary.totalItems === 1 ? "" : "s"}
-                                </span>
-                                <span className="text-text-tertiary">·</span>
-                                <span className="text-text-secondary tabular-nums">
-                                  {summary.activeSections} dept{summary.activeSections === 1 ? "" : "s"}
-                                </span>
-                              </div>
-
-                              <p
-                                className={`truncate text-sm ${
-                                  deptLine === "No items yet"
-                                    ? "italic text-text-tertiary"
-                                    : "text-text-secondary"
-                                }`}
-                              >
-                                {deptLine}
-                              </p>
-
-                              {summary.issue && (
-                                <p className="inline-flex items-center gap-1 text-xs text-warning">
-                                  <AlertCircle className="h-3.5 w-3.5" />
-                                  {summary.issue}
-                                </p>
-                              )}
-                            </div>
-
-                            <div className="flex shrink-0 items-center gap-2 pt-0.5">
-                              <StatusPill variant={variant}>{label}</StatusPill>
-                              <ChevronRight className="h-4 w-4 shrink-0 text-text-tertiary transition-colors group-hover:text-primary" />
-                            </div>
+                            Dismiss
                           </button>
-                        );
-                      })}
+                        </div>
+                      )}
                     </div>
-                  </section>
-                ))}
+                  );
+                })}
               </div>
             </Card>
           );

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthUser, requireRole, authErrorResponse } from "@/lib/auth/guards";
 import { listProducts, createProduct } from "@/lib/services/products.service";
 import { createProductSchema } from "@/lib/validation/products.schema";
-import type { ProductDepartment } from "@/types/domain";
+import type { ProductDepartment, ProductLifecyclePhase } from "@/types/domain";
 
 export async function GET(request: Request) {
   try {
@@ -10,10 +10,14 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const department = searchParams.get("department") as ProductDepartment | null;
     const search = searchParams.get("search") || undefined;
+    const lifecyclePhase = searchParams.get("lifecycle_phase") as
+      | ProductLifecyclePhase
+      | null;
 
     const products = await listProducts({
       department: department || undefined,
       search,
+      lifecyclePhase: lifecyclePhase || undefined,
     });
     return NextResponse.json(products);
   } catch (error) {

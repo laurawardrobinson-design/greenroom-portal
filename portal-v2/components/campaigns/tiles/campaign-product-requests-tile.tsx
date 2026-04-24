@@ -38,7 +38,7 @@ export function CampaignProductRequestsTile({ campaignId, user }: Props) {
   const { data: docs, mutate } = useSWR<PRDoc[]>(
     `/api/product-requests?campaignId=${campaignId}`,
     fetcher,
-    { refreshInterval: 30000 }
+    { refreshInterval: 60000 }
   );
 
   const items = docs ?? [];
@@ -92,7 +92,7 @@ export function CampaignProductRequestsTile({ campaignId, user }: Props) {
                   <p className="text-[11px] text-text-tertiary">
                     {doc.sections.length > 0
                       ? doc.sections.map((s) => s.department === "Meat-Seafood" ? "Meat & Seafood" : s.department).join(", ")
-                      : doc.docNumber}
+                      : "No items yet"}
                   </p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-text-tertiary group-hover:text-text-secondary transition-colors shrink-0" />

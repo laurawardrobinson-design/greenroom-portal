@@ -12,6 +12,7 @@ export async function POST(
     const { sectionId } = await params;
     const body = (await request.json()) as {
       productId?: string | null;
+      name?: string;
       quantity?: number;
       size?: string;
       specialInstructions?: string;
@@ -19,6 +20,7 @@ export async function POST(
 
     const item = await addItem(sectionId, {
       productId: body.productId,
+      name: body.name,
       quantity: body.quantity,
       size: body.size,
       specialInstructions: body.specialInstructions,

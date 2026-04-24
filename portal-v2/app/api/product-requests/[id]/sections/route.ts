@@ -22,7 +22,7 @@ export async function POST(
     if (!body.department) return NextResponse.json({ error: "department required" }, { status: 400 });
 
     // Pickup person + phone are producer-owned fields. BMM / Studio
-    // must never be able to modify them, even on submitted docs.
+    // must never be able to modify them.
     const wantsPickupEdit =
       body.pickupPerson !== undefined || body.pickupPhone !== undefined;
     if (wantsPickupEdit) {
@@ -34,7 +34,8 @@ export async function POST(
         throw new AuthError("Only the producer can edit pickup contact", 403);
       }
 
-      // Also require the doc to still be a draft.
+      // Producers can keep editing pickup contact while request is active.
+      // Lock only after terminal states.
       const db = createAdminClient();
       const { data: doc } = await db
         .from("product_request_docs")
@@ -42,8 +43,9 @@ export async function POST(
         .eq("id", id)
         .single();
       if (!doc) throw new AuthError("PR not found", 404);
-      if ((doc as { status: string }).status !== "draft") {
-        throw new AuthError("Pickup contact is locked after submission", 403);
+      const status = (doc as { status: string }).status;
+      if (status === "fulfilled" || status === "cancelled") {
+        throw new AuthError("Pickup contact is locked for closed requests", 403);
       }
     }
 

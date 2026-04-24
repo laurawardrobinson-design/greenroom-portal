@@ -30,7 +30,7 @@ export function BudgetSidebarTile({ financials, canEdit, onRequestOverage }: Pro
     : "text-primary";
 
   const stats: { label: string; value: number; valueClass: string }[] = [
-    { label: "Total Budget", value: financials.budget, valueClass: "text-text-primary" },
+    { label: "Total", value: financials.budget, valueClass: "text-text-primary" },
     { label: "Remaining", value: financials.remaining, valueClass: remainingColor },
     { label: "Committed", value: financials.committed, valueClass: "text-blue-500" },
     { label: "Spent", value: financials.spent, valueClass: "text-text-secondary" },

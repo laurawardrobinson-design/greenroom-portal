@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   Product,
   ProductDepartment,
+  ProductLifecyclePhase,
   CampaignProduct,
   CampaignProductRole,
   CampaignGearLink,
@@ -23,6 +24,8 @@ function toProduct(row: Record<string, unknown>): Product {
     pcomLink: (row.pcom_link as string) || null,
     rpGuideUrl: (row.rp_guide_url as string) || null,
     imageUrl: (row.image_url as string) || null,
+    lifecyclePhase:
+      ((row.lifecycle_phase as ProductLifecyclePhase) ?? "live") as ProductLifecyclePhase,
     createdBy: (row.created_by as string) || null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -82,6 +85,7 @@ function toGearItem(row: Record<string, unknown>): GearItem {
 export async function listProducts(filters?: {
   department?: ProductDepartment;
   search?: string;
+  lifecyclePhase?: ProductLifecyclePhase;
 }): Promise<Product[]> {
   const db = createAdminClient();
   let query = db.from("products").select("*").order("name", { ascending: true });
@@ -90,7 +94,12 @@ export async function listProducts(filters?: {
     query = query.eq("department", filters.department);
   }
   if (filters?.search) {
-    query = query.ilike("name", `%${filters.search}%`);
+    query = query.or(
+      `name.ilike.%${filters.search}%,item_code.ilike.%${filters.search}%`
+    );
+  }
+  if (filters?.lifecyclePhase) {
+    query = query.eq("lifecycle_phase", filters.lifecyclePhase);
   }
 
   const { data, error } = await query;
@@ -119,6 +128,7 @@ export async function createProduct(input: CreateProductInput, userId: string): 
       pcom_link: input.pcomLink,
       rp_guide_url: input.rpGuideUrl,
       image_url: input.imageUrl,
+      lifecycle_phase: input.lifecyclePhase ?? "live",
       created_by: userId,
     })
     .select()
@@ -140,6 +150,7 @@ export async function updateProduct(id: string, input: UpdateProductInput): Prom
   if (input.pcomLink !== undefined) update.pcom_link = input.pcomLink;
   if (input.rpGuideUrl !== undefined) update.rp_guide_url = input.rpGuideUrl;
   if (input.imageUrl !== undefined) update.image_url = input.imageUrl;
+  if (input.lifecyclePhase !== undefined) update.lifecycle_phase = input.lifecyclePhase;
 
   const { data, error } = await db
     .from("products")

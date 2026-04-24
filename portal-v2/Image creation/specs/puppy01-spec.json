@@ -1,0 +1,145 @@
+{
+  "characterId": "puppy-01",
+  "styleLock": {
+    "referenceSheet": "references/source_screens/ref-01.png",
+    "poseGrid": "references/pose_grids/ref-01",
+    "rules": [
+      "Preserve silhouette proportions from reference poses",
+      "Keep muzzle short and angular; no realistic elongation",
+      "Maintain simple oval eyes and minimal facial linework",
+      "Do not change leg thickness or paw shape style",
+      "Tail stays thin with slight upward arc"
+    ]
+  },
+  "bodyPartMap": [
+    {
+      "id": "head",
+      "parent": "neck",
+      "pivotNormXY": [0.42, 0.58],
+      "notes": "Primary expressive driver for look, beg, sniff, and jump anticipation"
+    },
+    {
+      "id": "ear_left",
+      "parent": "head",
+      "pivotNormXY": [0.28, 0.24],
+      "notes": "Secondary motion and emotional readability"
+    },
+    {
+      "id": "ear_right",
+      "parent": "head",
+      "pivotNormXY": [0.64, 0.22],
+      "notes": "Mirror behavior with slight offset for natural asymmetry"
+    },
+    {
+      "id": "face",
+      "parent": "head",
+      "pivotNormXY": [0.58, 0.60],
+      "notes": "Eye blink and mouth/tongue swaps"
+    },
+    {
+      "id": "torso",
+      "parent": "root",
+      "pivotNormXY": [0.50, 0.58],
+      "notes": "Keep rigid for style-lock consistency"
+    },
+    {
+      "id": "front_leg_near",
+      "parent": "torso",
+      "pivotNormXY": [0.38, 0.76],
+      "notes": "Upper-lower split for walk/run arcs"
+    },
+    {
+      "id": "front_leg_far",
+      "parent": "torso",
+      "pivotNormXY": [0.46, 0.76],
+      "notes": "Depth offset for readability"
+    },
+    {
+      "id": "rear_leg_near",
+      "parent": "torso",
+      "pivotNormXY": [0.66, 0.78],
+      "notes": "Main propulsion limb"
+    },
+    {
+      "id": "rear_leg_far",
+      "parent": "torso",
+      "pivotNormXY": [0.74, 0.78],
+      "notes": "Phase-shifted from near rear leg"
+    },
+    {
+      "id": "paws",
+      "parent": "legs",
+      "pivotNormXY": [0.0, 0.0],
+      "notes": "Use pose swaps for contact readability"
+    },
+    {
+      "id": "tail",
+      "parent": "torso",
+      "pivotNormXY": [0.83, 0.52],
+      "notes": "Follow-through on turns, run, and excited states"
+    }
+  ],
+  "animationStates": [
+    {
+      "key": "idle",
+      "type": "loop",
+      "fps": 7,
+      "minFrames": 6,
+      "maxFrames": 8,
+      "partsPriority": ["head", "face", "ears", "tail"]
+    },
+    {
+      "key": "walk",
+      "type": "loop",
+      "fps": 9,
+      "minFrames": 6,
+      "maxFrames": 8,
+      "partsPriority": ["legs", "paws", "torso", "head", "tail"]
+    },
+    {
+      "key": "run",
+      "type": "loop",
+      "fps": 11,
+      "minFrames": 4,
+      "maxFrames": 6,
+      "partsPriority": ["legs", "paws", "tail", "ears"]
+    },
+    {
+      "key": "jump",
+      "type": "oneshot",
+      "segments": ["jump_start", "jump_air", "jump_land"],
+      "fps": 12
+    },
+    {
+      "key": "beg",
+      "type": "loop",
+      "fps": 7,
+      "minFrames": 4,
+      "maxFrames": 6,
+      "partsPriority": ["head", "face", "front_leg_near", "front_leg_far", "tail"]
+    },
+    {
+      "key": "twirl",
+      "type": "oneshot",
+      "fps": 12,
+      "minFrames": 8,
+      "maxFrames": 12
+    },
+    {
+      "key": "paws_up",
+      "type": "loop_or_hold",
+      "fps": 6,
+      "minFrames": 4,
+      "maxFrames": 6
+    }
+  ],
+  "runtimeTargets": {
+    "primary": "PixiJS",
+    "fallback": "Canvas2D",
+    "atlas": {
+      "padding": 2,
+      "trim": true,
+      "bleed": true
+    }
+  }
+}

@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Puppy 01 Animation Preview</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --panel: #101a2e;
+        --ink: #e5eefc;
+        --muted: #8fa7c5;
+        --line: #2a3b56;
+        --accent: #55d3a5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: radial-gradient(circle at 30% 20%, #162645, var(--bg));
+        color: var(--ink);
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 24px auto;
+        padding: 0 16px 24px;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0 0 8px;
+      }
+      .sub {
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 16px;
+      }
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, transparent);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+      }
+      label {
+        display: block;
+        margin-top: 10px;
+        margin-bottom: 6px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      select,
+      button,
+      input[type="range"] {
+        width: 100%;
+      }
+      select,
+      button {
+        height: 38px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: #0d172a;
+        color: var(--ink);
+        padding: 0 10px;
+      }
+      button {
+        cursor: pointer;
+        margin-top: 10px;
+      }
+      button:hover {
+        border-color: var(--accent);
+      }
+      .stat {
+        margin-top: 12px;
+        padding: 10px;
+        border-radius: 8px;
+        background: #0d172a;
+        border: 1px solid var(--line);
+        font-size: 13px;
+      }
+      .stat code {
+        color: #c3d7f8;
+      }
+      canvas {
+        width: 100%;
+        height: min(70vh, 680px);
+        display: block;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, #79d9cb 0%, #71d6c1 70%, #62cba9 100%);
+      }
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>Puppy 01 Animation Preview</h1>
+      <div class="sub">Atlas + JSON preview for `idle`, `walk`, and `run`</div>
+
+      <div class="grid">
+        <section class="panel">
+          <label for="state">State</label>
+          <select id="state">
+            <option value="idle">idle</option>
+            <option value="walk">walk</option>
+            <option value="run">run</option>
+          </select>
+
+          <button id="toggle">Pause</button>
+
+          <label for="speed">Speed Multiplier</label>
+          <input id="speed" type="range" min="0.3" max="2.0" step="0.1" value="1.0" />
+
+          <label for="scale">Render Scale</label>
+          <input id="scale" type="range" min="0.8" max="2.8" step="0.1" value="1.7" />
+
+          <div class="stat" id="stats">Loading atlas...</div>
+        </section>
+
+        <section>
+          <canvas id="stage" width="900" height="680"></canvas>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const canvas = document.getElementById("stage");
+      const ctx = canvas.getContext("2d");
+      const stateEl = document.getElementById("state");
+      const speedEl = document.getElementById("speed");
+      const scaleEl = document.getElementById("scale");
+      const toggleEl = document.getElementById("toggle");
+      const statsEl = document.getElementById("stats");
+
+      let atlas = null;
+      let atlasImg = null;
+      let activeState = "idle";
+      let playing = true;
+      let frameCursor = 0;
+      let frameTimer = 0;
+      let lastTs = 0;
+
+      async function loadAtlas() {
+        const res = await fetch("./puppy01-atlas.json");
+        atlas = await res.json();
+        atlasImg = new Image();
+        atlasImg.src = `./${atlas.meta.image.split("/").pop()}`;
+        await atlasImg.decode();
+      }
+
+      function currentAnim() {
+        return atlas.animations[activeState];
+      }
+
+      function setStats() {
+        const anim = currentAnim();
+        const frameId = anim.frames[frameCursor % anim.frames.length];
+        statsEl.innerHTML = `
+          <div><strong>State:</strong> <code>${activeState}</code></div>
+          <div><strong>FPS:</strong> <code>${anim.fps}</code> x <code>${Number(speedEl.value).toFixed(1)}</code></div>
+          <div><strong>Frame:</strong> <code>${frameCursor % anim.frames.length}</code> / <code>${anim.frames.length - 1}</code> (${frameId})</div>
+          <div><strong>Atlas:</strong> <code>${atlas.meta.atlasSize.w}x${atlas.meta.atlasSize.h}</code></div>
+        `;
+      }
+
+      function drawGround() {
+        const y = canvas.height * 0.78;
+        ctx.fillStyle = "rgba(40, 111, 94, 0.55)";
+        ctx.beginPath();
+        ctx.ellipse(canvas.width * 0.5, y + 18, 160, 28, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function drawPuppy() {
+        const anim = currentAnim();
+        const frameId = anim.frames[frameCursor % anim.frames.length];
+        const frame = atlas.frames[frameId].frame;
+        const scale = Number(scaleEl.value);
+
+        const dw = frame.w * scale;
+        const dh = frame.h * scale;
+        const dx = (canvas.width - dw) / 2;
+        const dy = canvas.height * 0.78 - dh + 8;
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(
+          atlasImg,
+          frame.x,
+          frame.y,
+          frame.w,
+          frame.h,
+          dx,
+          dy,
+          dw,
+          dh
+        );
+      }
+
+      function tick(ts) {
+        if (!lastTs) lastTs = ts;
+        const dt = (ts - lastTs) / 1000;
+        lastTs = ts;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawGround();
+
+        if (playing && atlas) {
+          const anim = currentAnim();
+          const fps = anim.fps * Number(speedEl.value);
+          frameTimer += dt;
+          const frameDur = 1 / Math.max(0.01, fps);
+          while (frameTimer >= frameDur) {
+            frameTimer -= frameDur;
+            frameCursor = (frameCursor + 1) % anim.frames.length;
+          }
+        }
+
+        if (atlas && atlasImg?.complete) {
+          drawPuppy();
+          setStats();
+        }
+
+        requestAnimationFrame(tick);
+      }
+
+      stateEl.addEventListener("change", () => {
+        activeState = stateEl.value;
+        frameCursor = 0;
+        frameTimer = 0;
+      });
+
+      toggleEl.addEventListener("click", () => {
+        playing = !playing;
+        toggleEl.textContent = playing ? "Pause" : "Play";
+      });
+
+      (async () => {
+        await loadAtlas();
+        setStats();
+        requestAnimationFrame(tick);
+      })().catch((err) => {
+        statsEl.textContent = `Failed to load atlas: ${err.message}`;
+      });
+    </script>
+  </body>
+</html>

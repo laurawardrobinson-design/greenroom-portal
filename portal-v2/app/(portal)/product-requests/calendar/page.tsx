@@ -379,7 +379,7 @@ export default function ProductRequestsCalendarPage() {
             <div className="px-3.5 py-3 space-y-2">
               <p className="text-[12px] text-text-tertiary">
                 Each department has a stable tamper-proof calendar URL. Share
-                once; new PRs appear as they&apos;re forwarded.
+                once; new PRs appear as they&apos;re sent.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {data.tokens.map((t) => (

@@ -1,17 +1,29 @@
 "use client";
 
 import { Menu } from "lucide-react";
+import type { UserRole } from "@/types/domain";
 import { NotificationBell } from "./notification-bell";
+import { UserMenu } from "./user-menu";
 
 interface TopbarProps {
   title?: string;
   onMenuClick: () => void;
+  userName: string;
+  userRole: UserRole;
+  userFavoriteProduct?: string;
   children?: React.ReactNode;
 }
 
-export function Topbar({ title, onMenuClick, children }: TopbarProps) {
+export function Topbar({
+  title,
+  onMenuClick,
+  userName,
+  userRole,
+  userFavoriteProduct,
+  children,
+}: TopbarProps) {
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-surface/95 px-4 backdrop-blur-sm lg:hidden">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-surface/95 px-4 backdrop-blur-sm">
       {/* Mobile menu button */}
       <button
         onClick={onMenuClick}
@@ -20,15 +32,20 @@ export function Topbar({ title, onMenuClick, children }: TopbarProps) {
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Page title */}
+      {/* Mobile page title */}
       {title && (
-        <h1 className="text-base font-semibold text-text-primary">{title}</h1>
+        <h1 className="text-base font-semibold text-text-primary lg:hidden">{title}</h1>
       )}
 
-      {/* Right section — actions, search, etc. */}
-      <div className="ml-auto flex items-center gap-2">
+      {/* Right section */}
+      <div className="ml-auto flex items-center gap-1">
         {children}
         <NotificationBell variant="topbar" />
+        <UserMenu
+          userName={userName}
+          userRole={userRole}
+          userFavoriteProduct={userFavoriteProduct}
+        />
       </div>
     </header>
   );

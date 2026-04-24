@@ -65,6 +65,7 @@ export async function POST(
             pcomLink: null,
             rpGuideUrl: null,
             imageUrl: null,
+            lifecyclePhase: "live",
           },
           user.id
         );

@@ -8,6 +8,7 @@ import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { TodayView } from "@/components/studio/today-view";
@@ -866,18 +867,19 @@ export default function StudioManagementPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-0">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-border">
-          <h1 className="text-2xl font-bold text-text-primary">{pageTitle}</h1>
-          {user.role === "Studio" && (
-            <Link href="/gear/scan">
-              <Button size="md" variant="secondary">
-                <QrCode className="h-4 w-4" />
-                Scan Gear
-              </Button>
-            </Link>
-          )}
-        </div>
+        <PageHeader
+          title={pageTitle}
+          actions={
+            user.role === "Studio" ? (
+              <Link href="/gear/scan">
+                <Button size="md" variant="secondary">
+                  <QrCode className="h-4 w-4" />
+                  Scan Gear
+                </Button>
+              </Link>
+            ) : undefined
+          }
+        />
 
         <PageTabs
           tabs={TABS.map(({ id, label, icon }) => ({ key: id, label, icon }))}

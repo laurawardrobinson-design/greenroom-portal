@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { PR_DEPARTMENTS } from "@/types/domain";
 import type {
   PRDoc,
   PRDeptSection,
@@ -13,6 +14,7 @@ import type {
   MasterCalendarView,
   Product,
   ProductDepartment,
+  ProductLifecyclePhase,
 } from "@/types/domain";
 
 // --- Mapping helpers ---
@@ -29,6 +31,8 @@ function toProduct(row: Record<string, unknown>): Product {
     pcomLink: (row.pcom_link as string) || null,
     rpGuideUrl: (row.rp_guide_url as string) || null,
     imageUrl: (row.image_url as string) || null,
+    lifecyclePhase:
+      ((row.lifecycle_phase as ProductLifecyclePhase) ?? "live") as ProductLifecyclePhase,
     createdBy: (row.created_by as string) || null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -40,6 +44,7 @@ function toItem(row: Record<string, unknown>): PRItem {
     id: row.id as string,
     sectionId: row.section_id as string,
     productId: (row.product_id as string) || null,
+    name: (row.name as string) || "",
     quantity: Number(row.quantity) || 1,
     size: (row.size as string) || "",
     specialInstructions: (row.special_instructions as string) || "",
@@ -48,6 +53,23 @@ function toItem(row: Record<string, unknown>): PRItem {
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
     product: row.products ? toProduct(row.products as Record<string, unknown>) : undefined,
+  };
+}
+
+function toItemLite(row: Record<string, unknown>): PRItem {
+  return {
+    id: row.id as string,
+    sectionId: row.section_id as string,
+    productId: (row.product_id as string) || null,
+    name: "",
+    quantity: Number(row.quantity) || 1,
+    size: "",
+    specialInstructions: "",
+    fromShotList: false,
+    sortOrder: Number(row.sort_order) || 0,
+    createdAt: (row.created_at as string) || "",
+    updatedAt: (row.updated_at as string) || "",
+    product: undefined,
   };
 }
 
@@ -103,8 +125,10 @@ function toDoc(
 export async function listPRDocs(opts?: {
   campaignId?: string;
   status?: PRDocStatus | PRDocStatus[];
+  detail?: "light" | "full";
 }): Promise<PRDoc[]> {
   const db = createAdminClient();
+  const detail = opts?.detail ?? "light";
   let q = db
     .from("product_request_docs")
     .select("*, campaigns(id, name, wf_number)")
@@ -138,14 +162,22 @@ export async function listPRDocs(opts?: {
 
   if (sectionIds.length === 0) return docs;
 
+  const itemSelect =
+    detail === "full"
+      ? "*, products(id, name, department, item_code, image_url)"
+      : "id, section_id, product_id, quantity, sort_order, created_at, updated_at";
   const { data: itemData, error: itemErr } = await db
     .from("product_request_items")
-    .select("*, products(id, name, department, item_code, image_url)")
+    .select(itemSelect)
     .in("section_id", sectionIds)
     .order("sort_order", { ascending: true });
   if (itemErr) throw itemErr;
 
-  const items = (itemData || []).map((r) => toItem(r as Record<string, unknown>));
+  const items = (itemData || []).map((r) =>
+    detail === "full"
+      ? toItem(r as Record<string, unknown>)
+      : toItemLite(r as Record<string, unknown>)
+  );
   const itemsBySection = new Map<string, PRItem[]>();
   for (const item of items) {
     if (!itemsBySection.has(item.sectionId)) itemsBySection.set(item.sectionId, []);
@@ -260,7 +292,7 @@ export async function createPRDoc(input: {
   if (error) throw error;
 
   const doc = toDoc(data as Record<string, unknown>, []);
-  await syncShotListProducts(doc.id, input.campaignId);
+  await syncShotListProducts(doc.id, input.campaignId, input.shootDate);
   return getPRDoc(doc.id);
 }
 
@@ -391,6 +423,7 @@ export async function addItem(
   sectionId: string,
   input: {
     productId?: string | null;
+    name?: string;
     quantity?: number;
     size?: string;
     specialInstructions?: string;
@@ -404,6 +437,7 @@ export async function addItem(
     .insert({
       section_id: sectionId,
       product_id: input.productId ?? null,
+      name: input.name ?? "",
       quantity: input.quantity ?? 1,
       size: input.size ?? "",
       special_instructions: input.specialInstructions ?? "",
@@ -459,7 +493,8 @@ export async function deleteItem(itemId: string): Promise<void> {
 
 export async function syncShotListProducts(
   docId: string,
-  campaignId: string
+  campaignId: string,
+  defaultDateNeeded?: string | null
 ): Promise<void> {
   const db = createAdminClient();
 
@@ -481,30 +516,45 @@ export async function syncShotListProducts(
     seen.add(product.id);
 
     const dept = product.department;
-    if (!["Bakery", "Produce", "Deli", "Meat-Seafood", "Grocery"].includes(dept)) continue;
+    if (!PR_DEPARTMENTS.includes(dept as PRDepartment)) continue;
 
     if (!productsByDept.has(dept)) productsByDept.set(dept, []);
     productsByDept.get(dept)!.push(product);
   }
 
-  if (productsByDept.size === 0) return;
-
-  // Find products already in this doc to avoid duplication
+  // Find sections/items already present in this doc to avoid duplication.
   const { data: existingSections } = await db
     .from("product_request_dept_sections")
     .select("department, product_request_items(product_id)")
     .eq("doc_id", docId);
 
   const existingByDept = new Map<string, Set<string>>();
+  const existingDepts = new Set<string>();
   for (const s of existingSections || []) {
     const sec = s as Record<string, unknown>;
     const dept = sec.department as string;
     const items = (sec.product_request_items as { product_id: string }[]) || [];
+    existingDepts.add(dept);
     existingByDept.set(dept, new Set(items.map((i) => i.product_id)));
   }
 
+  // Always ensure all department sections exist. Prefill shoot date only
+  // when the department section is being created for the first time.
+  const sectionByDept = new Map<PRDepartment, PRDeptSection>();
+  for (const dept of PR_DEPARTMENTS) {
+    const section = await upsertSection(
+      docId,
+      dept,
+      existingDepts.has(dept) ? {} : { dateNeeded: defaultDateNeeded ?? null }
+    );
+    sectionByDept.set(dept, section);
+  }
+
+  if (productsByDept.size === 0) return;
+
   for (const [dept, products] of productsByDept) {
-    const section = await upsertSection(docId, dept as PRDepartment, {});
+    const section = sectionByDept.get(dept as PRDepartment);
+    if (!section) continue;
     const alreadyPresent = existingByDept.get(dept) || new Set<string>();
 
     for (let i = 0; i < products.length; i++) {

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Puppy Reference Index</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card: #111827;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --border: #334155;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      .wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px 0;
+      }
+      p {
+        margin: 0 0 16px 0;
+        color: var(--muted);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .card img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .card .meta {
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+      .small-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .small-grid img {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+      code {
+        color: #facc15;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>Puppy Reference Index</h1>
+      <p>
+        Source screenshots copied to <code>references/source_screens</code>. Pose extraction generated with
+        <code>scripts/extract_pose_grids.py</code>.
+      </p>
+
+      <h2>Reference Sheets</h2>
+      <div class="grid">
+        <div class="card">
+          <img src="../references/source_screens/ref-01.png" alt="ref-01" />
+          <div class="meta">ref-01 (Puppy 01 master)</div>
+        </div>
+        <div class="card">
+          <img src="../references/source_screens/ref-02.png" alt="ref-02" />
+          <div class="meta">ref-02</div>
+        </div>
+        <div class="card">
+          <img src="../references/source_screens/ref-03.png" alt="ref-03" />
+          <div class="meta">ref-03</div>
+        </div>
+        <div class="card">
+          <img src="../references/source_screens/ref-04.png" alt="ref-04" />
+          <div class="meta">ref-04</div>
+        </div>
+        <div class="card">
+          <img src="../references/source_screens/ref-05.png" alt="ref-05" />
+          <div class="meta">ref-05</div>
+        </div>
+        <div class="card">
+          <img src="../references/source_screens/ref-08.png" alt="ref-08" />
+          <div class="meta">ref-08</div>
+        </div>
+      </div>
+
+      <h2 style="margin-top: 24px">Puppy 01 Pose Cells (Extracted)</h2>
+      <div class="small-grid">
+        <img src="../references/pose_grids/ref-01/pose-r1c1.png" alt="r1c1" />
+        <img src="../references/pose_grids/ref-01/pose-r1c2.png" alt="r1c2" />
+        <img src="../references/pose_grids/ref-01/pose-r1c3.png" alt="r1c3" />
+        <img src="../references/pose_grids/ref-01/pose-r2c1.png" alt="r2c1" />
+        <img src="../references/pose_grids/ref-01/pose-r2c2.png" alt="r2c2" />
+        <img src="../references/pose_grids/ref-01/pose-r2c3.png" alt="r2c3" />
+        <img src="../references/pose_grids/ref-01/pose-r3c1.png" alt="r3c1" />
+        <img src="../references/pose_grids/ref-01/pose-r3c2.png" alt="r3c2" />
+        <img src="../references/pose_grids/ref-01/pose-r3c3.png" alt="r3c3" />
+      </div>
+    </main>
+  </body>
+</html>

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { EditRoomCalendar } from "@/components/post-workflow/edit-room-calendar";
 import { DriveInventory } from "@/components/post-workflow/drive-inventory";
 import { Clapperboard, HardDrive } from "lucide-react";
@@ -53,10 +54,7 @@ export default function PostWorkflowPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-0">
-        {/* Page header */}
-        <div className="pb-4 border-b border-border">
-          <h1 className="text-2xl font-bold text-text-primary">Post Production</h1>
-        </div>
+        <PageHeader title="Post Production" />
 
         <PageTabs
           tabs={TABS.map(({ id, label, icon }) => ({ key: id, label, icon }))}

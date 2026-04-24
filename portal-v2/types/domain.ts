@@ -622,6 +622,19 @@ export type ProductDepartment =
   | "Grocery"
   | "Other";
 
+export type ProductLifecyclePhase =
+  | "planning"
+  | "coming_soon"
+  | "live"
+  | "discontinued";
+
+export const PRODUCT_LIFECYCLE_PHASES: ProductLifecyclePhase[] = [
+  "planning",
+  "coming_soon",
+  "live",
+  "discontinued",
+];
+
 export interface Product {
   id: string;
   name: string;
@@ -633,6 +646,7 @@ export interface Product {
   pcomLink: string | null;
   rpGuideUrl: string | null;
   imageUrl: string | null;
+  lifecyclePhase: ProductLifecyclePhase;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1805,8 +1819,8 @@ export type PRDepartment = "Bakery" | "Produce" | "Deli" | "Meat-Seafood" | "Gro
 
 export const PR_DEPARTMENTS: PRDepartment[] = [
   "Bakery",
-  "Produce",
   "Deli",
+  "Produce",
   "Meat-Seafood",
   "Grocery",
 ];
@@ -1823,6 +1837,7 @@ export interface PRItem {
   id: string;
   sectionId: string;
   productId: string | null;
+  name: string;
   quantity: number;
   size: string;
   specialInstructions: string;
@@ -1880,7 +1895,7 @@ export interface PREvent {
 export const PR_STATUS_LABELS: Record<PRDocStatus, string> = {
   draft: "Draft",
   submitted: "Submitted",
-  forwarded: "Forwarded to RBU",
+  forwarded: "Sent",
   fulfilled: "Fulfilled",
   cancelled: "Cancelled",
 };

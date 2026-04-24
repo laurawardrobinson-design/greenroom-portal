@@ -28,7 +28,7 @@ export function RailInProgressRequests() {
   const { data, mutate } = useSWR<PRDoc[]>(
     "/api/product-requests?status=draft",
     fetcher,
-    { refreshInterval: 30000 }
+    { refreshInterval: 60000 }
   );
   const items = (data ?? []).slice(0, 5);
 

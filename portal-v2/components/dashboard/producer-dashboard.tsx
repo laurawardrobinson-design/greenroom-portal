@@ -31,6 +31,7 @@ import {
 import type { AppUser, CampaignStatus } from "@/types/domain";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/loading-skeleton";
 import { CampaignStatusBadge } from "@/components/campaigns/campaign-status-badge";
 import { HighlightsCard } from "@/components/dashboard/highlights-card";
@@ -102,44 +103,25 @@ interface InfoCardProps {
   icon: ReactNode;
   label: string;
   count: number | undefined;
-  accentBorder: string;
-  colorText: string;
-  colorBg: string;
   children: ReactNode;
 }
 
-function InfoCard({
-  icon,
-  label,
-  count,
-  accentBorder,
-  colorText,
-  colorBg,
-  children,
-}: InfoCardProps) {
+function InfoCard({ icon, label, count, children }: InfoCardProps) {
   return (
-    <Card padding="none" className={`overflow-hidden border-l-[3px] ${accentBorder}`}>
-      <div className="flex items-center gap-3 px-4 py-3">
-        <div
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${colorBg} ${colorText}`}
-        >
+    <Card padding="none" className="overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center text-primary [&>svg]:h-4 [&>svg]:w-4">
           {icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">{label}</p>
-        </div>
-        <div className="text-lg font-semibold text-text-primary">
-          {count === undefined ? (
-            <Skeleton className="h-5 w-8" />
-          ) : (
-            count
-          )}
-        </div>
+        </span>
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+          {label}
+        </h3>
+        <span className="ml-auto text-sm font-semibold text-text-primary tabular-nums">
+          {count === undefined ? <Skeleton className="h-4 w-6" /> : count}
+        </span>
       </div>
       {count !== undefined && count > 0 && (
-        <div className="max-h-56 overflow-y-auto border-t border-border">
-          {children}
-        </div>
+        <div className="max-h-56 overflow-y-auto">{children}</div>
       )}
     </Card>
   );
@@ -262,54 +244,56 @@ export function ProducerDashboard({ user }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">
-            Welcome back, {user.name.split(" ")[0]}
-          </h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex rounded-lg border border-border bg-surface-secondary p-0.5">
-            <button
-              onClick={() => setScope("mine")}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                scope === "mine"
-                  ? "bg-surface text-text-primary shadow-sm"
-                  : "text-text-tertiary hover:text-text-secondary"
-              }`}
-            >
-              My Work
-            </button>
-            <button
-              onClick={() => setScope("all")}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                scope === "all"
-                  ? "bg-surface text-text-primary shadow-sm"
-                  : "text-text-tertiary hover:text-text-secondary"
-              }`}
-            >
-              Team
-            </button>
-          </div>
-          <Link href="/campaigns/new">
-            <Button size="md">
-              <Plus className="h-4 w-4" />
-              New Campaign
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title={`Welcome back, ${user.name.split(" ")[0]}`}
+        actions={
+          <>
+            <div className="flex rounded-lg border border-border bg-surface-secondary p-0.5">
+              <button
+                onClick={() => setScope("mine")}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  scope === "mine"
+                    ? "bg-surface text-text-primary shadow-sm"
+                    : "text-text-tertiary hover:text-text-secondary"
+                }`}
+              >
+                My Work
+              </button>
+              <button
+                onClick={() => setScope("all")}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  scope === "all"
+                    ? "bg-surface text-text-primary shadow-sm"
+                    : "text-text-tertiary hover:text-text-secondary"
+                }`}
+              >
+                Team
+              </button>
+            </div>
+            <Link href="/campaigns/new">
+              <Button size="md">
+                <Plus className="h-4 w-4" />
+                New Campaign
+              </Button>
+            </Link>
+          </>
+        }
+      />
 
       {/* Main grid: calendar + stats */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-10">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
 
         {/* ── Calendar ── */}
-        <Card padding="none" className="lg:col-span-7">
+        <Card padding="none" className="lg:col-span-2">
 
           {/* Month nav header */}
-          <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
-            <h3 className="text-sm font-semibold text-text-primary">Shoot Calendar</h3>
+          <div className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2.5">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 shrink-0 text-primary" />
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+                Shoot Calendar
+              </h3>
+            </div>
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
@@ -494,7 +478,7 @@ export function ProducerDashboard({ user }: Props) {
       )}
 
         {/* ── Highlights ── */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-1">
           <HighlightsCard />
         </div>
       </div>
@@ -506,9 +490,6 @@ export function ProducerDashboard({ user }: Props) {
           icon={<Film className="h-4 w-4" />}
           label="Active Campaigns"
           count={stats?.activeCampaigns}
-          accentBorder="border-l-blue-500"
-          colorText="text-blue-600"
-          colorBg="bg-blue-50"
         >
           {stats?.activeCampaignsList?.map((c) => (
             <Link
@@ -529,9 +510,6 @@ export function ProducerDashboard({ user }: Props) {
           icon={<ClipboardCheck className="h-4 w-4" />}
           label="Pending Tasks"
           count={stats?.pendingTasks}
-          accentBorder="border-l-amber-500"
-          colorText="text-warning"
-          colorBg="bg-amber-50"
         >
           {stats?.pendingTasksList?.map((t) => (
             <Link
@@ -555,9 +533,6 @@ export function ProducerDashboard({ user }: Props) {
           icon={<Calendar className="h-4 w-4" />}
           label="Upcoming Shoots"
           count={stats?.shootsThisWeek}
-          accentBorder="border-l-purple-500"
-          colorText="text-purple-600"
-          colorBg="bg-purple-50"
         >
           {stats?.shootsThisWeekList?.map((s) => (
             <Link

@@ -1,0 +1,326 @@
+{
+  "meta": {
+    "name": "puppy01",
+    "version": "v3",
+    "image": "preview/puppy01-atlas.png",
+    "generatedBy": "scripts/build_puppy01_atlas.py",
+    "cellSize": {
+      "w": 374,
+      "h": 356
+    },
+    "atlasSize": {
+      "w": 2300,
+      "h": 1100
+    },
+    "padding": 8
+  },
+  "frames": {
+    "r1c1": {
+      "frame": {
+        "x": 8,
+        "y": 26,
+        "w": 374,
+        "h": 320
+      },
+      "cell": {
+        "x": 8,
+        "y": 8,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-v1-transparent/puppy01-r1c1.png"
+    },
+    "r1c2": {
+      "frame": {
+        "x": 465,
+        "y": 19,
+        "w": 223,
+        "h": 333
+      },
+      "cell": {
+        "x": 390,
+        "y": 8,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-v1-transparent/puppy01-r1c2.png"
+    },
+    "r1c3": {
+      "frame": {
+        "x": 838,
+        "y": 17,
+        "w": 241,
+        "h": 337
+      },
+      "cell": {
+        "x": 772,
+        "y": 8,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-v1-transparent/puppy01-r1c3.png"
+    },
+    "r2c1": {
+      "frame": {
+        "x": 1162,
+        "y": 90,
+        "w": 358,
+        "h": 192
+      },
+      "cell": {
+        "x": 1154,
+        "y": 8,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-v1-transparent/puppy01-r2c1.png"
+    },
+    "r2c2": {
+      "frame": {
+        "x": 1612,
+        "y": 8,
+        "w": 222,
+        "h": 356
+      },
+      "cell": {
+        "x": 1536,
+        "y": 8,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-v1-transparent/puppy01-r2c2.png"
+    },
+    "r2c3": {
+      "frame": {
+        "x": 1937,
+        "y": 46,
+        "w": 335,
+        "h": 279
+      },
+      "cell": {
+        "x": 1918,
+        "y": 8,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-v1-transparent/puppy01-r2c3.png"
+    },
+    "r3c1": {
+      "frame": {
+        "x": 19,
+        "y": 410,
+        "w": 352,
+        "h": 280
+      },
+      "cell": {
+        "x": 8,
+        "y": 372,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-v1-transparent/puppy01-r3c1.png"
+    },
+    "r3c2": {
+      "frame": {
+        "x": 441,
+        "y": 419,
+        "w": 272,
+        "h": 262
+      },
+      "cell": {
+        "x": 390,
+        "y": 372,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-v1-transparent/puppy01-r3c2.png"
+    },
+    "r3c3": {
+      "frame": {
+        "x": 785,
+        "y": 413,
+        "w": 347,
+        "h": 273
+      },
+      "cell": {
+        "x": 772,
+        "y": 372,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-v1-transparent/puppy01-r3c3.png"
+    },
+    "walk00": {
+      "frame": {
+        "x": 1154,
+        "y": 390,
+        "w": 374,
+        "h": 320
+      },
+      "cell": {
+        "x": 1154,
+        "y": 372,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-walk-v2/walk-00.png"
+    },
+    "walk01": {
+      "frame": {
+        "x": 1536,
+        "y": 390,
+        "w": 374,
+        "h": 320
+      },
+      "cell": {
+        "x": 1536,
+        "y": 372,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-walk-v2/walk-01.png"
+    },
+    "walk02": {
+      "frame": {
+        "x": 1918,
+        "y": 390,
+        "w": 374,
+        "h": 320
+      },
+      "cell": {
+        "x": 1918,
+        "y": 372,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-walk-v2/walk-02.png"
+    },
+    "walk03": {
+      "frame": {
+        "x": 8,
+        "y": 754,
+        "w": 374,
+        "h": 320
+      },
+      "cell": {
+        "x": 8,
+        "y": 736,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-walk-v2/walk-03.png"
+    },
+    "walk04": {
+      "frame": {
+        "x": 390,
+        "y": 754,
+        "w": 374,
+        "h": 320
+      },
+      "cell": {
+        "x": 390,
+        "y": 736,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-walk-v2/walk-04.png"
+    },
+    "walk05": {
+      "frame": {
+        "x": 772,
+        "y": 754,
+        "w": 374,
+        "h": 320
+      },
+      "cell": {
+        "x": 772,
+        "y": 736,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-walk-v2/walk-05.png"
+    },
+    "walk06": {
+      "frame": {
+        "x": 1154,
+        "y": 754,
+        "w": 374,
+        "h": 320
+      },
+      "cell": {
+        "x": 1154,
+        "y": 736,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-walk-v2/walk-06.png"
+    },
+    "walk07": {
+      "frame": {
+        "x": 1536,
+        "y": 754,
+        "w": 374,
+        "h": 320
+      },
+      "cell": {
+        "x": 1536,
+        "y": 736,
+        "w": 374,
+        "h": 356
+      },
+      "source": "preview/puppy01-walk-v2/walk-07.png"
+    }
+  },
+  "animations": {
+    "idle": {
+      "frames": [
+        "r1c1",
+        "r1c1",
+        "walk00",
+        "r1c1"
+      ],
+      "fps": 4,
+      "loop": true,
+      "notes": "Light idle hold with tiny movement from walk frame 00."
+    },
+    "walk": {
+      "frames": [
+        "walk00",
+        "walk01",
+        "walk02",
+        "walk03",
+        "walk04",
+        "walk05",
+        "walk06",
+        "walk07"
+      ],
+      "fps": 12,
+      "loop": true,
+      "notes": "Walk cycle generated from user-provided 16-frame reference sheet."
+    },
+    "run": {
+      "frames": [
+        "r2c3",
+        "walk01",
+        "walk03",
+        "walk05",
+        "walk07",
+        "r2c3"
+      ],
+      "fps": 13,
+      "loop": true,
+      "notes": "Provisional run cadence using selected walk extremes."
+    }
+  },
+  "poseMap": {
+    "r1c1": "side_stand",
+    "r1c2": "scratch",
+    "r1c3": "back_view",
+    "r2c1": "lying_down",
+    "r2c2": "front_yawn",
+    "r2c3": "run_leap",
+    "r3c1": "angry_step",
+    "r3c2": "eat_bowl",
+    "r3c3": "stretch"
+  }
+}

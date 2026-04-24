@@ -5,7 +5,7 @@ import type { Campaign, CampaignStatus } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
-import { Trash2, X, Check } from "lucide-react";
+import { Trash2, X, Check, Mail } from "lucide-react";
 import { CopyButton } from "./copy-button";
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   canEdit: boolean;
   canDelete: boolean;
   onStatusChange: (status: CampaignStatus) => void;
+  onDraftEmail?: () => void;
   onDelete: () => void;
   deleting: boolean;
   onUpdate: (field: string, value: string | number | null) => void;
@@ -23,6 +24,7 @@ export function CampaignDetailHeader({
   canEdit,
   canDelete,
   onStatusChange,
+  onDraftEmail,
   onDelete,
   deleting,
   onUpdate,
@@ -136,7 +138,9 @@ export function CampaignDetailHeader({
       {/* Page header with breadcrumb and title */}
       <PageHeader
         breadcrumb="Campaigns"
+        hideBreadcrumbLabel
         breadcrumbHref="/campaigns"
+        showDivider={false}
         title={
           editingField === "name" ? (
             <div className="space-y-2">
@@ -175,29 +179,40 @@ export function CampaignDetailHeader({
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-start gap-2">
               <h1
-                className={`text-2xl font-bold text-text-primary break-words ${canEdit && !isCancelled ? "cursor-pointer hover:text-primary/80 transition-colors" : ""}`}
+                className={`break-words text-2xl font-bold text-text-primary ${canEdit && !isCancelled ? "cursor-pointer transition-colors hover:text-primary/80" : ""}`}
                 onClick={() => canEdit && !isCancelled && startEdit("name", title)}
               >
                 {title}
               </h1>
-              <CopyButton value={title} />
+              <div className="flex shrink-0 items-center gap-1">
+                <CopyButton value={title} />
+                {onDraftEmail && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onDraftEmail}
+                    title="Draft Email"
+                    className="text-text-tertiary hover:text-text-primary"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    title="Delete campaign"
+                    className="text-text-tertiary hover:text-error"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
             </div>
           )
-        }
-        actions={
-          !editingField && canDelete ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDeleteConfirm(true)}
-              title="Delete campaign"
-              className="text-text-tertiary hover:text-error"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          ) : undefined
         }
       />
 

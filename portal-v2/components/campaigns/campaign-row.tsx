@@ -197,7 +197,7 @@ export function CampaignRow({ campaign, onMutate, hideFinancials, readOnly }: Pr
       </div>
 
       {/* Status */}
-      <div className="w-24 shrink-0" onClick={(e) => e.stopPropagation()}>
+      <div className="w-20 shrink-0" onClick={(e) => e.stopPropagation()}>
         <CampaignStatusBadge status={campaign.status} />
       </div>
 

@@ -22,15 +22,12 @@ import { LinkGearDrawer } from "@/components/campaigns/link-gear-drawer";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { PeopleTile } from "@/components/campaigns/tiles/people-tile";
 import { BudgetSidebarTile } from "@/components/campaigns/tiles/budget-sidebar-tile";
-import { CopySectionTile } from "@/components/campaigns/tiles/copy-section-tile";
-import { DeliverableTemplatesTile } from "@/components/campaigns/tiles/deliverable-templates-tile";
-import { CreativeTeamTile } from "@/components/campaigns/tiles/creative-team-tile";
 import { CampaignSectionTabs } from "@/components/campaigns/campaign-section-tabs";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { ShoppingBasket, Wrench, Plus, DollarSign, Mail, Bell, AlertCircle, Calendar, X, FolderSync } from "lucide-react";
+import { ShoppingBasket, Wrench, Plus, DollarSign, Bell, AlertCircle, Calendar, X } from "lucide-react";
 import { ShotListModal } from "@/components/campaigns/shot-list-modal";
 import useSWR from "swr";
 import type { AppUser } from "@/types/domain";
@@ -292,6 +289,10 @@ export default function CampaignDetailPage({
   const allDates = shoots.flatMap((s) =>
     s.dates.map((d) => ({ ...d, shootName: s.name, shootType: s.shootType }))
   );
+  const assetsDueDate = campaign.assetsDeliveryDate ? parseISO(campaign.assetsDeliveryDate) : null;
+  const assetsDueLabel = assetsDueDate
+    ? format(assetsDueDate, "MMM d, yyyy").toUpperCase()
+    : "Set Date";
 
   return (
     <div className="space-y-2 -mt-3">
@@ -300,71 +301,65 @@ export default function CampaignDetailPage({
         canEdit={canEdit}
         canDelete={canDelete}
         onStatusChange={handleStatusChange}
+        onDraftEmail={() => setShowDraftEmail(true)}
         onDelete={handleDelete}
         deleting={deleting}
         onUpdate={handleUpdate}
       />
 
-      {/* Section tab nav — Brief / Asset Studio / Pre-Production all live behind tabs */}
-      {!isVendor && <CampaignSectionTabs campaignId={id} />}
-
-      {/* Top-right actions */}
-      <div className="flex items-start gap-4">
-        <div className="flex-1" />
-
-        {/* Status + Assets Due — top right */}
-        <div className="shrink-0 space-y-2 pt-1">
-          {/* Row 1: Planning + Mail — aligned with WF number */}
-          <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+        {/* Top-right actions collapse first on mobile, then align right on desktop */}
+        <div className="order-1 flex w-full flex-wrap items-center gap-2 md:order-2 md:ml-auto md:w-auto md:justify-end md:shrink-0">
+          <div className="min-w-[9.5rem] grow md:min-w-0 md:grow-0">
             <StatusDropdown
               status={campaign.status}
               onStatusChange={canEdit && campaign.status !== "Cancelled" ? handleStatusChange : undefined}
               disabled={!canEdit || campaign.status === "Cancelled"}
             />
+          </div>
+          {(showFinancials || campaign.assetsDeliveryDate) && (
             <button
               type="button"
-              onClick={() => setShowDraftEmail(true)}
-              title="Draft Email"
-              className="flex items-center justify-center rounded-lg border border-border p-1.5 text-text-secondary hover:bg-surface-secondary hover:text-text-primary transition-colors shrink-0"
-            >
-              <Mail className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          {/* Row 2: Assets Due — stacked label + big date */}
-          {(showFinancials || campaign.assetsDeliveryDate) && (
-            <div
-              className={`relative text-right ${canEdit ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+              className={`relative inline-flex min-h-9 flex-1 items-center gap-2 rounded-lg border border-border px-2.5 py-1.5 text-xs transition-colors md:min-h-0 md:flex-none ${
+                canEdit ? "cursor-pointer hover:bg-surface-secondary" : ""
+              }`}
               onClick={() => canEdit && assetsDueDateRef.current?.showPicker()}
+              title={campaign.assetsDeliveryDate ? "Assets due date" : "Set assets due date"}
             >
-              <div className="flex items-center justify-end gap-1.5">
-                <Calendar className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-primary">Assets Due</span>
-              </div>
-              {campaign.assetsDeliveryDate && (
-                <p className="text-lg font-bold text-primary tracking-wide mt-0.5">
-                  {format(parseISO(campaign.assetsDeliveryDate), "MMM d, yyyy").toUpperCase()}
-                </p>
-              )}
+              <Calendar className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span className="flex min-w-0 flex-col leading-tight">
+                <span className="font-semibold uppercase tracking-wider text-primary">Assets Due</span>
+                <span className="truncate font-semibold text-text-primary">
+                  {assetsDueLabel}
+                </span>
+              </span>
               {canEdit && (
                 <input
                   ref={assetsDueDateRef}
                   type="date"
                   value={campaign.assetsDeliveryDate ?? ""}
                   onChange={(e) => handleUpdate("assetsDeliveryDate", e.target.value || null)}
-                  className="absolute inset-0 opacity-0 pointer-events-none w-0"
+                  className="pointer-events-none absolute inset-0 w-0 opacity-0"
                 />
               )}
-            </div>
+            </button>
           )}
         </div>
+
+        {/* Section tab nav — Brief / Asset Studio / Pre-Production all live behind tabs */}
+        {!isVendor && (
+          <div className="order-2 min-w-0 w-full md:order-1 md:flex-1">
+            <CampaignSectionTabs campaignId={id} showDivider={false} />
+          </div>
+        )}
       </div>
 
       {/* === ROW 1: Calendar + Shoot Days | Documents | Budget === */}
-      <div className={`grid grid-cols-1 gap-4 items-stretch ${isVendor ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+      <div className={`grid grid-cols-1 items-stretch gap-4 ${isVendor ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
 
         {/* Calendar + Shoot Days */}
-        <div className="lg:col-span-2 flex flex-col">
-          <div className="flex gap-4 flex-1">
+        <div className="lg:col-span-2">
+          <div className="flex items-stretch gap-4">
             <div className="shrink-0">
               <ProductionCalendarTile
                 shoots={shoots}
@@ -402,7 +397,7 @@ export default function CampaignDetailPage({
         />
 
         {/* Budget / Inventory (vendors see inventory here instead) */}
-        <div className={`h-full ${isVendor ? "lg:col-span-2" : ""}`}>
+        <div className={isVendor ? "lg:col-span-2" : ""}>
           {showFinancials && (
             <CollapsibleSection
               id={`campaign-${id}-budget-sidebar`}
@@ -449,29 +444,6 @@ export default function CampaignDetailPage({
         onMutate={mutate}
         onViewFullList={isVendor ? () => setShowShotListModal(true) : undefined}
       />
-
-      {/* === COPY (collapsed by default; tabs: Campaign | Per Deliverable) === */}
-      {!isVendor && (
-        <CopySectionTile
-          campaign={campaign}
-          deliverables={deliverables}
-          canEdit={canEdit}
-          onUpdate={async (field, value) => { await handleUpdate(field, value); }}
-          onMutate={mutate}
-        />
-      )}
-
-      {/* === DELIVERABLE TEMPLATES PROGRESS === */}
-      {!isVendor && <DeliverableTemplatesTile campaignId={id} />}
-
-      {/* === CREATIVE TEAM (designer + AD + viewers for versioning) === */}
-      {!isVendor && user?.role !== "Brand Marketing Manager" && (
-        <CreativeTeamTile
-          campaignId={id}
-          canEdit={canEdit}
-          allUsers={allUsers}
-        />
-      )}
 
       {/* === ROW 2: People | Inventory === */}
       <div className={`grid grid-cols-1 gap-4 items-stretch ${isVendor ? "" : "lg:grid-cols-2"}`}>

@@ -86,7 +86,7 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-3.5 py-3">
         {tab === "products" && (
-          <div className="space-y-1.5">
+          <div className="mx-auto w-full max-w-2xl space-y-1.5">
             {campaignProducts.length === 0 ? (
               <p className="text-sm text-text-tertiary py-1">No products added.</p>
             ) : (

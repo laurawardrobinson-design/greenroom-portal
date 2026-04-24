@@ -8,10 +8,10 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { useCampaign } from "@/hooks/use-campaigns";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { PageTabs } from "@/components/ui/page-tabs";
 import { Card } from "@/components/ui/card";
 import {
-  ArrowLeft,
   LayoutGrid,
   PlayCircle,
   Images,
@@ -84,38 +84,24 @@ export default function CampaignAssetStudioPage({
   }
 
   return (
-    <div className="space-y-4 -mt-3">
-      {/* Breadcrumb + title */}
-      <div>
-        <Link
-          href={`/campaigns/${campaignId}`}
-          className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider text-text-tertiary hover:text-text-secondary"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          Back to campaign
-        </Link>
-        <div className="mt-1 flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-text-primary">
-            {campaign.wfNumber ? `${campaign.wfNumber} · ` : ""}
-            {campaign.name}
-          </h1>
-          <span className="text-sm text-text-tertiary">Asset Studio</span>
-        </div>
-      </div>
+    <div className="space-y-0">
+      <PageHeader title={`${campaign.wfNumber ? `${campaign.wfNumber} · ` : ""}${campaign.name}`} showDivider={false} />
 
-      {/* Tabs */}
       <PageTabs
-        tabs={TABS.map((t) => ({ key: t.id, label: t.label, icon: t.icon }))}
+        ariaLabel="Asset Studio sections"
+        tabs={TABS.map(({ id, label, icon }) => ({ key: id, label, icon }))}
         activeTab={activeTab}
-        onTabChange={(id) => switchTab(id as Tab)}
+        onTabChange={(key) => switchTab(key as Tab)}
       />
 
-      {activeTab === "overview" && (
-        <CampaignOverview campaignId={campaignId} campaign={campaign} user={user} />
-      )}
-      {activeTab === "dam" && <DamTab user={user} lockedCampaignId={campaignId} />}
-      {activeTab === "runs" && <RunsTab user={user} campaignId={campaignId} />}
-      {activeTab === "variants" && <VariantsTab user={user} campaignId={campaignId} />}
+      <div className="pt-[var(--density-preprod-content-pt)]">
+        {activeTab === "overview" && (
+          <CampaignOverview campaignId={campaignId} campaign={campaign} user={user} />
+        )}
+        {activeTab === "dam" && <DamTab user={user} lockedCampaignId={campaignId} />}
+        {activeTab === "runs" && <RunsTab user={user} campaignId={campaignId} />}
+        {activeTab === "variants" && <VariantsTab user={user} campaignId={campaignId} />}
+      </div>
     </div>
   );
 }
@@ -227,4 +213,3 @@ function TeamRow({ label, name }: { label: string; name: string | null }) {
     </div>
   );
 }
-

@@ -28,7 +28,7 @@ export function RailFormalRequests() {
   const { data, mutate } = useSWR<PRDoc[]>(
     "/api/product-requests?status=submitted,forwarded",
     fetcher,
-    { refreshInterval: 30000 }
+    { refreshInterval: 60000 }
   );
   const items = (data ?? []).filter((d) => d.status === "submitted").slice(0, 5);
 
