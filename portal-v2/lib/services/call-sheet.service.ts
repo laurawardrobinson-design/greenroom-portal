@@ -1,5 +1,559 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { CallSheetData, CallSheetCrewEntry } from "@/types/domain";
+import type {
+  CallSheetData,
+  CallSheetCrewEntry,
+  CallSheetContent,
+  CallSheetRow,
+  CallSheetVersion,
+  CallSheetCrewRow,
+  CallSheetTalentRow,
+  CallSheetLocationRow,
+} from "@/types/domain";
+import { randomBytes } from "crypto";
+
+// ============================================================
+// Persistence (Wave 1 — migration 094)
+// ============================================================
+
+const DEFAULT_SAFETY_REMINDERS =
+  "Safety Reminders:\n" +
+  "Always wear closed toe shoes.\n" +
+  "Dress for EXT or INT shoots with safety in mind.\n" +
+  "Review call sheets for safety information.\n" +
+  "Know where the first aid kit is located (ask the producer).\n" +
+  "Be mindful of common production hazards:\n" +
+  "  Tripping (wires, cables, boxes)\n" +
+  "  Falling Objects (lighting, flags, stands)\n" +
+  "  Electrical (breakout boxes and high voltage cabling)\n" +
+  "  Vehicles\n" +
+  "  Water";
+
+const DEFAULT_ALLERGEN_BULLETIN =
+  "Food Safety Reminder:\n" +
+  "Declare all allergens in the morning safety meeting (nuts, dairy, gluten, shellfish, eggs, soy).\n" +
+  "Keep raw and cooked surfaces separated.\n" +
+  "Wash hands between handling product.\n" +
+  "Any dietary restrictions — flag to the food stylist before call.";
+
+export function emptyCallSheetContent(): CallSheetContent {
+  return {
+    companyName: "Publix Corporate",
+    companyAddress: "3300 Publix Corporate Pkwy\nLakeland, FL 33811\n863-688-1188",
+    location: "",
+    parkingDirections: "",
+    generalCallTime: "",
+    shootingCallTime: "",
+    breakfastTime: "",
+    lunchTime: "",
+    lunchVenue: "",
+    estimatedWrap: "",
+    companyMoves: "",
+    walkieChannels: "",
+    weatherNotes: "",
+    weatherCachedAt: null,
+    sunrise: "",
+    sunset: "",
+    goldenHour: "",
+    emergencyHospital: "",
+    emergencyAddress: "",
+    emergencyPhone: "",
+    urgentCareName: "",
+    urgentCarePhone: "",
+    policeNonEmergencyPhone: "",
+    onSetMedic: "",
+    allergenBulletin: DEFAULT_ALLERGEN_BULLETIN,
+    safetyReminders: DEFAULT_SAFETY_REMINDERS,
+    crew: [],
+    talent: [],
+    locations: [],
+    specialInstructions: "",
+    producer: null,
+  };
+}
+
+function rowToCallSheet(
+  row: Record<string, unknown>,
+  currentVNumber: number | null = null
+): CallSheetRow {
+  const content = (row.content_draft as CallSheetContent) || emptyCallSheetContent();
+  return {
+    id: row.id as string,
+    campaignId: row.campaign_id as string,
+    shootDateId: (row.shoot_date_id as string | null) ?? null,
+    shootDate: row.shoot_date as string,
+    status: row.status as CallSheetRow["status"],
+    contentDraft: { ...emptyCallSheetContent(), ...content },
+    currentVersionId: (row.current_version_id as string | null) ?? null,
+    currentVNumber,
+    createdBy: (row.created_by as string | null) ?? null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
+async function fetchCurrentVNumber(
+  currentVersionId: string | null,
+  db: AdminClient
+): Promise<number | null> {
+  if (!currentVersionId) return null;
+  const { data } = await db
+    .from("call_sheet_versions")
+    .select("v_number")
+    .eq("id", currentVersionId)
+    .maybeSingle();
+  return (data as { v_number?: number } | null)?.v_number ?? null;
+}
+
+function rowToVersion(row: Record<string, unknown>): CallSheetVersion {
+  return {
+    id: row.id as string,
+    callSheetId: row.call_sheet_id as string,
+    vNumber: row.v_number as number,
+    payload: row.payload as CallSheetContent,
+    publishedBy: (row.published_by as string | null) ?? null,
+    publishedAt: row.published_at as string,
+    supersededAt: (row.superseded_at as string | null) ?? null,
+  };
+}
+
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+// Convert a Postgres time value like "05:00:00" into "5:00 AM".
+// Leaves already-formatted strings untouched.
+function formatCallTimeFromDb(raw: string): string {
+  if (!raw) return "";
+  const match = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (!match) return raw;
+  const hour24 = Number(match[1]);
+  const minute = match[2];
+  const period = hour24 >= 12 ? "PM" : "AM";
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  return `${hour12}:${minute} ${period}`;
+}
+
+async function buildInitialContent(
+  campaignId: string,
+  shootDateId: string | null,
+  db: AdminClient
+): Promise<CallSheetContent> {
+  const content = emptyCallSheetContent();
+
+  // Campaign + producer
+  const { data: campaign } = await db
+    .from("campaigns")
+    .select("*, users!campaigns_producer_id_fkey(name, phone, email)")
+    .eq("id", campaignId)
+    .single();
+
+  if (campaign) {
+    const producer = (campaign as Record<string, unknown>).users as
+      | Record<string, unknown>
+      | null;
+    content.producer = producer
+      ? {
+          name: (producer.name as string) || "",
+          phone: (producer.phone as string) || "",
+          email: (producer.email as string) || "",
+        }
+      : null;
+  }
+
+  if (!shootDateId) return content;
+
+  // Shoot date + parent shoot
+  const { data: shootDate } = await db
+    .from("shoot_dates")
+    .select("*, shoots!inner(*)")
+    .eq("id", shootDateId)
+    .single();
+
+  if (!shootDate) return content;
+
+  const shoot = (shootDate as Record<string, unknown>).shoots as Record<string, unknown>;
+
+  content.generalCallTime = formatCallTimeFromDb((shootDate.call_time as string) || "");
+  content.location = (shootDate.location as string) || (shoot?.location as string) || "";
+  content.parkingDirections = (shootDate.parking_directions as string) || "";
+  content.weatherNotes = (shootDate.weather_notes as string) || "";
+  content.specialInstructions = (shootDate.special_instructions as string) || "";
+
+  // Seed one location row from the shoot location
+  if (content.location) {
+    content.locations = [
+      {
+        id: `seed-loc-${shootDateId}`,
+        label: (shoot?.name as string) || "Primary Location",
+        address: content.location,
+        mapLink: "",
+        loadIn: "",
+        parking: content.parkingDirections,
+      },
+    ];
+  }
+
+  // Seed crew from shoot_crew
+  const shootId = shoot?.id as string;
+  if (shootId) {
+    const { data: crewRows } = await db
+      .from("shoot_crew")
+      .select("*, users(id, name, phone, email, role)")
+      .eq("shoot_id", shootId);
+
+    const crew: CallSheetCrewRow[] = [];
+
+    // Producer first
+    if (content.producer) {
+      crew.push({
+        id: `producer-${campaignId}`,
+        name: content.producer.name,
+        role: "Producer",
+        dept: "Production",
+        phone: content.producer.phone,
+        email: content.producer.email,
+        callTime: content.generalCallTime,
+        contactVisibility: "full",
+        sourceUserId: null,
+      });
+    }
+
+    for (const c of crewRows || []) {
+      const u = (c as Record<string, unknown>).users as Record<string, unknown> | null;
+      if (!u) continue;
+      crew.push({
+        id: (c as Record<string, unknown>).id as string,
+        name: (u.name as string) || "",
+        role: ((c as Record<string, unknown>).role_on_shoot as string) || (u.role as string) || "",
+        dept: (u.role as string) || "",
+        phone: (u.phone as string) || "",
+        email: (u.email as string) || "",
+        callTime: content.generalCallTime,
+        contactVisibility: "full",
+        sourceUserId: (u.id as string) || null,
+      });
+    }
+    content.crew = crew;
+  }
+
+  // Seed talent + non-talent vendors
+  const { data: campaignVendors } = await db
+    .from("campaign_vendors")
+    .select("*, vendors(company_name, contact_name, phone, email, category)")
+    .eq("campaign_id", campaignId)
+    .not("status", "eq", "Rejected");
+
+  const talent: CallSheetTalentRow[] = [];
+  const extraCrew: CallSheetCrewRow[] = [];
+
+  for (const cv of campaignVendors || []) {
+    const v = (cv as Record<string, unknown>).vendors as Record<string, unknown> | null;
+    if (!v) continue;
+    const category = (v.category as string) || "";
+    const isTalent = category.toLowerCase() === "talent";
+
+    if (isTalent) {
+      talent.push({
+        id: `vendor-${(cv as Record<string, unknown>).id as string}`,
+        name: (v.contact_name as string) || (v.company_name as string) || "",
+        role: "Talent",
+        phone: (v.phone as string) || "",
+        email: (v.email as string) || "",
+        callTime: content.generalCallTime,
+        makeupWardrobeCall: "",
+        pickupTime: "",
+        agency: (v.company_name as string) || "",
+        sourceVendorId: ((cv as Record<string, unknown>).vendor_id as string) || null,
+      });
+    } else {
+      extraCrew.push({
+        id: `vendor-${(cv as Record<string, unknown>).id as string}`,
+        name: (v.contact_name as string) || (v.company_name as string) || "",
+        role: category || (v.company_name as string) || "",
+        dept: category || "",
+        phone: (v.phone as string) || "",
+        email: (v.email as string) || "",
+        callTime: content.generalCallTime,
+        contactVisibility: "full",
+        sourceVendorId: ((cv as Record<string, unknown>).vendor_id as string) || null,
+      });
+    }
+  }
+
+  content.crew = [...content.crew, ...extraCrew];
+  content.talent = talent;
+
+  return content;
+}
+
+/**
+ * Return the draft call sheet for a given shoot date. If `content_draft`
+ * is empty, seed it from campaign + shoot_date + crew + vendors and persist
+ * the seed. After first fetch, the draft is the source of truth.
+ */
+export async function getOrCreateDraftByShootDate(
+  campaignId: string,
+  shootDateId: string
+): Promise<CallSheetRow> {
+  const db = createAdminClient();
+
+  // Find the call sheet for this shoot date (auto-created by trigger).
+  // A sheet row is always the editable draft; publishing snapshots it to
+  // call_sheet_versions but leaves the sheet row in place for further edits.
+  const { data: existing } = await db
+    .from("call_sheets")
+    .select("*")
+    .eq("campaign_id", campaignId)
+    .eq("shoot_date_id", shootDateId)
+    .neq("status", "archived")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  let row = existing as Record<string, unknown> | null;
+
+  if (!row) {
+    // Trigger should have made one; if not, create it here
+    const { data: shootDate } = await db
+      .from("shoot_dates")
+      .select("shoot_date")
+      .eq("id", shootDateId)
+      .single();
+
+    if (!shootDate) throw new Error("Shoot date not found");
+
+    const { data: inserted, error } = await db
+      .from("call_sheets")
+      .insert({
+        campaign_id: campaignId,
+        shoot_date_id: shootDateId,
+        shoot_date: (shootDate as Record<string, unknown>).shoot_date as string,
+        status: "draft",
+      })
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    row = inserted as Record<string, unknown>;
+  }
+
+  const currentVNumber = await fetchCurrentVNumber(
+    (row.current_version_id as string | null) ?? null,
+    db
+  );
+  const sheet = rowToCallSheet(row, currentVNumber);
+
+  // Seed content on first fetch
+  const contentIsEmpty =
+    !row.content_draft ||
+    typeof row.content_draft !== "object" ||
+    Object.keys(row.content_draft as object).length === 0;
+
+  if (contentIsEmpty) {
+    const seeded = await buildInitialContent(campaignId, shootDateId, db);
+    await db
+      .from("call_sheets")
+      .update({ content_draft: seeded })
+      .eq("id", sheet.id);
+    sheet.contentDraft = seeded;
+  }
+
+  return sheet;
+}
+
+export async function getCallSheet(id: string): Promise<CallSheetRow | null> {
+  const db = createAdminClient();
+  const { data } = await db.from("call_sheets").select("*").eq("id", id).maybeSingle();
+  if (!data) return null;
+  const row = data as Record<string, unknown>;
+  const currentVNumber = await fetchCurrentVNumber(
+    (row.current_version_id as string | null) ?? null,
+    db
+  );
+  return rowToCallSheet(row, currentVNumber);
+}
+
+export async function updateDraft(
+  id: string,
+  contentPatch: Partial<CallSheetContent>
+): Promise<CallSheetRow> {
+  const db = createAdminClient();
+
+  const { data: existing, error: fetchErr } = await db
+    .from("call_sheets")
+    .select("content_draft, status")
+    .eq("id", id)
+    .single();
+
+  if (fetchErr || !existing) throw new Error("Call sheet not found");
+  if ((existing as Record<string, unknown>).status === "archived") {
+    throw new Error("Cannot edit an archived call sheet");
+  }
+
+  const current = ((existing as Record<string, unknown>).content_draft as CallSheetContent) ||
+    emptyCallSheetContent();
+  const merged: CallSheetContent = { ...emptyCallSheetContent(), ...current, ...contentPatch };
+
+  const { data: updated, error } = await db
+    .from("call_sheets")
+    .update({ content_draft: merged })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  const row = updated as Record<string, unknown>;
+  const currentVNumber = await fetchCurrentVNumber(
+    (row.current_version_id as string | null) ?? null,
+    db
+  );
+  return rowToCallSheet(row, currentVNumber);
+}
+
+/**
+ * Snapshot the current draft into an immutable version, mark the
+ * previous current version as superseded, and point current_version_id
+ * at the new version. Returns the new version.
+ */
+export async function publishVersion(
+  callSheetId: string,
+  publishedBy: string
+): Promise<CallSheetVersion> {
+  const db = createAdminClient();
+
+  const { data: sheet, error } = await db
+    .from("call_sheets")
+    .select("*")
+    .eq("id", callSheetId)
+    .single();
+
+  if (error || !sheet) throw new Error("Call sheet not found");
+
+  const row = sheet as Record<string, unknown>;
+  const content = (row.content_draft as CallSheetContent) || emptyCallSheetContent();
+
+  // Required-field check for publish
+  if (!content.emergencyHospital || !content.emergencyAddress || !content.emergencyPhone) {
+    throw new Error("Cannot publish: hospital name, address, and phone are required");
+  }
+  if (!content.generalCallTime) {
+    throw new Error("Cannot publish: general call time is required");
+  }
+
+  // Find next v_number
+  const { data: latest } = await db
+    .from("call_sheet_versions")
+    .select("v_number")
+    .eq("call_sheet_id", callSheetId)
+    .order("v_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextV = ((latest as { v_number?: number } | null)?.v_number ?? 0) + 1;
+
+  // Insert new version
+  const { data: newVersion, error: insertErr } = await db
+    .from("call_sheet_versions")
+    .insert({
+      call_sheet_id: callSheetId,
+      v_number: nextV,
+      payload: content,
+      published_by: publishedBy,
+    })
+    .select("*")
+    .single();
+
+  if (insertErr || !newVersion) throw insertErr || new Error("Failed to create version");
+
+  const versionRow = newVersion as Record<string, unknown>;
+
+  // Mark previous current as superseded
+  if (row.current_version_id) {
+    await db
+      .from("call_sheet_versions")
+      .update({ superseded_at: new Date().toISOString() })
+      .eq("id", row.current_version_id as string);
+  }
+
+  // Update the call_sheet pointer. The sheet row itself stays editable —
+  // publishing snapshots into call_sheet_versions but does not freeze the
+  // draft; further edits are always welcome and can be published as v+1.
+  await db
+    .from("call_sheets")
+    .update({ current_version_id: versionRow.id as string })
+    .eq("id", callSheetId);
+
+  return rowToVersion(versionRow);
+}
+
+export async function listVersions(callSheetId: string): Promise<CallSheetVersion[]> {
+  const db = createAdminClient();
+  const { data } = await db
+    .from("call_sheet_versions")
+    .select("*")
+    .eq("call_sheet_id", callSheetId)
+    .order("v_number", { ascending: false });
+
+  return (data || []).map((r) => rowToVersion(r as Record<string, unknown>));
+}
+
+export async function getVersion(versionId: string): Promise<CallSheetVersion | null> {
+  const db = createAdminClient();
+  const { data } = await db
+    .from("call_sheet_versions")
+    .select("*")
+    .eq("id", versionId)
+    .maybeSingle();
+  if (!data) return null;
+  return rowToVersion(data as Record<string, unknown>);
+}
+
+// ============================================================
+// PDF adapter — bridge new content shape to existing generator
+// ============================================================
+
+export function contentToPdfData(
+  content: CallSheetContent,
+  campaignName: string,
+  wfNumber: string,
+  shootDate: string
+): CallSheetData {
+  const crewEntries: CallSheetCrewEntry[] = content.crew
+    .filter((c) => c.role !== "Producer")
+    .map((c) => ({
+      name: c.name,
+      role: c.role,
+      phone: c.contactVisibility === "full" ? c.phone : "",
+      email: c.contactVisibility === "full" ? c.email : "reach out to producer for contact",
+      callTime: c.callTime || null,
+    }));
+
+  return {
+    campaignName,
+    wfNumber,
+    shootDate,
+    location: content.location,
+    callTime: content.generalCallTime || null,
+    crew: crewEntries,
+    vendors: content.talent.map((t) => ({
+      company: t.agency,
+      contact: t.name,
+      phone: t.phone,
+      email: t.email,
+      role: "Talent",
+    })),
+    deliverables: [],
+    notes: content.specialInstructions,
+    producer: content.producer,
+  };
+}
+
+// ============================================================
+// Distribution (stubs for later sub-steps of Wave 1)
+// ============================================================
+
+export function generateAckToken(): string {
+  return randomBytes(24).toString("base64url");
+}
+
 
 export async function generateCallSheet(
   campaignId: string,

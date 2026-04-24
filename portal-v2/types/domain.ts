@@ -861,7 +861,7 @@ export interface Notification {
   campaign?: { id: string; wfNumber: string; name: string };
 }
 
-// --- Call Sheet (computed, not stored) ---
+// --- Call Sheet (computed DTO passed to PDF generator / mailto) ---
 export interface CallSheetCrewEntry {
   name: string;
   role: string;
@@ -881,6 +881,157 @@ export interface CallSheetData {
   deliverables: { channel: string; format: string; dimensions: string }[];
   notes: string;
   producer: { name: string; phone: string; email: string } | null;
+}
+
+// --- Call Sheet (persisted) ---
+// Wave 1 of PRODUCER_DOCS_IMPLEMENTATION_PLAN.md. These types back
+// the call_sheets / call_sheet_versions / call_sheet_distributions /
+// call_sheet_attachments tables (migration 094).
+
+export type CallSheetStatus = "draft" | "published" | "archived";
+export type CallSheetTier = "full" | "redacted";
+export type CallSheetChannel = "email" | "in_portal";
+export type CallSheetAttachmentKind =
+  | "talent_release"
+  | "minor_release"
+  | "location_permit"
+  | "coi"
+  | "safety_bulletin"
+  | "other";
+
+export type CallSheetContactVisibility = "full" | "redacted";
+
+export interface CallSheetCrewRow {
+  id: string;
+  name: string;
+  role: string;
+  dept: string;
+  phone: string;
+  email: string;
+  callTime: string;
+  contactVisibility: CallSheetContactVisibility;
+  sourceUserId?: string | null;
+  sourceVendorId?: string | null;
+}
+
+export interface CallSheetTalentRow {
+  id: string;
+  name: string;
+  role: string;
+  phone: string;
+  email: string;
+  callTime: string;
+  makeupWardrobeCall: string;
+  pickupTime: string;
+  agency: string;
+  sourceVendorId?: string | null;
+}
+
+export interface CallSheetLocationRow {
+  id: string;
+  label: string;
+  address: string;
+  mapLink: string;
+  loadIn: string;
+  parking: string;
+}
+
+// Shape of call_sheets.content_draft and call_sheet_versions.payload.
+// Stored as jsonb so we can evolve the field set without migrations.
+export interface CallSheetContent {
+  // Header
+  companyName: string;
+  companyAddress: string;
+
+  // Shoot logistics
+  location: string;
+  parkingDirections: string;
+  generalCallTime: string;
+  shootingCallTime: string;
+  breakfastTime: string;
+  lunchTime: string;
+  lunchVenue: string;
+  estimatedWrap: string;
+  companyMoves: string;
+  walkieChannels: string;
+
+  // Environmental
+  weatherNotes: string;
+  weatherCachedAt: string | null;
+  sunrise: string;
+  sunset: string;
+  goldenHour: string;
+
+  // Safety block (required for publish)
+  emergencyHospital: string;
+  emergencyAddress: string;
+  emergencyPhone: string;
+  urgentCareName: string;
+  urgentCarePhone: string;
+  policeNonEmergencyPhone: string;
+  onSetMedic: string;
+  allergenBulletin: string;
+  safetyReminders: string;
+
+  // People + places
+  crew: CallSheetCrewRow[];
+  talent: CallSheetTalentRow[];
+  locations: CallSheetLocationRow[];
+
+  // Instructions
+  specialInstructions: string;
+
+  // Producer snapshot (frozen on publish)
+  producer: { name: string; phone: string; email: string } | null;
+}
+
+export interface CallSheetRow {
+  id: string;
+  campaignId: string;
+  shootDateId: string | null;
+  shootDate: string;
+  status: CallSheetStatus;
+  contentDraft: CallSheetContent;
+  currentVersionId: string | null;
+  currentVNumber: number | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CallSheetVersion {
+  id: string;
+  callSheetId: string;
+  vNumber: number;
+  payload: CallSheetContent;
+  publishedBy: string | null;
+  publishedAt: string;
+  supersededAt: string | null;
+}
+
+export interface CallSheetDistribution {
+  id: string;
+  versionId: string;
+  recipientName: string;
+  recipientEmail: string;
+  tier: CallSheetTier;
+  channel: CallSheetChannel;
+  ackToken: string;
+  sentAt: string;
+  ackedAt: string | null;
+  sentBy: string | null;
+}
+
+export interface CallSheetAttachment {
+  id: string;
+  callSheetId: string;
+  kind: CallSheetAttachmentKind;
+  label: string;
+  fileUrl: string;
+  expiresAt: string | null;
+  required: boolean;
+  uploadedBy: string | null;
+  createdAt: string;
 }
 
 // --- Computed types ---
