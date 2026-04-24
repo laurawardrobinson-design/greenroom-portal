@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import useSWR from "swr";
 import {
   AlertTriangle,
   Aperture,
@@ -15,14 +16,16 @@ import {
   Info,
   Loader2,
   Package,
+  Paperclip,
   Plus,
   Send,
   ShieldAlert,
   Sparkles,
   Trash2,
+  Upload,
   Users,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { differenceInHours, format, parseISO } from "date-fns";
 import { generateCallSheetPdf } from "@/lib/utils/pdf-generator";
 import { useCallSheetDraft, type SaveState } from "@/hooks/use-call-sheet-draft";
 import type {
@@ -30,7 +33,24 @@ import type {
   CallSheetContent,
   CallSheetCrewRow,
   CallSheetTalentRow,
+  CallSheetAttachment,
+  CallSheetAttachmentKind,
 } from "@/types/domain";
+
+const fetcher = async (url: string) => {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Request failed: ${r.status}`);
+  return r.json();
+};
+
+const ATTACHMENT_KIND_LABELS: Record<CallSheetAttachmentKind, string> = {
+  talent_release: "Talent Release",
+  minor_release: "Minor Release",
+  location_permit: "Location Permit",
+  coi: "COI",
+  safety_bulletin: "Safety Bulletin",
+  other: "Other",
+};
 
 interface Props {
   campaignId: string;
@@ -85,6 +105,21 @@ export function CallSheetBuilder({
     publish,
     publishError,
   } = useCallSheetDraft(campaignId, selectedDateId || null);
+
+  // Attachments (separate SWR key from the sheet itself)
+  const attachmentsKey = sheet?.id ? `/api/call-sheets/${sheet.id}/attachments` : null;
+  const { data: attachments = [], mutate: mutateAttachments } = useSWR<CallSheetAttachment[]>(
+    attachmentsKey,
+    fetcher
+  );
+
+  // 48h-out warning: if the shoot is within 48 hours and no attachments
+  // (releases / permits / COI) are on file, flag it.
+  const hoursToShoot = selectedDate?.shootDate
+    ? differenceInHours(parseISO(selectedDate.shootDate), new Date())
+    : null;
+  const isWithin48h = hoursToShoot !== null && hoursToShoot >= 0 && hoursToShoot <= 48;
+  const showAttachmentWarning = isWithin48h && attachments.length === 0;
 
   // ─── Crew / Talent mutations ────────────────────────────────────────────────
   const setCrew = (next: CallSheetCrewRow[]) => updateContent({ crew: next });
@@ -301,6 +336,13 @@ export function CallSheetBuilder({
         </div>
       )}
 
+      {showAttachmentWarning && (
+        <div className="flex items-center gap-2 rounded-lg border border-[color:var(--color-warning)]/30 bg-[color:var(--color-warning)]/8 px-3 py-2 text-xs text-[color:var(--color-warning)]">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          Shoot is in under 48 hours and no release / permit / COI / safety bulletin is attached yet.
+        </div>
+      )}
+
       {/* Two-column: form + preview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* ─── LEFT: Editable form ─── */}
@@ -467,6 +509,14 @@ export function CallSheetBuilder({
               rows={4}
             />
           </FormSection>
+
+          {sheet?.id && (
+            <AttachmentsSection
+              callSheetId={sheet.id}
+              attachments={attachments}
+              onChange={() => mutateAttachments()}
+            />
+          )}
 
           <FormSection title="Crew Contacts" icon={Users}>
             <div className="space-y-2">
@@ -816,6 +866,136 @@ export function CallSheetBuilder({
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Attachments section ────────────────────────────────────────────────────
+function AttachmentsSection({
+  callSheetId,
+  attachments,
+  onChange,
+}: {
+  callSheetId: string;
+  attachments: CallSheetAttachment[];
+  onChange: () => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedKind, setSelectedKind] = useState<CallSheetAttachmentKind>("talent_release");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handlePick = () => fileInputRef.current?.click();
+
+  const handleUpload = async (file: File) => {
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("kind", selectedKind);
+      fd.append("label", file.name);
+      const r = await fetch(`/api/call-sheets/${callSheetId}/attachments`, {
+        method: "POST",
+        body: fd,
+      });
+      if (!r.ok) {
+        const err = (await r.json().catch(() => ({}))) as { error?: string };
+        setUploadError(err.error || "Upload failed");
+        return;
+      }
+      onChange();
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    const r = await fetch(`/api/call-sheets/attachments/${id}`, { method: "DELETE" });
+    if (r.ok) onChange();
+  };
+
+  return (
+    <FormSection title="Attachments" icon={Paperclip}>
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
+            Kind
+          </label>
+          <select
+            value={selectedKind}
+            onChange={(e) => setSelectedKind(e.target.value as CallSheetAttachmentKind)}
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none"
+          >
+            {(Object.keys(ATTACHMENT_KIND_LABELS) as CallSheetAttachmentKind[]).map((k) => (
+              <option key={k} value={k}>
+                {ATTACHMENT_KIND_LABELS[k]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="button"
+          onClick={handlePick}
+          disabled={uploading}
+          className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-text-primary hover:bg-surface-secondary transition-colors disabled:opacity-60"
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          Upload
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleUpload(file);
+          }}
+        />
+      </div>
+
+      {uploadError && (
+        <p className="text-xs text-[color:var(--color-error)]">{uploadError}</p>
+      )}
+
+      {attachments.length === 0 ? (
+        <p className="text-xs text-text-tertiary">
+          No attachments yet. Upload releases, permits, COIs, or a safety bulletin.
+        </p>
+      ) : (
+        <ul className="space-y-1.5">
+          {attachments.map((a) => (
+            <li
+              key={a.id}
+              className="flex items-center justify-between gap-2 rounded border border-border bg-surface px-2.5 py-1.5"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="rounded-full bg-surface-secondary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-text-secondary shrink-0">
+                  {ATTACHMENT_KIND_LABELS[a.kind]}
+                </span>
+                <a
+                  href={a.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-text-primary hover:underline truncate"
+                >
+                  {a.label || "file"}
+                </a>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleRemove(a.id)}
+                className="flex items-center justify-center h-6 w-6 rounded hover:bg-surface-secondary text-text-tertiary transition-colors shrink-0"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </FormSection>
   );
 }
 

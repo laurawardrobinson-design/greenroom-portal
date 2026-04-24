@@ -9,6 +9,8 @@ import type {
   CallSheetTalentRow,
   CallSheetLocationRow,
   CallSheetDeliveryBlock,
+  CallSheetAttachment,
+  CallSheetAttachmentKind,
 } from "@/types/domain";
 import { randomBytes } from "crypto";
 
@@ -637,6 +639,102 @@ export function contentToPdfData(
     notes: content.specialInstructions,
     producer: content.producer,
   };
+}
+
+// ============================================================
+// Attachments — releases / permits / COI / safety bulletin
+// ============================================================
+
+const ATTACHMENT_BUCKET = "campaign-assets";
+
+function rowToAttachment(row: Record<string, unknown>): CallSheetAttachment {
+  return {
+    id: row.id as string,
+    callSheetId: row.call_sheet_id as string,
+    kind: row.kind as CallSheetAttachmentKind,
+    label: (row.label as string) || "",
+    fileUrl: row.file_url as string,
+    expiresAt: (row.expires_at as string | null) ?? null,
+    required: Boolean(row.required),
+    uploadedBy: (row.uploaded_by as string | null) ?? null,
+    createdAt: row.created_at as string,
+  };
+}
+
+export async function listAttachments(callSheetId: string): Promise<CallSheetAttachment[]> {
+  const db = createAdminClient();
+  const { data } = await db
+    .from("call_sheet_attachments")
+    .select("*")
+    .eq("call_sheet_id", callSheetId)
+    .order("created_at", { ascending: true });
+  return (data || []).map((r) => rowToAttachment(r as Record<string, unknown>));
+}
+
+export async function uploadAttachment(
+  callSheetId: string,
+  file: File,
+  opts: {
+    kind: CallSheetAttachmentKind;
+    label: string;
+    expiresAt: string | null;
+    required: boolean;
+    uploadedBy: string | null;
+  }
+): Promise<CallSheetAttachment> {
+  const db = createAdminClient();
+
+  const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const rand = Math.random().toString(36).slice(2);
+  const storagePath = `call-sheets/${callSheetId}/${Date.now()}-${rand}.${ext}`;
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const { error: uploadError } = await db.storage
+    .from(ATTACHMENT_BUCKET)
+    .upload(storagePath, buffer, { contentType: file.type, upsert: false });
+  if (uploadError) throw uploadError;
+
+  const { data: urlData } = db.storage.from(ATTACHMENT_BUCKET).getPublicUrl(storagePath);
+
+  const { data: inserted, error: insertErr } = await db
+    .from("call_sheet_attachments")
+    .insert({
+      call_sheet_id: callSheetId,
+      kind: opts.kind,
+      label: opts.label || file.name,
+      file_url: urlData.publicUrl,
+      expires_at: opts.expiresAt,
+      required: opts.required,
+      uploaded_by: opts.uploadedBy,
+    })
+    .select("*")
+    .single();
+
+  if (insertErr || !inserted) throw insertErr || new Error("Failed to record attachment");
+  return rowToAttachment(inserted as Record<string, unknown>);
+}
+
+export async function removeAttachment(attachmentId: string): Promise<void> {
+  const db = createAdminClient();
+
+  const { data } = await db
+    .from("call_sheet_attachments")
+    .select("file_url")
+    .eq("id", attachmentId)
+    .maybeSingle();
+
+  if (data) {
+    const fileUrl = (data as { file_url: string }).file_url;
+    // Extract storage path from public URL:
+    //   https://.../storage/v1/object/public/campaign-assets/<path>
+    const match = fileUrl.match(/\/public\/[^/]+\/(.+)$/);
+    if (match) {
+      await db.storage.from(ATTACHMENT_BUCKET).remove([match[1]]);
+    }
+  }
+
+  const { error } = await db.from("call_sheet_attachments").delete().eq("id", attachmentId);
+  if (error) throw error;
 }
 
 // ============================================================
