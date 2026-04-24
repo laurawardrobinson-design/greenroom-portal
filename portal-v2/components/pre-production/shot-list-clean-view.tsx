@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, Fragment } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, Check, Download, List, GripVertical, Plus, Star, Trash2, ChevronLeft, X, Upload, UserPlus, User } from "lucide-react";
+import { AlertTriangle, Calendar, Check, Copy, Download, List, GripVertical, MoveRight, Plus, Star, Trash2, ChevronLeft, X, Upload, UserPlus, User } from "lucide-react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { useToast } from "@/components/ui/toast";
 import { generateShotListPdf } from "@/lib/utils/pdf-generator";
@@ -1431,6 +1431,75 @@ export function ShotListCleanView({
   const [dragSetupId, setDragSetupId] = useState<string | null>(null);
   const [expandedShots, setExpandedShots] = useState<Record<string, boolean>>({});
 
+  // Multi-select state (Wave 2C)
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const lastSelectedIdRef = useRef<string | null>(null);
+  const clearSelection = useCallback(() => {
+    setSelected(new Set());
+    lastSelectedIdRef.current = null;
+  }, []);
+
+  const toggleSelected = useCallback(
+    (shotId: string, opts: { shift?: boolean; meta?: boolean }) => {
+      if (!data) return;
+      const flat = [...data.setups]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .flatMap((setup) =>
+          data.shots
+            .filter((s) => s.setup_id === setup.id)
+            .sort((a, b) => a.sort_order - b.sort_order)
+        );
+
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (opts.shift && lastSelectedIdRef.current) {
+          const lastIdx = flat.findIndex((s) => s.id === lastSelectedIdRef.current);
+          const curIdx = flat.findIndex((s) => s.id === shotId);
+          if (lastIdx !== -1 && curIdx !== -1) {
+            const [lo, hi] = lastIdx < curIdx ? [lastIdx, curIdx] : [curIdx, lastIdx];
+            for (let i = lo; i <= hi; i++) next.add(flat[i].id);
+            return next;
+          }
+        }
+        if (opts.meta) {
+          if (next.has(shotId)) next.delete(shotId);
+          else next.add(shotId);
+          return next;
+        }
+        // Plain click on the checkbox just toggles that one (checkbox is
+        // always a toggle; range/add is via shift / meta).
+        if (next.has(shotId)) next.delete(shotId);
+        else next.add(shotId);
+        return next;
+      });
+      lastSelectedIdRef.current = shotId;
+    },
+    [data]
+  );
+
+  const bulkAction = useCallback(
+    async (
+      action: "assignDate" | "moveToSetup" | "duplicate" | "delete",
+      extras: { shootDateId?: string | null; setupId?: string } = {}
+    ) => {
+      const ids = Array.from(selected);
+      if (ids.length === 0) return;
+      try {
+        const r = await fetch("/api/shot-list/shots/bulk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids, action, ...extras }),
+        });
+        if (!r.ok) throw new Error("bulk failed");
+        globalMutate(swrKey);
+        clearSelection();
+      } catch {
+        toast("error", "Bulk action failed");
+      }
+    },
+    [selected, swrKey, toast, clearSelection]
+  );
+
   // ─── Setup reorder (Wave 2) ───────────────────────────────────────────────
   const handleSetupDrop = useCallback(
     async (targetSetupId: string) => {
@@ -1763,8 +1832,28 @@ export function ShotListCleanView({
   const totalShots = data.shots.length;
   const sortedSetups = [...data.setups].sort((a, b) => a.sort_order - b.sort_order);
 
+  // Flatten setups + shoots for bulk popovers
+  const bulkSetups = data.setups;
+  const bulkShootDates = shoots.flatMap((s) =>
+    s.dates.map((d) => ({ id: d.id, label: `${s.name} — ${d.shootDate}` }))
+  );
+
   return (
     <div className={embedded ? "" : "space-y-[var(--density-shotlist-stack-gap)]"}>
+      {/* Bulk action bar (Wave 2C) — sticky at top when selection active */}
+      {selected.size > 0 && (
+        <BulkActionBar
+          count={selected.size}
+          setups={bulkSetups}
+          shootDates={bulkShootDates}
+          onAssignDate={(shootDateId) => bulkAction("assignDate", { shootDateId })}
+          onMoveToSetup={(setupId) => bulkAction("moveToSetup", { setupId })}
+          onDuplicate={() => bulkAction("duplicate")}
+          onDelete={() => bulkAction("delete")}
+          onClear={clearSelection}
+        />
+      )}
+
       {/* Header */}
       <div className={`flex items-center justify-between ${embedded ? "border-b border-border pb-3" : ""}`}>
         <div className="flex items-center gap-3">
@@ -1929,13 +2018,48 @@ export function ShotListCleanView({
                             className={`border-t border-border transition-colors ${
                               dragId === shot.id
                                 ? "opacity-30 bg-primary/5"
+                                : selected.has(shot.id)
+                                ? "bg-primary/5"
                                 : "hover:bg-surface-secondary/50"
                             }`}
                           >
-                            {/* Drag handle */}
+                            {/* Drag handle / selection checkbox (Wave 2) */}
                             <td className="w-[28px] cursor-grab active:cursor-grabbing">
-                              <div className="flex items-center justify-center h-full">
-                                <GripVertical className="h-3 w-3 text-text-tertiary/30" />
+                              <div className="flex items-center justify-center h-full group/drag">
+                                {selected.has(shot.id) ? (
+                                  <input
+                                    type="checkbox"
+                                    checked
+                                    onChange={(e) =>
+                                      toggleSelected(shot.id, {
+                                        shift: (e.nativeEvent as MouseEvent).shiftKey,
+                                        meta:
+                                          (e.nativeEvent as MouseEvent).metaKey ||
+                                          (e.nativeEvent as MouseEvent).ctrlKey,
+                                      })
+                                    }
+                                    className="h-3 w-3 accent-primary cursor-pointer"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                ) : (
+                                  <>
+                                    <GripVertical className="h-3 w-3 text-text-tertiary/30 group-hover/drag:hidden" />
+                                    <input
+                                      type="checkbox"
+                                      checked={false}
+                                      onChange={(e) =>
+                                        toggleSelected(shot.id, {
+                                          shift: (e.nativeEvent as MouseEvent).shiftKey,
+                                          meta:
+                                            (e.nativeEvent as MouseEvent).metaKey ||
+                                            (e.nativeEvent as MouseEvent).ctrlKey,
+                                        })
+                                      }
+                                      className="hidden h-3 w-3 accent-primary cursor-pointer group-hover/drag:block"
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                  </>
+                                )}
                               </div>
                             </td>
 
@@ -2264,6 +2388,169 @@ export function ShotListCleanView({
             </section>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Bulk action bar (Wave 2C) ───────────────────────────────────────────────
+// Sticky bar at the top of the shot list when ≥1 shots are selected. Fires
+// bulk mutations via /api/shot-list/shots/bulk. Kept lean — four actions,
+// inline popovers for the two actions that need a target.
+function BulkActionBar({
+  count,
+  setups,
+  shootDates,
+  onAssignDate,
+  onMoveToSetup,
+  onDuplicate,
+  onDelete,
+  onClear,
+}: {
+  count: number;
+  setups: Array<{ id: string; name: string }>;
+  shootDates: Array<{ id: string; label: string }>;
+  onAssignDate: (shootDateId: string | null) => void;
+  onMoveToSetup: (setupId: string) => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+  onClear: () => void;
+}) {
+  const [popover, setPopover] = useState<null | "date" | "setup" | "confirm-delete">(null);
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
+          {count} selected
+        </span>
+        <button
+          type="button"
+          onClick={onClear}
+          className="text-xs text-text-secondary hover:text-text-primary transition-colors"
+        >
+          Clear
+        </button>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setPopover(popover === "date" ? null : "date")}
+            className="flex items-center gap-1 rounded-md border border-border bg-surface px-2.5 py-1 text-xs text-text-secondary hover:bg-surface-secondary transition-colors"
+          >
+            <Calendar className="h-3 w-3" />
+            Assign date
+          </button>
+          {popover === "date" && (
+            <div className="absolute right-0 top-full mt-1 z-50 w-64 rounded-md border border-border bg-surface shadow-lg">
+              <ul className="py-1 max-h-72 overflow-y-auto">
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAssignDate(null);
+                      setPopover(null);
+                    }}
+                    className="flex w-full items-center justify-between px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-secondary transition-colors"
+                  >
+                    Unassign
+                  </button>
+                </li>
+                {shootDates.map((d) => (
+                  <li key={d.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAssignDate(d.id);
+                        setPopover(null);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-text-primary hover:bg-surface-secondary transition-colors"
+                    >
+                      <Calendar className="h-3 w-3 text-text-tertiary" />
+                      {d.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setPopover(popover === "setup" ? null : "setup")}
+            className="flex items-center gap-1 rounded-md border border-border bg-surface px-2.5 py-1 text-xs text-text-secondary hover:bg-surface-secondary transition-colors"
+          >
+            <MoveRight className="h-3 w-3" />
+            Move to setup
+          </button>
+          {popover === "setup" && (
+            <div className="absolute right-0 top-full mt-1 z-50 w-56 rounded-md border border-border bg-surface shadow-lg">
+              <ul className="py-1 max-h-72 overflow-y-auto">
+                {setups.map((s) => (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onMoveToSetup(s.id);
+                        setPopover(null);
+                      }}
+                      className="flex w-full items-center px-3 py-1.5 text-xs text-text-primary hover:bg-surface-secondary transition-colors"
+                    >
+                      {s.name || "Untitled Setup"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={onDuplicate}
+          className="flex items-center gap-1 rounded-md border border-border bg-surface px-2.5 py-1 text-xs text-text-secondary hover:bg-surface-secondary transition-colors"
+        >
+          <Copy className="h-3 w-3" />
+          Duplicate
+        </button>
+
+        {popover === "confirm-delete" ? (
+          <div className="flex items-center gap-1 rounded-md border border-[color:var(--color-error)]/30 bg-[color:var(--color-error)]/8 px-2 py-1">
+            <span className="text-[10px] uppercase tracking-wider text-[color:var(--color-error)]">
+              Delete {count}?
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                onDelete();
+                setPopover(null);
+              }}
+              className="text-[10px] font-semibold text-[color:var(--color-error)] hover:underline"
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              onClick={() => setPopover(null)}
+              className="text-[10px] text-text-tertiary hover:text-text-secondary"
+            >
+              No
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPopover("confirm-delete")}
+            className="flex items-center gap-1 rounded-md border border-border bg-surface px-2.5 py-1 text-xs text-text-secondary hover:border-[color:var(--color-error)]/40 hover:text-[color:var(--color-error)] transition-colors"
+          >
+            <Trash2 className="h-3 w-3" />
+            Delete
+          </button>
+        )}
       </div>
     </div>
   );

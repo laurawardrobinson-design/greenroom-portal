@@ -290,6 +290,94 @@ export async function deleteShot(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// --- Bulk operations (Wave 2) ---
+
+export type BulkAction = "assignDate" | "moveToSetup" | "duplicate" | "delete";
+
+export interface BulkActionInput {
+  ids: string[];
+  action: BulkAction;
+  shootDateId?: string | null;
+  setupId?: string;
+}
+
+export async function bulkShotAction(input: BulkActionInput): Promise<{
+  affected: number;
+  newIds?: string[];
+}> {
+  const db = createAdminClient();
+  const ids = Array.from(new Set(input.ids)).filter(Boolean);
+  if (ids.length === 0) return { affected: 0 };
+
+  if (input.action === "delete") {
+    const { error, count } = await db
+      .from("shot_list_shots")
+      .delete({ count: "exact" })
+      .in("id", ids);
+    if (error) throw error;
+    return { affected: count ?? 0 };
+  }
+
+  if (input.action === "assignDate") {
+    const { error, count } = await db
+      .from("shot_list_shots")
+      .update({ shoot_date_id: input.shootDateId ?? null }, { count: "exact" })
+      .in("id", ids);
+    if (error) throw error;
+    return { affected: count ?? 0 };
+  }
+
+  if (input.action === "moveToSetup") {
+    if (!input.setupId) throw new Error("setupId required for moveToSetup");
+    const { error, count } = await db
+      .from("shot_list_shots")
+      .update({ setup_id: input.setupId }, { count: "exact" })
+      .in("id", ids);
+    if (error) throw error;
+    return { affected: count ?? 0 };
+  }
+
+  if (input.action === "duplicate") {
+    const { data: sourceRows, error: fetchErr } = await db
+      .from("shot_list_shots")
+      .select("*")
+      .in("id", ids);
+    if (fetchErr) throw fetchErr;
+
+    const sources = (sourceRows || []) as Array<Record<string, unknown>>;
+    const inserts = sources.map((row) => {
+      const copy: Record<string, unknown> = { ...row };
+      delete copy.id;
+      delete copy.created_at;
+      delete copy.updated_at;
+      delete copy.approved_at;
+      delete copy.approved_by;
+      delete copy.approved_snapshot;
+      delete copy.needs_reapproval;
+      delete copy.completed_at;
+      delete copy.completed_by;
+      copy.status = "Pending";
+      copy.is_hero = false;
+      const originalName = (row.name as string) || "";
+      copy.name = originalName ? `${originalName} (copy)` : "Copy";
+      return copy;
+    });
+
+    if (inserts.length === 0) return { affected: 0 };
+
+    const { data: newRows, error: insertErr } = await db
+      .from("shot_list_shots")
+      .insert(inserts)
+      .select("id");
+    if (insertErr) throw insertErr;
+
+    const newIds = (newRows || []).map((r) => (r as { id: string }).id);
+    return { affected: newIds.length, newIds };
+  }
+
+  throw new Error(`Unknown bulk action: ${input.action}`);
+}
+
 // --- Deliverable Links ---
 
 export async function linkDeliverable(
