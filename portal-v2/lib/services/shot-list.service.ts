@@ -70,6 +70,7 @@ function toShot(
     approvedBy: (row.approved_by as string | null) ?? null,
     approvedAt: (row.approved_at as string | null) ?? null,
     approvedSnapshot: (row.approved_snapshot as Record<string, unknown> | null) ?? null,
+    approvalNotes: (row.approval_notes as string) || "",
     needsReapproval: Boolean(row.needs_reapproval),
     deliverableLinks: links,
     productLinks,
@@ -580,7 +581,8 @@ export async function updateTalent(id: string, input: Partial<{
  */
 export async function approveShot(
   shotId: string,
-  approvedBy: string
+  approvedBy: string,
+  notes?: string
 ): Promise<ShotListShot> {
   const db = createAdminClient();
 
@@ -603,18 +605,36 @@ export async function approveShot(
     variantType: row.variant_type,
   };
 
+  const update: Record<string, unknown> = {
+    approved_by: approvedBy,
+    approved_at: new Date().toISOString(),
+    approved_snapshot: snapshot,
+    needs_reapproval: false,
+  };
+  if (notes !== undefined) update.approval_notes = notes;
+
   const { data: updated, error } = await db
     .from("shot_list_shots")
-    .update({
-      approved_by: approvedBy,
-      approved_at: new Date().toISOString(),
-      approved_snapshot: snapshot,
-      needs_reapproval: false,
-    })
+    .update(update)
     .eq("id", shotId)
     .select("*")
     .single();
 
+  if (error) throw error;
+  return toShot(updated as Record<string, unknown>);
+}
+
+export async function updateShotApprovalNotes(
+  shotId: string,
+  notes: string
+): Promise<ShotListShot> {
+  const db = createAdminClient();
+  const { data: updated, error } = await db
+    .from("shot_list_shots")
+    .update({ approval_notes: notes })
+    .eq("id", shotId)
+    .select("*")
+    .single();
   if (error) throw error;
   return toShot(updated as Record<string, unknown>);
 }
@@ -627,6 +647,7 @@ export async function unapproveShot(shotId: string): Promise<ShotListShot> {
       approved_by: null,
       approved_at: null,
       approved_snapshot: null,
+      approval_notes: "",
       needs_reapproval: false,
     })
     .eq("id", shotId)

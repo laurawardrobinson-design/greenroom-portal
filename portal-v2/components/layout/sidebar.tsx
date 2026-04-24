@@ -334,15 +334,17 @@ export function Sidebar({
         })}
       </nav>
 
+      {/* Easter egg — kept directly under the nav so the hover zone stays
+          at the bottom-of-nav spot people already know, not pushed below
+          the user footer where the menu button intercepts hover. */}
+      <GatorEasterEgg />
+
       {/* User identity + account menu */}
       <SidebarUserFooter
         userName={userName}
         userRole={userRole}
         userFavoriteProduct={userFavoriteProduct}
       />
-
-      {/* Easter egg */}
-      <GatorEasterEgg />
     </div>
   );
 
@@ -412,26 +414,26 @@ function SidebarUserFooter({
       {open && (
         <div
           role="menu"
-          className="absolute bottom-[calc(100%-0.25rem)] left-3 right-3 z-10 overflow-hidden rounded-lg border border-border bg-surface shadow-lg"
+          className="absolute bottom-[calc(100%-0.25rem)] left-3 right-3 z-10 overflow-hidden rounded-lg border border-white/10 bg-sidebar-active shadow-lg"
         >
           <Link
             href="/settings"
             role="menuitem"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-text-primary transition-colors hover:bg-surface-secondary"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-white transition-colors hover:bg-white/5"
           >
-            <Settings className="h-4 w-4 shrink-0 text-text-tertiary" />
+            <Settings className="h-4 w-4 shrink-0 text-white/50" />
             <span>Settings</span>
           </Link>
 
-          <div className="border-t border-border">
+          <div className="border-t border-white/10">
             <button
               type="button"
               role="menuitem"
               onClick={handleSignOut}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-error transition-colors hover:bg-error/5"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-white transition-colors hover:bg-white/5"
             >
-              <LogOut className="h-4 w-4 shrink-0" />
+              <LogOut className="h-4 w-4 shrink-0 text-white/50" />
               <span>Sign out</span>
             </button>
           </div>

@@ -609,6 +609,7 @@ export interface ShotListShot {
   approvedBy: string | null;
   approvedAt: string | null;
   approvedSnapshot: Record<string, unknown> | null;
+  approvalNotes: string;
   needsReapproval: boolean;
   deliverableLinks: ShotDeliverableLink[];
   productLinks: ShotProductLink[];

@@ -1419,23 +1419,27 @@ export default function PreProductionWorkspacePage({
   const canAccess =
     user?.role === "Admin" ||
     user?.role === "Producer" || user?.role === "Post Producer" ||
-    user?.role === "Art Director";
+    user?.role === "Art Director" ||
+    user?.role === "Creative Director";
 
   if (!canAccess) {
     return (
       <EmptyState
         title="Access restricted"
-        description="Pre-production is available to Producers and Art Directors."
+        description="Pre-production is available to Producers, Art Directors, and the Creative Director."
       />
     );
   }
 
   const isArtDirector = user?.role === "Art Director";
+  const isCreativeDirector = user?.role === "Creative Director";
   const canManagePeople = user?.role === "Admin" || user?.role === "Producer" || user?.role === "Post Producer";
-  const visibleTabs = isArtDirector
+  // CD comes here to sign off on the shot list. Keep their view scoped to the shot list so the
+  // nav doesn't imply they own scheduling, crew, or logistics.
+  const visibleTabs = isArtDirector || isCreativeDirector
     ? TABS.filter((t) => t.id === "schedule" || t.id === "people")
     : TABS;
-  const visibleScheduleViews = isArtDirector
+  const visibleScheduleViews = isArtDirector || isCreativeDirector
     ? SCHEDULE_SUB_VIEWS.filter((view) => view.id === "shot-list")
     : SCHEDULE_SUB_VIEWS;
 

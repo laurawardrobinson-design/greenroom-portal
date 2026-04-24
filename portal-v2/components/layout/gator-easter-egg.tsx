@@ -10,6 +10,8 @@ export function GatorEasterEgg() {
   const [chomping, setChomping] = useState(false);
   const [zookeeperWalking, setZookeeperWalking] = useState(false);
   const [creditVisible, setCreditVisible] = useState(false);
+  const gatorTriggerRef = useRef<HTMLDivElement>(null);
+  const zookeeperTriggerRef = useRef<HTMLDivElement>(null);
   const {
     discoverCreature,
     activateMenagerie,
@@ -34,6 +36,28 @@ export function GatorEasterEgg() {
     }
     setTimeout(() => setChomping(false), 8000);
   }
+
+  // Attach native mouseenter listeners directly to the trigger DOM nodes.
+  // React's synthetic onMouseEnter relies on mouseover-bubbling delegation;
+  // some setups drop those, so the easter egg stops responding to real hover.
+  // Native `mouseenter` fires reliably regardless of delegation.
+  useEffect(() => {
+    const el = gatorTriggerRef.current;
+    if (!el) return;
+    const handler = () => triggerChomp();
+    el.addEventListener("mouseenter", handler);
+    return () => el.removeEventListener("mouseenter", handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chomping, zookeeperWalking, gatorCurrentlyLoose]);
+
+  useEffect(() => {
+    const el = zookeeperTriggerRef.current;
+    if (!el) return;
+    const handler = () => triggerZookeeper();
+    el.addEventListener("mouseenter", handler);
+    return () => el.removeEventListener("mouseenter", handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chomping, zookeeperWalking, gatorFound, enabled]);
 
   useEffect(() => {
     if (!chomping) {
@@ -142,14 +166,14 @@ export function GatorEasterEgg() {
             {/* Zookeeper trigger — far left side, only visible after gator found + enabled */}
             {gatorFound && enabled && (
               <div
-                onMouseEnter={triggerZookeeper}
-                className="h-6 w-4 cursor-default shrink-0"
+                ref={zookeeperTriggerRef}
+                className="h-full w-20 cursor-default shrink-0"
               />
             )}
             {/* Gator trigger — right side */}
             <div className="flex-1 flex items-center justify-end h-full">
               <div
-                onMouseEnter={triggerChomp}
+                ref={gatorTriggerRef}
                 className="h-6 w-6 cursor-default"
               />
             </div>

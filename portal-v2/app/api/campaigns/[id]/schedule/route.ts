@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio", "Creative Director"]);
     const { id: campaignId } = await params;
     const db = createAdminClient();
 
@@ -52,6 +52,24 @@ export async function GET(
       db.from("campaign_products").select("*, product:products(*)").eq("campaign_id", campaignId),
     ]);
 
+    // Approver lookup — so the shot list popover can show who signed off
+    // without a second round-trip per row.
+    const approverIds = Array.from(
+      new Set(
+        (shots || [])
+          .map((s) => (s as Record<string, unknown>).approved_by as string | null)
+          .filter((id): id is string => !!id)
+      )
+    );
+    let approvers: Array<{ id: string; name: string }> = [];
+    if (approverIds.length > 0) {
+      const { data: users } = await db
+        .from("users")
+        .select("id, name")
+        .in("id", approverIds);
+      approvers = (users || []) as Array<{ id: string; name: string }>;
+    }
+
     return NextResponse.json({
       setups: setups || [],
       shots: shots || [],
@@ -60,6 +78,7 @@ export async function GET(
       talent: talentEntries,
       deliverables: delRes.data || [],
       campaignProducts: cpRes.data || [],
+      approvers,
     });
   } catch (error) {
     return authErrorResponse(error);

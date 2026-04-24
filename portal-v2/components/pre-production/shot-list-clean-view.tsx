@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, Fragment } from "react";
+import { useState, useRef, useEffect, useCallback, Fragment, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, Calendar, Check, Copy, Download, List, GripVertical, MoveRight, Plus, Star, Trash2, ChevronLeft, X, Upload, UserPlus, User } from "lucide-react";
+import { AlertTriangle, Calendar, Check, Circle, Copy, Download, List, GripVertical, MoveRight, Plus, Star, Trash2, ChevronLeft, X, Upload, UserPlus, User } from "lucide-react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { useToast } from "@/components/ui/toast";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { generateShotListPdf } from "@/lib/utils/pdf-generator";
 import { CHANNEL_TEMPLATES, SPEC_DIMENSIONS } from "@/lib/constants/channels";
 import type { ChannelTemplate } from "@/lib/constants/channels";
@@ -115,6 +116,7 @@ interface ScheduleData {
     approved_by?: string | null;
     approved_at?: string | null;
     approved_snapshot?: Record<string, unknown> | null;
+    approval_notes?: string;
     needs_reapproval?: boolean;
   }>;
   links: Array<{ shot_id: string; deliverable_id: string }>;
@@ -136,6 +138,7 @@ interface ScheduleData {
   }>;
   deliverables: Array<{ id: string; channel: string; format: string; aspect_ratio: string }>;
   campaignProducts: Array<{ id: string; product_id: string; product: { id: string; name: string; item_code: string | null; department: string | null; description: string | null; shooting_notes: string | null; image_url: string | null } | null }>;
+  approvers?: Array<{ id: string; name: string }>;
 }
 
 // ─── Editable Cell ───────────────────────────────────────────────────────────
@@ -196,7 +199,8 @@ function Cell({
         />
       ) : (
         <div
-          className={`px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs h-full ${
+          title={value || undefined}
+          className={`px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs h-full truncate ${
             value ? "text-text-primary" : "text-text-tertiary/40"
           } group-hover:bg-primary/3 transition-colors`}
         >
@@ -308,9 +312,9 @@ function RefImageCell({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="flex items-center justify-center h-6 w-6 rounded border border-dashed border-border/60 text-text-tertiary/30 hover:border-primary/40 hover:text-primary/50 transition-colors"
+          className="flex items-center justify-center h-6 w-6 rounded border border-dashed border-border text-text-tertiary hover:border-primary hover:text-primary transition-colors"
         >
-          <Upload className="h-3 w-3" />
+          <Upload className="h-3 w-3.5" />
         </button>
       )}
     </td>
@@ -1385,6 +1389,203 @@ function ChannelCell({
   );
 }
 
+// ─── CD sign-off indicator ───────────────────────────────────────────────────
+// Compact icon that any role sees; only Creative Director (or Admin)
+// interacts with it. Pending = dashed outline, Signed = green check,
+// Stale = amber alert. Clicking opens a popover with status, notes, and
+// (for CD) Sign off / Unsign controls. Advisory only — never blocks the shoot.
+function CdSignoffIndicator({
+  shot,
+  canSignOff,
+  approverName,
+  onApprove,
+  onUnapprove,
+  onUpdateNotes,
+}: {
+  shot: ScheduleData["shots"][number];
+  canSignOff: boolean;
+  approverName: string | null;
+  onApprove: (notes?: string) => void;
+  onUnapprove: () => void;
+  onUpdateNotes: (notes: string) => void;
+}) {
+  const { anchorRef, panelStyle, open, toggle, close } = usePortalPanel<HTMLButtonElement>();
+  const [draftNotes, setDraftNotes] = useState(shot.approval_notes ?? "");
+
+  // Right-anchor the popover: the CD column sits at the far right of the shot-list table, so a
+  // left-anchored panel would fall off the viewport. Align the popover's right edge to the
+  // button's right edge, clamped to the viewport with an 8px gutter.
+  const POPOVER_WIDTH = 288;
+  const adjustedPanelStyle: React.CSSProperties = (() => {
+    if (typeof window === "undefined" || !anchorRef.current) return panelStyle;
+    const r = anchorRef.current.getBoundingClientRect();
+    const preferred = r.right - POPOVER_WIDTH;
+    const clamped = Math.max(8, Math.min(window.innerWidth - POPOVER_WIDTH - 8, preferred));
+    return { ...panelStyle, left: clamped };
+  })();
+
+  useEffect(() => {
+    if (!open) setDraftNotes(shot.approval_notes ?? "");
+  }, [open, shot.approval_notes]);
+
+  const isApproved = Boolean(shot.approved_at);
+  const isStale = Boolean(shot.needs_reapproval);
+
+  const status: "pending" | "signed" | "stale" = isStale
+    ? "stale"
+    : isApproved
+      ? "signed"
+      : "pending";
+
+  const label =
+    status === "signed" ? "CD signed off" : status === "stale" ? "Needs re-sign" : "Awaiting CD";
+
+  const iconClasses =
+    status === "signed"
+      ? "bg-[color:var(--color-success)]/12 text-[color:var(--color-success)] border-[color:var(--color-success)]/30"
+      : status === "stale"
+        ? "bg-[color:var(--color-warning)]/12 text-[color:var(--color-warning)] border-[color:var(--color-warning)]/40"
+        : "text-text-tertiary/70 border-border border-dashed";
+
+  const formattedDate = shot.approved_at
+    ? new Date(shot.approved_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    : null;
+
+  function handleSignOff() {
+    onApprove(draftNotes.trim() ? draftNotes : undefined);
+    close();
+  }
+
+  function handleUnsign() {
+    onUnapprove();
+    close();
+  }
+
+  function handleSaveNotes() {
+    if (draftNotes !== (shot.approval_notes ?? "")) onUpdateNotes(draftNotes);
+    close();
+  }
+
+  return (
+    <>
+      <button
+        ref={anchorRef}
+        type="button"
+        onClick={toggle}
+        title={canSignOff ? `${label} — click to review` : label}
+        className={`flex h-5 w-5 items-center justify-center rounded-full border transition-colors ${iconClasses} ${
+          canSignOff ? "hover:opacity-80" : "cursor-default"
+        }`}
+      >
+        {status === "signed" ? (
+          <Check className="h-3 w-3" />
+        ) : status === "stale" ? (
+          <AlertTriangle className="h-3 w-3" />
+        ) : (
+          <Circle className="h-2.5 w-2.5 opacity-0" />
+        )}
+      </button>
+
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <>
+            <div className="fixed inset-0 z-[9998]" onClick={close} />
+            <div
+              style={adjustedPanelStyle}
+              className="w-72 rounded-lg border border-border bg-surface shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="border-b border-border px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+                  CD sign-off
+                </p>
+                <p
+                  className={`mt-0.5 text-sm font-semibold ${
+                    status === "signed"
+                      ? "text-[color:var(--color-success)]"
+                      : status === "stale"
+                        ? "text-[color:var(--color-warning)]"
+                        : "text-text-primary"
+                  }`}
+                >
+                  {label}
+                </p>
+                {isApproved && (
+                  <p className="mt-0.5 text-xs text-text-secondary">
+                    {approverName || "CD"}
+                    {formattedDate ? ` · ${formattedDate}` : ""}
+                  </p>
+                )}
+                {isStale && (
+                  <p className="mt-0.5 text-[11px] text-text-tertiary">
+                    Shot changed after sign-off. CD can re-sign when ready.
+                  </p>
+                )}
+              </div>
+
+              <div className="px-3 py-2">
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+                  Notes
+                </label>
+                {canSignOff ? (
+                  <textarea
+                    value={draftNotes}
+                    onChange={(e) => setDraftNotes(e.target.value)}
+                    placeholder="Optional notes for the producer / art director"
+                    rows={3}
+                    className="mt-1 w-full rounded border border-border bg-surface px-2 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
+                  />
+                ) : (
+                  <p className="mt-1 whitespace-pre-wrap rounded border border-border bg-surface-secondary/40 px-2 py-1.5 text-xs text-text-secondary min-h-[44px]">
+                    {shot.approval_notes?.trim() ? shot.approval_notes : "No notes."}
+                  </p>
+                )}
+                {!canSignOff && (
+                  <p className="mt-2 text-[11px] text-text-tertiary">
+                    Only the Creative Director can sign off or edit notes.
+                  </p>
+                )}
+              </div>
+
+              {canSignOff && (
+                <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2">
+                  {isApproved && !isStale ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleUnsign}
+                        className="rounded border border-border px-2 py-1 text-[11px] font-medium text-text-secondary hover:text-text-primary transition-colors"
+                      >
+                        Unsign
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveNotes}
+                        className="rounded bg-primary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-primary/90 transition-colors"
+                      >
+                        Save notes
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSignOff}
+                      className="rounded bg-primary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-primary/90 transition-colors"
+                    >
+                      {isStale ? "Re-sign" : "Sign off"}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </>,
+          document.body
+        )}
+    </>
+  );
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 export function ShotListCleanView({
   campaignId,
@@ -1395,8 +1596,16 @@ export function ShotListCleanView({
   embedded = false,
 }: Props) {
   const { toast } = useToast();
+  const { user: currentUser } = useCurrentUser();
+  const canSignOff = currentUser?.role === "Creative Director" || currentUser?.role === "Admin";
   const swrKey = `/api/campaigns/${campaignId}/schedule`;
   const { data, isLoading } = useSWR<ScheduleData>(swrKey, fetcher);
+
+  const approverMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of data?.approvers ?? []) m.set(a.id, a.name);
+    return m;
+  }, [data?.approvers]);
 
   // User campaign preferences — Shot List density (detailed / on_set)
   const prefsKey = `/api/campaigns/${campaignId}/preferences`;
@@ -1543,18 +1752,18 @@ export function ShotListCleanView({
     { key: "drag", label: "", minW: 28, defaultW: 28 },
     { key: "#", label: "#", minW: 36, defaultW: 36 },
     { key: "ref", label: "Ref", minW: 36, defaultW: 36 },
-    { key: "name", label: "Shot Name", minW: 120, defaultW: 190 },
-    { key: "type", label: "Type", minW: 56, defaultW: 72 },
-    { key: "angle", label: "Angle", minW: 64, defaultW: 84 },
-    { key: "env", label: "Env", minW: 72, defaultW: 98 },
+    { key: "name", label: "Shot Name", minW: 120, defaultW: 168 },
+    { key: "type", label: "Type", minW: 48, defaultW: 56 },
+    { key: "angle", label: "Angle", minW: 52, defaultW: 64 },
+    { key: "env", label: "Env", minW: 56, defaultW: 76 },
     { key: "channel", label: "Channel", minW: 84, defaultW: 118 },
     { key: "desc", label: "Description", minW: 150, defaultW: 260 },
     { key: "details", label: "Details", minW: 76, defaultW: 82 },
-    { key: "state", label: "Sign-off", minW: 112, defaultW: 128 },
+    { key: "state", label: "CD", minW: 36, defaultW: 40 },
     { key: "delete", label: "", minW: 28, defaultW: 28 },
   ];
 
-  const storageKey = `shotlist-col-widths-v5-${campaignId}`;
+  const storageKey = `shotlist-col-widths-v10-${campaignId}`;
   const [colWidths, setColWidths] = useState<number[]>(() => {
     if (typeof window === "undefined") return COLUMNS.map((c) => c.defaultW);
     try {
@@ -1634,16 +1843,35 @@ export function ShotListCleanView({
 
   // ─── Approve / unapprove (Wave 2) ─────────────────────────────────────────
   const approveShot = useCallback(
-    async (shotId: string) => {
+    async (shotId: string, notes?: string) => {
       try {
         const r = await fetch(`/api/shot-list/shots/${shotId}/approve`, {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(notes !== undefined ? { notes } : {}),
         });
         if (!r.ok) throw new Error("approve failed");
         globalMutate(swrKey);
         toast("success", "CD signed off");
       } catch {
         toast("error", "Failed to approve");
+      }
+    },
+    [swrKey, toast]
+  );
+
+  const updateApprovalNotes = useCallback(
+    async (shotId: string, notes: string) => {
+      try {
+        const r = await fetch(`/api/shot-list/shots/${shotId}/approve`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notes }),
+        });
+        if (!r.ok) throw new Error("notes update failed");
+        globalMutate(swrKey);
+      } catch {
+        toast("error", "Failed to save notes");
       }
     },
     [swrKey, toast]
@@ -1657,6 +1885,7 @@ export function ShotListCleanView({
         });
         if (!r.ok) throw new Error("unapprove failed");
         globalMutate(swrKey);
+        toast("success", "Sign-off revoked");
       } catch {
         toast("error", "Failed to revoke approval");
       }
@@ -1950,8 +2179,9 @@ export function ShotListCleanView({
               {density === "on_set" ? (
                 <OnSetShotList
                   shots={setupShots}
+                  canSignOff={canSignOff}
                   onToggleHero={toggleHero}
-                  onApprove={approveShot}
+                  onApprove={(shotId) => approveShot(shotId)}
                   onUnapprove={unapproveShot}
                   onStatus={(shotId, status) => patchShot(shotId, "status", status)}
                 />
@@ -2043,7 +2273,7 @@ export function ShotListCleanView({
                                   />
                                 ) : (
                                   <>
-                                    <GripVertical className="h-3 w-3 text-text-tertiary/30 group-hover/drag:hidden" />
+                                    <GripVertical className="h-3.5 w-3.5 text-text-tertiary group-hover/drag:hidden" />
                                     <input
                                       type="checkbox"
                                       checked={false}
@@ -2088,6 +2318,7 @@ export function ShotListCleanView({
                               <select
                                 value={shot.media_type || "Still"}
                                 onChange={(e) => patchShot(shot.id, "mediaType", e.target.value)}
+                                title={shot.media_type || "Still"}
                                 className="w-full px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs text-text-primary bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none"
                               >
                                 <option value="Still">Still</option>
@@ -2101,6 +2332,7 @@ export function ShotListCleanView({
                               <select
                                 value={shot.angle || ""}
                                 onChange={(e) => patchShot(shot.id, "angle", e.target.value)}
+                                title={shot.angle || "Angle"}
                                 className={`w-full px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none ${
                                   shot.angle ? "text-text-primary" : "text-text-tertiary/40"
                                 }`}
@@ -2118,6 +2350,7 @@ export function ShotListCleanView({
                               <select
                                 value={shot.location || ""}
                                 onChange={(e) => patchShot(shot.id, "location", e.target.value)}
+                                title={shot.location || "Environment"}
                                 className={`w-full px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none ${
                                   shot.location ? "text-text-primary" : "text-text-tertiary/40"
                                 }`}
@@ -2152,55 +2385,17 @@ export function ShotListCleanView({
                               </button>
                             </td>
 
-                            {/* Review: hero star + approve button + stale badge (Wave 2) */}
+                            {/* CD sign-off indicator (Wave 2) */}
                             <td className="px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)]">
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => toggleHero(shot.id, !shot.is_hero)}
-                                  title={shot.is_hero ? "Unmark hero" : "Mark hero"}
-                                  className={`flex items-center justify-center h-5 w-5 rounded hover:bg-surface-secondary transition-colors ${
-                                    shot.is_hero ? "text-[color:var(--color-warning)]" : "text-text-tertiary/60"
-                                  }`}
-                                >
-                                  <Star
-                                    className="h-3 w-3"
-                                    fill={shot.is_hero ? "currentColor" : "none"}
-                                  />
-                                </button>
-
-                                {shot.approved_at ? (
-                                  shot.needs_reapproval ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => approveShot(shot.id)}
-                                      title="Previously signed off by CD; changes detected. Click to re-sign."
-                                      className="inline-flex items-center gap-0.5 rounded-full border border-[color:var(--color-warning)]/30 bg-[color:var(--color-warning)]/8 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[color:var(--color-warning)] hover:bg-[color:var(--color-warning)]/15 transition-colors"
-                                    >
-                                      <AlertTriangle className="h-2.5 w-2.5" />
-                                      Re-sign
-                                    </button>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => unapproveShot(shot.id)}
-                                      title="CD signed off. Click to revoke."
-                                      className="inline-flex items-center gap-0.5 rounded-full border border-[color:var(--color-success)]/30 bg-[color:var(--color-success)]/8 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[color:var(--color-success)] hover:bg-[color:var(--color-success)]/15 transition-colors"
-                                    >
-                                      <Check className="h-2.5 w-2.5" />
-                                      Signed off
-                                    </button>
-                                  )
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => approveShot(shot.id)}
-                                    title="CD sign-off on this shot (snapshots current fields)"
-                                    className="inline-flex items-center rounded border border-border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-text-secondary hover:border-primary/40 hover:text-primary transition-colors"
-                                  >
-                                    Sign off
-                                  </button>
-                                )}
+                              <div className="flex items-center justify-center">
+                                <CdSignoffIndicator
+                                  shot={shot}
+                                  canSignOff={canSignOff}
+                                  approverName={shot.approved_by ? approverMap.get(shot.approved_by) ?? null : null}
+                                  onApprove={(notes) => approveShot(shot.id, notes)}
+                                  onUnapprove={() => unapproveShot(shot.id)}
+                                  onUpdateNotes={(notes) => updateApprovalNotes(shot.id, notes)}
+                                />
                               </div>
                             </td>
 
@@ -2562,12 +2757,14 @@ function BulkActionBar({
 // on set). Rendered when user has density = on_set.
 function OnSetShotList({
   shots,
+  canSignOff,
   onToggleHero,
   onApprove,
   onUnapprove,
   onStatus,
 }: {
   shots: Array<ScheduleData["shots"][number]>;
+  canSignOff: boolean;
   onToggleHero: (shotId: string, next: boolean) => void;
   onApprove: (shotId: string) => void;
   onUnapprove: (shotId: string) => void;
@@ -2674,31 +2871,33 @@ function OnSetShotList({
                 </button>
               )}
 
-              {isStale ? (
-                <button
-                  type="button"
-                  onClick={() => onApprove(shot.id)}
-                  className="flex h-11 items-center rounded-lg border border-[color:var(--color-warning)]/40 bg-[color:var(--color-warning)]/8 px-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--color-warning)] hover:bg-[color:var(--color-warning)]/15 transition-colors"
-                >
-                  Re-sign
-                </button>
-              ) : isApproved ? (
-                <button
-                  type="button"
-                  onClick={() => onUnapprove(shot.id)}
-                  className="flex h-11 items-center rounded-lg border border-border px-3 text-xs font-semibold uppercase tracking-wider text-text-tertiary hover:text-text-secondary transition-colors"
-                >
-                  Unsign
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onApprove(shot.id)}
-                  className="flex h-11 items-center rounded-lg border border-border px-3 text-xs font-semibold uppercase tracking-wider text-text-secondary hover:border-primary/40 hover:text-primary transition-colors"
-                >
-                  Sign off
-                </button>
-              )}
+              {canSignOff ? (
+                isStale ? (
+                  <button
+                    type="button"
+                    onClick={() => onApprove(shot.id)}
+                    className="flex h-11 items-center rounded-lg border border-[color:var(--color-warning)]/40 bg-[color:var(--color-warning)]/8 px-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--color-warning)] hover:bg-[color:var(--color-warning)]/15 transition-colors"
+                  >
+                    Re-sign
+                  </button>
+                ) : isApproved ? (
+                  <button
+                    type="button"
+                    onClick={() => onUnapprove(shot.id)}
+                    className="flex h-11 items-center rounded-lg border border-border px-3 text-xs font-semibold uppercase tracking-wider text-text-tertiary hover:text-text-secondary transition-colors"
+                  >
+                    Unsign
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onApprove(shot.id)}
+                    className="flex h-11 items-center rounded-lg border border-border px-3 text-xs font-semibold uppercase tracking-wider text-text-secondary hover:border-primary/40 hover:text-primary transition-colors"
+                  >
+                    Sign off
+                  </button>
+                )
+              ) : null}
             </div>
           </div>
         );
