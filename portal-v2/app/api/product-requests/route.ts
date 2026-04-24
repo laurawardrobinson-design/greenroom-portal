@@ -8,18 +8,29 @@ const VALID_STATUSES: PRDocStatus[] = ["draft", "submitted", "forwarded", "fulfi
 // GET /api/product-requests?campaignId=...&status=draft,submitted
 export async function GET(request: Request) {
   try {
-    await getAuthUser();
+    const user = await getAuthUser();
     const { searchParams } = new URL(request.url);
     const campaignId = searchParams.get("campaignId") || undefined;
     const statusParam = searchParams.get("status");
     const detail = searchParams.get("detail") === "full" ? "full" : "light";
 
+    // BMM does not see Producer drafts — drafts are private WIP.
+    const isBMM = user.role === "Brand Marketing Manager";
+
     let status: PRDocStatus | PRDocStatus[] | undefined;
     if (statusParam) {
       const parts = statusParam.split(",").map((s) => s.trim()) as PRDocStatus[];
-      const valid = parts.filter((p) => VALID_STATUSES.includes(p));
+      const valid = parts
+        .filter((p) => VALID_STATUSES.includes(p))
+        .filter((p) => !isBMM || p !== "draft");
       if (valid.length === 1) status = valid[0];
       else if (valid.length > 1) status = valid;
+      else if (isBMM) {
+        // BMM asked only for draft — return empty.
+        return NextResponse.json([]);
+      }
+    } else if (isBMM) {
+      status = VALID_STATUSES.filter((s) => s !== "draft");
     }
 
     const docs = await listPRDocs({ campaignId, status, detail });

@@ -63,12 +63,7 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* Main content area — offset by sidebar width on desktop */}
         <div className="flex flex-1 flex-col lg:pl-[245px]">
-          <Topbar
-            onMenuClick={() => setMobileOpen(true)}
-            userName={user.name}
-            userRole={user.role}
-            userFavoriteProduct={user.favoritePublixProduct || undefined}
-          />
+          <Topbar onMenuClick={() => setMobileOpen(true)} />
 
           <main className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-7xl px-[var(--density-page-content-px)] py-[var(--density-page-content-py)] lg:px-[var(--density-page-content-px-lg)]">

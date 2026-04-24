@@ -15,6 +15,7 @@ import {
 import type { PRDepartment } from "@/types/domain";
 import { PR_DEPARTMENT_LABELS } from "@/types/domain";
 import type { RBUProduct } from "@/app/api/rbu/[token]/products/route";
+import { ReferenceImageGallery } from "@/components/products/reference-image-gallery";
 
 interface Response {
   department: PRDepartment;
@@ -40,6 +41,7 @@ export default function RBUProductsPage({
 
   const [query, setQuery] = useState("");
   const [flagFor, setFlagFor] = useState<RBUProduct | null>(null);
+  const [detailFor, setDetailFor] = useState<RBUProduct | null>(null);
   const [showAdd, setShowAdd] = useState(false);
 
   const filtered = useMemo(() => {
@@ -129,7 +131,12 @@ export default function RBUProductsPage({
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((p) => (
-            <ProductTile key={p.id} product={p} onFlag={() => setFlagFor(p)} />
+            <ProductTile
+              key={p.id}
+              product={p}
+              onOpen={() => setDetailFor(p)}
+              onFlag={() => setFlagFor(p)}
+            />
           ))}
         </div>
       )}
@@ -142,6 +149,18 @@ export default function RBUProductsPage({
           onFlagged={() => {
             setFlagFor(null);
             mutate();
+          }}
+        />
+      )}
+
+      {detailFor && (
+        <ProductDetailModal
+          token={token}
+          product={detailFor}
+          onClose={() => setDetailFor(null)}
+          onFlag={() => {
+            setFlagFor(detailFor);
+            setDetailFor(null);
           }}
         />
       )}
@@ -163,13 +182,18 @@ export default function RBUProductsPage({
 
 function ProductTile({
   product: p,
+  onOpen,
   onFlag,
 }: {
   product: RBUProduct;
+  onOpen: () => void;
   onFlag: () => void;
 }) {
   return (
-    <div className="group relative flex h-full flex-col rounded-xl border border-neutral-200 bg-white p-4 transition-all hover:border-neutral-300 hover:shadow-sm">
+    <div
+      onClick={onOpen}
+      className="group relative flex h-full cursor-pointer flex-col rounded-xl border border-neutral-200 bg-white p-4 transition-all hover:border-neutral-300 hover:shadow-sm"
+    >
       {p.openFlagCount > 0 && (
         <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium">
           <Flag className="h-2.5 w-2.5" />
@@ -240,7 +264,10 @@ function ProductTile({
           )}
         </div>
         <button
-          onClick={onFlag}
+          onClick={(e) => {
+            e.stopPropagation();
+            onFlag();
+          }}
           className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] font-medium text-neutral-700 hover:border-amber-400 hover:text-amber-800 hover:bg-amber-50 transition-all"
         >
           <Flag className="h-3 w-3" />
@@ -572,21 +599,148 @@ function Field({
 function Overlay({
   children,
   onClose,
+  size = "md",
 }: {
   children: React.ReactNode;
   onClose: () => void;
+  size?: "md" | "lg";
 }) {
+  const maxWidth = size === "lg" ? "max-w-3xl" : "max-w-lg";
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-xl bg-white shadow-xl overflow-hidden"
+        className={`w-full ${maxWidth} rounded-xl bg-white shadow-xl overflow-hidden max-h-[90vh] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}
       </div>
     </div>
+  );
+}
+
+// Product detail modal for RBU teams — shows product facts plus the
+// reference-image gallery in "rbu" mode so they can upload samples of
+// what they're currently producing. Brand team promotes samples to
+// "approved" from the portal side once they clear the bar.
+function ProductDetailModal({
+  token,
+  product: p,
+  onClose,
+  onFlag,
+}: {
+  token: string;
+  product: RBUProduct;
+  onClose: () => void;
+  onFlag: () => void;
+}) {
+  return (
+    <Overlay onClose={onClose} size="lg">
+      <header className="px-5 py-4 border-b border-neutral-200 flex items-start justify-between gap-4 shrink-0">
+        <div className="flex items-start gap-3 min-w-0">
+          {p.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={p.imageUrl}
+              alt={p.name}
+              className="h-14 w-14 shrink-0 rounded-lg object-cover bg-neutral-100"
+            />
+          ) : (
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
+              <ShoppingBasket className="h-6 w-6 text-neutral-300" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-neutral-500">
+              Product
+            </div>
+            <div className="text-[16px] font-semibold text-neutral-900 truncate">
+              {p.name}
+            </div>
+            {p.itemCode && (
+              <div className="text-[11px] text-neutral-500 mt-0.5">
+                #{p.itemCode}
+              </div>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="shrink-0 rounded-md p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </header>
+
+      <div className="overflow-y-auto px-5 py-4 space-y-5">
+        {p.description && (
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-neutral-500 mb-1">
+              Description
+            </div>
+            <p className="text-[13px] text-neutral-700">{p.description}</p>
+          </div>
+        )}
+
+        {p.restrictions && (
+          <div className="flex items-start gap-2 rounded-md bg-rose-50 border border-rose-100 px-3 py-2 text-[12px] text-rose-700">
+            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <span>{p.restrictions}</span>
+          </div>
+        )}
+
+        {(p.rpGuideUrl || p.pcomLink) && (
+          <div className="flex items-center gap-3 text-[12px]">
+            {p.rpGuideUrl && (
+              <a
+                href={p.rpGuideUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[#004C2A] hover:underline"
+              >
+                R&amp;P guide
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+            {p.pcomLink && (
+              <a
+                href={p.pcomLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-neutral-500 hover:underline"
+              >
+                Publix.com
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+        )}
+
+        <div className="pt-2 border-t border-neutral-200">
+          <ReferenceImageGallery
+            endpointBase={`/api/rbu/${token}/products/${p.id}/images`}
+            mode="rbu"
+          />
+        </div>
+      </div>
+
+      <footer className="shrink-0 border-t border-neutral-200 px-5 py-3 flex items-center justify-between gap-2">
+        <button
+          onClick={onFlag}
+          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-[12px] text-neutral-700 hover:border-amber-400 hover:text-amber-800 hover:bg-amber-50"
+        >
+          <Flag className="h-3 w-3" />
+          Flag product
+        </button>
+        <button
+          onClick={onClose}
+          className="rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-[12px] text-neutral-700 hover:bg-neutral-50"
+        >
+          Close
+        </button>
+      </footer>
+    </Overlay>
   );
 }

@@ -1,25 +1,20 @@
 "use client";
 
 import { Menu } from "lucide-react";
-import type { UserRole } from "@/types/domain";
 import { NotificationBell } from "./notification-bell";
-import { UserMenu } from "./user-menu";
 
 interface TopbarProps {
   title?: string;
   onMenuClick: () => void;
-  userName: string;
-  userRole: UserRole;
-  userFavoriteProduct?: string;
   children?: React.ReactNode;
 }
 
+// The user identity + account menu (Settings / Goals / Sign out) now
+// lives at the bottom of the sidebar. The topbar keeps the mobile menu
+// trigger and the notification bell only.
 export function Topbar({
   title,
   onMenuClick,
-  userName,
-  userRole,
-  userFavoriteProduct,
   children,
 }: TopbarProps) {
   return (
@@ -41,11 +36,6 @@ export function Topbar({
       <div className="ml-auto flex items-center gap-1">
         {children}
         <NotificationBell variant="topbar" />
-        <UserMenu
-          userName={userName}
-          userRole={userRole}
-          userFavoriteProduct={userFavoriteProduct}
-        />
       </div>
     </header>
   );

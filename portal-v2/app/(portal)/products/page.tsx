@@ -63,11 +63,15 @@ export default function ProductDirectoryPage() {
     ? Object.values(flagCounts).reduce((a, b) => a + b, 0)
     : 0;
 
+  // BMM can create + edit products so they can spin up "coming-soon" /
+  // "planning" entries for things the team wants to shoot — and attach
+  // reference images to them before RBU starts sampling.
   const canEdit =
     user?.role === "Admin" ||
     user?.role === "Producer" || user?.role === "Post Producer" ||
     user?.role === "Art Director" ||
-    user?.role === "Studio";
+    user?.role === "Studio" ||
+    user?.role === "Brand Marketing Manager";
   const canSeeFlags =
     user?.role === "Admin" ||
     user?.role === "Producer" ||
@@ -75,7 +79,7 @@ export default function ProductDirectoryPage() {
     user?.role === "Brand Marketing Manager";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="space-y-0">
         <PageHeader title="Products" />
 
@@ -152,8 +156,8 @@ export default function ProductDirectoryPage() {
                 onClick={() => setDeptFilter("")}
                 className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                   deptFilter === ""
-                    ? "bg-text-primary text-white"
-                    : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
+                    ? "border border-primary text-primary bg-primary/5"
+                    : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
                 }`}
               >
                 All
@@ -164,8 +168,8 @@ export default function ProductDirectoryPage() {
                   onClick={() => setDeptFilter(deptFilter === dept ? "" : dept)}
                   className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                     deptFilter === dept
-                      ? "bg-text-primary text-white"
-                      : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
+                      ? "border border-primary text-primary bg-primary/5"
+                      : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
                   }`}
                 >
                   {dept}

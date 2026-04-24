@@ -12,6 +12,7 @@ function toUser(row: Record<string, unknown>): AppUser {
     phone: (row.phone as string) || "",
     title: (row.title as string) || "",
     vendorId: (row.vendor_id as string) || null,
+    deskDepartment: (row.desk_department as AppUser["deskDepartment"]) ?? null,
     favoriteDrinks: (row.favorite_drinks as string) || "",
     favoriteSnacks: (row.favorite_snacks as string) || "",
     dietaryRestrictions: (row.dietary_restrictions as string) || "",

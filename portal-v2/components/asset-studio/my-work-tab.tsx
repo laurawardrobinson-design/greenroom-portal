@@ -320,7 +320,7 @@ export function MyWorkTab({ user }: Props) {
     <div className="space-y-5">
       <Card
         padding="lg"
-        className="flex flex-col gap-3 border-[var(--as-border)] bg-[var(--as-surface)] lg:flex-row lg:items-center lg:justify-between"
+        className="flex flex-col gap-4 border-[var(--as-border)] bg-[var(--as-surface)]"
       >
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-[var(--as-accent-soft)] p-2">
@@ -334,7 +334,7 @@ export function MyWorkTab({ user }: Props) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
           <StageStat
             label="Actionable"
             value={items.length}
@@ -354,7 +354,7 @@ export function MyWorkTab({ user }: Props) {
             icon={PlayCircle}
           />
           <StageStat
-            label="Mechanicals this week"
+            label="Mechanicals"
             value={summary?.variantsThisWeek ?? 0}
             sub="Last 7 days"
             icon={Images}
@@ -456,23 +456,19 @@ function StageStat({
   icon?: React.ElementType;
 }) {
   return (
-    <div className="rounded-md border border-[var(--as-border)] bg-[var(--as-surface-2)] px-3 py-2">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-wide text-[var(--as-text-muted)]">{label}</p>
-          <p className="mt-0.5 text-lg font-semibold text-[var(--as-text)]">
-            {value.toLocaleString()}
-          </p>
-          {sub && (
-            <p className="mt-0.5 text-[10px] text-[var(--as-text-subtle)]">{sub}</p>
-          )}
+    <div className="relative rounded-md border border-[var(--as-border)] bg-[var(--as-surface-2)] px-3 py-2">
+      {Icon && (
+        <div className="absolute right-2 top-2 rounded-md bg-[var(--as-surface)] p-1.5 text-[var(--as-text-muted)]">
+          <Icon className="h-3.5 w-3.5" />
         </div>
-        {Icon && (
-          <div className="rounded-md bg-[var(--as-surface)] p-1.5 text-[var(--as-text-muted)]">
-            <Icon className="h-3.5 w-3.5" />
-          </div>
-        )}
-      </div>
+      )}
+      <p className="pr-8 text-[11px] uppercase text-[var(--as-text-muted)]">{label}</p>
+      <p className="mt-0.5 text-lg font-semibold text-[var(--as-text)]">
+        {value.toLocaleString()}
+      </p>
+      {sub && (
+        <p className="mt-0.5 text-[10px] text-[var(--as-text-subtle)]">{sub}</p>
+      )}
     </div>
   );
 }

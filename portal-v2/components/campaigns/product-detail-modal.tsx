@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { X, ExternalLink, AlertTriangle } from "lucide-react";
 import type { Product } from "@/types/domain";
+import { ReferenceImageGallery } from "@/components/products/reference-image-gallery";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error(); return r.json(); });
 
@@ -96,6 +97,14 @@ export function ProductDetailModal({ productId, open, onClose }: Props) {
             )}
           </div>
         )}
+
+        {/* Reference images — standards + RBU samples for this product */}
+        <div className="rounded-lg border border-border bg-surface-secondary/30 p-3">
+          <ReferenceImageGallery
+            endpointBase={`/api/products/${productId}/reference-images`}
+            mode="portal"
+          />
+        </div>
 
         {/* Shooting notes */}
         {product.shootingNotes && (

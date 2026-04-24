@@ -70,7 +70,7 @@ export default function ContactsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="space-y-0">
         <PageHeader title="Contacts" />
 
@@ -129,7 +129,7 @@ export default function ContactsPage() {
               <button
                 onClick={() => setRoleFilter("")}
                 className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                  !roleFilter ? "bg-text-primary text-white" : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
+                  !roleFilter ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
                 }`}
               >
                 All
@@ -139,7 +139,7 @@ export default function ContactsPage() {
                   key={r}
                   onClick={() => setRoleFilter(roleFilter === r ? "" : r)}
                   className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                    roleFilter === r ? "bg-text-primary text-white" : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
+                    roleFilter === r ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
                   }`}
                 >
                   {r}
@@ -151,7 +151,7 @@ export default function ContactsPage() {
               <button
                 onClick={() => setCategoryFilter("")}
                 className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                  !categoryFilter ? "bg-text-primary text-white" : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
+                  !categoryFilter ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
                 }`}
               >
                 All
@@ -161,7 +161,7 @@ export default function ContactsPage() {
                   key={c}
                   onClick={() => setCategoryFilter(categoryFilter === c ? "" : c)}
                   className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                    categoryFilter === c ? "bg-text-primary text-white" : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
+                    categoryFilter === c ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
                   }`}
                 >
                   {c}

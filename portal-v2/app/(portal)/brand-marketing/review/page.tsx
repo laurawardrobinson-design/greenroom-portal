@@ -44,7 +44,7 @@ export default function BrandMarketingReviewIndexPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <div className="inline-flex items-center gap-1 text-[12px] text-text-tertiary mb-1">
           <Sparkles className="h-3 w-3" />

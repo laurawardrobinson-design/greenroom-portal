@@ -436,12 +436,14 @@ export default function ProductRequestsPage() {
 
       {!isLoading && (counts.needs + counts.submitted + counts.fulfilled) > 0 && (
         <div className="flex flex-wrap gap-2">
-          <FilterPill
-            active={filter === "needs"}
-            onClick={() => setFilter("needs")}
-            label="Planning"
-            count={counts.needs}
-          />
+          {!isBMM && (
+            <FilterPill
+              active={filter === "needs"}
+              onClick={() => setFilter("needs")}
+              label="Planning"
+              count={counts.needs}
+            />
+          )}
           <FilterPill
             active={filter === "submitted"}
             onClick={() => setFilter("submitted")}

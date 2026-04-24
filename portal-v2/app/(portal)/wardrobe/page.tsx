@@ -213,7 +213,7 @@ export default function WardrobePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="space-y-0">
         <PageHeader
           title="Wardrobe"
@@ -277,9 +277,9 @@ export default function WardrobePage() {
               </div>
             </div>
             <div className="flex gap-1.5 flex-wrap">
-              <button onClick={() => setCategoryFilter("")} className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${categoryFilter === "" ? "bg-text-primary text-white" : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"}`}>All</button>
+              <button onClick={() => setCategoryFilter("")} className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${categoryFilter === "" ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"}`}>All</button>
               {WARDROBE_CATEGORIES.map((cat) => (
-                <button key={cat} onClick={() => setCategoryFilter(categoryFilter === cat ? "" : cat)} className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${categoryFilter === cat ? "bg-text-primary text-white" : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"}`}>{cat}</button>
+                <button key={cat} onClick={() => setCategoryFilter(categoryFilter === cat ? "" : cat)} className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${categoryFilter === cat ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"}`}>{cat}</button>
               ))}
             </div>
           </div>

@@ -18,7 +18,7 @@ export function LobFilterChips({ value, onChange, availableLobs }: LobFilterChip
         onClick={() => onChange(null)}
         className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium tracking-wide ring-1 ring-inset transition-colors ${
           value === null
-            ? "bg-text-primary text-white ring-text-primary"
+            ? "bg-primary/5 text-primary ring-primary"
             : "bg-transparent text-text-secondary ring-border hover:bg-surface-secondary"
         }`}
       >
@@ -34,7 +34,7 @@ export function LobFilterChips({ value, onChange, availableLobs }: LobFilterChip
             onClick={() => onChange(active ? null : lob)}
             className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium tracking-wide ring-1 ring-inset transition-colors ${
               active
-                ? "bg-text-primary text-white ring-text-primary"
+                ? "bg-primary/5 text-primary ring-primary"
                 : muted
                   ? "bg-transparent text-text-tertiary ring-border/60 hover:text-text-secondary"
                   : "bg-transparent text-text-secondary ring-border hover:bg-surface-secondary"

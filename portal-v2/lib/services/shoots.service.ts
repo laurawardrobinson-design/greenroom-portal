@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Shoot, ShootDate, ShootCrew, AppUser } from "@/types/domain";
 import type { CreateShootInput, UpdateShootInput, ShootDateInput } from "@/lib/validation/campaigns.schema";
+import { ensureAutoDraftForShootDate } from "@/lib/services/product-requests.service";
 
 function toShoot(
   row: Record<string, unknown>,
@@ -54,6 +55,7 @@ function toShootCrew(row: Record<string, unknown>): ShootCrew {
           phone: (user.phone as string) || "",
           title: (user.title as string) || "",
           vendorId: (user.vendor_id as string) || null,
+          deskDepartment: (user.desk_department as AppUser["deskDepartment"]) ?? null,
           favoriteDrinks: (user.favorite_drinks as string) || "",
           favoriteSnacks: (user.favorite_snacks as string) || "",
           dietaryRestrictions: (user.dietary_restrictions as string) || "",
@@ -165,6 +167,16 @@ export async function createShoot(input: CreateShootInput): Promise<Shoot> {
       .select();
     if (dateError) throw dateError;
     dates = (insertedDates || []).map(toShootDate);
+
+    await Promise.all(
+      dates.map((d) =>
+        ensureAutoDraftForShootDate({
+          campaignId: input.campaignId,
+          shootDate: d.shootDate,
+          shootDateId: d.id,
+        })
+      )
+    );
   }
 
   return toShoot(data, dates, []);
@@ -235,7 +247,29 @@ export async function addShootDates(
   }));
   const { data, error } = await db.from("shoot_dates").insert(rows).select();
   if (error) throw error;
-  return (data || []).map(toShootDate);
+  const inserted = (data || []).map(toShootDate);
+
+  if (inserted.length > 0) {
+    const { data: shootRow } = await db
+      .from("shoots")
+      .select("campaign_id")
+      .eq("id", shootId)
+      .single();
+    const campaignId = (shootRow as { campaign_id: string } | null)?.campaign_id;
+    if (campaignId) {
+      await Promise.all(
+        inserted.map((d) =>
+          ensureAutoDraftForShootDate({
+            campaignId,
+            shootDate: d.shootDate,
+            shootDateId: d.id,
+          })
+        )
+      );
+    }
+  }
+
+  return inserted;
 }
 
 // --- Remove a shoot date ---

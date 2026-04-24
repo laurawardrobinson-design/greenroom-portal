@@ -358,9 +358,9 @@ export default function CampaignDetailPage({
       <div className={`grid grid-cols-1 items-stretch gap-4 ${isVendor ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
 
         {/* Calendar + Shoot Days */}
-        <div className="lg:col-span-2">
-          <div className="flex items-stretch gap-4">
-            <div className="shrink-0">
+        <div className="lg:col-span-2 min-h-0 h-full lg:max-h-[22rem]">
+          <div className="flex items-stretch gap-4 min-h-0 h-full">
+            <div className="shrink-0 h-full">
               <ProductionCalendarTile
                 shoots={shoots}
                 campaignId={id}
@@ -370,7 +370,7 @@ export default function CampaignDetailPage({
                 onDayClick={(shoot) => setSelectedShootId(shoot.id)}
               />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 min-h-0 h-full">
               <ShootDayListTile
                 shoots={shoots}
                 wfNumber={campaign.wfNumber}
@@ -387,17 +387,19 @@ export default function CampaignDetailPage({
         </div>
 
         {/* Documents (tabbed) */}
-        <DocumentsTabTile
-          campaignId={id}
-          isVendor={isVendor}
-          canEdit={canEdit}
-          uploading={uploading}
-          onUpload={handleFileUpload}
-          hideAdminDocs={isArtDirector}
-        />
+        <div className="min-h-0 h-full lg:max-h-[22rem]">
+          <DocumentsTabTile
+            campaignId={id}
+            isVendor={isVendor}
+            canEdit={canEdit}
+            uploading={uploading}
+            onUpload={handleFileUpload}
+            hideAdminDocs={isArtDirector}
+          />
+        </div>
 
         {/* Budget / Inventory (vendors see inventory here instead) */}
-        <div className={isVendor ? "lg:col-span-2" : ""}>
+        <div className={`min-h-0 h-full lg:max-h-[22rem] ${isVendor ? "lg:col-span-2" : ""}`}>
           {showFinancials && (
             <CollapsibleSection
               id={`campaign-${id}-budget-sidebar`}

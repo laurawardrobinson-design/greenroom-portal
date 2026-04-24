@@ -37,7 +37,6 @@ export function ShootDayListTile({
   const [localTimes, setLocalTimes] = useState<Record<string, string>>({});
   const [deleting, setDeleting] = useState(false);
   const showSharedSettings = canEdit && shoots.length > 1;
-  const listHeightClass = showSharedSettings ? "h-44" : "h-56";
 
   const sortedShoots = useMemo(
     () =>
@@ -108,7 +107,7 @@ export function ShootDayListTile({
   }
 
   return (
-    <Card padding="none" className="flex flex-col">
+    <Card padding="none" className="flex h-full min-h-0 flex-col">
       <div className="flex items-center px-3.5 py-2.5 border-b border-border">
         <div className="flex items-center gap-2">
           <Clapperboard className="h-4 w-4 shrink-0 text-primary" />
@@ -117,7 +116,7 @@ export function ShootDayListTile({
       </div>
 
       {sortedShoots.length === 0 ? (
-        <div className={`flex items-center justify-center px-3.5 ${listHeightClass}`}>
+        <div className="flex min-h-0 flex-1 items-center justify-center px-3.5 py-4">
           <p className="text-xs text-text-tertiary text-center leading-relaxed">
             Click a date on the calendar
             <br />
@@ -125,7 +124,7 @@ export function ShootDayListTile({
           </p>
         </div>
       ) : (
-        <div className={`overflow-y-auto space-y-1.5 px-3.5 py-3 ${listHeightClass}`}>
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-1.5 px-3.5 py-3">
           {sortedShoots.map((shoot) => {
             const name = getShootDayName(shoot, shoots, wfNumber);
             const date = shoot.dates[0];

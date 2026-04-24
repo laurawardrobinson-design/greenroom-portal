@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { AppUser, UserRole } from "@/types/domain";
+import type { AppUser, PRDepartment, UserRole } from "@/types/domain";
+import { PR_DEPARTMENTS } from "@/types/domain";
 
 export class AuthError extends Error {
   constructor(
@@ -49,6 +50,9 @@ export async function getAuthUser(): Promise<AppUser> {
     phone: dbUser.phone || "",
     title: dbUser.title || "",
     vendorId: dbUser.vendor_id || null,
+    deskDepartment: PR_DEPARTMENTS.includes(dbUser.desk_department as PRDepartment)
+      ? (dbUser.desk_department as PRDepartment)
+      : null,
     favoriteDrinks: dbUser.favorite_drinks || "",
     favoriteSnacks: dbUser.favorite_snacks || "",
     dietaryRestrictions: dbUser.dietary_restrictions || "",

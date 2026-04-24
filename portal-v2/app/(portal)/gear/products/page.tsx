@@ -64,7 +64,7 @@ export default function ProductDirectoryPage() {
     user?.role === "Studio";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <PageHeader
         breadcrumb="Gear"
@@ -87,8 +87,8 @@ export default function ProductDirectoryPage() {
             onClick={() => setDeptFilter("")}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
               deptFilter === ""
-                ? "bg-text-primary text-white"
-                : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
+                ? "border border-primary text-primary bg-primary/5"
+                : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
             }`}
           >
             All
@@ -101,8 +101,8 @@ export default function ProductDirectoryPage() {
               }
               className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                 deptFilter === dept
-                  ? "bg-text-primary text-white"
-                  : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
+                  ? "border border-primary text-primary bg-primary/5"
+                  : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
               }`}
             >
               {dept}

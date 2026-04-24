@@ -52,7 +52,7 @@ export default function PostWorkflowPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="space-y-0">
         <PageHeader title="Post Production" />
 

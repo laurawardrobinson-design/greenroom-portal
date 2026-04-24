@@ -865,7 +865,7 @@ export default function StudioManagementPage() {
   const pageTitle = "Studio Management";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="space-y-0">
         <PageHeader
           title={pageTitle}

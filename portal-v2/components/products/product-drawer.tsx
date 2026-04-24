@@ -23,6 +23,7 @@ import {
 import Link from "next/link";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { RaiseFlagDialog } from "@/components/products/raise-flag-dialog";
+import { ReferenceImageGallery } from "@/components/products/reference-image-gallery";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -590,6 +591,18 @@ export function ProductDrawer({
               />
             </div>
           </div>
+
+          {/* Reference images — the standards paper trail. BMM uploads
+              references + approves RBU samples; RBU uploads samples via
+              their dept token route. See `components/products/reference-image-gallery.tsx`. */}
+          {current?.id && (
+            <div className="rounded-xl border border-border bg-surface-secondary/30 p-3">
+              <ReferenceImageGallery
+                endpointBase={`/api/products/${current.id}/reference-images`}
+                mode="portal"
+              />
+            </div>
+          )}
 
           {/* Shooting Notes */}
           <div>

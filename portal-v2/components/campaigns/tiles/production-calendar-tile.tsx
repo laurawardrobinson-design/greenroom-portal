@@ -22,7 +22,6 @@ import {
 } from "date-fns";
 import { ChevronLeft, ChevronRight, AlertTriangle, CalendarDays } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { getShootDayName } from "@/components/campaigns/shoot-day-modal";
 
 interface Props {
   shoots: Shoot[];
@@ -151,7 +150,7 @@ export function ProductionCalendarTile({
   }
 
   return (
-    <Card padding="none">
+    <Card padding="none" className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border">
         <div className="flex items-center gap-2">
@@ -176,7 +175,7 @@ export function ProductionCalendarTile({
         </div>
       </div>
 
-      <div className="px-3.5 py-3">
+      <div className="flex-1 px-3.5 py-3">
         {/* Day headers */}
         <div className="grid grid-cols-7 mb-0.5">
           {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (

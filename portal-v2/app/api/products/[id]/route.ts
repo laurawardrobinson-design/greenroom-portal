@@ -35,7 +35,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio", "Brand Marketing Manager"]);
     const { id } = await params;
     const body = await request.json();
     const parsed = updateProductSchema.parse(body);

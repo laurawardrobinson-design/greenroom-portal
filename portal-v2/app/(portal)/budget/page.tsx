@@ -78,7 +78,7 @@ export default function BudgetPage() {
 
   if (!isAdmin) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <PageHeader title="Budget" />
         <VendorFinancialsTab />
       </div>
@@ -86,7 +86,7 @@ export default function BudgetPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="space-y-0">
         <PageHeader title="Budget" />
 

@@ -99,6 +99,7 @@ function toDoc(
     docNumber: row.doc_number as string,
     campaignId: row.campaign_id as string,
     shootDate: row.shoot_date as string,
+    shootDateId: (row.shoot_date_id as string) || null,
     status: row.status as PRDocStatus,
     submittedBy: (row.submitted_by as string) || null,
     submittedAt: (row.submitted_at as string) || null,
@@ -275,6 +276,7 @@ export async function createPRDoc(input: {
   campaignId: string;
   shootDate: string;
   submittedBy: string;
+  shootDateId?: string | null;
   notes?: string;
 }): Promise<PRDoc> {
   const db = createAdminClient();
@@ -283,6 +285,7 @@ export async function createPRDoc(input: {
     .insert({
       campaign_id: input.campaignId,
       shoot_date: input.shootDate,
+      shoot_date_id: input.shootDateId ?? null,
       submitted_by: input.submittedBy,
       notes: input.notes || "",
       doc_number: "",
@@ -294,6 +297,44 @@ export async function createPRDoc(input: {
   const doc = toDoc(data as Record<string, unknown>, []);
   await syncShotListProducts(doc.id, input.campaignId, input.shootDate);
   return getPRDoc(doc.id);
+}
+
+// Create an unclaimed draft PR (submitted_by = NULL) for a newly
+// inserted shoot_date row. Producers claim it on first edit.
+// Idempotent — if a draft already exists for this shoot_date_id,
+// no-op and return the existing one.
+export async function ensureAutoDraftForShootDate(input: {
+  campaignId: string;
+  shootDate: string;
+  shootDateId: string;
+}): Promise<PRDoc | null> {
+  const db = createAdminClient();
+
+  const { data: existing } = await db
+    .from("product_request_docs")
+    .select("id")
+    .eq("shoot_date_id", input.shootDateId)
+    .eq("status", "draft")
+    .maybeSingle();
+  if (existing) return getPRDoc((existing as { id: string }).id);
+
+  const { data, error } = await db
+    .from("product_request_docs")
+    .insert({
+      campaign_id: input.campaignId,
+      shoot_date: input.shootDate,
+      shoot_date_id: input.shootDateId,
+      submitted_by: null,
+      notes: "",
+      doc_number: "",
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+
+  const id = (data as { id: string }).id;
+  await syncShotListProducts(id, input.campaignId, input.shootDate);
+  return getPRDoc(id);
 }
 
 export async function updatePRDoc(
@@ -319,15 +360,21 @@ export async function transitionPRDoc(
 
   const { data: current, error: fetchErr } = await db
     .from("product_request_docs")
-    .select("status")
+    .select("status, submitted_by")
     .eq("id", id)
     .single();
   if (fetchErr) throw fetchErr;
 
   const fromStatus = (current as Record<string, unknown>).status as PRDocStatus;
+  const currentSubmittedBy = (current as Record<string, unknown>).submitted_by as string | null;
 
   const update: Record<string, unknown> = { status: toStatus };
-  if (toStatus === "submitted") update.submitted_at = new Date().toISOString();
+  if (toStatus === "submitted") {
+    update.submitted_at = new Date().toISOString();
+    // Auto-drafts land with submitted_by = NULL; the user hitting
+    // Submit becomes the submitter.
+    if (!currentSubmittedBy) update.submitted_by = actorId;
+  }
   if (toStatus === "forwarded") {
     update.forwarded_by = actorId;
     update.forwarded_at = new Date().toISOString();

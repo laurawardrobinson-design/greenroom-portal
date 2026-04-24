@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
+  AppUser,
   CrewBooking,
   CrewBookingDate,
   CrewBookingStatus,
@@ -89,6 +90,7 @@ function toCrewBooking(row: Record<string, unknown>): CrewBooking {
           phone: (user.phone as string) || "",
           title: (user.title as string) || "",
           vendorId: (user.vendor_id as string) || null,
+          deskDepartment: (user.desk_department as AppUser["deskDepartment"]) ?? null,
           favoriteDrinks: (user.favorite_drinks as string) || "",
           favoriteSnacks: (user.favorite_snacks as string) || "",
           dietaryRestrictions: (user.dietary_restrictions as string) || "",

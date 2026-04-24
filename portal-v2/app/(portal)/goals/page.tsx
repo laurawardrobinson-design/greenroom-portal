@@ -99,7 +99,7 @@ export default function GoalsPage() {
   const withGoals = filtered.filter((u) => u.goal);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <h1 className="text-2xl font-bold text-text-primary">{isAdmin ? "Team Goals" : "My Goals"}</h1>
 
       {!isAdmin && !hasOwnGoal && !isLoading && (

@@ -24,6 +24,9 @@ export interface AppUser {
   phone: string;
   title: string;
   vendorId: string | null;
+  // The RBU department this user owns the weekly meeting with.
+  // BMM-only today; null for every other role.
+  deskDepartment: PRDepartment | null;
   favoriteDrinks: string;
   favoriteSnacks: string;
   dietaryRestrictions: string;
@@ -653,6 +656,34 @@ export interface Product {
 }
 
 export type CampaignProductRole = "hero" | "secondary";
+
+// --- Product reference images (the quality-standard paper trail) ---
+export type ProductImageType = "reference" | "sample" | "approved";
+
+export const PRODUCT_IMAGE_TYPE_LABELS: Record<ProductImageType, string> = {
+  reference: "Reference",
+  sample: "RBU sample",
+  approved: "Approved",
+};
+
+export const PRODUCT_IMAGE_TYPE_DESCRIPTIONS: Record<ProductImageType, string> = {
+  reference: "What 'good' looks like — the standard to meet.",
+  sample: "RBU's working attempt at the product.",
+  approved: "Promoted to committed standard.",
+};
+
+export interface ProductReferenceImage {
+  id: string;
+  productId: string;
+  imageType: ProductImageType;
+  fileUrl: string;
+  storagePath: string | null;
+  notes: string;
+  uploadedByUserId: string | null;
+  uploadedByUserName: string | null;
+  uploadedViaRbuDepartment: PRDepartment | null;
+  createdAt: string;
+}
 
 export interface CampaignProduct {
   id: string;
@@ -1867,6 +1898,7 @@ export interface PRDoc {
   docNumber: string;
   campaignId: string;
   shootDate: string;
+  shootDateId: string | null;
   status: PRDocStatus;
   submittedBy: string | null;
   submittedAt: string | null;

@@ -205,7 +205,7 @@ export default function PropsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="space-y-0">
         {/* Header */}
         <PageHeader
@@ -273,7 +273,7 @@ export default function PropsPage() {
               <button
                 onClick={() => setCategoryFilter("")}
                 className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                  !categoryFilter ? "bg-text-primary text-white" : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
+                  !categoryFilter ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
                 }`}
               >
                 All
@@ -283,7 +283,7 @@ export default function PropsPage() {
                   key={cat}
                   onClick={() => setCategoryFilter(categoryFilter === cat ? "" : cat)}
                   className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                    categoryFilter === cat ? "bg-text-primary text-white" : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
+                    categoryFilter === cat ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
                   }`}
                 >
                   {cat}
