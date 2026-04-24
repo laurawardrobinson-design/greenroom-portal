@@ -128,30 +128,40 @@ Waves sequenced so that the highest-liability gap ships first and the biggest mi
 
 ### Wave 1 — Call Sheet persistence + distribution
 
-**Status: IN PROGRESS (2026-04-24).** Core persistence + publish-versioning shipped; distribution / attachments / print-watermark / PRDoc-deliveries pending next session.
+**Status: COMPLETE (2026-04-24).** All Wave 1 scope shipped and verified end-to-end in preview.
 
 **Shipped:**
 - Migration 094 — `call_sheets`, `call_sheet_versions`, `call_sheet_distributions`, `call_sheet_attachments` + triggers (auto-draft on shoot_date insert, re-date sync, cascade-delete drafts, backfill for existing shoot_dates).
-- Service layer (`lib/services/call-sheet.service.ts`) — `getOrCreateDraftByShootDate`, `getCallSheet`, `updateDraft`, `publishVersion`, `listVersions`, `getVersion`, `contentToPdfData`, `formatCallTimeFromDb`.
-- API routes — `/api/call-sheets/by-shoot-date`, `/api/call-sheets/[id]` (GET + PATCH), `/api/call-sheets/[id]/publish` (POST), `/api/call-sheets/[id]/versions`.
-- React hook (`hooks/use-call-sheet-draft.ts`) — debounced autosave (800ms), publish, save-state machine (idle / dirty / saving / saved / error).
+- Service layer (`lib/services/call-sheet.service.ts`) — `getOrCreateDraftByShootDate`, `getCallSheet`, `updateDraft`, `publishVersion`, `listVersions`, `getVersion`, `contentToPdfData`, `formatCallTimeFromDb`, `listAttachments`, `uploadAttachment`, `removeAttachment`, `createDistributions`, `listDistributions`, `resolveByAckToken`, `markAckedByToken`, `generateAckToken`, `fetchDeliveriesForShootDate`.
+- API routes:
+  - `/api/call-sheets/by-shoot-date` (GET)
+  - `/api/call-sheets/[id]` (GET, PATCH)
+  - `/api/call-sheets/[id]/publish` (POST)
+  - `/api/call-sheets/[id]/versions` (GET)
+  - `/api/call-sheets/[id]/attachments` (GET, POST)
+  - `/api/call-sheets/attachments/[attachmentId]` (DELETE)
+  - `/api/call-sheets/versions/[versionId]/distribute` (GET, POST)
+  - `/api/call-sheets/signed/[token]` (GET — auth-free)
+  - `/api/call-sheets/signed/[token]/ack` (POST — auth-free)
+- React hook (`hooks/use-call-sheet-draft.ts`) — debounced autosave (800ms), publish, save-state machine.
 - Rewired `components/pre-production/call-sheet-builder.tsx` to read/write from DB.
-- New CallSheet fields added in the UI: shooting call, breakfast, lunch time + venue, estimated wrap, company moves, walkie channels, sunrise / sunset / golden hour, urgent care, police non-emergency, on-set medic, allergen/food-safety bulletin, hospital required-field validation.
-- Save-status pill (Saving / Saved / Unsaved / Save failed).
-- Version stamp pill (V1, V2, …) in the toolbar after publish.
-- Publish required-field validation (hospital name + address + phone + general call time). Error surfaces in UI.
+- New CallSheet fields: shooting call, breakfast, lunch time + venue, estimated wrap, company moves, walkie channels, sunrise / sunset / golden hour, urgent care, police non-emergency, on-set medic, allergen/food-safety bulletin.
+- Hospital + call-time required for publish; validation error surfaces clearly.
+- Save-status pill; version stamp pill in toolbar.
 - Call time format helper — Postgres `time` values auto-format to `5:00 AM` on seed.
+- **Deliveries Today** block — auto-pulls from non-cancelled PRDocs tied to the shoot_date; groups by dept section with pickup time + pickup person; snapshotted into publish payload.
+- **Attachments** section — file upload to Supabase Storage (`campaign-assets/call-sheets/<id>/`), kind selector (talent release / minor release / location permit / COI / safety bulletin / other), click-to-open links, delete with blob cleanup. 48h-out warning banner when shoot is within 48 hours and no attachments are on file.
+- **Distribution** — two-tier (Full / Redacted), per-recipient signed link with ack_token; public viewer at `/call-sheet/signed/[token]` rendered outside portal chrome; ack button flips to "Acknowledged {timestamp}" state; Redacted tier strips crew phones/emails except producer; Distribute panel in builder shows sent/acked status pills with copy-link and copy-all-links buttons; SMS channel deferred (needs short-code + vendor onboarding).
+- **Print superseded watermark** — Tailwind `print:` variant; hidden on screen, diagonal overlay fills the printed page; plus on-screen warning banner when a version has been superseded. Applied on the public signed-link viewer.
 
-**Semantic clarification (post-review):**
+**Semantic clarification:**
 - `call_sheets.status` stays `'draft'` always while editable. Publish does NOT flip the row status — it creates an immutable `call_sheet_versions` row and updates `current_version_id`. This preserves the "sheet row is the always-editable draft" model and prevents orphan rows.
 
-**Still open in Wave 1 (next session):**
-- PRDoc "Deliveries Today" block on the preview (auto-pull from PR items for the shoot_date).
-- Two-tier distribution (Full / Redacted) — email send + ack-token signed link endpoint. Blocked on email vendor decision (Resend / SendGrid / SES / mailto-only).
-- Attachments (talent release, minor release, location permit, COI, safety bulletin) + 48h-out required-missing warning.
-- Print-only superseded watermark CSS (`.ui-print-superseded`).
+**Deferred to later wave:**
+- SMS distribution channel (needs short-code registration + vendor contract).
+- Email transactional send via vendor (Resend / SendGrid / SES). For now the producer copy-pastes per-recipient signed links into their email client; switching to a vendor requires zero schema changes — just wire the POST distribute endpoint to also POST to the provider.
 
-**Goal:** eliminate the ephemeral-form liability and meet industry-standard safety and versioning.
+**Goal:** eliminate the ephemeral-form liability and meet industry-standard safety and versioning. ✓ Delivered.
 
 **Schema**
 - `call_sheets` (id, campaign_id, shoot_date_id, created_by, timestamps).

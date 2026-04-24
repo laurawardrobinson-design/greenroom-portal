@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { CheckCircle2, Loader2, Package } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, Package } from "lucide-react";
 import type {
   CallSheetContent,
   CallSheetDeliveryBlock,
@@ -91,12 +91,31 @@ export default function SignedCallSheetPage() {
   }
 
   const { payload, version, campaignName, wfNumber, tier } = data;
-  const shootDateStr = payload.producer ? "" : ""; // shoot date comes from the sheet-level row; we show what's in the payload
   const deliveries = payload.deliveries || [];
+  const isSuperseded = Boolean(version.supersededAt);
 
   return (
     <div className="min-h-screen bg-surface-secondary py-4 sm:py-8">
+      {/* Print-only SUPERSEDED watermark — hidden on screen, diagonal overlay
+          on the printed page so a stale paper copy reads as superseded. */}
+      {isSuperseded && (
+        <div
+          aria-hidden="true"
+          className="hidden print:flex print:fixed print:inset-0 print:items-center print:justify-center print:pointer-events-none print:opacity-20 print:text-black print:font-bold print:text-8xl print:tracking-[0.2em] print:uppercase print:z-[9999] print:-rotate-[30deg] print:whitespace-nowrap"
+        >
+          SUPERSEDED
+        </div>
+      )}
+
       <div className="mx-auto max-w-3xl rounded-lg border border-border bg-surface p-4 sm:p-6 shadow-xs">
+        {isSuperseded && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-[color:var(--color-warning)]/30 bg-[color:var(--color-warning)]/8 px-3 py-2 text-xs text-[color:var(--color-warning)]">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            This version was superseded{" "}
+            {format(parseISO(version.supersededAt!), "MMM d 'at' h:mm a")}. Contact the
+            producer for the current call sheet.
+          </div>
+        )}
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3 mb-4">
           <div>
@@ -346,7 +365,6 @@ export default function SignedCallSheetPage() {
           Published {format(parseISO(version.publishedAt), "MMM d, yyyy 'at' h:mm a")} · Version {version.vNumber}
         </p>
       </div>
-      {shootDateStr}
     </div>
   );
 }
