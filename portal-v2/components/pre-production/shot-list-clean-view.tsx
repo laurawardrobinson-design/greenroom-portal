@@ -1550,7 +1550,7 @@ export function ShotListCleanView({
     { key: "channel", label: "Channel", minW: 84, defaultW: 118 },
     { key: "desc", label: "Description", minW: 150, defaultW: 260 },
     { key: "details", label: "Details", minW: 76, defaultW: 82 },
-    { key: "state", label: "Review", minW: 112, defaultW: 128 },
+    { key: "state", label: "Sign-off", minW: 112, defaultW: 128 },
     { key: "delete", label: "", minW: 28, defaultW: 28 },
   ];
 
@@ -1641,7 +1641,7 @@ export function ShotListCleanView({
         });
         if (!r.ok) throw new Error("approve failed");
         globalMutate(swrKey);
-        toast("success", "Approved");
+        toast("success", "CD signed off");
       } catch {
         toast("error", "Failed to approve");
       }
@@ -2174,31 +2174,31 @@ export function ShotListCleanView({
                                     <button
                                       type="button"
                                       onClick={() => approveShot(shot.id)}
-                                      title="Previously approved; changes detected. Click to re-approve."
+                                      title="Previously signed off by CD; changes detected. Click to re-sign."
                                       className="inline-flex items-center gap-0.5 rounded-full border border-[color:var(--color-warning)]/30 bg-[color:var(--color-warning)]/8 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[color:var(--color-warning)] hover:bg-[color:var(--color-warning)]/15 transition-colors"
                                     >
                                       <AlertTriangle className="h-2.5 w-2.5" />
-                                      Stale
+                                      Re-sign
                                     </button>
                                   ) : (
                                     <button
                                       type="button"
                                       onClick={() => unapproveShot(shot.id)}
-                                      title="Approved. Click to revoke."
+                                      title="CD signed off. Click to revoke."
                                       className="inline-flex items-center gap-0.5 rounded-full border border-[color:var(--color-success)]/30 bg-[color:var(--color-success)]/8 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[color:var(--color-success)] hover:bg-[color:var(--color-success)]/15 transition-colors"
                                     >
                                       <Check className="h-2.5 w-2.5" />
-                                      Approved
+                                      Signed off
                                     </button>
                                   )
                                 ) : (
                                   <button
                                     type="button"
                                     onClick={() => approveShot(shot.id)}
-                                    title="Approve this shot (snapshots current fields)"
+                                    title="CD sign-off on this shot (snapshots current fields)"
                                     className="inline-flex items-center rounded border border-border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-text-secondary hover:border-primary/40 hover:text-primary transition-colors"
                                   >
-                                    Approve
+                                    Sign off
                                   </button>
                                 )}
                               </div>
@@ -2622,12 +2622,12 @@ function OnSetShotList({
                 )}
                 {isStale && (
                   <span className="shrink-0 rounded-full bg-[color:var(--color-warning)]/8 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[color:var(--color-warning)]">
-                    Re-approve
+                    Re-sign
                   </span>
                 )}
                 {isApproved && !isStale && (
                   <span className="shrink-0 rounded-full bg-[color:var(--color-success)]/8 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[color:var(--color-success)]">
-                    Approved
+                    Signed off
                   </span>
                 )}
               </div>
@@ -2680,7 +2680,7 @@ function OnSetShotList({
                   onClick={() => onApprove(shot.id)}
                   className="flex h-11 items-center rounded-lg border border-[color:var(--color-warning)]/40 bg-[color:var(--color-warning)]/8 px-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--color-warning)] hover:bg-[color:var(--color-warning)]/15 transition-colors"
                 >
-                  Re-approve
+                  Re-sign
                 </button>
               ) : isApproved ? (
                 <button
@@ -2688,7 +2688,7 @@ function OnSetShotList({
                   onClick={() => onUnapprove(shot.id)}
                   className="flex h-11 items-center rounded-lg border border-border px-3 text-xs font-semibold uppercase tracking-wider text-text-tertiary hover:text-text-secondary transition-colors"
                 >
-                  Revoke
+                  Unsign
                 </button>
               ) : (
                 <button
@@ -2696,7 +2696,7 @@ function OnSetShotList({
                   onClick={() => onApprove(shot.id)}
                   className="flex h-11 items-center rounded-lg border border-border px-3 text-xs font-semibold uppercase tracking-wider text-text-secondary hover:border-primary/40 hover:text-primary transition-colors"
                 >
-                  Approve
+                  Sign off
                 </button>
               )}
             </div>
