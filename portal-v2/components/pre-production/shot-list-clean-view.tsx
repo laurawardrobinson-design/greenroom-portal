@@ -1749,21 +1749,21 @@ export function ShotListCleanView({
 
   // ─── Column resize ──────────────────────────────────────────────────────────
   const COLUMNS = [
-    { key: "drag", label: "", minW: 28, defaultW: 28 },
-    { key: "#", label: "#", minW: 36, defaultW: 36 },
-    { key: "ref", label: "Ref", minW: 36, defaultW: 36 },
-    { key: "name", label: "Shot Name", minW: 120, defaultW: 168 },
-    { key: "type", label: "Type", minW: 48, defaultW: 56 },
-    { key: "angle", label: "Angle", minW: 52, defaultW: 64 },
-    { key: "env", label: "Env", minW: 56, defaultW: 76 },
-    { key: "channel", label: "Channel", minW: 84, defaultW: 118 },
-    { key: "desc", label: "Description", minW: 150, defaultW: 260 },
-    { key: "details", label: "Details", minW: 76, defaultW: 82 },
-    { key: "state", label: "CD", minW: 36, defaultW: 40 },
-    { key: "delete", label: "", minW: 28, defaultW: 28 },
+    { key: "drag", label: "", minW: 24, defaultW: 28 },
+    { key: "#", label: "#", minW: 28, defaultW: 36 },
+    { key: "ref", label: "Ref", minW: 28, defaultW: 36 },
+    { key: "name", label: "Shot Name", minW: 140, defaultW: 220 },
+    { key: "type", label: "Type", minW: 44, defaultW: 64 },
+    { key: "angle", label: "Angle", minW: 48, defaultW: 72 },
+    { key: "env", label: "Env", minW: 56, defaultW: 88 },
+    { key: "channel", label: "Channel", minW: 84, defaultW: 140 },
+    { key: "desc", label: "Description", minW: 180, defaultW: 320 },
+    { key: "details", label: "Details", minW: 64, defaultW: 84 },
+    { key: "state", label: "CD", minW: 32, defaultW: 40 },
+    { key: "delete", label: "", minW: 24, defaultW: 28 },
   ];
 
-  const storageKey = `shotlist-col-widths-v10-${campaignId}`;
+  const storageKey = `shotlist-col-widths-v12-${campaignId}`;
   const [colWidths, setColWidths] = useState<number[]>(() => {
     if (typeof window === "undefined") return COLUMNS.map((c) => c.defaultW);
     try {
@@ -2188,7 +2188,7 @@ export function ShotListCleanView({
               ) : (
               /* Table */
               <div className="overflow-x-auto">
-                <table className="text-left" style={{ tableLayout: "fixed", width: colWidths.reduce((a, b) => a + b, 0) }}>
+                <table className="text-left" style={{ tableLayout: "fixed", width: "100%", minWidth: colWidths.reduce((a, b) => a + b, 0) }}>
                   <thead>
                     <tr className="bg-surface-secondary">
                       {COLUMNS.map((col, ci) => (
@@ -2425,12 +2425,7 @@ export function ShotListCleanView({
                                           "Lighting",
                                           "Talent",
                                           "Wardrobe",
-                                          "Notes",
                                           "Retouching",
-                                          "Variant",
-                                          "Orient",
-                                          "Retouch Level",
-                                          "Hero SKU",
                                         ].map((label) => (
                                           <th
                                             key={label}
@@ -2478,84 +2473,11 @@ export function ShotListCleanView({
                                           onSave={(v) => patchShot(shot.id, "wardrobe", v)}
                                         />
                                         <Cell
-                                          value={shot.notes}
-                                          placeholder="Notes"
-                                          onSave={(v) => patchShot(shot.id, "notes", v)}
-                                        />
-                                        <Cell
                                           value={shot.retouching_notes || ""}
                                           placeholder="Retouching"
                                           onSave={(v) => patchShot(shot.id, "retouchingNotes", v)}
                                         />
 
-                                        {/* Variant */}
-                                        <td className="relative">
-                                          <select
-                                            value={shot.variant_type ?? ""}
-                                            onChange={(e) =>
-                                              patchShot(
-                                                shot.id,
-                                                "variantType",
-                                                e.target.value || ""
-                                              )
-                                            }
-                                            className="w-full px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs text-text-primary bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none"
-                                          >
-                                            <option value="">—</option>
-                                            <option value="hero_still">Hero still</option>
-                                            <option value="motion">Motion</option>
-                                            <option value="social_vertical">Social 9:16</option>
-                                            <option value="other">Other</option>
-                                          </select>
-                                        </td>
-
-                                        {/* Orientation */}
-                                        <td className="relative">
-                                          <select
-                                            value={shot.orientation ?? ""}
-                                            onChange={(e) =>
-                                              patchShot(
-                                                shot.id,
-                                                "orientation",
-                                                e.target.value || ""
-                                              )
-                                            }
-                                            className="w-full px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs text-text-primary bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none"
-                                          >
-                                            <option value="">—</option>
-                                            <option value="horizontal">Horizontal</option>
-                                            <option value="vertical">Vertical</option>
-                                            <option value="square">Square</option>
-                                            <option value="custom">Custom</option>
-                                          </select>
-                                        </td>
-
-                                        {/* Retouch Level */}
-                                        <td className="relative">
-                                          <select
-                                            value={shot.retouch_level ?? ""}
-                                            onChange={(e) =>
-                                              patchShot(
-                                                shot.id,
-                                                "retouchLevel",
-                                                e.target.value || ""
-                                              )
-                                            }
-                                            className="w-full px-[var(--density-shotlist-row-cell-px)] py-[var(--density-shotlist-row-cell-py)] text-xs text-text-primary bg-transparent border-none outline-none cursor-pointer hover:bg-primary/3 transition-colors appearance-none"
-                                          >
-                                            <option value="">—</option>
-                                            <option value="comp">Comp</option>
-                                            <option value="light">Light</option>
-                                            <option value="heavy">Heavy</option>
-                                          </select>
-                                        </td>
-
-                                        {/* Hero SKU */}
-                                        <Cell
-                                          value={shot.hero_sku || ""}
-                                          placeholder="Hero SKU"
-                                          onSave={(v) => patchShot(shot.id, "heroSku", v)}
-                                        />
                                       </tr>
                                     </tbody>
                                   </table>
