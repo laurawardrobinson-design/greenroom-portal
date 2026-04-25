@@ -62,7 +62,7 @@ export function AppShell({ children }: AppShellProps) {
         />
 
         {/* Main content area — offset by sidebar width on desktop */}
-        <div className="flex flex-1 flex-col lg:pl-[245px]">
+        <div className="flex min-w-0 flex-1 flex-col lg:pl-[245px]">
           <Topbar onMenuClick={() => setMobileOpen(true)} />
 
           <main className="flex-1 overflow-y-auto">
