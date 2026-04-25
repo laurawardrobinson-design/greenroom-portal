@@ -47,7 +47,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || loading}
         className={`
           inline-flex items-center justify-center font-medium
-          transition-all duration-[var(--duration-fast)] ease-[var(--ease-out)]
+          transition-[color,background-color,border-color,box-shadow,opacity] duration-[var(--duration-fast)] ease-[var(--ease-out)]
           disabled:pointer-events-none disabled:opacity-50
           ${variantStyles[variant]}
           ${sizeStyles[size]}

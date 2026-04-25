@@ -31,7 +31,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           className={`
             block w-full rounded-[var(--density-control-radius)] border bg-surface px-[var(--density-control-px)] py-[var(--density-control-py)]
             text-sm text-text-primary
-            shadow-xs transition-all appearance-none
+            shadow-xs transition-[color,background-color,border-color,box-shadow,opacity] appearance-none
             focus:border-primary focus:outline-none
             disabled:bg-surface-secondary disabled:text-text-tertiary
             ${error ? "border-error" : "border-border"}
