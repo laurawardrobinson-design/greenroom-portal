@@ -22,14 +22,14 @@ export function HighlightsCard() {
   const { data: highlights, isLoading } = useSWR<Highlight[]>("/api/highlights", fetcher);
 
   return (
-    <div className="rounded-2xl border border-border bg-surface shadow-xs overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-xs">
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
         <Sparkles className="h-4 w-4 shrink-0 text-primary" />
         <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
           Highlights
         </span>
       </div>
-      <div className="px-3.5 py-3 space-y-3">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3.5 py-3">
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (

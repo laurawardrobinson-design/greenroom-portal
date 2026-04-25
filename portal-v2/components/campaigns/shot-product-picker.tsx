@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { Search, Plus, Check, ShoppingBasket, ChevronDown } from "lucide-react";
-import { PRODUCT_DEPARTMENTS } from "@/lib/validation/products.schema";
+import { PRODUCT_DEPARTMENTS } from "@/lib/constants/products";
 import type { Product } from "@/types/domain";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error(); return r.json(); });

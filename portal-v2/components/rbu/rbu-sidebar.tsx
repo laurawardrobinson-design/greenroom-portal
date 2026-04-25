@@ -96,7 +96,7 @@ export function RBUSidebar({
         <div className="border-t border-white/10 p-3">
           <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
             <span
-              className={`h-8 w-8 shrink-0 rounded-full ${color.chip} flex items-center justify-center ring-1 ring-white/10`}
+              className={`h-8 w-8 shrink-0 rounded-full ${color.bg} ${color.border} border flex items-center justify-center ring-1 ring-white/10`}
             >
               <span className={`h-2 w-2 rounded-full ${color.dot}`} />
             </span>

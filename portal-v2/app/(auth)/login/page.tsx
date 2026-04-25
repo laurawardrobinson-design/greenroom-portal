@@ -109,7 +109,7 @@ export default function LoginPage() {
   async function handleDevLogin(role: string, vendorId?: string) {
     setLoading(role);
     try {
-      const body: any = { role };
+      const body: { role: string; vendor_id?: string } = { role };
       if (vendorId) body.vendor_id = vendorId;
 
       const res = await fetch("/api/auth/dev-login", {
@@ -343,7 +343,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <div className="mt-4 rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+        <div className="mt-4 h-28 overflow-y-auto overscroll-contain rounded-lg border border-white/10 bg-white/5 px-4 py-3">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-[#69A925] mb-1">April 20, 2026</p>
           <p className="text-sm font-medium text-white/50">New feature — Asset Studio. Designers can version mechanicals with automation.</p>
         </div>

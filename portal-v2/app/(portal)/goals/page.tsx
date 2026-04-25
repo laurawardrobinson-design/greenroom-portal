@@ -6,14 +6,13 @@ import { formatDistanceToNow, parseISO, differenceInMonths } from "date-fns";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { RoleBadge } from "@/components/ui/role-badge";
 import { Modal } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { useToast } from "@/components/ui/toast";
-import type { UserGoal, GoalMilestone, GoalHighlight, GoalStakeholder } from "@/types/domain";
+import type { UserGoal, GoalMilestone, GoalHighlight, GoalStakeholder, UserRole } from "@/types/domain";
 import {
   Search,
   Compass,
@@ -38,7 +37,7 @@ const fetcher = (url: string) =>
 interface GoalOverviewUser {
   id: string;
   name: string;
-  role: string;
+  role: UserRole;
   title: string;
   favoritePublixProduct: string;
   goal: {

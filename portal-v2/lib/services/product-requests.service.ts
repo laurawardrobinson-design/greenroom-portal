@@ -174,7 +174,7 @@ export async function listPRDocs(opts?: {
     .order("sort_order", { ascending: true });
   if (itemErr) throw itemErr;
 
-  const items = (itemData || []).map((r) =>
+  const items = ((itemData || []) as unknown[]).map((r) =>
     detail === "full"
       ? toItem(r as Record<string, unknown>)
       : toItemLite(r as Record<string, unknown>)

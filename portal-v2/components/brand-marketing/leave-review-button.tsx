@@ -46,11 +46,10 @@ export function LeaveReviewButton({
 
   async function leaveReview(decision: DecisionState) {
     if (decision !== "approved" && comment.trim().length === 0) {
-      toast({
-        title: "Comment required",
-        description: `Tell the producer what needs to change before marking "${APPROVAL_STATE_LABELS[decision]}".`,
-        variant: "error",
-      });
+      toast(
+        "error",
+        `Tell the producer what needs to change before marking "${APPROVAL_STATE_LABELS[decision]}".`
+      );
       return;
     }
     setSubmitting(decision);
@@ -68,17 +67,13 @@ export function LeaveReviewButton({
       });
       if (!r.ok) {
         const err = (await r.json()).error ?? "Failed";
-        toast({ title: "Couldn't save review", description: err, variant: "error" });
+        toast("error", `Couldn't save review: ${err}`);
         return;
       }
       await mutate();
       setOpen(false);
       setComment("");
-      toast({
-        title: `Marked ${APPROVAL_STATE_LABELS[decision].toLowerCase()}`,
-        description: "Visible to the producer on this subject.",
-        variant: "success",
-      });
+      toast("success", `Marked ${APPROVAL_STATE_LABELS[decision].toLowerCase()}`);
     } finally {
       setSubmitting(null);
     }

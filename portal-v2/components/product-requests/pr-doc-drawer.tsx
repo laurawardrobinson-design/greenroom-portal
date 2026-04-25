@@ -474,7 +474,7 @@ function DepartmentSpreadsheet({
     fetcher
   );
   const { data: otherProducts } = useSWR<Product[]>(
-    section.department !== "Other" ? `/api/products?department=Other` : null,
+    `/api/products?department=Other`,
     fetcher
   );
 
@@ -777,7 +777,7 @@ export function PRDocContent({
         .map((cp) => cp.product)
         .filter(
           (product): product is Product =>
-            Boolean(product) && product.department === activeDept
+            product !== undefined && product.department === activeDept
         ),
     [campaignProducts, activeDept]
   );

@@ -1,20 +1,10 @@
 import { z } from "zod";
+import {
+  PRODUCT_DEPARTMENTS,
+  PRODUCT_LIFECYCLE_PHASES,
+} from "@/lib/constants/products";
 
-export const PRODUCT_DEPARTMENTS = [
-  "Deli",
-  "Bakery",
-  "Meat-Seafood",
-  "Produce",
-  "Grocery",
-  "Other",
-] as const;
-
-export const PRODUCT_LIFECYCLE_PHASES = [
-  "planning",
-  "coming_soon",
-  "live",
-  "discontinued",
-] as const;
+export { PRODUCT_DEPARTMENTS, PRODUCT_LIFECYCLE_PHASES };
 
 export const createProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),

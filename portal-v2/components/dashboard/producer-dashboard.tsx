@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import {
@@ -138,6 +138,8 @@ export function ProducerDashboard({ user }: Props) {
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [scope, setScope] = useState<"mine" | "all">("mine");
   const [hiddenProducers, setHiddenProducers] = useState<Set<string>>(new Set());
+  const [calendarPanelHeight, setCalendarPanelHeight] = useState<number | null>(null);
+  const calendarPanelRef = useRef<HTMLDivElement | null>(null);
 
   const monthStr = format(currentMonth, "yyyy-MM");
 
@@ -234,6 +236,22 @@ export function ProducerDashboard({ user }: Props) {
   }, [events]);
   const selectedDayAllEvents = selectedDateStr ? allGrouped.get(selectedDateStr) || [] : [];
 
+  useEffect(() => {
+    const panelEl = calendarPanelRef.current;
+    if (!panelEl) return;
+
+    const updateHeight = () => {
+      const nextHeight = Math.round(panelEl.getBoundingClientRect().height);
+      setCalendarPanelHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+    };
+
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(panelEl);
+
+    return () => observer.disconnect();
+  }, []);
+
   function taskHref(type: string, campaignId: string): string {
     const normalized = type.toLowerCase();
     if (normalized.includes("estimate") || normalized.includes("invoice") || normalized.includes("po")) {
@@ -281,10 +299,11 @@ export function ProducerDashboard({ user }: Props) {
       />
 
       {/* Main grid: calendar + stats */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-3">
 
         {/* ── Calendar ── */}
-        <Card padding="none" className="lg:col-span-2">
+        <div ref={calendarPanelRef} className="self-start lg:col-span-2">
+        <Card padding="none">
 
           {/* Month nav header */}
           <div className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2.5">
@@ -394,6 +413,7 @@ export function ProducerDashboard({ user }: Props) {
           </div>
 
         </Card>
+        </div>
 
       {/* Day detail popup overlay */}
       {selectedDay && (
@@ -478,7 +498,10 @@ export function ProducerDashboard({ user }: Props) {
       )}
 
         {/* ── Highlights ── */}
-        <div className="lg:col-span-1">
+        <div
+          className="min-h-0 self-start lg:col-span-1"
+          style={calendarPanelHeight ? { height: `${calendarPanelHeight}px` } : undefined}
+        >
           <HighlightsCard />
         </div>
       </div>

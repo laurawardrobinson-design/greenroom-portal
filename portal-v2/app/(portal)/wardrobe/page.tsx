@@ -17,8 +17,12 @@ import type {
   JobClassNote,
   JobClassItemGender,
 } from "@/types/domain";
-import { WARDROBE_CATEGORIES, UNIT_SIZES, UNIT_GENDERS } from "@/lib/validation/wardrobe.schema";
-import { PRODUCT_DEPARTMENTS } from "@/lib/validation/products.schema";
+import {
+  UNIT_GENDERS,
+  UNIT_SIZES,
+  WARDROBE_CATEGORIES,
+} from "@/lib/constants/wardrobe";
+import { PRODUCT_DEPARTMENTS } from "@/lib/constants/products";
 import { DEPT_COLORS } from "@/components/products/product-drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

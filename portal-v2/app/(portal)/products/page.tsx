@@ -10,7 +10,7 @@ import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useToast } from "@/components/ui/toast";
-import { PRODUCT_DEPARTMENTS } from "@/lib/validation/products.schema";
+import { PRODUCT_DEPARTMENTS } from "@/lib/constants/products";
 import { ProductDrawer, DEPT_COLORS } from "@/components/products/product-drawer";
 import { PageHeader } from "@/components/ui/page-header";
 import {
@@ -323,4 +323,3 @@ export default function ProductDirectoryPage() {
     </div>
   );
 }
-

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import useSWR from "swr";
 import type { Product, ProductDepartment, ProductLifecyclePhase } from "@/types/domain";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { PRODUCT_DEPARTMENTS } from "@/lib/validation/products.schema";
+import { PRODUCT_DEPARTMENTS } from "@/lib/constants/products";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
@@ -37,7 +37,6 @@ export const DEPT_COLORS: Record<string, string> = {
   "Meat-Seafood": "bg-red-50 text-error",
   Produce: "bg-emerald-50 text-success",
   Grocery: "bg-blue-50 text-blue-700",
-  Floral: "bg-pink-50 text-pink-700",
   Other: "bg-slate-50 text-slate-600",
 };
 

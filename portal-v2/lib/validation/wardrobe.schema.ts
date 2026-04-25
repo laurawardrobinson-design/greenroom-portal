@@ -1,21 +1,17 @@
 import { z } from "zod";
+import {
+  UNIT_GENDERS,
+  UNIT_SIZES,
+  WARDROBE_CATEGORIES,
+  WARDROBE_CONDITIONS,
+} from "@/lib/constants/wardrobe";
 
-export const WARDROBE_CATEGORIES = [
-  "Tops",
-  "Aprons",
-  "Headwear",
-  "Bottoms",
-  "Outerwear",
-  "Footwear",
-  "Accessories",
-  "Other",
-] as const;
-
-export const UNIT_SIZES = [
-  "XS", "S", "M", "L", "XL", "2XL", "3XL", "One Size", "Other",
-] as const;
-
-export const UNIT_GENDERS = ["Men's", "Women's", "Unisex"] as const;
+export {
+  UNIT_GENDERS,
+  UNIT_SIZES,
+  WARDROBE_CATEGORIES,
+  WARDROBE_CONDITIONS,
+};
 
 // ── Wardrobe item type schema (no size/gender/status at type level) ────────────
 export const createWardrobeSchema = z.object({
@@ -36,7 +32,7 @@ export const createUnitSchema = z.object({
   wardrobeItemId: z.string().uuid("Valid item ID required"),
   size: z.enum(UNIT_SIZES).default("One Size"),
   gender: z.enum(UNIT_GENDERS).default("Unisex"),
-  condition: z.enum(["Excellent", "Good", "Fair", "Poor", "Damaged"]).default("Good"),
+  condition: z.enum(WARDROBE_CONDITIONS).default("Good"),
   qrCode: z.string().nullable().default(null),
   notes: z.string().default(""),
   quantity: z.number().int().min(1).max(50).default(1),
@@ -77,7 +73,6 @@ export const createCheckoutSchema = z.object({
 });
 
 // ── Wardrobe action schemas (main route: POST /api/wardrobe with { action }) ───
-export const WARDROBE_CONDITIONS = ["Excellent", "Good", "Fair", "Poor", "Damaged"] as const;
 
 export const checkoutActionSchema = z.object({
   wardrobeItemId: z.string().uuid("Valid item ID required"),

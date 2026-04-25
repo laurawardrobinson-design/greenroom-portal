@@ -149,14 +149,14 @@ export function BriefEditor({ campaignId, canEdit }: BriefEditorProps) {
       });
       if (!r.ok) {
         const msg = (await r.json()).error ?? "Failed to save";
-        toast({ title: "Couldn't save brief", description: msg, variant: "error" });
+        toast("error", `Couldn't save brief: ${msg}`);
         return;
       }
       const saved = (await r.json()) as CampaignBrief;
       mutate(saved, { revalidate: false });
       setDraft(fromBrief(saved));
       setDirty(false);
-      toast({ title: "Brief saved", description: `Version ${saved.version}`, variant: "success" });
+      toast("success", `Brief saved (v${saved.version})`);
     } finally {
       setSaving(false);
     }
