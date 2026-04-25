@@ -124,7 +124,7 @@ export function CampaignDetailHeader({
   const title = titleParts.join(" ");
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {/* Cancelled state banner */}
       {isCancelled && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-center gap-2">
@@ -188,28 +188,6 @@ export function CampaignDetailHeader({
               </h1>
               <div className="flex shrink-0 items-center gap-1">
                 <CopyButton value={title} />
-                {onDraftEmail && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onDraftEmail}
-                    title="Draft Email"
-                    className="text-text-tertiary hover:text-text-primary"
-                  >
-                    <Mail className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-                {canDelete && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    title="Delete campaign"
-                    className="text-text-tertiary hover:text-error"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                )}
               </div>
             </div>
           )

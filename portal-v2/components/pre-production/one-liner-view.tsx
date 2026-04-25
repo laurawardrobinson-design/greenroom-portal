@@ -1,24 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Download, AlignJustify, GripVertical } from "lucide-react";
+import { useState, useCallback, type DragEvent } from "react";
+import { Download, AlignJustify, GripVertical, X, Plus, Truck, Utensils, Flag } from "lucide-react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { format, parseISO } from "date-fns";
 import { generateOneLinerPdf } from "@/lib/utils/pdf-generator";
 import type { Shoot } from "@/types/domain";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
-const SETUP_COLORS = [
-  "border-l-amber-400 bg-amber-50/40",
-  "border-l-blue-400 bg-blue-50/40",
-  "border-l-rose-400 bg-rose-50/40",
-  "border-l-emerald-400 bg-emerald-50/40",
-  "border-l-violet-400 bg-violet-50/40",
-  "border-l-yellow-400 bg-yellow-50/40",
-  "border-l-orange-400 bg-orange-50/40",
-  "border-l-sky-400 bg-sky-50/40",
-];
 
 interface Props {
   campaignId: string;
@@ -41,8 +30,20 @@ interface ScheduleShot {
   estimated_duration_minutes: number;
   shoot_date_id: string | null;
   sort_order_in_day: number;
+  int_ext?: string;
   surface?: string;
   hero_sku?: string | null;
+}
+
+type DayEventType = "move" | "lunch" | "wrap" | "other";
+
+interface DayEvent {
+  id: string;
+  shoot_date_id: string;
+  type: DayEventType;
+  label: string;
+  time: string | null;
+  sort_order_in_day: number;
 }
 
 interface ScheduleData {
@@ -60,6 +61,7 @@ interface ScheduleData {
     id: string;
     product?: { name: string; item_code: string };
   }>;
+  dayEvents?: DayEvent[];
 }
 
 type DateBucket = {
@@ -136,14 +138,22 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
     null
   );
 
-  const handleDragStart = (shotId: string, bucketId: string | null) =>
+  const handleDragStart = (
+    e: DragEvent,
+    shotId: string,
+    bucketId: string | null
+  ) => {
     setDrag({ shotId, bucketId });
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", shotId);
+    }
+  };
   const handleDragEnd = () => setDrag(null);
 
   const moveShot = useCallback(
     async (shotId: string, targetBucketId: string | null, targetIdx: number) => {
       if (!data) return;
-      // Rebuild the target bucket's new order
       const buckets = buildBuckets(data, shoots);
       const targetBucket = buckets.find((b) => b.id === targetBucketId);
       const sourceBucket = buckets.find((b) => b.shots.some((s) => s.id === shotId));
@@ -152,7 +162,6 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
       const moved = sourceBucket.shots.find((s) => s.id === shotId);
       if (!moved) return;
 
-      // Remove from source order; add at target position
       const targetList = targetBucket.shots.filter((s) => s.id !== shotId);
       targetList.splice(targetIdx, 0, moved);
 
@@ -162,7 +171,6 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
         shootDateId: targetBucketId,
       }));
 
-      // Also rewrite source bucket's sortOrderInDay if we moved cross-bucket
       const sourceRewrite =
         sourceBucket.id !== targetBucketId
           ? sourceBucket.shots
@@ -174,12 +182,38 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
               }))
           : [];
 
-      await fetch(swrKey, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reorder: [...reorderPayload, ...sourceRewrite] }),
-      });
-      globalMutate(swrKey);
+      const allUpdates = [...reorderPayload, ...sourceRewrite];
+      const updateMap = new Map(
+        allUpdates.map((u) => [u.shotId, u] as const)
+      );
+
+      // Optimistic local update — render the new order immediately,
+      // then revalidate from the server. No flash, no round-trip wait.
+      const optimistic: ScheduleData = {
+        ...data,
+        shots: data.shots.map((s) => {
+          const u = updateMap.get(s.id);
+          if (!u) return s;
+          return {
+            ...s,
+            shoot_date_id: u.shootDateId,
+            sort_order_in_day: u.sortOrderInDay,
+          };
+        }),
+      };
+
+      globalMutate(
+        swrKey,
+        (async () => {
+          await fetch(swrKey, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reorder: allUpdates }),
+          });
+          return optimistic;
+        })(),
+        { optimisticData: optimistic, rollbackOnError: true, revalidate: true }
+      );
     },
     [data, shoots, swrKey]
   );
@@ -191,6 +225,74 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
       body: JSON.stringify({ shotId, estimatedDurationMinutes: minutes }),
     });
     globalMutate(swrKey);
+  };
+
+  const handleIntExtChange = async (shotId: string, intExt: string) => {
+    await fetch(swrKey, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shotId, intExt }),
+    });
+    globalMutate(swrKey);
+  };
+
+  const addEvent = async (shootDateId: string, type: DayEventType) => {
+    await fetch(swrKey, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: { action: "create", shootDateId, type, sortOrderInDay: 9999 },
+      }),
+    });
+    globalMutate(swrKey);
+  };
+
+  const deleteEvent = async (id: string) => {
+    await fetch(swrKey, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event: { action: "delete", id } }),
+    });
+    globalMutate(swrKey);
+  };
+
+  const [addingDay, setAddingDay] = useState(false);
+  const addShootDay = async () => {
+    const primaryShoot = shoots[0];
+    if (!primaryShoot) return;
+    // Default: day after the last existing date, or tomorrow if none.
+    const allDates = shoots.flatMap((s) => s.dates.map((d) => d.shootDate)).sort();
+    const lastDate = allDates[allDates.length - 1];
+    const base = lastDate ? new Date(lastDate) : new Date();
+    base.setDate(base.getDate() + 1);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    if (base < todayStart) base.setTime(todayStart.getTime());
+    const yyyy = base.getFullYear();
+    const mm = String(base.getMonth() + 1).padStart(2, "0");
+    const dd = String(base.getDate()).padStart(2, "0");
+    setAddingDay(true);
+    try {
+      await fetch(`/api/shoots/${primaryShoot.id}/dates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dates: [
+            {
+              shootDate: `${yyyy}-${mm}-${dd}`,
+              callTime: null,
+              location: primaryShoot.location || "",
+              notes: "",
+            },
+          ],
+        }),
+      });
+      // Re-fetch the campaign so `shoots` updates upstream
+      globalMutate(`/api/campaigns/${campaignId}`);
+      globalMutate(swrKey);
+    } finally {
+      setAddingDay(false);
+    }
   };
 
   const handleDownload = () => {
@@ -278,11 +380,23 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
 
   const buckets = buildBuckets(data, shoots);
   const setupNameMap = new Map(data.setups.map((s) => [s.id, s.name]));
-  const uniqueSetups = [...new Set(data.shots.map((s) => s.setup_id))];
-  const setupColorMap = new Map<string, string>();
-  uniqueSetups.forEach((id, i) =>
-    setupColorMap.set(id, SETUP_COLORS[i % SETUP_COLORS.length])
-  );
+  const setupLocationMap = new Map(data.setups.map((s) => [s.id, s.location]));
+
+  const productNamesByShot = new Map<string, string>();
+  for (const shot of data.shots) {
+    const links = (data.productLinks || []).filter((l) => l.shot_id === shot.id);
+    const names = links
+      .map((l) => {
+        const cp = (data.campaignProducts || []).find(
+          (p) => p.id === l.campaign_product_id
+        );
+        if (!cp?.product) return null;
+        const code = cp.product.item_code ? ` (${cp.product.item_code})` : "";
+        return `${cp.product.name}${code}`;
+      })
+      .filter(Boolean) as string[];
+    productNamesByShot.set(shot.id, names.join(", "));
+  }
 
   return (
     <div className="space-y-3">
@@ -304,130 +418,224 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
       </div>
 
       {/* Multi-day one-liner */}
-      <div className="rounded-lg border border-border overflow-hidden">
-        {buckets.map((bucket) => (
-          <div key={bucket.id ?? "unassigned"}>
-            <DayBar bucket={bucket} />
-            {bucket.shots.length === 0 ? (
-              <div
-                className="border-t border-border px-4 py-4 text-center text-[11px] text-text-tertiary"
-                onDragOver={(e) => {
-                  if (drag) e.preventDefault();
-                }}
-                onDrop={() => {
-                  if (drag) moveShot(drag.shotId, bucket.id, 0);
-                }}
-              >
-                Drop a shot here to assign to{" "}
-                {bucket.id === null
-                  ? "unassigned"
-                  : `Day ${bucket.dayNumber}`}
-                .
-              </div>
-            ) : (
-              bucket.shots.map((shot, idx) => {
-                const colorClass = setupColorMap.get(shot.setup_id) || "";
-                const setupName = setupNameMap.get(shot.setup_id) || "";
-                const shotLinks = data.links.filter((l) => l.shot_id === shot.id);
-                const channels = shotLinks
-                  .map(
-                    (l) =>
-                      data.deliverables.find((d) => d.id === l.deliverable_id)
-                        ?.channel
-                  )
-                  .filter(Boolean)
-                  .join(", ");
-
-                return (
-                  <div
-                    key={shot.id}
-                    draggable
-                    onDragStart={() => handleDragStart(shot.id, bucket.id)}
-                    onDragEnd={handleDragEnd}
-                    onDragOver={(e) => {
-                      if (drag) e.preventDefault();
-                    }}
-                    onDrop={() => {
-                      if (drag) moveShot(drag.shotId, bucket.id, idx);
-                    }}
-                    className={`grid grid-cols-[32px_36px_1fr_120px_90px_90px_52px_1fr] border-t border-border border-l-[3px] ${colorClass} ${
-                      drag?.shotId === shot.id ? "opacity-40" : ""
-                    } hover:bg-surface-secondary/30 transition-colors cursor-grab active:cursor-grabbing`}
-                  >
-                    <div className="flex items-center justify-center px-1">
-                      <GripVertical className="h-3 w-3 text-text-tertiary/40" />
-                    </div>
-                    <div className="px-2 py-2 text-xs font-medium text-text-primary">
-                      {idx + 1}
-                    </div>
-                    <div className="px-2 py-2">
-                      <p className="text-xs text-text-primary leading-relaxed">
-                        {shot.description || shot.name}
-                      </p>
-                      {setupName && (
-                        <p className="text-[10px] text-text-tertiary mt-0.5">
-                          Setup: {setupName}
-                        </p>
-                      )}
-                    </div>
-                    <div className="px-2 py-2 text-xs text-text-secondary">
-                      {shot.props}
-                    </div>
-                    <div className="px-2 py-2">
-                      <span className="inline-block rounded-full bg-surface-secondary px-2 py-0.5 text-[10px] text-text-secondary">
-                        {shot.location ||
-                          data.setups.find((s) => s.id === shot.setup_id)
-                            ?.location ||
-                          "—"}
-                      </span>
-                    </div>
-                    <div className="px-2 py-2 text-[10px] text-text-tertiary">
-                      {channels}
-                    </div>
-                    <div className="px-2 py-2">
-                      <select
-                        value={shot.estimated_duration_minutes || 15}
-                        onChange={(e) =>
-                          handleDurationChange(shot.id, Number(e.target.value))
-                        }
-                        className="w-full rounded border border-border bg-surface px-1 py-0.5 text-[10px] focus:outline-none"
-                      >
-                        {[5, 10, 15, 20, 30, 45, 60, 90, 120].map((m) => (
-                          <option key={m} value={m}>
-                            {m}m
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="px-2 py-2 text-[10px] text-text-tertiary">
-                      {shot.notes}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Setup legend */}
-      {uniqueSetups.length > 1 && (
-        <div className="flex flex-wrap items-center gap-3 text-[10px] text-text-tertiary">
-          <span className="font-medium">Setups:</span>
-          {uniqueSetups.map((id, i) => (
-            <span key={id} className="flex items-center gap-1">
-              <span
-                className={`inline-block h-2.5 w-2.5 rounded-sm border-l-[3px] ${
-                  SETUP_COLORS[i % SETUP_COLORS.length].split(" ")[0]
-                }`}
-              />
-              {setupNameMap.get(id) || `Setup ${i + 1}`}
-            </span>
-          ))}
+      <div className="border-2 border-black overflow-hidden bg-white">
+        {/* Column headers */}
+        <div className="grid grid-cols-[24px_36px_56px_minmax(200px,2fr)_110px_minmax(160px,1.2fr)_minmax(140px,1fr)_64px_minmax(140px,1fr)] border-b-2 border-black bg-white text-[10px] font-bold uppercase tracking-wider text-black">
+          <div className="px-2 py-1.5" />
+          <div className="px-2 py-1.5 border-l border-black/30">#</div>
+          <div className="px-2 py-1.5 border-l border-black/30">I/E</div>
+          <div className="px-2 py-1.5 border-l border-black/30">Description</div>
+          <div className="px-2 py-1.5 border-l border-black/30">Talent</div>
+          <div className="px-2 py-1.5 border-l border-black/30">Product</div>
+          <div className="px-2 py-1.5 border-l border-black/30">Wardrobe / Props</div>
+          <div className="px-2 py-1.5 border-l border-black/30">Time</div>
+          <div className="px-2 py-1.5 border-l border-black/30">Notes</div>
         </div>
-      )}
+        {buckets.map((bucket) => {
+          // Group shots by setup, preserving the bucket's order
+          const setupGroups: { setupId: string; shots: ScheduleShot[] }[] = [];
+          for (const shot of bucket.shots) {
+            const last = setupGroups[setupGroups.length - 1];
+            if (last && last.setupId === shot.setup_id) {
+              last.shots.push(shot);
+            } else {
+              setupGroups.push({ setupId: shot.setup_id, shots: [shot] });
+            }
+          }
+
+          let runningIdx = 0;
+          const isDropTarget = drag !== null;
+          return (
+            <div
+              key={bucket.id ?? "unassigned"}
+              onDragOver={(e) => {
+                if (drag) e.preventDefault();
+              }}
+              onDrop={() => {
+                if (drag) moveShot(drag.shotId, bucket.id, bucket.shots.length);
+              }}
+              className={isDropTarget ? "ring-1 ring-inset ring-black/30" : ""}
+            >
+              <DayBar bucket={bucket} />
+              {bucket.shots.length === 0 ? (
+                <div
+                  className="border-t border-black/30 px-4 py-6 text-center text-[11px] font-medium text-text-tertiary bg-surface-secondary/40"
+                >
+                  Drag a shot here to assign to{" "}
+                  {bucket.id === null
+                    ? "unassigned"
+                    : `Day ${bucket.dayNumber}`}
+                  .
+                </div>
+              ) : (
+                setupGroups.map((group, gi) => {
+                  const setupName = setupNameMap.get(group.setupId) || "Setup";
+                  const setupLoc = setupLocationMap.get(group.setupId) || "";
+                  return (
+                    <div key={`${group.setupId}-${gi}`}>
+                      <div className="border-t border-black/30 bg-surface-secondary/40 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.15em] text-black">
+                        {setupName}
+                        {setupLoc && (
+                          <span className="ml-2 font-normal normal-case tracking-normal text-text-tertiary">
+                            · {setupLoc}
+                          </span>
+                        )}
+                      </div>
+                      {group.shots.map((shot) => {
+                        const idx = runningIdx++;
+                        const products =
+                          productNamesByShot.get(shot.id) || shot.hero_sku || "—";
+                        return (
+                          <div
+                            key={shot.id}
+                            onDragOver={(e) => {
+                              if (drag) e.preventDefault();
+                            }}
+                            onDrop={() => {
+                              if (drag) moveShot(drag.shotId, bucket.id, idx);
+                            }}
+                            className={`grid grid-cols-[24px_36px_56px_minmax(200px,2fr)_110px_minmax(160px,1.2fr)_minmax(140px,1fr)_64px_minmax(140px,1fr)] items-start border-t border-border ${
+                              idx % 2 === 1 ? "bg-surface-secondary/25" : ""
+                            } ${
+                              drag?.shotId === shot.id ? "opacity-40" : ""
+                            } hover:bg-surface-secondary/30 transition-colors`}
+                          >
+                            <div
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, shot.id, bucket.id)}
+                              onDragEnd={handleDragEnd}
+                              className="flex items-center justify-center pt-1.5 cursor-grab active:cursor-grabbing"
+                              title="Drag to reorder or move"
+                            >
+                              <GripVertical className="h-3.5 w-3.5 text-text-tertiary" />
+                            </div>
+                            <div className="border-l border-black/20 px-2 py-1.5 text-xs font-bold text-text-primary tabular-nums">
+                              {shot.sort_order}
+                            </div>
+                            <div className="border-l border-black/20 py-1 px-1">
+                              <select
+                                value={shot.int_ext || ""}
+                                onChange={(e) => handleIntExtChange(shot.id, e.target.value)}
+                                className="w-full bg-transparent px-0.5 py-0 text-[11px] font-bold tabular-nums text-text-primary focus:outline-none uppercase"
+                              >
+                                <option value="">—</option>
+                                <option value="INT">INT</option>
+                                <option value="EXT">EXT</option>
+                                <option value="INT/EXT">I/E</option>
+                              </select>
+                            </div>
+                            <div className="border-l border-black/20 px-2 py-1.5 text-xs leading-snug text-text-primary">
+                              {shot.description || shot.name || "—"}
+                            </div>
+                            <div className="border-l border-black/20 px-2 py-1.5 text-xs text-text-secondary">
+                              {shot.talent || "—"}
+                            </div>
+                            <div className="border-l border-black/20 px-2 py-1.5 text-xs text-text-secondary">
+                              {products}
+                            </div>
+                            <div className="border-l border-black/20 px-2 py-1.5 text-xs text-text-secondary">
+                              {shot.props || "—"}
+                            </div>
+                            <div className="border-l border-border px-1.5 py-1.5">
+                              <select
+                                value={shot.estimated_duration_minutes || 15}
+                                onChange={(e) =>
+                                  handleDurationChange(shot.id, Number(e.target.value))
+                                }
+                                className="w-full bg-transparent px-0.5 py-0 text-[11px] font-medium tabular-nums text-text-primary focus:outline-none"
+                              >
+                                {[5, 10, 15, 20, 30, 45, 60, 90, 120].map((m) => (
+                                  <option key={m} value={m}>
+                                    {m}m
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="border-l border-black/20 px-2 py-1.5 text-xs text-text-tertiary">
+                              {shot.notes || ""}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })
+              )}
+              {bucket.id !== null && (
+                <>
+                  {(data.dayEvents || [])
+                    .filter((ev) => ev.shoot_date_id === bucket.id)
+                    .map((ev) => (
+                      <EventBanner
+                        key={ev.id}
+                        event={ev}
+                        onDelete={() => deleteEvent(ev.id)}
+                      />
+                    ))}
+                  <div className="flex items-center gap-2 border-t border-black/20 bg-white px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
+                    <span>Add break:</span>
+                    <button
+                      type="button"
+                      onClick={() => addEvent(bucket.id!, "move")}
+                      className="inline-flex items-center gap-1 border border-black/30 px-2 py-0.5 hover:bg-black hover:text-white transition-colors"
+                    >
+                      <Plus className="h-3 w-3" /> Company Move
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addEvent(bucket.id!, "lunch")}
+                      className="inline-flex items-center gap-1 border border-black/30 px-2 py-0.5 hover:bg-black hover:text-white transition-colors"
+                    >
+                      <Plus className="h-3 w-3" /> Lunch
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addEvent(bucket.id!, "wrap")}
+                      className="inline-flex items-center gap-1 border border-black/30 px-2 py-0.5 hover:bg-black hover:text-white transition-colors"
+                    >
+                      <Plus className="h-3 w-3" /> Wrap
+                    </button>
+                  </div>
+                </>
+              )}
+              {bucket.id !== null && bucket.shots.length > 0 && (
+                <div className="border-t-2 border-black bg-black px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-white">
+                  End of Day {bucket.dayNumber} — {bucket.shots.length} shot
+                  {bucket.shots.length === 1 ? "" : "s"} —{" "}
+                  {formatDayTotal(
+                    bucket.shots.reduce(
+                      (acc, s) => acc + (s.estimated_duration_minutes || 15),
+                      0
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {/* Add a new shoot day */}
+        {shoots.length > 0 && (
+          <button
+            type="button"
+            onClick={addShootDay}
+            disabled={addingDay}
+            className="flex w-full items-center justify-center gap-2 border-t-2 border-black bg-white px-3 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-black hover:bg-neutral-100 disabled:opacity-50 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {addingDay ? "Adding…" : "Add Shoot Day"}
+          </button>
+        )}
+      </div>
     </div>
   );
+}
+
+function formatDayTotal(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
 }
 
 // ─── Day-bar (Wave 3) ────────────────────────────────────────────────────────
@@ -446,10 +654,50 @@ function formatTimeLabel(raw: string): string {
   return `${hour12}:${minute} ${period}`;
 }
 
+const EVENT_LABELS: Record<DayEventType, string> = {
+  move: "Company Move",
+  lunch: "Lunch",
+  wrap: "Wrap",
+  other: "Break",
+};
+
+function EventBanner({
+  event,
+  onDelete,
+}: {
+  event: DayEvent;
+  onDelete: () => void;
+}) {
+  const Icon =
+    event.type === "move" ? Truck : event.type === "lunch" ? Utensils : Flag;
+  const label = event.label || EVENT_LABELS[event.type];
+  return (
+    <div className="group flex items-center justify-between gap-3 border-t border-black/40 bg-surface-secondary/70 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.15em] text-black">
+      <div className="flex items-center gap-2">
+        <Icon className="h-3.5 w-3.5" />
+        <span>{label}</span>
+        {event.time && (
+          <span className="font-normal normal-case tracking-normal text-text-secondary">
+            · {formatTimeLabel(event.time)}
+          </span>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onDelete}
+        className="opacity-0 group-hover:opacity-100 text-text-tertiary hover:text-error transition-opacity"
+        title="Remove"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
 function DayBar({ bucket }: { bucket: DateBucket }) {
   if (bucket.id === null) {
     return (
-      <div className="border-t-2 border-black bg-surface-secondary/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-text-primary">
+      <div className="border-t-2 border-black bg-neutral-300 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-black">
         Unassigned
       </div>
     );
@@ -465,7 +713,7 @@ function DayBar({ bucket }: { bucket: DateBucket }) {
   if (bucket.callTime) parts.push(`Call ${formatTimeLabel(bucket.callTime)}`);
 
   return (
-    <div className="border-t-2 border-black bg-surface-secondary/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-text-primary">
+    <div className="border-t-2 border-black bg-neutral-300 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-black">
       {parts.join(" — ")}
     </div>
   );

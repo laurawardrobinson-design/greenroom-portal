@@ -22,26 +22,28 @@ export function DocumentsTabTile({ campaignId, isVendor, canEdit, uploading, onU
       {/* Header */}
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border shrink-0">
         <FileText className="h-4 w-4 shrink-0 text-primary" />
-        <span className="text-sm font-semibold uppercase tracking-wider text-text-primary flex-1">Documents</span>
-        {showAdmin && (
-          <div className="flex items-center gap-1">
-            {(["creative", "admin"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTab(t)}
-                className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider transition-colors ${
-                  tab === t
-                    ? "bg-primary text-white"
-                    : "text-text-tertiary hover:text-text-primary"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        )}
+        <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">Documents</span>
       </div>
+
+      {/* Tab bar — only shown when admin docs are visible */}
+      {showAdmin && (
+        <div className="flex shrink-0 border-b border-border px-3.5">
+          {(["creative", "admin"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={`px-1 py-2 mr-4 text-xs font-semibold uppercase tracking-wider border-b-2 transition-colors ${
+                tab === t
+                  ? "border-primary text-primary"
+                  : "border-transparent text-text-tertiary hover:text-text-primary"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Body */}
       <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3">

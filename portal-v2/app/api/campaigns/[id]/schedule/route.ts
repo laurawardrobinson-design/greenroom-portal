@@ -70,6 +70,22 @@ export async function GET(
       approvers = (users || []) as Array<{ id: string; name: string }>;
     }
 
+    // Day events (company moves, meals, wrap) — scoped to this campaign's shoot dates
+    const { data: campaignShootDates } = await db
+      .from("shoot_dates")
+      .select("id, shoot_id, shoots!inner(campaign_id)")
+      .eq("shoots.campaign_id", campaignId);
+    const shootDateIds = (campaignShootDates || []).map((d) => d.id);
+    let dayEvents: Record<string, unknown>[] = [];
+    if (shootDateIds.length > 0) {
+      const { data: ev } = await db
+        .from("shoot_day_events")
+        .select("*")
+        .in("shoot_date_id", shootDateIds)
+        .order("sort_order_in_day", { ascending: true });
+      dayEvents = (ev || []) as Record<string, unknown>[];
+    }
+
     return NextResponse.json({
       setups: setups || [],
       shots: shots || [],
@@ -79,6 +95,7 @@ export async function GET(
       deliverables: delRes.data || [],
       campaignProducts: cpRes.data || [],
       approvers,
+      dayEvents,
     });
   } catch (error) {
     return authErrorResponse(error);
@@ -103,6 +120,7 @@ export async function PATCH(
       if (body.shootDateId !== undefined) update.shoot_date_id = body.shootDateId;
       if (body.estimatedDurationMinutes !== undefined) update.estimated_duration_minutes = body.estimatedDurationMinutes;
       if (body.sortOrderInDay !== undefined) update.sort_order_in_day = body.sortOrderInDay;
+      if (body.intExt !== undefined) update.int_ext = body.intExt;
 
       const { error } = await db
         .from("shot_list_shots")
@@ -112,6 +130,42 @@ export async function PATCH(
 
       if (error) throw error;
       return NextResponse.json({ success: true });
+    }
+
+    // Day events (company move / lunch / wrap)
+    if (body.event) {
+      const e = body.event;
+      if (e.action === "create") {
+        const { error } = await db.from("shoot_day_events").insert({
+          shoot_date_id: e.shootDateId,
+          type: e.type,
+          label: e.label || "",
+          time: e.time || null,
+          sort_order_in_day: e.sortOrderInDay ?? 9999,
+        });
+        if (error) throw error;
+        return NextResponse.json({ success: true });
+      }
+      if (e.action === "delete") {
+        const { error } = await db
+          .from("shoot_day_events")
+          .delete()
+          .eq("id", e.id);
+        if (error) throw error;
+        return NextResponse.json({ success: true });
+      }
+      if (e.action === "update") {
+        const update: Record<string, unknown> = {};
+        if (e.label !== undefined) update.label = e.label;
+        if (e.time !== undefined) update.time = e.time;
+        if (e.sortOrderInDay !== undefined) update.sort_order_in_day = e.sortOrderInDay;
+        const { error } = await db
+          .from("shoot_day_events")
+          .update(update)
+          .eq("id", e.id);
+        if (error) throw error;
+        return NextResponse.json({ success: true });
+      }
     }
 
     // Bulk reorder shots within a day

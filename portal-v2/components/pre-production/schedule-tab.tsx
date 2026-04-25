@@ -4,14 +4,12 @@ import { useState } from "react";
 import type { Shoot } from "@/types/domain";
 import { ShotListCleanView } from "./shot-list-clean-view";
 import { OneLinerView } from "./one-liner-view";
-import { DayByDayView } from "./day-by-day-view";
 import { CallSheetBuilder } from "./call-sheet-builder";
 
 // ─── Sub-nav config ──────────────────────────────────────────────────────────
 export const SCHEDULE_SUB_VIEWS = [
   { id: "shot-list", label: "Shot List" },
   { id: "one-liner", label: "One-Liner" },
-  { id: "day-by-day", label: "Day-by-Day" },
   { id: "call-sheet", label: "Call Sheet" },
 ] as const;
 
@@ -114,15 +112,6 @@ export function ScheduleTab({
 
           {resolvedActiveView === "one-liner" && (
             <OneLinerView
-              campaignId={campaignId}
-              campaignName={campaignName}
-              wfNumber={wfNumber}
-              shoots={shoots}
-            />
-          )}
-
-          {resolvedActiveView === "day-by-day" && (
-            <DayByDayView
               campaignId={campaignId}
               campaignName={campaignName}
               wfNumber={wfNumber}

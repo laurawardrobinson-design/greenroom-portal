@@ -27,7 +27,7 @@ import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils/format";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { ShoppingBasket, Wrench, Plus, DollarSign, Bell, AlertCircle, Calendar, X } from "lucide-react";
+import { ShoppingBasket, Wrench, Plus, DollarSign, Bell, AlertCircle, Calendar, X, Mail, Trash2 } from "lucide-react";
 import { ShotListModal } from "@/components/campaigns/shot-list-modal";
 import useSWR from "swr";
 import type { AppUser } from "@/types/domain";
@@ -77,6 +77,7 @@ export default function CampaignDetailPage({
   const [showAddGear, setShowAddGear] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Draft email modal
   const [showDraftEmail, setShowDraftEmail] = useState(false);
@@ -295,41 +296,63 @@ export default function CampaignDetailPage({
     : "Set Date";
 
   return (
-    <div className="space-y-2 -mt-3">
+    <div className="space-y-1 -mt-3">
+      <div className="relative">
       <CampaignDetailHeader
         campaign={campaign}
         canEdit={canEdit}
-        canDelete={canDelete}
+        canDelete={false}
         onStatusChange={handleStatusChange}
-        onDraftEmail={() => setShowDraftEmail(true)}
         onDelete={handleDelete}
         deleting={deleting}
         onUpdate={handleUpdate}
       />
 
-      <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+      <div className="flex flex-col gap-1 md:flex-row md:flex-wrap md:items-center">
         {/* Top-right actions collapse first on mobile, then align right on desktop */}
-        <div className="order-1 flex w-full flex-wrap items-center gap-2 md:order-2 md:ml-auto md:w-auto md:justify-end md:shrink-0">
-          <div className="min-w-[9.5rem] grow md:min-w-0 md:grow-0">
-            <StatusDropdown
-              status={campaign.status}
-              onStatusChange={canEdit && campaign.status !== "Cancelled" ? handleStatusChange : undefined}
-              disabled={!canEdit || campaign.status === "Cancelled"}
-            />
+        <div className="order-1 flex w-full flex-wrap items-center gap-2 md:order-2 md:ml-auto md:w-auto md:justify-end md:shrink-0 md:absolute md:right-0 md:bottom-0">
+          <div className="flex flex-col items-end gap-0">
+            <div className="flex gap-0">
+              <button
+                type="button"
+                onClick={() => setShowDraftEmail(true)}
+                title="Draft Email"
+                className="inline-flex h-6 w-6 items-center justify-center text-text-tertiary hover:text-text-primary"
+              >
+                <Mail className="h-3.5 w-3.5" />
+              </button>
+              {canDelete && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  title="Delete campaign"
+                  className="inline-flex h-6 w-6 items-center justify-center text-text-tertiary hover:text-error"
+                >
+                  <Trash2 className="h-3.5 w-3.5 -translate-y-px" />
+                </button>
+              )}
+            </div>
+            <div className="min-w-[9.5rem] md:min-w-0">
+              <StatusDropdown
+                status={campaign.status}
+                onStatusChange={canEdit && campaign.status !== "Cancelled" ? handleStatusChange : undefined}
+                disabled={!canEdit || campaign.status === "Cancelled"}
+              />
+            </div>
           </div>
           {(showFinancials || campaign.assetsDeliveryDate) && (
             <button
               type="button"
-              className={`relative inline-flex min-h-9 flex-1 items-center gap-2 rounded-lg border border-border px-2.5 py-1.5 text-xs transition-colors md:min-h-0 md:flex-none ${
+              className={`relative inline-flex min-h-11 flex-1 items-center gap-2.5 rounded-lg border border-border px-3.5 py-2 transition-colors md:min-h-0 md:flex-none ${
                 canEdit ? "cursor-pointer hover:bg-surface-secondary" : ""
               }`}
               onClick={() => canEdit && assetsDueDateRef.current?.showPicker()}
               title={campaign.assetsDeliveryDate ? "Assets due date" : "Set assets due date"}
             >
-              <Calendar className="h-3.5 w-3.5 shrink-0 text-primary" />
-              <span className="flex min-w-0 flex-col leading-tight">
-                <span className="font-semibold uppercase tracking-wider text-primary">Assets Due</span>
-                <span className="truncate font-semibold text-text-primary">
+              <Calendar className="h-5 w-5 shrink-0 text-primary" />
+              <span className="flex min-w-0 flex-col gap-0.5 leading-none">
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-primary">Assets Due</span>
+                <span className="truncate text-base font-bold text-primary">
                   {assetsDueLabel}
                 </span>
               </span>
@@ -352,6 +375,7 @@ export default function CampaignDetailPage({
             <CampaignSectionTabs campaignId={id} showDivider={false} />
           </div>
         )}
+      </div>
       </div>
 
       {/* === ROW 1: Calendar + Shoot Days | Documents | Budget === */}
@@ -541,6 +565,30 @@ export default function CampaignDetailPage({
         wfNumber={campaign.wfNumber}
         setups={setups}
       />
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Delete Campaign"
+        size="sm"
+      >
+        <p className="text-base text-text-secondary">
+          Are you sure you want to delete <strong>{campaign.name}</strong>?
+          This will remove all shoots, vendor assignments, deliverables, and
+          files associated with this campaign. This cannot be undone.
+        </p>
+        <ModalFooter>
+          <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+          <Button
+            variant="danger"
+            loading={deleting}
+            onClick={() => { handleDelete(); setShowDeleteConfirm(false); }}
+          >
+            Delete Campaign
+          </Button>
+        </ModalFooter>
+      </Modal>
 
       {/* Draft Email Modal */}
       <DraftEmailModal

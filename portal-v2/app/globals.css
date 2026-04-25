@@ -430,7 +430,7 @@ body {
   position: absolute;
   left: var(--density-tabs-px);
   right: var(--density-tabs-px);
-  bottom: 0;
+  bottom: 0.25rem;
   height: var(--ui-tab-underline-height);
   border-radius: 999px;
   background: var(--color-primary);
