@@ -5,16 +5,32 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // GET /api/calendar?month=2026-03
 export async function GET(request: Request) {
   try {
-    await getAuthUser();
+    const user = await getAuthUser();
     const { searchParams } = new URL(request.url);
     const month = searchParams.get("month"); // YYYY-MM format
 
     const db = createAdminClient();
 
+    // Vendors only see shoots for campaigns they're assigned to.
+    let allowedCampaignIds: string[] | null = null;
+    if (user.role === "Vendor") {
+      if (!user.vendorId) return NextResponse.json([]);
+      const { data: assignments } = await db
+        .from("campaign_vendors")
+        .select("campaign_id")
+        .eq("vendor_id", user.vendorId);
+      allowedCampaignIds = (assignments ?? []).map((r) => r.campaign_id as string);
+      if (allowedCampaignIds.length === 0) return NextResponse.json([]);
+    }
+
     let query = db
       .from("shoot_dates")
       .select("*, shoots!inner(id, name, shoot_type, campaign_id, campaigns(id, name, wf_number, status, producer_id, users!campaigns_producer_id_fkey(id, name)))")
       .order("shoot_date");
+
+    if (allowedCampaignIds) {
+      query = query.in("shoots.campaign_id", allowedCampaignIds);
+    }
 
     const from = searchParams.get("from");
     if (from) {
@@ -34,6 +50,9 @@ export async function GET(request: Request) {
     let crewQuery = db
       .from("crew_booking_dates")
       .select("shoot_date, crew_bookings!inner(campaign_id)");
+    if (allowedCampaignIds) {
+      crewQuery = crewQuery.in("crew_bookings.campaign_id", allowedCampaignIds);
+    }
     if (from) {
       crewQuery = crewQuery.gte("shoot_date", from);
     } else if (month) {

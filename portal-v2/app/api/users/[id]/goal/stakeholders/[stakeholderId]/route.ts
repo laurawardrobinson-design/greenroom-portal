@@ -8,6 +8,9 @@ export async function DELETE(
 ) {
   try {
     const user = await getAuthUser();
+    if (user.role === "Vendor") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     if (user.role !== "Admin") {
       return NextResponse.json({ error: "Only Admin can remove stakeholders" }, { status: 403 });
     }

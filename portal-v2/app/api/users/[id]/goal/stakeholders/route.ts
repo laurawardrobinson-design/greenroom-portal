@@ -9,6 +9,9 @@ export async function GET(
 ) {
   try {
     const user = await getAuthUser();
+    if (user.role === "Vendor") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     const { id } = await params;
 
     const canView = await isGoalViewer(id, user.id);
@@ -58,6 +61,9 @@ export async function POST(
 ) {
   try {
     const user = await getAuthUser();
+    if (user.role === "Vendor") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     if (user.role !== "Admin") {
       return NextResponse.json({ error: "Only Admin can assign stakeholders" }, { status: 403 });
     }

@@ -8,6 +8,9 @@ export async function DELETE(
 ) {
   try {
     const user = await getAuthUser();
+    if (user.role === "Vendor") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     const { noteId } = await params;
     const supabase = createAdminClient();
 

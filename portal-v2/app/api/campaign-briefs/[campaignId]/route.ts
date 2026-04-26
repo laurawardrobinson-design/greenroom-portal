@@ -34,7 +34,10 @@ export async function GET(
   { params }: { params: Promise<{ campaignId: string }> }
 ) {
   try {
-    await getAuthUser();
+    const user = await getAuthUser();
+    if (user.role === "Vendor") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     const { campaignId } = await params;
     const brief = await getBriefByCampaignId(campaignId);
     return NextResponse.json(brief);
