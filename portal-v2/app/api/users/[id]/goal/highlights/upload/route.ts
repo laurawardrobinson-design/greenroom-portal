@@ -8,6 +8,9 @@ export async function POST(
 ) {
   try {
     const user = await getAuthUser();
+    if (user.role === "Vendor") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     const { id } = await params;
 
     // Only the goal owner can upload files
