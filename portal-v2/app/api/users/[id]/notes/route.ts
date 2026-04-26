@@ -7,7 +7,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await getAuthUser();
+    const user = await getAuthUser();
+    if (user.role === "Vendor") {
+      return NextResponse.json([]);
+    }
     const { id } = await params;
     const supabase = createAdminClient();
     const { data, error } = await supabase
@@ -35,6 +38,9 @@ export async function POST(
 ) {
   try {
     const user = await getAuthUser();
+    if (user.role === "Vendor") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     const { id } = await params;
     const { text } = await req.json();
     if (!text?.trim()) {

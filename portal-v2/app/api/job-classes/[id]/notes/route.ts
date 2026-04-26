@@ -7,7 +7,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await getAuthUser();
+    const user = await getAuthUser();
+    if (user.role === "Vendor") {
+      return NextResponse.json([]);
+    }
     const { id } = await params;
     const notes = await listJobClassNotes(id);
     return NextResponse.json(notes);
