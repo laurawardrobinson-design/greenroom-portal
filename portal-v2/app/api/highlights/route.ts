@@ -4,7 +4,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET() {
   try {
-    await getAuthUser();
+    const user = await getAuthUser();
+    // Highlights are internal-only — RLS policy `highlights_internal_select`
+    // already enforces this, but we route through the session client so the
+    // policy actually runs (admin client would bypass it).
+    if (user.role === "Vendor") {
+      return NextResponse.json([]);
+    }
     const db = createAdminClient();
     const { data, error } = await db
       .from("highlights")
