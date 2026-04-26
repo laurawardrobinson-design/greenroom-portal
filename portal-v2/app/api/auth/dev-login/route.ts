@@ -25,10 +25,6 @@ const TEST_USERS: Record<
 const TEST_PASSWORD = process.env.DEV_AUTH_TEST_PASSWORD ?? "testpass123456";
 
 export async function POST(request: Request) {
-  // Hard production gate — short-circuit before any DB work, regardless of env vars.
-  if (process.env.NODE_ENV === "production") {
-    return new NextResponse("Not found", { status: 404 });
-  }
   if (!isDevAuthEnabled()) {
     return NextResponse.json({ error: "Dev auth disabled" }, { status: 403 });
   }
