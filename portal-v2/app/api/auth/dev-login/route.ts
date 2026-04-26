@@ -22,11 +22,13 @@ const TEST_USERS: Record<
   bmm: { email: "bmm@test.local", name: "Nicole Lee", role: "Brand Marketing Manager" },
 };
 
-const TEST_PASSWORD = "testpass123456";
+const TEST_PASSWORD = process.env.DEV_AUTH_TEST_PASSWORD ?? "testpass123456";
 
 export async function POST(request: Request) {
-  // Guard: only works when DEV_AUTH is explicitly enabled.
-  // In production, a server-only opt-in is also required.
+  // Hard production gate — short-circuit before any DB work, regardless of env vars.
+  if (process.env.NODE_ENV === "production") {
+    return new NextResponse("Not found", { status: 404 });
+  }
   if (!isDevAuthEnabled()) {
     return NextResponse.json({ error: "Dev auth disabled" }, { status: 403 });
   }
