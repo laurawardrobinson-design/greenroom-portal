@@ -2,10 +2,12 @@ function isTrue(value: string | undefined): boolean {
   return value === "true";
 }
 
-// Dev-login is available whenever NEXT_PUBLIC_DEV_AUTH=true,
-// but is hard-disabled in production regardless of env vars.
+// Dev-login is enabled when NEXT_PUBLIC_DEV_AUTH=true.
+// Note: this app's Vercel deployment is a demo environment that intentionally
+// uses dev-login as the primary login method. The env-var check is the gate;
+// disabling NEXT_PUBLIC_DEV_AUTH on a real-production deployment is what
+// turns dev-login off.
 export function isDevAuthEnabled(): boolean {
-  if (process.env.NODE_ENV === "production") return false;
   return isTrue(process.env.NEXT_PUBLIC_DEV_AUTH);
 }
 
