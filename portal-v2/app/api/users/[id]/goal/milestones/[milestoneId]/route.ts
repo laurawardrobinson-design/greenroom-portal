@@ -9,6 +9,9 @@ export async function PATCH(
 ) {
   try {
     const user = await getAuthUser();
+    if (user.role === "Vendor") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     const { id, milestoneId } = await params;
 
     const canView = await isGoalViewer(id, user.id);
@@ -62,6 +65,9 @@ export async function DELETE(
 ) {
   try {
     const user = await getAuthUser();
+    if (user.role === "Vendor") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     const { id, milestoneId } = await params;
 
     const canView = await isGoalViewer(id, user.id);

@@ -7,7 +7,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // inventory UIs can badge flagged products without a second join.
 export async function GET() {
   try {
-    await getAuthUser();
+    const user = await getAuthUser();
+    if (user.role === "Vendor") {
+      return NextResponse.json({});
+    }
     const db = createAdminClient();
     const { data, error } = await db
       .from("product_flags")
