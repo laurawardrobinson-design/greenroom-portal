@@ -129,7 +129,7 @@ export function POGallery() {
 
             <div className="mb-4 pb-4 border-b border-border">
               <p className="text-xs text-text-secondary mb-1">
-                {po.campaignWF} · {po.campaignName}
+                {po.campaignWF} {po.campaignName}
               </p>
               <p className="text-lg font-semibold text-primary">
                 ${po.totalAmount.toLocaleString()}

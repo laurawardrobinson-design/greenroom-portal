@@ -54,7 +54,7 @@ export default function PostWorkflowPage() {
   return (
     <div className="space-y-4">
       <div className="space-y-0">
-        <PageHeader title="Post Production" showDivider={false} />
+        <PageHeader title="Post Production" />
 
         <PageTabs
           tabs={TABS.map(({ id, label }) => ({ key: id, label }))}

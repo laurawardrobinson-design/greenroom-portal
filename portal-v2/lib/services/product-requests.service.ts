@@ -273,6 +273,24 @@ export async function getPREvents(docId: string): Promise<PREvent[]> {
 
 // --- Mutations ---
 
+async function findActivePRDocForCampaignDate(
+  campaignId: string,
+  shootDate: string
+): Promise<string | null> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("product_request_docs")
+    .select("id")
+    .eq("campaign_id", campaignId)
+    .eq("shoot_date", shootDate)
+    .neq("status", "cancelled")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { id: string } | null)?.id ?? null;
+}
+
 export async function createPRDoc(input: {
   campaignId: string;
   shootDate: string;
@@ -281,6 +299,12 @@ export async function createPRDoc(input: {
   notes?: string;
 }): Promise<PRDoc> {
   const db = createAdminClient();
+  const existingId = await findActivePRDocForCampaignDate(
+    input.campaignId,
+    input.shootDate
+  );
+  if (existingId) return getPRDoc(existingId);
+
   const { data, error } = await db
     .from("product_request_docs")
     .insert({
@@ -293,7 +317,16 @@ export async function createPRDoc(input: {
     })
     .select("*, campaigns(id, name, wf_number)")
     .single();
-  if (error) throw error;
+  if (error) {
+    if (error.code === "23505") {
+      const racedExistingId = await findActivePRDocForCampaignDate(
+        input.campaignId,
+        input.shootDate
+      );
+      if (racedExistingId) return getPRDoc(racedExistingId);
+    }
+    throw error;
+  }
 
   const doc = toDoc(data as Record<string, unknown>, []);
   await syncShotListProducts(doc.id, input.campaignId, input.shootDate);
@@ -302,7 +335,7 @@ export async function createPRDoc(input: {
 
 // Create an unclaimed draft PR (submitted_by = NULL) for a newly
 // inserted shoot_date row. Producers claim it on first edit.
-// Idempotent — if a draft already exists for this shoot_date_id,
+// Idempotent — if an active PR already exists for this campaign/date,
 // no-op and return the existing one.
 export async function ensureAutoDraftForShootDate(input: {
   campaignId: string;
@@ -311,13 +344,18 @@ export async function ensureAutoDraftForShootDate(input: {
 }): Promise<PRDoc | null> {
   const db = createAdminClient();
 
-  const { data: existing } = await db
-    .from("product_request_docs")
-    .select("id")
-    .eq("shoot_date_id", input.shootDateId)
-    .eq("status", "draft")
-    .maybeSingle();
-  if (existing) return getPRDoc((existing as { id: string }).id);
+  const existingId = await findActivePRDocForCampaignDate(
+    input.campaignId,
+    input.shootDate
+  );
+  if (existingId) {
+    await db
+      .from("product_request_docs")
+      .update({ shoot_date_id: input.shootDateId })
+      .eq("id", existingId)
+      .is("shoot_date_id", null);
+    return getPRDoc(existingId);
+  }
 
   const { data, error } = await db
     .from("product_request_docs")
@@ -331,7 +369,16 @@ export async function ensureAutoDraftForShootDate(input: {
     })
     .select("id")
     .single();
-  if (error) throw error;
+  if (error) {
+    if (error.code === "23505") {
+      const racedExistingId = await findActivePRDocForCampaignDate(
+        input.campaignId,
+        input.shootDate
+      );
+      if (racedExistingId) return getPRDoc(racedExistingId);
+    }
+    throw error;
+  }
 
   const id = (data as { id: string }).id;
   await syncShotListProducts(id, input.campaignId, input.shootDate);

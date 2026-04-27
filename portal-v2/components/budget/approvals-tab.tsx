@@ -552,7 +552,7 @@ export function ApprovalsTab() {
                           <Send className="h-3.5 w-3.5" />
                           {creatingBatch ? "Creating…" : "Batch"}
                         </Button>
-                        <p className="text-sm font-bold text-text-primary tabular-nums">
+                        <p className="text-sm font-bold text-text-primary">
                           {formatCurrency(unbatched.reduce((s, p) => s + p.totalAmount, 0))}
                         </p>
                       </div>

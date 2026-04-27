@@ -153,7 +153,7 @@ export function InvoiceGallery() {
 
               <div className="mb-4 pb-4 border-b border-border">
                 <p className="text-xs text-text-secondary mb-1">
-                  {invoice.campaignWF} · {invoice.campaignName}
+                  {invoice.campaignWF} {invoice.campaignName}
                 </p>
                 <p className="text-lg font-semibold text-primary">
                   ${invoice.totalAmount.toLocaleString()}

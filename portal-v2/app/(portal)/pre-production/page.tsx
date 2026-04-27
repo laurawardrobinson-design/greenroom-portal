@@ -12,7 +12,6 @@ import type { CampaignListItem } from "@/types/domain";
 
 const PREP_STATUSES: Array<CampaignListItem["status"]> = [
   "Planning",
-  "Upcoming",
   "In Production",
 ];
 

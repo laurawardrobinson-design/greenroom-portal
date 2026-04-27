@@ -18,6 +18,18 @@ const DEV_ROLES = [
   { key: "rbu", label: "RBU", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
 ];
 
+const LOGIN_NOTIFICATIONS = [
+  // Add new login page updates here. Viewers cannot edit these.
+  {
+    date: "April 27, 2026",
+    text: "Major upgrades! New roles for Brand Marketing / RBU for visibility of product inventory and requests. Design overhaul and cybersecurity SOC-2 audits completed.",
+  },
+  {
+    date: "April 20, 2026",
+    text: "New feature — Asset Studio. Designers can version mechanicals with automation.",
+  },
+];
+
 interface Vendor {
   id: string;
   company_name: string;
@@ -343,9 +355,19 @@ export default function LoginPage() {
           )}
         </div>
 
-        <div className="mt-4 h-28 overflow-y-auto overscroll-contain rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#69A925] mb-1">April 20, 2026</p>
-          <p className="text-sm font-medium text-white/50">New feature — Asset Studio. Designers can version mechanicals with automation.</p>
+        <div className="mt-4 max-h-32 overflow-y-auto overscroll-contain rounded-lg border border-white/10 bg-white/5 px-4 py-3 pr-3">
+          <div className="space-y-4">
+            {LOGIN_NOTIFICATIONS.map((notification) => (
+              <article key={`${notification.date}-${notification.text}`}>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-[#69A925]">
+                  {notification.date}
+                </p>
+                <p className="text-sm font-medium leading-5 text-white/50">
+                  {notification.text}
+                </p>
+              </article>
+            ))}
+          </div>
         </div>
 
         {!DEV_AUTH && (

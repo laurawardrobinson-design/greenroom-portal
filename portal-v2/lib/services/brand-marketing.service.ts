@@ -31,7 +31,7 @@ export interface BrandMarketingPortfolio {
 }
 
 // Active (non-terminal) statuses — what a BMM thinks of as "in flight."
-const ACTIVE_STATUSES: CampaignStatus[] = ["Planning", "Upcoming", "In Production", "Post"];
+const ACTIVE_STATUSES: CampaignStatus[] = ["Planning", "In Production", "Post"];
 
 export async function getBrandMarketingPortfolio(
   userId: string,
@@ -206,7 +206,7 @@ export async function getBmmShoots(
     .select("id, wf_number, name, status, line_of_business")
     .eq("brand_owner_id", userId)
     .is("deleted_at", null)
-    .in("status", ["Planning", "Upcoming", "In Production", "Post"]);
+    .in("status", ["Planning", "In Production", "Post"]);
   if (campErr) throw campErr;
 
   const campaigns = campaignRows ?? [];

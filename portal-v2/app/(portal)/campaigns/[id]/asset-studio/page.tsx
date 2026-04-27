@@ -85,7 +85,7 @@ export default function CampaignAssetStudioPage({
 
   return (
     <div className="space-y-0">
-      <PageHeader title={`${campaign.wfNumber ? `${campaign.wfNumber} ` : ""}${campaign.name}`} showDivider={false} />
+      <PageHeader title={`${campaign.wfNumber ? `${campaign.wfNumber} ` : ""}${campaign.name}`} />
 
       <PageTabs
         ariaLabel="Asset Studio sections"

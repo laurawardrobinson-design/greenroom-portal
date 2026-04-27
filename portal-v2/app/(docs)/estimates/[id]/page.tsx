@@ -165,13 +165,13 @@ export default function EstimatePage({
                       {item.category}
                     </p>
                   </div>
-                  <p className="text-sm text-gray-500 text-right tabular-nums">
+                  <p className="text-sm text-gray-500 text-right">
                     {item.quantity}
                   </p>
-                  <p className="text-sm text-gray-500 text-right tabular-nums">
+                  <p className="text-sm text-gray-500 text-right">
                     {fmt(item.unit_price)}
                   </p>
-                  <p className="text-sm text-gray-900 text-right tabular-nums">
+                  <p className="text-sm text-gray-900 text-right">
                     {fmt(item.amount)}
                   </p>
                 </div>
@@ -189,7 +189,7 @@ export default function EstimatePage({
           <div className="w-56">
             <div className="flex justify-between items-center pt-3 border-t-2 border-gray-900">
               <p className="text-sm font-semibold text-gray-900">Estimate Total</p>
-              <p className="text-sm font-semibold text-gray-900 tabular-nums">
+              <p className="text-sm font-semibold text-gray-900">
                 {fmt(total)}
               </p>
             </div>

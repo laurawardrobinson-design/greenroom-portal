@@ -220,7 +220,6 @@ export default function WardrobePage() {
       <div className="space-y-0">
         <PageHeader
           title="Wardrobe"
-          showDivider={false}
           actions={
             tab === "backstock" ? (
               <Button variant="secondary" onClick={() => { setShowScanner(true); setScannerActive(true); }}>

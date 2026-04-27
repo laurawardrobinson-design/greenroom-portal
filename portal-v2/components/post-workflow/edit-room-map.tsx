@@ -116,7 +116,7 @@ export function EditRoomMap({
                 dominantBaseline="middle"
                 fontSize={fs}
                 fontWeight="700"
-                fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif"
+                fontFamily="var(--font-sans)"
                 letterSpacing="0.05em"
                 fill={labelColor}
                 style={{ userSelect: "none" }}
@@ -137,7 +137,7 @@ export function EditRoomMap({
                       dominantBaseline="middle"
                       fontSize={fs}
                       fontWeight="700"
-                      fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif"
+                      fontFamily="var(--font-sans)"
                       letterSpacing="0.05em"
                       fill={labelColor}
                       style={{ userSelect: "none" }}
@@ -168,7 +168,7 @@ export function EditRoomMap({
                         dominantBaseline="middle"
                         fontSize={fsS}
                         fontWeight="600"
-                        fontFamily="ui-sans-serif, system-ui, sans-serif"
+                        fontFamily="var(--font-sans)"
                         fill={labelColor}
                         style={{ userSelect: "none" }}
                       >
@@ -181,7 +181,7 @@ export function EditRoomMap({
                           textAnchor="middle"
                           dominantBaseline="middle"
                           fontSize={fsS}
-                          fontFamily="ui-sans-serif, system-ui, sans-serif"
+                          fontFamily="var(--font-sans)"
                           fill={labelColor}
                           style={{ userSelect: "none" }}
                         >

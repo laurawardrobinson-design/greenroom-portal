@@ -280,7 +280,7 @@ function DraftChannelChip({ sel, tmpl, onRemove }: {
     <span className="relative inline-block">
       <button ref={anchorRef} type="button" onClick={toggle}
         className="group inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors">
-        {tmpl?.abbr ?? sel.channel} <span className=" font-normal opacity-70">{sel.spec}</span>
+        {tmpl?.abbr ?? sel.channel} <span className="font-normal opacity-70">{sel.spec}</span>
       </button>
       {open && typeof document !== "undefined" && createPortal(
         <>
@@ -289,7 +289,7 @@ function DraftChannelChip({ sel, tmpl, onRemove }: {
             className="rounded-xl border border-border bg-surface shadow-lg overflow-hidden">
             <div className="px-3 pt-2.5 pb-1">
               <p className="text-[13px] font-semibold text-text-primary">{tmpl?.name ?? sel.channel}</p>
-              <p className=" text-xs text-text-tertiary mt-0.5">{sel.spec}</p>
+              <p className="text-xs text-text-tertiary mt-0.5">{sel.spec}</p>
             </div>
             <div className="px-3 pt-1 pb-1">
               <OverlayPreview spec={sel.spec} />
@@ -392,7 +392,7 @@ function DeliverableChip({ del, canEdit, onRemove }: {
     <span className="relative inline-block">
       <button ref={anchorRef} type="button" onClick={toggle}
         className="group inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors">
-        {channelLabel} <span className=" font-normal opacity-70">{del.aspectRatio}</span>
+        {channelLabel} <span className="font-normal opacity-70">{del.aspectRatio}</span>
       </button>
 
       {open && typeof document !== "undefined" && createPortal(
@@ -402,7 +402,7 @@ function DeliverableChip({ del, canEdit, onRemove }: {
             className="rounded-xl border border-border bg-surface shadow-lg overflow-hidden">
             <div className="px-3 pt-2.5 pb-1">
               <p className="text-[13px] font-semibold text-text-primary">{del.channel}</p>
-              <p className=" text-xs text-text-tertiary mt-0.5">{del.format} · {del.width}×{del.height}</p>
+              <p className="text-xs text-text-tertiary mt-0.5">{del.format} · {del.width}×{del.height}</p>
             </div>
             <div className="px-3 pt-1 pb-1">
               <OverlayPreview spec={del.aspectRatio} />

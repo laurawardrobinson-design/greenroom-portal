@@ -88,7 +88,7 @@ export default function BudgetPage() {
   return (
     <div className="space-y-4">
       <div className="space-y-0">
-        <PageHeader title="Budget" showDivider={false} />
+        <PageHeader title="Budget" />
 
         <PageTabs tabs={TABS} activeTab={activeTab} onTabChange={(key) => setActiveTab(key as Tab)} />
       </div>
@@ -895,7 +895,7 @@ function CampaignBudgetsTab() {
                     )}
                   </div>
                 </div>
-                <div className="w-[72px] shrink-0 text-right text-xs text-text-secondary tabular-nums">
+                <div className="w-[72px] shrink-0 text-right text-xs text-text-secondary">
                   {formatCurrency(c.committed || 0)}
                 </div>
                 <div className="w-24 shrink-0 text-right">
@@ -920,7 +920,7 @@ function CampaignBudgetsTab() {
                       className="w-full rounded-lg border border-primary bg-surface px-2 py-1 text-sm text-right text-text-primary focus:outline-none/20"
                     />
                   ) : (
-                    <span className="text-sm font-semibold text-text-primary tabular-nums">
+                    <span className="text-sm font-semibold text-text-primary">
                       {formatCurrency(c.productionBudget)}
                     </span>
                   )}
@@ -1613,7 +1613,7 @@ function TransactionDrilldownModal({
                     {t.flagged && <AlertTriangle className="inline h-3 w-3 mr-1 shrink-0" />}
                     {t.description || "Line item"}
                   </p>
-                  <span className="text-sm font-semibold text-text-primary shrink-0 tabular-nums">
+                  <span className="text-sm font-semibold text-text-primary shrink-0">
                     {formatCurrency(t.amount)}
                   </span>
                 </div>

@@ -153,11 +153,11 @@ export default function PRViewPage({
               <div className="text-[11px] font-medium uppercase tracking-wider text-neutral-500">
                 Request No.
               </div>
-              <div className="text-[18px] font-semibold text-neutral-900 tabular-nums">
+              <div className="text-[18px] font-semibold text-neutral-900">
                 {docNumber}
               </div>
               {campaign.wfNumber && (
-                <div className="text-[12px] text-neutral-500 mt-0.5 tabular-nums">
+                <div className="text-[12px] text-neutral-500 mt-0.5">
                   {campaign.wfNumber}
                 </div>
               )}
@@ -229,7 +229,7 @@ export default function PRViewPage({
                   <Phone className="h-3.5 w-3.5 text-neutral-500 mt-0.5 shrink-0" />
                   <a
                     href={`tel:${section.pickupPhone.replace(/[^0-9+]/g, "")}`}
-                    className="tabular-nums hover:underline"
+                    className="hover:underline"
                   >
                     {section.pickupPhone}
                   </a>
@@ -250,7 +250,7 @@ export default function PRViewPage({
             <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
               Products requested
             </div>
-            <div className="text-[11px] text-neutral-500 tabular-nums">
+            <div className="text-[11px] text-neutral-500">
               {section.items.length}{" "}
               {section.items.length === 1 ? "item" : "items"}
             </div>
@@ -294,7 +294,7 @@ export default function PRViewPage({
                       </div>
                     )}
                   </td>
-                  <td className="py-2.5 pr-3 text-right text-neutral-900 tabular-nums">
+                  <td className="py-2.5 pr-3 text-right text-neutral-900">
                     {item.quantity}
                   </td>
                   <td className="py-2.5 pr-3 text-neutral-700">

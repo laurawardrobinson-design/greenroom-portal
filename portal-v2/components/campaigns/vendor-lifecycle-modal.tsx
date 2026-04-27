@@ -639,7 +639,7 @@ export function VendorLifecycleModal({ open, onClose, campaignVendor: cv, campai
                               className="w-full text-xs bg-surface-secondary border border-border rounded px-1.5 py-0.5 text-right text-text-primary focus:outline-none"
                             />
                           </td>
-                          <td className="py-1 text-right font-medium text-text-primary tabular-nums">
+                          <td className="py-1 text-right font-medium text-text-primary">
                             {formatCurrency(item.amount)}
                           </td>
                           <td className="py-1 pl-1">

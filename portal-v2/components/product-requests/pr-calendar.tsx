@@ -216,7 +216,7 @@ export function PRMonthCalendar({
               }`}
             >
               <div
-                className={`text-[10px] tabular-nums leading-none mb-0.5 ${
+                className={`text-[10px] leading-none mb-0.5 ${
                   isToday
                     ? "font-semibold text-primary"
                     : "text-text-tertiary"
@@ -269,7 +269,7 @@ function DayCellChips({
               }`}
               title={`${e.campaign.name} · ${e.itemCount} items${e.pickupTime ? ` · ${e.pickupTime}` : ""}`}
             >
-              <span className="font-medium tabular-nums leading-none">
+              <span className="font-medium leading-none">
                 {e.campaign.wfNumber || "Request"}
               </span>
             </button>
@@ -303,7 +303,7 @@ function DayCellChips({
               group.length === 1 ? "dept" : "depts"
             } · ${totalItems} items`}
           >
-            <div className="text-[10px] font-semibold text-text-primary tabular-nums leading-tight truncate">
+            <div className="text-[10px] font-semibold text-text-primary leading-tight truncate">
               {first.campaign.wfNumber || "Request"}
             </div>
             <div className="text-[10px] text-text-tertiary leading-tight truncate">

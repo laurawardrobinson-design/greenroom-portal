@@ -307,10 +307,10 @@ export default function ProductRequestsCalendarPage() {
                           >
                             <div className="min-w-0 flex-1">
                               <div className="flex items-baseline gap-2">
-                                <span className="text-[12px] font-semibold text-text-primary tabular-nums">
+                                <span className="text-[12px] font-semibold text-text-primary">
                                   {formatLongDate(g.shootDate)}
                                 </span>
-                                <span className="text-[10px] text-text-tertiary tabular-nums">
+                                <span className="text-[10px] text-text-tertiary">
                                   {g.campaign.wfNumber}
                                 </span>
                               </div>
@@ -331,7 +331,7 @@ export default function ProductRequestsCalendarPage() {
                                       <span className="font-medium">
                                         {PR_DEPARTMENT_LABELS[e.department]}
                                       </span>
-                                      <span className="tabular-nums opacity-70">
+                                      <span className="opacity-70">
                                         · {e.itemCount}
                                       </span>
                                     </span>

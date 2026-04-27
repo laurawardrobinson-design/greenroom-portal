@@ -1290,7 +1290,7 @@ function CampaignSwitcher({
 
   // Pre-production campaigns only
   const prepCampaigns = campaigns.filter(
-    (c) => c.status === "Planning" || c.status === "Upcoming" || c.status === "In Production"
+    (c) => c.status === "Planning" || c.status === "In Production"
   );
 
   // Default: only campaigns assigned to this producer
@@ -1456,10 +1456,9 @@ export default function PreProductionWorkspacePage({
   }
 
   return (
-    <div className="space-y-0">
+    <div>
       <PageHeader
-        title={`${campaign.wfNumber ? `${campaign.wfNumber} · ` : ""}${campaign.name}`}
-        showDivider={false}
+        title={`${campaign.wfNumber ? `${campaign.wfNumber} ` : ""}${campaign.name}`}
         actions={(
           <CampaignSwitcher
             currentId={id}
@@ -1470,47 +1469,45 @@ export default function PreProductionWorkspacePage({
         )}
       />
 
-      {/* Pre-Production sub-tabs */}
-      <div className="border-b border-border">
-        <div className="flex flex-wrap items-center gap-2">
-          <SectionDropdown
-            tabs={visibleTabs}
-            activeTab={resolvedActiveTab}
-            onSelect={handleTabClick}
-            showActiveUnderline={resolvedActiveTab !== "schedule"}
-          />
+      {/* Pre-Production sub-tabs — below the header border */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-border">
+        <SectionDropdown
+          tabs={visibleTabs}
+          activeTab={resolvedActiveTab}
+          onSelect={handleTabClick}
+          showActiveUnderline={resolvedActiveTab !== "schedule"}
+        />
 
-          {resolvedActiveTab === "schedule" && (
-            <>
-              <span className="h-5 w-px bg-border/70" aria-hidden />
-              <nav className="ui-tabs" role="tablist" aria-label="Schedule views">
-              {visibleScheduleViews.map((view) => {
-                const active = resolvedScheduleView === view.id;
-                return (
-                  <button
-                    key={view.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setActiveScheduleView(view.id)}
-                    className="ui-tab"
-                    data-state={active ? "active" : "inactive"}
-                  >
-                    {view.label}
-                    {active && (
-                      <span className="ui-tab-underline" />
-                    )}
-                  </button>
-                );
-              })}
-              </nav>
-            </>
-          )}
-        </div>
+        {resolvedActiveTab === "schedule" && (
+          <>
+            <span className="h-5 w-px bg-border/70" aria-hidden />
+            <nav className="ui-tabs" role="tablist" aria-label="Schedule views">
+            {visibleScheduleViews.map((view) => {
+              const active = resolvedScheduleView === view.id;
+              return (
+                <button
+                  key={view.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setActiveScheduleView(view.id)}
+                  className="ui-tab"
+                  data-state={active ? "active" : "inactive"}
+                >
+                  {view.label}
+                  {active && (
+                    <span className="ui-tab-underline" />
+                  )}
+                </button>
+              );
+            })}
+            </nav>
+          </>
+        )}
       </div>
 
       {/* Tab content */}
-      <div className="pt-[var(--density-preprod-content-pt)]">
+      <div className="pt-4">
         {resolvedActiveTab === "schedule"  && (
           <ScheduleTab
             campaignId={id}

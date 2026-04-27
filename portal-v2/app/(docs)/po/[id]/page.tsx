@@ -174,9 +174,9 @@ export default function PoPage({
                       <p className="text-sm text-gray-700">{item.description}</p>
                       <p className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">{item.category}</p>
                     </div>
-                    <p className="text-sm text-gray-500 text-right tabular-nums">{item.quantity}</p>
-                    <p className="text-sm text-gray-500 text-right tabular-nums">{fmt(item.unit_price)}</p>
-                    <p className="text-sm text-gray-900 text-right tabular-nums">{fmt(item.amount)}</p>
+                    <p className="text-sm text-gray-500 text-right">{item.quantity}</p>
+                    <p className="text-sm text-gray-500 text-right">{fmt(item.unit_price)}</p>
+                    <p className="text-sm text-gray-900 text-right">{fmt(item.amount)}</p>
                   </div>
                 )
               )
@@ -192,7 +192,7 @@ export default function PoPage({
             <div className="w-56">
               <div className="flex justify-between items-center pt-3 border-t-2 border-gray-900">
                 <p className="text-sm font-semibold text-gray-900">Total Authorized</p>
-                <p className="text-sm font-semibold text-gray-900 tabular-nums">{fmt(total)}</p>
+                <p className="text-sm font-semibold text-gray-900">{fmt(total)}</p>
               </div>
             </div>
           </div>

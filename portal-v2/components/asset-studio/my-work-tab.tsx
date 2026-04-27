@@ -152,7 +152,7 @@ export function MyWorkTab({ user }: Props) {
 
           <p className="mt-1 text-xs text-[var(--as-text-muted)]">
             {item.campaign
-              ? `${item.campaign.wfNumber ? `${item.campaign.wfNumber} · ` : ""}${item.campaign.name}`
+              ? `${item.campaign.wfNumber ? `${item.campaign.wfNumber} ` : ""}${item.campaign.name}`
               : "No campaign linked"}
             {" · "}
             Updated {fmtRelative(item.updatedAt)}
@@ -232,7 +232,7 @@ export function MyWorkTab({ user }: Props) {
 
           <p className="mt-1 text-xs text-[var(--as-text-muted)]">
             {item.campaign
-              ? `${item.campaign.wfNumber ? `${item.campaign.wfNumber} · ` : ""}${item.campaign.name}`
+              ? `${item.campaign.wfNumber ? `${item.campaign.wfNumber} ` : ""}${item.campaign.name}`
               : "No campaign linked"}
             {quantityLabel}
             {" · "}
@@ -386,7 +386,7 @@ export function MyWorkTab({ user }: Props) {
                       href={`/campaigns/${row.campaign.id}/asset-studio`}
                       className="truncate text-sm font-semibold text-[var(--as-text)] hover:text-[var(--as-accent)]"
                     >
-                      {row.campaign.wfNumber ? `${row.campaign.wfNumber} · ` : ""}
+                      {row.campaign.wfNumber ? `${row.campaign.wfNumber} ` : ""}
                       {row.campaign.name}
                     </Link>
                     <p className="mt-0.5 text-[11px] text-[var(--as-text-subtle)]">

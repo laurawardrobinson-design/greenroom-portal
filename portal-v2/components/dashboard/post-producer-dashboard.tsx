@@ -88,7 +88,7 @@ export function PostProducerDashboard({ user }: Props) {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <h1 className="text-2xl font-bold text-text-primary">
         Welcome back, {user.name.split(" ")[0]}
       </h1>
@@ -218,7 +218,7 @@ export function PostProducerDashboard({ user }: Props) {
                       </p>
                       <p className="truncate text-xs text-text-secondary">
                         {r.editorName}
-                        {r.campaignWfNumber ? ` · ${r.campaignWfNumber}` : ""}
+                        {r.campaignWfNumber ? ` ${r.campaignWfNumber}` : ""}
                       </p>
                     </div>
                     <span className="shrink-0 text-xs text-text-tertiary">

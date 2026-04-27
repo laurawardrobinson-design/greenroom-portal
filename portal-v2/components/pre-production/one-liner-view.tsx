@@ -509,14 +509,14 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
                             >
                               <GripVertical className="h-3.5 w-3.5 text-text-tertiary" />
                             </div>
-                            <div className="border-l border-black/20 px-2 py-1.5 text-xs font-bold text-text-primary tabular-nums">
+                            <div className="border-l border-black/20 px-2 py-1.5 text-xs font-bold text-text-primary">
                               {shot.sort_order}
                             </div>
                             <div className="border-l border-black/20 py-1 px-1">
                               <select
                                 value={shot.int_ext || ""}
                                 onChange={(e) => handleIntExtChange(shot.id, e.target.value)}
-                                className="w-full bg-transparent px-0.5 py-0 text-[11px] font-bold tabular-nums text-text-primary focus:outline-none uppercase"
+                                className="w-full bg-transparent px-0.5 py-0 text-[11px] font-bold text-text-primary focus:outline-none uppercase"
                               >
                                 <option value="">—</option>
                                 <option value="INT">INT</option>
@@ -542,7 +542,7 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
                                 onChange={(e) =>
                                   handleDurationChange(shot.id, Number(e.target.value))
                                 }
-                                className="w-full bg-transparent px-0.5 py-0 text-[11px] font-medium tabular-nums text-text-primary focus:outline-none"
+                                className="w-full bg-transparent px-0.5 py-0 text-[11px] font-medium text-text-primary focus:outline-none"
                               >
                                 {[5, 10, 15, 20, 30, 45, 60, 90, 120].map((m) => (
                                   <option key={m} value={m}>

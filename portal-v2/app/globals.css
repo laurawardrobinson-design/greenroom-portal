@@ -178,7 +178,7 @@
   --density-button-radius-lg: 0.5rem;
 
   --density-page-header-gap: 0.5rem;
-  --density-page-header-pb: 0.5rem;
+  --density-page-header-pb: 1rem;
   --density-page-header-row-gap: 1rem;
   --density-page-header-crumb-gap: 0.5rem;
   --density-page-header-action-gap: 0.5rem;
@@ -218,7 +218,7 @@
 
   --density-page-content-px: 0.75rem;
   --density-page-content-px-lg: 1rem;
-  --density-page-content-py: 1.25rem;
+  --density-page-content-py: 1rem;
 
   --density-modal-overlay-pad: 1rem;
   --density-modal-content-pad: 1.25rem;
@@ -258,7 +258,7 @@
   --density-button-gap-lg: 0.375rem;
 
   --density-page-header-gap: 0.5rem;
-  --density-page-header-pb: 0.75rem;
+  --density-page-header-pb: 0.875rem;
   --density-page-header-row-gap: 0.75rem;
   --density-page-header-crumb-gap: 0.375rem;
   --density-page-header-action-gap: 0.375rem;
@@ -298,7 +298,7 @@
 
   --density-page-content-px: 0.75rem;
   --density-page-content-px-lg: 1rem;
-  --density-page-content-py: 1rem;
+  --density-page-content-py: 0.875rem;
 
   --density-modal-overlay-pad: 0.75rem;
   --density-modal-content-pad: 1rem;
@@ -330,6 +330,12 @@ body {
   color: var(--color-text-primary);
   background: var(--color-surface);
   line-height: var(--line-height-readable);
+}
+
+/* Inter only: neutralize accidental numeric alternates that make IDs,
+   WF numbers, dates, and amounts look like a different typeface. */
+.tabular-nums {
+  font-variant-numeric: normal;
 }
 
 /* ============================================================
@@ -430,7 +436,7 @@ body {
   position: absolute;
   left: var(--density-tabs-px);
   right: var(--density-tabs-px);
-  bottom: 0.25rem;
+  bottom: 0.4375rem;
   height: var(--ui-tab-underline-height);
   border-radius: 999px;
   background: var(--color-primary);
@@ -887,4 +893,3 @@ select:focus-visible {
   --as-handle-color:   #69A925;
   --as-handle-locked:  #F59E0B;
 }
-

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import type { AppUser, Vendor, UserGoal } from "@/types/domain";
@@ -38,8 +38,9 @@ import {
   Send,
   Compass,
   Pencil,
+  ChevronDown,
+  Check,
 } from "lucide-react";
-import { PageTabs } from "@/components/ui/page-tabs";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -50,6 +51,73 @@ const fetcher = (url: string) =>
 type Tab = "team" | "vendors";
 
 const ROLES = ["Admin", "Producer", "Studio"] as const;
+
+const CONTACT_TABS = [
+  { id: "team" as const, label: "Internal Team", icon: Users },
+  { id: "vendors" as const, label: "External Vendors", icon: Building2 },
+];
+
+function SectionDropdown({
+  activeTab,
+  onSelect,
+}: {
+  activeTab: Tab;
+  onSelect: (tab: Tab) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const active = CONTACT_TABS.find((t) => t.id === activeTab) ?? CONTACT_TABS[0];
+  const ActiveIcon = active.icon;
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="ui-tab"
+        data-state="active"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <ActiveIcon className="ui-tab-icon" />
+        <span>{active.label}</span>
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-text-tertiary transition-transform ${open ? "rotate-180" : ""}`} />
+        <span className="ui-tab-underline" />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
+          {CONTACT_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = tab.id === activeTab;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => { setOpen(false); onSelect(tab.id); }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                  isActive ? "bg-primary/5 text-text-primary" : "text-text-secondary hover:bg-surface-secondary"
+                }`}
+              >
+                <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-primary" : "text-text-tertiary"}`} />
+                <span className="flex-1">{tab.label}</span>
+                {isActive && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ContactsPage() {
   const { user } = useCurrentUser();
@@ -72,103 +140,76 @@ export default function ContactsPage() {
   return (
     <div className="space-y-4">
       <div className="space-y-0">
-        <PageHeader title="Contacts" showDivider={false} />
-
-        <PageTabs
-          tabs={[
-            { key: "team", label: "Internal Team" },
-            { key: "vendors", label: "External Vendors" },
-          ]}
-          activeTab={tab}
-          onTabChange={(key) => switchTab(key as Tab)}
+        <PageHeader
+          title="Contacts"
+          actions={
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+                <input
+                  type="text"
+                  placeholder={tab === "team" ? "Search team members..." : "Search vendors..."}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-7 w-48 rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:w-64 transition-all"
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                {canEdit && (
+                  <button
+                    onClick={() => tab === "team" ? setShowAddTeam(true) : setShowAddVendor(true)}
+                    className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+                    title={tab === "team" ? "Add team member" : "Add vendor"}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                )}
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
+                  title="Grid view"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
+                  title="List view"
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          }
         />
-      </div>
-
-      {/* Filter + search bar */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex gap-1.5 flex-wrap flex-1 min-w-0">
-          {tab === "team" ? (
-            <>
-              <button
-                onClick={() => setRoleFilter("")}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                  !roleFilter ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
-                }`}
-              >
-                All
-              </button>
-              {ROLES.map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setRoleFilter(roleFilter === r ? "" : r)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                    roleFilter === r ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
-                  }`}
-                >
-                  {r}
+        <div className="flex flex-wrap items-center gap-2 border-b border-border">
+          <SectionDropdown activeTab={tab} onSelect={switchTab} />
+          <span className="h-5 w-px bg-border/70" aria-hidden />
+          <nav className="ui-tabs">
+            {tab === "team" ? (
+              <>
+                <button type="button" onClick={() => setRoleFilter("")} data-state={!roleFilter ? "active" : "inactive"} className="ui-tab">
+                  All{!roleFilter && <span className="ui-tab-underline" />}
                 </button>
-              ))}
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setCategoryFilter("")}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                  !categoryFilter ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
-                }`}
-              >
-                All
-              </button>
-              {VENDOR_CATEGORIES.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setCategoryFilter(categoryFilter === c ? "" : c)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                    categoryFilter === c ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
-                  }`}
-                >
-                  {c}
+                {ROLES.map((r) => (
+                  <button key={r} type="button" onClick={() => setRoleFilter(r === roleFilter ? "" : r)} data-state={roleFilter === r ? "active" : "inactive"} className="ui-tab">
+                    {r}{roleFilter === r && <span className="ui-tab-underline" />}
+                  </button>
+                ))}
+              </>
+            ) : (
+              <>
+                <button type="button" onClick={() => setCategoryFilter("")} data-state={!categoryFilter ? "active" : "inactive"} className="ui-tab">
+                  All{!categoryFilter && <span className="ui-tab-underline" />}
                 </button>
-              ))}
-            </>
-          )}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-            <input
-              type="text"
-              placeholder={tab === "team" ? "Search team members..." : "Search vendors..."}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-7 w-48 rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:w-64 transition-all"
-            />
-          </div>
-          <div className="flex items-center gap-1">
-            {canEdit && (
-              <button
-                onClick={() => tab === "team" ? setShowAddTeam(true) : setShowAddVendor(true)}
-                className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
-                title={tab === "team" ? "Add team member" : "Add vendor"}
-              >
-                <Plus className="h-4 w-4" />
-              </button>
+                {VENDOR_CATEGORIES.map((c) => (
+                  <button key={c} type="button" onClick={() => setCategoryFilter(c === categoryFilter ? "" : c)} data-state={categoryFilter === c ? "active" : "inactive"} className="ui-tab">
+                    {c}{categoryFilter === c && <span className="ui-tab-underline" />}
+                  </button>
+                ))}
+              </>
             )}
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
-              title="Grid view"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
-              title="List view"
-            >
-              <List className="h-4 w-4" />
-            </button>
-          </div>
+          </nav>
         </div>
       </div>
 

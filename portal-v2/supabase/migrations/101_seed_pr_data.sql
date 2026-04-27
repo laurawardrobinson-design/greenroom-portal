@@ -8,6 +8,10 @@
 -- the schema's check constraint but is not used in practice — once
 -- BMM forwards to the depts, the PR's job is done.)
 --
+-- Product rule: one active PR per campaign shoot day. If older seed
+-- paths produced duplicate active docs, keep the earliest canonical doc
+-- and cancel the extras before populating sections/items.
+--
 -- "Today" for status bucketing is hard-coded to 2026-04-26 so the
 -- buckets stay stable across reseeds (matches the reseeded dates in
 -- migration 100).
@@ -17,6 +21,31 @@ DELETE FROM public.product_request_events;
 DELETE FROM public.product_request_items;
 DELETE FROM public.product_request_dept_sections;
 
+WITH ranked_docs AS (
+  SELECT
+    id,
+    ROW_NUMBER() OVER (
+      PARTITION BY campaign_id, shoot_date
+      ORDER BY
+        CASE WHEN shoot_date_id IS NULL THEN 1 ELSE 0 END,
+        created_at ASC,
+        id ASC
+    ) AS rn
+  FROM public.product_request_docs
+  WHERE status <> 'cancelled'
+)
+UPDATE public.product_request_docs d
+   SET status = 'cancelled',
+       notes = trim(both from concat_ws(
+         E'\n\n',
+         nullif(d.notes, ''),
+         'Seed cleanup: cancelled duplicate PR because Greenroom uses one active product request per campaign shoot day.'
+       )),
+       updated_at = now()
+  FROM ranked_docs r
+ WHERE d.id = r.id
+   AND r.rn > 1;
+
 -- One section per (doc, department-of-a-linked-product)
 WITH doc_dept AS (
   SELECT DISTINCT d.id AS doc_id, d.shoot_date, p.department
@@ -24,6 +53,7 @@ WITH doc_dept AS (
   JOIN public.campaign_products cp ON cp.campaign_id = d.campaign_id
   JOIN public.products p ON p.id = cp.product_id
   WHERE p.department IN ('Bakery','Produce','Deli','Meat-Seafood','Grocery')
+    AND d.status <> 'cancelled'
 )
 INSERT INTO public.product_request_dept_sections
   (id, doc_id, department, date_needed, time_needed, pickup_person, sort_order)
@@ -115,7 +145,8 @@ SET
     WHEN d.shoot_date <= (SELECT d FROM today) + INTERVAL '4 days'
       THEN 'Submitted to BMM — awaiting forward to depts.'
     ELSE ''
-  END;
+  END
+WHERE d.status <> 'cancelled';
 
 -- Audit events
 INSERT INTO public.product_request_events (doc_id, actor_id, from_status, to_status, comment, created_at)

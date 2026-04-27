@@ -193,7 +193,7 @@ export function FloorPlan({ spaces, reservations, onRoomClick, selectedSpaceIds,
                 textAnchor="middle" dominantBaseline="middle"
                 fontSize={fs}
                 fontWeight="700"
-                fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif"
+                fontFamily="var(--font-sans)"
                 letterSpacing="0.05em"
                 fill={labelColor}
                 style={{ userSelect: "none" }}
@@ -211,7 +211,7 @@ export function FloorPlan({ spaces, reservations, onRoomClick, selectedSpaceIds,
                     textAnchor="middle" dominantBaseline="middle"
                     fontSize={fs}
                     fontWeight="600"
-                    fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif"
+                    fontFamily="var(--font-sans)"
                     letterSpacing="0.04em"
                     fill={labelColor}
                     style={{ userSelect: "none" }}
@@ -234,7 +234,7 @@ export function FloorPlan({ spaces, reservations, onRoomClick, selectedSpaceIds,
                       x={cx} y={nameY}
                       textAnchor="middle" dominantBaseline="middle"
                       fontSize={fsS}
-                      fontFamily="ui-sans-serif, system-ui, sans-serif"
+                      fontFamily="var(--font-sans)"
                       fill={labelColor}
                       style={{ userSelect: "none" }}
                     >

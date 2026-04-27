@@ -210,7 +210,6 @@ export default function PropsPage() {
         {/* Header */}
         <PageHeader
           title="Props"
-          showDivider={false}
           actions={
             <Button variant="secondary" onClick={() => setShowScanner(true)}>
               <ScanLine className="h-4 w-4" />

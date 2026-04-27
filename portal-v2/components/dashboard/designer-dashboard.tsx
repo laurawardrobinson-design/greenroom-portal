@@ -39,7 +39,7 @@ export function DesignerDashboard({ user }: { user: AppUser }) {
   const items = data?.items ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <h1 className="text-2xl font-bold text-text-primary">
         Welcome back, {user.name?.split(" ")[0] || "there"}
       </h1>
@@ -79,7 +79,7 @@ export function DesignerDashboard({ user }: { user: AppUser }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="truncate text-sm font-medium text-text-primary">
-                      {campaign.wfNumber ? `${campaign.wfNumber} · ` : ""}
+                      {campaign.wfNumber ? `${campaign.wfNumber} ` : ""}
                       {campaign.name}
                     </span>
                     <CampaignStatusBadge status={campaign.status} />

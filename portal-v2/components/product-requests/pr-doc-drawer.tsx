@@ -212,11 +212,11 @@ function SpreadsheetItemRow({
             onKeyDown={(e) => {
               if (e.key === "Enter") (e.target as HTMLInputElement).blur();
             }}
-            className={`${SHEET_INPUT_CLASS} text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
+            className={`${SHEET_INPUT_CLASS} text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
             aria-label="Quantity"
           />
         ) : (
-          <span className="tabular-nums">{item.quantity}</span>
+          <span>{item.quantity}</span>
         )}
       </td>
       <td className={`${SHEET_CELL_CLASS} w-20`}>
@@ -375,7 +375,7 @@ function PendingItemRow({
           min={1}
           onClick={(e) => (e.target as HTMLInputElement).select()}
           onKeyDown={(e) => { if (e.key === "Enter") nameRef.current?.focus(); }}
-          className={`${SHEET_INPUT_CLASS} text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
+          className={`${SHEET_INPUT_CLASS} text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
           aria-label="Quantity"
           disabled={disabled}
         />

@@ -46,7 +46,7 @@ export function BudgetSidebarTile({ financials, canEdit, onRequestOverage }: Pro
             <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-0.5">
               {label}
             </p>
-            <p className={`text-lg font-bold tabular-nums leading-tight ${valueClass}`}>
+            <p className={`text-lg font-bold leading-tight ${valueClass}`}>
               {formatCurrency(value)}
             </p>
           </div>

@@ -372,7 +372,7 @@ export default function CampaignDetailPage({
         {/* Section tab nav — Brief / Asset Studio / Pre-Production all live behind tabs */}
         {!isVendor && (
           <div className="order-2 min-w-0 w-full md:order-1 md:flex-1">
-            <CampaignSectionTabs campaignId={id} showDivider={false} />
+            <CampaignSectionTabs campaignId={id} />
           </div>
         )}
       </div>

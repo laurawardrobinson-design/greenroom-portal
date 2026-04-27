@@ -36,7 +36,7 @@ export function BmmCampaignDetail({ campaignId, user: _user }: Props) {
     return <p className="text-sm text-text-tertiary">Campaign not found.</p>;
   }
 
-  const title = [campaign.wfNumber, campaign.name].filter(Boolean).join(" · ");
+  const title = [campaign.wfNumber, campaign.name].filter(Boolean).join(" ");
 
   return (
     <div className="space-y-5">

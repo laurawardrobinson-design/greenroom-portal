@@ -90,7 +90,7 @@ export default function CampaignBriefPage({
         deleting={false}
         onUpdate={handleUpdate}
       />
-      <CampaignSectionTabs campaignId={id} showDivider={false} />
+      <CampaignSectionTabs campaignId={id} />
       <div className="pt-2">
         <BriefEditor campaignId={id} canEdit={canEditBrief} />
       </div>

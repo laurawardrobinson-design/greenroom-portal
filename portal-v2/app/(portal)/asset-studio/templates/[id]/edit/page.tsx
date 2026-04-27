@@ -453,7 +453,7 @@ function TemplateHeader({
                   href={`/campaigns/${deliverableCtx.campaign.id}`}
                   className="font-medium text-[var(--as-text)] hover:text-[var(--as-accent)]"
                 >
-                  {deliverableCtx.campaign.wf_number} · {deliverableCtx.campaign.name}
+                  {deliverableCtx.campaign.wf_number} {deliverableCtx.campaign.name}
                 </Link>
                 <span className="text-[var(--as-text-subtle)]">›</span>
               </>

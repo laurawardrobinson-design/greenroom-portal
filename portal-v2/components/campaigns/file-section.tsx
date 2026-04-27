@@ -199,7 +199,7 @@ function FilePreviewModal({ asset, onClose }: { asset: Asset; onClose: () => voi
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
-            <span className="text-xs text-text-tertiary tabular-nums min-w-[60px] text-center">
+            <span className="text-xs text-text-tertiary min-w-[60px] text-center">
               {numPages ? `${currentPage} / ${numPages}` : currentPage}
             </span>
             <button

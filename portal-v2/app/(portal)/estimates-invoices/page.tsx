@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { VendorLifecycleModal } from "@/components/campaigns/vendor-lifecycle-modal";
 import { LifecycleProgress } from "@/components/budget/vendor-financials-tab";
 import { formatCurrency } from "@/lib/utils/format";
-import { FileText, Receipt, ClipboardList, LayoutList, Tag } from "lucide-react";
+import { FileText, Receipt, ClipboardList, LayoutList } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Failed"); return r.json(); });
 
@@ -146,36 +147,6 @@ function DocRow({ row, onOpen }: { row: PendingRow; onOpen: () => void }) {
 
 type GroupBy = "status" | "campaign";
 
-function GroupByToggle({ value, onChange }: { value: GroupBy; onChange: (v: GroupBy) => void }) {
-  return (
-    <div className="flex gap-0.5 rounded-md bg-surface-secondary p-0.5">
-      <button
-        type="button"
-        onClick={() => onChange("status")}
-        className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-          value === "status"
-            ? "bg-white text-text-primary shadow-sm"
-            : "text-text-tertiary hover:text-text-secondary"
-        }`}
-      >
-        <Tag className="h-3 w-3" />
-        Status
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("campaign")}
-        className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-          value === "campaign"
-            ? "bg-white text-text-primary shadow-sm"
-            : "text-text-tertiary hover:text-text-secondary"
-        }`}
-      >
-        <LayoutList className="h-3 w-3" />
-        Campaign
-      </button>
-    </div>
-  );
-}
 
 // ── Campaign-grouped view ─────────────────────────────────────────────────────
 
@@ -289,10 +260,24 @@ export default function EstimatesInvoicesPage() {
 
   return (
     <div className="max-w-2xl space-y-4">
-      <h1 className="text-2xl font-bold text-text-primary">Estimates & Invoices</h1>
-
-      <div className="flex justify-end">
-        <GroupByToggle value={groupBy} onChange={setGroupBy} />
+      <div className="space-y-0">
+        <PageHeader title="Estimates & Invoices" />
+        <div className="border-b border-border">
+          <nav className="ui-tabs">
+            {(["status", "campaign"] as GroupBy[]).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setGroupBy(v)}
+                data-state={groupBy === v ? "active" : "inactive"}
+                className="ui-tab"
+              >
+                {v === "status" ? "Status" : "Campaign"}
+                {groupBy === v && <span className="ui-tab-underline" />}
+              </button>
+            ))}
+          </nav>
+        </div>
       </div>
 
       {loadingPending ? (

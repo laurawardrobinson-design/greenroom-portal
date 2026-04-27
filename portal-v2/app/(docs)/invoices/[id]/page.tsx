@@ -174,7 +174,7 @@ export default function InvoicePage({
                   className="grid grid-cols-[1fr_auto] gap-4 py-2.5 border-b border-gray-100"
                 >
                   <p className="text-sm text-gray-700">{item.description}</p>
-                  <p className="text-sm text-gray-900 text-right tabular-nums">
+                  <p className="text-sm text-gray-900 text-right">
                     {fmt(item.amount)}
                   </p>
                 </div>
@@ -196,7 +196,7 @@ export default function InvoicePage({
           <div className="w-56">
             <div className="flex justify-between items-center pt-3 border-t-2 border-gray-900">
               <p className="text-sm font-semibold text-gray-900">Total</p>
-              <p className="text-sm font-semibold text-gray-900 tabular-nums">
+              <p className="text-sm font-semibold text-gray-900">
                 {fmt(total)}
               </p>
             </div>

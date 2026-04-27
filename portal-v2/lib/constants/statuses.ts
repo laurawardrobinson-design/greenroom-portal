@@ -4,7 +4,6 @@ import type { StatusVariant } from "@/components/ui/status-pill";
 // Campaign status flow
 export const CAMPAIGN_STATUS_ORDER: CampaignStatus[] = [
   "Planning",
-  "Upcoming",
   "In Production",
   "Post",
   "Complete",
@@ -18,8 +17,6 @@ export function campaignStatusVariant(status: CampaignStatus): StatusVariant {
   switch (status) {
     case "Planning":
       return "draft";
-    case "Upcoming":
-      return "pending";
     case "In Production":
       return "info";
     case "Post":
@@ -56,8 +53,6 @@ export function campaignStatusStyle(status: CampaignStatus): {
 export const CAMPAIGN_STATUS_COLORS: Record<CampaignStatus, string> = {
   Planning:
     "text-[color:var(--status-draft-fg)] bg-[color:var(--status-draft-tint)]",
-  Upcoming:
-    "text-[color:var(--status-pending-fg)] bg-[color:var(--status-pending-tint)]",
   "In Production":
     "text-[color:var(--status-info-fg)] bg-[color:var(--status-info-tint)]",
   Post:

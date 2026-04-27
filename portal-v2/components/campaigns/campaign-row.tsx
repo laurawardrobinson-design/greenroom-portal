@@ -140,7 +140,7 @@ export function CampaignRow({ campaign, onMutate, hideFinancials, readOnly }: Pr
       </div>
 
       {/* Campaign Name */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-[160px]">
         <span className="text-sm font-medium text-text-primary group-hover:text-primary transition-colors truncate block">
           {campaign.name}
         </span>
@@ -197,12 +197,12 @@ export function CampaignRow({ campaign, onMutate, hideFinancials, readOnly }: Pr
       </div>
 
       {/* Status */}
-      <div className="w-20 shrink-0" onClick={(e) => e.stopPropagation()}>
+      <div className="w-20 shrink-0 hidden lg:block" onClick={(e) => e.stopPropagation()}>
         <CampaignStatusBadge status={campaign.status} />
       </div>
 
       {/* Next Shoot */}
-      <div className="w-20 shrink-0 text-right">
+      <div className="w-20 shrink-0 text-right hidden lg:block">
         <span className={`text-xs ${shootUrgent ? "text-error font-medium" : "text-text-secondary"}`}>
           {campaign.nextShootDate ? format(parseISO(campaign.nextShootDate), "MMM d") : "—"}
         </span>

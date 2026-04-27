@@ -112,7 +112,6 @@ export interface GoalHighlightFeedback {
 // --- Campaigns ---
 export type CampaignStatus =
   | "Planning"
-  | "Upcoming"
   | "In Production"
   | "Post"
   | "Complete"

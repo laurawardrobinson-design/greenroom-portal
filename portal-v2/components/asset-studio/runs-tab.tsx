@@ -121,7 +121,7 @@ export function RunsTab({ user, campaignId }: Props) {
                         <span className={statusPillClass(run.status)}>{run.status}</span>
                       </div>
                       <p className="mt-0.5 text-xs text-[var(--as-text-muted)]">
-                        {run.campaign?.wfNumber ? `${run.campaign.wfNumber} · ` : ""}
+                        {run.campaign?.wfNumber ? `${run.campaign.wfNumber} ` : ""}
                         {run.completedVariants}/{run.totalVariants} variants
                         {run.failedVariants > 0
                           ? ` · ${run.failedVariants} failed`

@@ -178,7 +178,7 @@ export function HopDashboard({ user }: Props) {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <h1 className="text-2xl font-bold text-text-primary">
         Welcome back, {user.name.split(" ")[0]}
       </h1>

@@ -81,7 +81,7 @@ export default function ProductDirectoryPage() {
   return (
     <div className="space-y-4">
       <div className="space-y-0">
-        <PageHeader title="Products" showDivider={false} />
+        <PageHeader title="Products" />
 
         <PageTabs
           tabs={[
@@ -122,7 +122,7 @@ export default function ProductDirectoryPage() {
                     <Flag className="h-3.5 w-3.5" />
                     Flags
                     {openFlagTotal > 0 && (
-                      <span className="tabular-nums">({openFlagTotal})</span>
+                      <span>({openFlagTotal})</span>
                     )}
                   </Link>
                 )}

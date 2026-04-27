@@ -57,7 +57,7 @@ export function StudioDashboard({ user }: Props) {
   const upcomingReservations = Array.isArray(reservations) ? reservations.slice(0, 5) : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">

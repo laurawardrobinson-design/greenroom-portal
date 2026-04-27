@@ -361,7 +361,7 @@ export default function NewRunPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-5" data-area="asset-studio">
+    <div className="space-y-4" data-area="asset-studio">
       <div className="flex items-start justify-between gap-3">
         <div>
           <Link
@@ -449,7 +449,7 @@ export default function NewRunPage() {
               <option value="">Select a campaign…</option>
               {(campaigns ?? []).map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.wfNumber ? `${c.wfNumber} · ` : ""}
+                  {c.wfNumber ? `${c.wfNumber} ` : ""}
                   {c.name}
                   {c.status ? ` (${c.status})` : ""}
                 </option>

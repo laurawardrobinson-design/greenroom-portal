@@ -40,6 +40,8 @@ interface NavItem {
   roles: UserRole[];
   /** Optional: hide unless predicate is true (e.g. vendor with assignments) */
   visibleIf?: (ctx: NavContext) => boolean;
+  /** Optional: also treat this item as active when any predicate matches the pathname */
+  alsoActiveFor?: Array<(pathname: string) => boolean>;
 }
 
 interface NavGroup {
@@ -72,9 +74,9 @@ const NAV_GROUPS: NavGroup[] = [
         roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director"],
       },
       {
-        label: "Brand Marketing",
+        label: "Dashboard",
         href: "/brand-marketing",
-        icon: Sparkles,
+        icon: LayoutDashboard,
         roles: ["Admin", "Brand Marketing Manager"],
       },
       {
@@ -108,6 +110,7 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/pre-production",
         icon: ClipboardList,
         roles: ["Admin", "Producer", "Post Producer"],
+        alsoActiveFor: [(p) => /\/campaigns\/[^/]+\/pre-production/.test(p)],
       },
       {
         label: "Asset Studio",
@@ -300,14 +303,23 @@ export function Sidebar({
           UI (mirrors the RBU sidebar's flat style). */}
       <nav className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden space-y-0.5 px-4 py-4">
         {flatItems.map((item) => {
+          const alsoMatches = item.alsoActiveFor?.some((fn) => fn(pathname)) ?? false;
           const matches =
-            pathname === item.href || pathname.startsWith(item.href + "/");
-          const moreSpecificMatch = flatItems.some(
-            (other) =>
-              other !== item &&
-              other.href.startsWith(item.href + "/") &&
-              (pathname === other.href || pathname.startsWith(other.href + "/"))
+            alsoMatches ||
+            pathname === item.href ||
+            pathname.startsWith(item.href + "/");
+          const claimedByOther = flatItems.some(
+            (other) => other !== item && (other.alsoActiveFor?.some((fn) => fn(pathname)) ?? false)
           );
+          const moreSpecificMatch =
+            claimedByOther && !alsoMatches
+              ? true
+              : flatItems.some(
+                  (other) =>
+                    other !== item &&
+                    other.href.startsWith(item.href + "/") &&
+                    (pathname === other.href || pathname.startsWith(other.href + "/"))
+                );
           const isActive = matches && !moreSpecificMatch;
           const Icon = item.icon;
 

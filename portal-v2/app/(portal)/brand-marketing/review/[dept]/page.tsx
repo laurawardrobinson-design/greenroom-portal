@@ -297,7 +297,7 @@ function TabButton({
     >
       {label}
       {count > 0 && (
-        <span className="tabular-nums text-text-tertiary">({count})</span>
+        <span className="text-text-tertiary">({count})</span>
       )}
       {active && <span className="ui-tab-underline" />}
     </button>

@@ -200,10 +200,10 @@ export default function DeptCalendarPage({
                         >
                           <div className="min-w-0 flex-1">
                             <div className="flex items-baseline gap-2">
-                              <span className="text-[13px] font-semibold text-neutral-900 tabular-nums">
+                              <span className="text-[13px] font-semibold text-neutral-900">
                                 {formatLongDate(e.shootDate)}
                               </span>
-                              <span className="text-[11px] text-neutral-500 tabular-nums">
+                              <span className="text-[11px] text-neutral-500">
                                 {e.campaign.wfNumber}
                               </span>
                             </div>

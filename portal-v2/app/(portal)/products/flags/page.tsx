@@ -88,7 +88,7 @@ export default function ProductFlagsPage() {
   }, [mutate]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div>
         <Link
           href="/products"
@@ -113,7 +113,7 @@ export default function ProductFlagsPage() {
                 >
                   {k}
                   {k === "open" && openCount !== null && openCount > 0 && (
-                    <span className="ml-1 tabular-nums">({openCount})</span>
+                    <span className="ml-1">({openCount})</span>
                   )}
                 </button>
               ))}

@@ -454,7 +454,7 @@ export default function SettingsPage() {
   if (loadingUser) return <DashboardSkeleton />;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <h1 className="text-2xl font-bold text-text-primary">Settings</h1>
 
       {/* My Card */}

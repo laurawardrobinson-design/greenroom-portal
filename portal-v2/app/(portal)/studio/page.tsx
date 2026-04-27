@@ -869,7 +869,6 @@ export default function StudioManagementPage() {
       <div className="space-y-0">
         <PageHeader
           title={pageTitle}
-          showDivider={false}
           actions={
             user.role === "Studio" ? (
               <Link href="/gear/scan">

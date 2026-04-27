@@ -417,7 +417,6 @@ export default function InventoryPage() {
       <div className="space-y-0">
         <PageHeader
           title="Gear"
-          showDivider={false}
           actions={(
             <Button variant="secondary" onClick={() => setShowScanner(true)}>
               <ScanLine className="h-4 w-4" />

@@ -102,7 +102,7 @@ export function CreativeDirectorDashboard({ user }: { user: AppUser }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <h1 className="text-2xl font-bold text-text-primary">
         Welcome back, {user.name?.split(" ")[0] || "there"}
       </h1>
@@ -159,7 +159,7 @@ function BatchRow({
   isApproving: boolean;
   onApprove: () => void;
 }) {
-  const wf = batch.campaign?.wfNumber ? `${batch.campaign.wfNumber} · ` : "";
+  const wf = batch.campaign?.wfNumber ? `${batch.campaign.wfNumber} ` : "";
   const campaignLabel = batch.campaign
     ? `${wf}${batch.campaign.name}`
     : "Unassigned campaign";

@@ -235,7 +235,7 @@ export default function RunDetailPage({
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-5" data-area="asset-studio">
+    <div className="space-y-4" data-area="asset-studio">
       <div>
         <Link
           href="/asset-studio?tab=runs"
@@ -254,7 +254,7 @@ export default function RunDetailPage({
             </div>
             <p className="mt-0.5 text-sm text-[var(--as-text-muted)]">
               {run.template?.name ? `${run.template.name} · ` : ""}
-              {run.campaign?.wfNumber ? `${run.campaign.wfNumber} · ` : ""}
+              {run.campaign?.wfNumber ? `${run.campaign.wfNumber} ` : ""}
               Created {fmtRelative(run.createdAt)}
               {run.startedAt ? ` · started ${fmtRelative(run.startedAt)}` : ""}
               {run.completedAt

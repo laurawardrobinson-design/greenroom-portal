@@ -84,7 +84,7 @@ export default function RBUDeptDashboard({
             <CalendarDays className="h-3 w-3" />
             Upcoming
           </div>
-          <div className="mt-1.5 text-[28px] font-semibold text-neutral-900 tabular-nums leading-none">
+          <div className="mt-1.5 text-[28px] font-semibold text-neutral-900 leading-none">
             {data ? upcoming.length : "—"}
           </div>
           <div className="mt-0.5 text-[11px] text-neutral-500">
@@ -96,7 +96,7 @@ export default function RBUDeptDashboard({
             <Clock className="h-3 w-3" />
             This week
           </div>
-          <div className="mt-1.5 text-[28px] font-semibold text-neutral-900 tabular-nums leading-none">
+          <div className="mt-1.5 text-[28px] font-semibold text-neutral-900 leading-none">
             {data ? thisWeekCount : "—"}
           </div>
           <div className="mt-0.5 text-[11px] text-neutral-500">
@@ -152,7 +152,7 @@ export default function RBUDeptDashboard({
             <div className="text-[13px] text-neutral-600 mt-0.5">
               {next.campaign.name}
               {next.campaign.wfNumber && (
-                <span className="text-neutral-400 tabular-nums">
+                <span className="text-neutral-400">
                   {" · "}
                   {next.campaign.wfNumber}
                 </span>
@@ -174,7 +174,7 @@ export default function RBUDeptDashboard({
                   <User className="h-3 w-3 text-neutral-500" />
                   {next.pickupPerson}
                   {next.pickupPhone && (
-                    <span className="text-neutral-500 tabular-nums">
+                    <span className="text-neutral-500">
                       · {next.pickupPhone}
                     </span>
                   )}

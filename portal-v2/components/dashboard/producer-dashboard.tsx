@@ -116,7 +116,7 @@ function InfoCard({ icon, label, count, children }: InfoCardProps) {
         <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
           {label}
         </h3>
-        <span className="ml-auto text-sm font-semibold text-text-primary tabular-nums">
+        <span className="ml-auto text-sm font-semibold text-text-primary">
           {count === undefined ? <Skeleton className="h-4 w-6" /> : count}
         </span>
       </div>
@@ -261,7 +261,7 @@ export function ProducerDashboard({ user }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title={`Welcome back, ${user.name.split(" ")[0]}`}
         actions={

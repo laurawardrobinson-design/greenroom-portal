@@ -281,7 +281,7 @@ export function DamTab({ user, lockedCampaignId }: Props) {
               <option value="all">All campaigns</option>
               {(campaigns ?? []).map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.wfNumber ? `${c.wfNumber} · ` : ""}
+                  {c.wfNumber ? `${c.wfNumber} ` : ""}
                   {c.name}
                 </option>
               ))}
@@ -331,7 +331,7 @@ export function DamTab({ user, lockedCampaignId }: Props) {
                         {source.fileName}
                       </p>
                       <p className="mt-0.5 text-xs text-[var(--as-text-muted)]">
-                        {source.campaignWfNumber ? `${source.campaignWfNumber} · ` : ""}
+                        {source.campaignWfNumber ? `${source.campaignWfNumber} ` : ""}
                         {source.campaignName} · {source.category}
                       </p>
                       <p className="mt-1 text-[11px] text-[var(--as-text-subtle)]">
@@ -408,7 +408,7 @@ export function DamTab({ user, lockedCampaignId }: Props) {
                             ? "No campaigns linked"
                             : linkedCampaigns
                                 .slice(0, 2)
-                                .map((c) => `${c.wfNumber ? `${c.wfNumber} · ` : ""}${c.name}`)
+                                .map((c) => `${c.wfNumber ? `${c.wfNumber} ` : ""}${c.name}`)
                                 .join("  •  ")}
                           {linkedCampaigns.length > 2
                             ? `  •  +${linkedCampaigns.length - 2} more`

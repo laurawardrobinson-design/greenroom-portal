@@ -217,7 +217,7 @@ function RowDateChip({ value, onSave }: { value: string; onSave: (iso: string) =
           e.stopPropagation();
           (inputRef.current as HTMLInputElement & { showPicker?: () => void })?.showPicker?.();
         }}
-        className="font-semibold text-text-primary tabular-nums hover:text-primary transition-colors"
+        className="font-semibold text-text-primary hover:text-primary transition-colors"
       >
         {display}
       </button>
@@ -258,7 +258,7 @@ function RowTimeChip({ value, onSave }: { value: string; onSave: (hhmm: string) 
           setPeriod(init.period);
           setEditing(true);
         }}
-        className="font-medium text-text-primary tabular-nums hover:text-primary transition-colors"
+        className="font-medium text-text-primary hover:text-primary transition-colors"
       >
         {display}
       </button>
@@ -275,7 +275,7 @@ function RowTimeChip({ value, onSave }: { value: string; onSave: (hhmm: string) 
         onFocus={(e) => e.target.select()}
         onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
         onBlur={() => save()}
-        className="w-12 bg-transparent border-b border-primary focus:outline-none text-sm font-medium text-primary text-center p-0 tabular-nums"
+        className="w-12 bg-transparent border-b border-primary focus:outline-none text-sm font-medium text-primary text-center p-0"
       />
       <select
         value={period}
@@ -414,50 +414,53 @@ export default function ProductRequestsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 pb-5">
-      <PageHeader
-        title="Product Requests"
-        actions={(
-          <div className="flex flex-wrap items-center gap-2">
-            {isBMM && (
+    <div className="mx-auto max-w-5xl space-y-4 px-4 pb-5">
+      <div className="space-y-0">
+        <PageHeader
+          title="Product Requests"
+          showDivider={false}
+          actions={(
+            <div className="flex flex-wrap items-center gap-2">
+              {isBMM && (
+                <Link
+                  href="/product-requests/calendar"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text-secondary hover:bg-surface-secondary transition-colors"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  Calendar
+                </Link>
+              )}
               <Link
-                href="/product-requests/calendar"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text-secondary hover:bg-surface-secondary transition-colors"
+                href="/product-requests/new"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover transition-colors"
               >
-                <CalendarDays className="h-4 w-4" />
-                Calendar
+                <Plus className="h-4 w-4" />
+                New Request
               </Link>
-            )}
-            <Link
-              href="/product-requests/new"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              New Request
-            </Link>
+            </div>
+          )}
+        />
+
+        {!isLoading && (counts.needs + counts.submitted + counts.forwarded + counts.confirmed + counts.fulfilled) > 0 && (
+          <div className="border-b border-border">
+            <nav className="ui-tabs" role="tablist" aria-label="Product request workflow">
+              {isBMM ? (
+                <>
+                  <FilterTab active={filter === "submitted"} onClick={() => setFilter("submitted")} label="Submitted" count={counts.submitted} />
+                  <FilterTab active={filter === "forwarded"} onClick={() => setFilter("forwarded")} label="Sent for RBU Confirmation" count={counts.forwarded} />
+                  <FilterTab active={filter === "confirmed"} onClick={() => setFilter("confirmed")} label="Confirmed" count={counts.confirmed} />
+                </>
+              ) : (
+                <>
+                  <FilterTab active={filter === "needs"} onClick={() => setFilter("needs")} label="Planning" count={counts.needs} />
+                  <FilterTab active={filter === "submitted"} onClick={() => setFilter("submitted")} label="Submitted" count={counts.submitted} />
+                  <FilterTab active={filter === "fulfilled"} onClick={() => setFilter("fulfilled")} label="Fulfilled" count={counts.fulfilled} />
+                </>
+              )}
+            </nav>
           </div>
         )}
-      />
-
-      {!isLoading && (counts.needs + counts.submitted + counts.forwarded + counts.confirmed + counts.fulfilled) > 0 && (
-        <div className="border-b border-border">
-          <nav className="ui-tabs">
-            {isBMM ? (
-              <>
-                <FilterTab active={filter === "submitted"} onClick={() => setFilter("submitted")} label="Submitted" count={counts.submitted} />
-                <FilterTab active={filter === "forwarded"} onClick={() => setFilter("forwarded")} label="Sent for RBU Confirmation" count={counts.forwarded} />
-                <FilterTab active={filter === "confirmed"} onClick={() => setFilter("confirmed")} label="Confirmed" count={counts.confirmed} />
-              </>
-            ) : (
-              <>
-                <FilterTab active={filter === "needs"} onClick={() => setFilter("needs")} label="Planning" count={counts.needs} />
-                <FilterTab active={filter === "submitted"} onClick={() => setFilter("submitted")} label="Submitted" count={counts.submitted} />
-                <FilterTab active={filter === "fulfilled"} onClick={() => setFilter("fulfilled")} label="Fulfilled" count={counts.fulfilled} />
-              </>
-            )}
-          </nav>
-        </div>
-      )}
+      </div>
 
       {isLoading && (
         <div className="space-y-3">
@@ -511,9 +514,9 @@ export default function ProductRequestsPage() {
                   <span className="text-sm font-semibold text-text-primary truncate">{name}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-text-tertiary shrink-0">
-                  {wfNumber && <span className="tabular-nums">{wfNumber}</span>}
+                  {wfNumber && <span>{wfNumber}</span>}
                   <span aria-hidden>·</span>
-                  <span className="tabular-nums">
+                  <span>
                     {campaignDocs.length} request{campaignDocs.length === 1 ? "" : "s"}
                   </span>
                 </div>
@@ -553,7 +556,7 @@ export default function ProductRequestsPage() {
                                 onSave={(iso) => updateAllSections(doc, { dateNeeded: iso })}
                               />
                             ) : (
-                              <span className="font-semibold text-text-primary tabular-nums">
+                              <span className="font-semibold text-text-primary">
                                 {formatCompactDate(doc.shootDate)}
                               </span>
                             )}
@@ -565,12 +568,12 @@ export default function ProductRequestsPage() {
                                 onSave={(hhmm) => updateAllSections(doc, { timeNeeded: hhmm })}
                               />
                             ) : (
-                              <span className="font-medium text-text-primary tabular-nums">
+                              <span className="font-medium text-text-primary">
                                 {rawPickupTime ? formatTime(rawPickupTime) : "TBD"}
                               </span>
                             )}
                             <span className="text-text-tertiary">·</span>
-                            <span className="text-text-secondary tabular-nums">
+                            <span className="text-text-secondary">
                               {summary.totalItems} item{summary.totalItems === 1 ? "" : "s"}
                             </span>
                             {hasItems && (

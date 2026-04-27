@@ -69,11 +69,6 @@ export function BrandMarketingHome({ user }: BrandMarketingHomeProps) {
               <h1 className="text-2xl font-bold text-text-primary">
                 Brand Marketing — {user.name.split(" ")[0]}
               </h1>
-              <p className="mt-1 text-sm text-text-secondary">
-                {deskLabel
-                  ? `${deskLabel} desk. Everything under your portfolio, organized by when it needs you.`
-                  : "Everything under your portfolio, organized by when it needs you."}
-              </p>
             </div>
           }
         />

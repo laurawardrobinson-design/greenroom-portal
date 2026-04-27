@@ -115,7 +115,7 @@ export function ArtDirectorDashboard({ user }: { user: AppUser }) {
   const { data: stats } = useSWR<ArtDirectorStats>("/api/dashboard", fetcher);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Greeting */}
       <h1 className="text-2xl font-bold text-text-primary">
         Welcome back, {user.name?.split(" ")[0] || "there"}

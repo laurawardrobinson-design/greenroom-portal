@@ -12,6 +12,7 @@ import type { CampaignStatus } from "@/types/domain";
 import { CsvImportModal } from "@/components/campaigns/csv-import-modal";
 import { NewCampaignModal } from "@/components/campaigns/new-campaign-modal";
 import { Plus, Film, Search, Upload, LayoutGrid, List, Eye } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function CampaignsPage() {
   const { user } = useCurrentUser();
@@ -60,11 +61,10 @@ export default function CampaignsPage() {
   }
 
   return (
-    <div className="space-y-5">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 pb-4 border-b border-border">
-          <h1 className="text-2xl font-bold text-text-primary">Campaigns</h1>
-          {canCreate && (
+    <div className="space-y-4">
+        <PageHeader
+          title="Campaigns"
+          actions={canCreate ? (
             <div className="flex gap-2">
               <Button variant="secondary" onClick={() => setShowImport(true)}>
                 <Upload className="h-4 w-4" />
@@ -75,8 +75,8 @@ export default function CampaignsPage() {
                 New Campaign
               </Button>
             </div>
-          )}
-        </div>
+          ) : undefined}
+        />
 
         {/* Filters row — compact */}
         <div className="flex items-center gap-3">
@@ -101,7 +101,6 @@ export default function CampaignsPage() {
           >
             <option value="">All statuses</option>
             <option value="Planning">Planning</option>
-            <option value="Upcoming">Upcoming</option>
             <option value="In Production">In Production</option>
             <option value="Post">Post</option>
             <option value="Complete">Complete</option>
@@ -193,11 +192,11 @@ export default function CampaignsPage() {
             <div className="flex items-center gap-4 px-5 py-1.5 text-sm font-semibold uppercase tracking-wider text-text-primary border-b border-border">
               <div className="w-2.5 shrink-0" />
               <div className="w-20 shrink-0">WF#</div>
-              <div className="flex-1">Campaign</div>
+              <div className="flex-1 min-w-[160px]">Campaign</div>
               <div className="w-28 shrink-0 hidden lg:block">Producer</div>
               <div className="w-28 shrink-0 hidden lg:block">Art Director</div>
-              <div className="w-20 shrink-0">Status</div>
-              <div className="w-20 shrink-0 text-right whitespace-nowrap">Next Shoot</div>
+              <div className="w-20 shrink-0 hidden lg:block">Status</div>
+              <div className="w-20 shrink-0 text-right whitespace-nowrap hidden lg:block">Next Shoot</div>
               <div className="w-20 shrink-0 text-right hidden lg:block">Due</div>
               {user?.role === "Vendor" && <div className="w-36 shrink-0 text-right">Inventory</div>}
               {user?.role !== "Vendor" && <div className="w-20 shrink-0 text-right">Budget</div>}
