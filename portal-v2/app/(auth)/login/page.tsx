@@ -28,6 +28,10 @@ const LOGIN_NOTIFICATIONS = [
     date: "April 20, 2026",
     text: "New feature — Asset Studio. Designers can version mechanicals with automation.",
   },
+  {
+    date: "April 14, 2026",
+    text: "Post production workflow under construction.",
+  },
 ];
 
 interface Vendor {
