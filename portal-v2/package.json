@@ -13,7 +13,7 @@
   "dependencies": {
     "@photo-sphere-viewer/core": "^5.14.1",
     "@supabase/ssr": "^0.9.0",
-    "@supabase/supabase-js": "^2.100.1",
+    "@supabase/supabase-js": "^2.105.0",
     "archiver": "^7.0.1",
     "date-fns": "^4.1.0",
     "html5-qrcode": "^2.3.8",
