@@ -121,31 +121,16 @@ export default function GoalsPage() {
               className="w-full h-10 rounded-lg border border-border bg-surface pl-10 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors"
             />
           </div>
-          <div className="flex gap-1.5 flex-wrap">
-            <button
-              onClick={() => setRoleFilter("")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
-                !roleFilter
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border text-text-secondary hover:text-text-primary hover:border-text-tertiary"
-              }`}
-            >
-              All
+          <div className="border-b border-border"><nav className="ui-tabs">
+            <button type="button" onClick={() => setRoleFilter("")} data-state={!roleFilter ? "active" : "inactive"} className="ui-tab">
+              All{!roleFilter && <span className="ui-tab-underline" />}
             </button>
             {FILTER_ROLES.map((r) => (
-              <button
-                key={r}
-                onClick={() => setRoleFilter(roleFilter === r ? "" : r)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
-                  roleFilter === r
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border text-text-secondary hover:text-text-primary hover:border-text-tertiary"
-                }`}
-              >
-                {r}
+              <button type="button" key={r} onClick={() => setRoleFilter(roleFilter === r ? "" : r)} data-state={roleFilter === r ? "active" : "inactive"} className="ui-tab">
+                {r}{roleFilter === r && <span className="ui-tab-underline" />}
               </button>
             ))}
-          </div>
+          </nav></div>
         </div>
       )}
 

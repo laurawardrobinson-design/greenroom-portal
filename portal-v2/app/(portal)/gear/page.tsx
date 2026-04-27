@@ -417,6 +417,7 @@ export default function InventoryPage() {
       <div className="space-y-0">
         <PageHeader
           title="Gear"
+          showDivider={false}
           actions={(
             <Button variant="secondary" onClick={() => setShowScanner(true)}>
               <ScanLine className="h-4 w-4" />
@@ -427,10 +428,10 @@ export default function InventoryPage() {
 
         <PageTabs
           tabs={[
-            { key: "items", label: "Items", icon: Package },
-            { key: "kits", label: "Kits", icon: Layers },
-            { key: "reservations", label: "Reservations", icon: CalendarRange },
-            { key: "maintenance", label: "Maintenance", icon: Wrench },
+            { key: "items", label: "Items" },
+            { key: "kits", label: "Kits" },
+            { key: "reservations", label: "Reservations" },
+            { key: "maintenance", label: "Maintenance" },
           ]}
           activeTab={tab}
           onTabChange={(key) => setTab(key as Tab)}

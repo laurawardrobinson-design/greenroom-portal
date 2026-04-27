@@ -72,58 +72,21 @@ export default function ContactsPage() {
   return (
     <div className="space-y-4">
       <div className="space-y-0">
-        <PageHeader title="Contacts" />
+        <PageHeader title="Contacts" showDivider={false} />
 
         <PageTabs
           tabs={[
-            { key: "team", label: "Internal Team", icon: Users },
-            { key: "vendors", label: "External Vendors", icon: Building2 },
+            { key: "team", label: "Internal Team" },
+            { key: "vendors", label: "External Vendors" },
           ]}
           activeTab={tab}
           onTabChange={(key) => switchTab(key as Tab)}
         />
       </div>
 
-      {/* Search + filter bar */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="relative min-w-[180px] max-w-xs flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-            <input
-              type="text"
-              placeholder={tab === "team" ? "Search team members..." : "Search vendors..."}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
-            />
-          </div>
-          <div className="ml-auto flex items-center gap-1">
-            {canEdit && (
-              <button
-                onClick={() => tab === "team" ? setShowAddTeam(true) : setShowAddVendor(true)}
-                className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
-                title={tab === "team" ? "Add team member" : "Add vendor"}
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            )}
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
-              title="Grid view"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
-              title="List view"
-            >
-              <List className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
+      {/* Filter + search bar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap flex-1 min-w-0">
           {tab === "team" ? (
             <>
               <button
@@ -169,6 +132,43 @@ export default function ContactsPage() {
               ))}
             </>
           )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+            <input
+              type="text"
+              placeholder={tab === "team" ? "Search team members..." : "Search vendors..."}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-7 w-48 rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none focus:w-64 transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            {canEdit && (
+              <button
+                onClick={() => tab === "team" ? setShowAddTeam(true) : setShowAddVendor(true)}
+                className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+                title={tab === "team" ? "Add team member" : "Add vendor"}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
+              title="Grid view"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
+              title="List view"
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 

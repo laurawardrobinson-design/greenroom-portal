@@ -81,12 +81,12 @@ export default function ProductDirectoryPage() {
   return (
     <div className="space-y-4">
       <div className="space-y-0">
-        <PageHeader title="Products" />
+        <PageHeader title="Products" showDivider={false} />
 
         <PageTabs
           tabs={[
-            { key: "items", label: "Items", icon: ShoppingBasket },
-            { key: "product-requests", label: "Product Requests", icon: ClipboardList },
+            { key: "items", label: "Items" },
+            { key: "product-requests", label: "Product Requests" },
           ]}
           activeTab={tab}
           onTabChange={(key) => setTab(key as Tab)}

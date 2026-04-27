@@ -137,7 +137,7 @@ export default function BrandMarketingReviewPage({
 
   if (!dept) {
     return (
-      <div className="space-y-5">
+      <div className="space-y-4">
         <PageHeader title="Review" />
         <p className="text-[13px] text-text-tertiary">
           Pick a department to start.
@@ -150,7 +150,7 @@ export default function BrandMarketingReviewPage({
   const DeptIcon = DEPT_ICONS[dept];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div>
         <div className="inline-flex items-center gap-1 text-[12px] text-text-tertiary mb-1">
           <Sparkles className="h-3 w-3" />
@@ -175,29 +175,11 @@ export default function BrandMarketingReviewPage({
         onChange={(d) => router.push(`/brand-marketing/review/${d}`)}
       />
 
-      <div className="flex items-center gap-1 rounded-lg border border-border p-0.5 bg-surface w-fit">
-        <TabButton
-          icon={Flag}
-          label="Flags"
-          count={flags.length}
-          active={tab === "flags"}
-          onClick={() => setTab("flags")}
-        />
-        <TabButton
-          icon={CalendarClock}
-          label="Coming Soon"
-          count={comingSoon.length}
-          active={tab === "coming_soon"}
-          onClick={() => setTab("coming_soon")}
-        />
-        <TabButton
-          icon={Clock}
-          label="Planning"
-          count={planning.length}
-          active={tab === "planning"}
-          onClick={() => setTab("planning")}
-        />
-      </div>
+      <div className="border-b border-border"><nav className="ui-tabs">
+        <TabButton label="Flags" count={flags.length} active={tab === "flags"} onClick={() => setTab("flags")} />
+        <TabButton label="Coming Soon" count={comingSoon.length} active={tab === "coming_soon"} onClick={() => setTab("coming_soon")} />
+        <TabButton label="Planning" count={planning.length} active={tab === "planning"} onClick={() => setTab("planning")} />
+      </nav></div>
 
       <div className="max-w-2xl">
         {tab === "flags" && (
@@ -275,38 +257,32 @@ function DeptPills({
   onChange: (dept: PRDepartment) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="border-b border-border"><nav className="ui-tabs">
       {PR_DEPARTMENTS.map((d) => {
-        const Icon = DEPT_ICONS[d];
         const isActive = active === d;
         return (
           <button
             key={d}
             type="button"
             onClick={() => onChange(d)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-medium transition-colors ${
-              isActive
-                ? "bg-primary text-white"
-                : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
-            }`}
+            data-state={isActive ? "active" : "inactive"}
+            className="ui-tab"
           >
-            <Icon className="h-3 w-3" />
             {d}
+            {isActive && <span className="ui-tab-underline" />}
           </button>
         );
       })}
-    </div>
+    </nav></div>
   );
 }
 
 function TabButton({
-  icon: Icon,
   label,
   count,
   active,
   onClick,
 }: {
-  icon: LucideIcon;
   label: string;
   count: number;
   active: boolean;
@@ -316,17 +292,14 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] font-medium transition-colors ${
-        active
-          ? "bg-surface-secondary text-text-primary"
-          : "text-text-tertiary hover:text-text-secondary"
-      }`}
+      data-state={active ? "active" : "inactive"}
+      className="ui-tab"
     >
-      <Icon className="h-3 w-3" />
       {label}
       {count > 0 && (
         <span className="tabular-nums text-text-tertiary">({count})</span>
       )}
+      {active && <span className="ui-tab-underline" />}
     </button>
   );
 }

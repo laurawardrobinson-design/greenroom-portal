@@ -220,6 +220,7 @@ export default function WardrobePage() {
       <div className="space-y-0">
         <PageHeader
           title="Wardrobe"
+          showDivider={false}
           actions={
             tab === "backstock" ? (
               <Button variant="secondary" onClick={() => { setShowScanner(true); setScannerActive(true); }}>
@@ -232,10 +233,10 @@ export default function WardrobePage() {
 
         <PageTabs
           tabs={[
-            { key: "job-classes", label: "Job Classes", icon: Users },
-            { key: "items", label: "Uniform Items", icon: Shirt },
-            { key: "backstock", label: "Backstock", icon: Archive },
-            { key: "reservations", label: "Reservations", icon: Calendar },
+            { key: "job-classes", label: "Job Classes" },
+            { key: "items", label: "Uniform Items" },
+            { key: "backstock", label: "Backstock" },
+            { key: "reservations", label: "Reservations" },
           ]}
           activeTab={tab}
           onTabChange={(key) => setTab(key as Tab)}
@@ -279,12 +280,12 @@ export default function WardrobePage() {
                 </button>
               </div>
             </div>
-            <div className="flex gap-1.5 flex-wrap">
-              <button onClick={() => setCategoryFilter("")} className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${categoryFilter === "" ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"}`}>All</button>
+            <div className="border-b border-border"><nav className="ui-tabs">
+              <button type="button" onClick={() => setCategoryFilter("")} data-state={categoryFilter === "" ? "active" : "inactive"} className="ui-tab">All{categoryFilter === "" && <span className="ui-tab-underline" />}</button>
               {WARDROBE_CATEGORIES.map((cat) => (
-                <button key={cat} onClick={() => setCategoryFilter(categoryFilter === cat ? "" : cat)} className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${categoryFilter === cat ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"}`}>{cat}</button>
+                <button type="button" key={cat} onClick={() => setCategoryFilter(categoryFilter === cat ? "" : cat)} data-state={categoryFilter === cat ? "active" : "inactive"} className="ui-tab">{cat}{categoryFilter === cat && <span className="ui-tab-underline" />}</button>
               ))}
-            </div>
+            </nav></div>
           </div>
 
           {isLoading ? (

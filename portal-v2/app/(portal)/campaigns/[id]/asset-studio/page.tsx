@@ -85,11 +85,11 @@ export default function CampaignAssetStudioPage({
 
   return (
     <div className="space-y-0">
-      <PageHeader title={`${campaign.wfNumber ? `${campaign.wfNumber} · ` : ""}${campaign.name}`} showDivider={false} />
+      <PageHeader title={`${campaign.wfNumber ? `${campaign.wfNumber} ` : ""}${campaign.name}`} showDivider={false} />
 
       <PageTabs
         ariaLabel="Asset Studio sections"
-        tabs={TABS.map(({ id, label, icon }) => ({ key: id, label, icon }))}
+        tabs={TABS.map(({ id, label }) => ({ key: id, label }))}
         activeTab={activeTab}
         onTabChange={(key) => switchTab(key as Tab)}
       />

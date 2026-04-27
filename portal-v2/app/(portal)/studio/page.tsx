@@ -869,6 +869,7 @@ export default function StudioManagementPage() {
       <div className="space-y-0">
         <PageHeader
           title={pageTitle}
+          showDivider={false}
           actions={
             user.role === "Studio" ? (
               <Link href="/gear/scan">
@@ -882,7 +883,7 @@ export default function StudioManagementPage() {
         />
 
         <PageTabs
-          tabs={TABS.map(({ id, label, icon }) => ({ key: id, label, icon }))}
+          tabs={TABS.map(({ id, label }) => ({ key: id, label }))}
           activeTab={tab}
           onTabChange={(key) => handleTabChange(key as Tab)}
         />

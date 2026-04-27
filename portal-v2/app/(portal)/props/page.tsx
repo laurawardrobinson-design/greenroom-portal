@@ -210,6 +210,7 @@ export default function PropsPage() {
         {/* Header */}
         <PageHeader
           title="Props"
+          showDivider={false}
           actions={
             <Button variant="secondary" onClick={() => setShowScanner(true)}>
               <ScanLine className="h-4 w-4" />
@@ -220,8 +221,8 @@ export default function PropsPage() {
 
         <PageTabs
           tabs={[
-            { key: "items", label: "Items", icon: Boxes },
-            { key: "reservations", label: "Reservations", icon: Calendar },
+            { key: "items", label: "Items" },
+            { key: "reservations", label: "Reservations" },
           ]}
           activeTab={tab}
           onTabChange={(key) => setTab(key as Tab)}

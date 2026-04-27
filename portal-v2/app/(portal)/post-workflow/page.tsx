@@ -54,10 +54,10 @@ export default function PostWorkflowPage() {
   return (
     <div className="space-y-4">
       <div className="space-y-0">
-        <PageHeader title="Post Production" />
+        <PageHeader title="Post Production" showDivider={false} />
 
         <PageTabs
-          tabs={TABS.map(({ id, label, icon }) => ({ key: id, label, icon }))}
+          tabs={TABS.map(({ id, label }) => ({ key: id, label }))}
           activeTab={activeTab}
           onTabChange={(key) => switchTab(key as Tab)}
         />

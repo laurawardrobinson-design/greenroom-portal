@@ -82,11 +82,11 @@ export default function AssetStudioPage() {
   }
 
   return (
-    <div className="space-y-5" data-area="asset-studio">
-      <PageHeader title="Asset Studio" />
+    <div className="space-y-4" data-area="asset-studio">
+      <PageHeader title="Asset Studio" showDivider={false} />
 
       <PageTabs
-        tabs={TABS.map(({ id, label, icon }) => ({ key: id, label, icon }))}
+        tabs={TABS.map(({ id, label }) => ({ key: id, label }))}
         activeTab={activeTab}
         onTabChange={(key) => switchTab(key as Tab)}
       />

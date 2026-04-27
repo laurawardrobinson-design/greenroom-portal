@@ -108,11 +108,11 @@ export default function CampaignCopyPage({
         onUpdate={handleUpdate}
       />
 
-      <CampaignSectionTabs campaignId={id} showDivider={false} />
+      <CampaignSectionTabs campaignId={id} />
 
       <PageTabs
         ariaLabel="Copy sections"
-        tabs={COPY_TABS.map(({ key, label, icon }) => ({ key, label, icon }))}
+        tabs={COPY_TABS.map(({ key, label }) => ({ key, label }))}
         activeTab={activeTab}
         onTabChange={(key) => setActiveTab(key as Tab)}
       />

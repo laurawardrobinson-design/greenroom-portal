@@ -5,7 +5,7 @@ import type { ElementType } from "react";
 export interface PageTab {
   key: string;
   label: string;
-  icon: ElementType<{ className?: string }>;
+  icon?: ElementType<{ className?: string }>;
   count?: number;
 }
 
@@ -34,7 +34,7 @@ export function PageTabs({ tabs, activeTab, onTabChange, ariaLabel = "Sections" 
               data-state={active ? "active" : "inactive"}
               className="ui-tab"
             >
-              <Icon className="ui-tab-icon" />
+              {Icon && <Icon className="ui-tab-icon" />}
               {label}
               {hasCount && count > 0 && (
                 <span>({count})</span>

@@ -289,7 +289,7 @@ function RowTimeChip({ value, onSave }: { value: string; onSave: (hhmm: string) 
   );
 }
 
-function FilterPill({
+function FilterTab({
   active,
   onClick,
   label,
@@ -303,14 +303,11 @@ function FilterPill({
     <button
       type="button"
       onClick={onClick}
-      data-active={active}
-      className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
-        active
-          ? "border-primary bg-primary-light text-primary-hover"
-          : "border-border bg-surface text-text-secondary hover:bg-surface-secondary"
-      }`}
+      data-state={active ? "active" : "inactive"}
+      className="ui-tab"
     >
       {label}
+      {active && <span className="ui-tab-underline" />}
     </button>
   );
 }
@@ -443,50 +440,22 @@ export default function ProductRequestsPage() {
       />
 
       {!isLoading && (counts.needs + counts.submitted + counts.forwarded + counts.confirmed + counts.fulfilled) > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {isBMM ? (
-            <>
-              <FilterPill
-                active={filter === "submitted"}
-                onClick={() => setFilter("submitted")}
-                label="Submitted"
-                count={counts.submitted}
-              />
-              <FilterPill
-                active={filter === "forwarded"}
-                onClick={() => setFilter("forwarded")}
-                label="Sent for RBU Confirmation"
-                count={counts.forwarded}
-              />
-              <FilterPill
-                active={filter === "confirmed"}
-                onClick={() => setFilter("confirmed")}
-                label="Confirmed"
-                count={counts.confirmed}
-              />
-            </>
-          ) : (
-            <>
-              <FilterPill
-                active={filter === "needs"}
-                onClick={() => setFilter("needs")}
-                label="Planning"
-                count={counts.needs}
-              />
-              <FilterPill
-                active={filter === "submitted"}
-                onClick={() => setFilter("submitted")}
-                label="Submitted"
-                count={counts.submitted}
-              />
-              <FilterPill
-                active={filter === "fulfilled"}
-                onClick={() => setFilter("fulfilled")}
-                label="Fulfilled"
-                count={counts.fulfilled}
-              />
-            </>
-          )}
+        <div className="border-b border-border">
+          <nav className="ui-tabs">
+            {isBMM ? (
+              <>
+                <FilterTab active={filter === "submitted"} onClick={() => setFilter("submitted")} label="Submitted" count={counts.submitted} />
+                <FilterTab active={filter === "forwarded"} onClick={() => setFilter("forwarded")} label="Sent for RBU Confirmation" count={counts.forwarded} />
+                <FilterTab active={filter === "confirmed"} onClick={() => setFilter("confirmed")} label="Confirmed" count={counts.confirmed} />
+              </>
+            ) : (
+              <>
+                <FilterTab active={filter === "needs"} onClick={() => setFilter("needs")} label="Planning" count={counts.needs} />
+                <FilterTab active={filter === "submitted"} onClick={() => setFilter("submitted")} label="Submitted" count={counts.submitted} />
+                <FilterTab active={filter === "fulfilled"} onClick={() => setFilter("fulfilled")} label="Fulfilled" count={counts.fulfilled} />
+              </>
+            )}
+          </nav>
         </div>
       )}
 

@@ -53,11 +53,11 @@ const fetcher = (url: string) =>
 
 type Tab = "queue" | "program" | "cost-report" | "vendors";
 
-const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
-  { key: "queue", label: "Queue", icon: ShieldCheck },
-  { key: "program", label: "Program", icon: LayoutList },
-  { key: "cost-report", label: "Cost Report", icon: Activity },
-  { key: "vendors", label: "Vendors", icon: Users },
+const TABS: { key: Tab; label: string }[] = [
+  { key: "queue", label: "Queue" },
+  { key: "program", label: "Program" },
+  { key: "cost-report", label: "Cost Report" },
+  { key: "vendors", label: "Vendors" },
 ];
 
 const VALID_TABS: readonly Tab[] = ["queue", "program", "cost-report", "vendors"] as const;
@@ -88,7 +88,7 @@ export default function BudgetPage() {
   return (
     <div className="space-y-4">
       <div className="space-y-0">
-        <PageHeader title="Budget" />
+        <PageHeader title="Budget" showDivider={false} />
 
         <PageTabs tabs={TABS} activeTab={activeTab} onTabChange={(key) => setActiveTab(key as Tab)} />
       </div>
