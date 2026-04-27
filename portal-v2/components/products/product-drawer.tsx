@@ -23,7 +23,6 @@ import {
 import Link from "next/link";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { RaiseFlagDialog } from "@/components/products/raise-flag-dialog";
-import { ReferenceImageGallery } from "@/components/products/reference-image-gallery";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -94,12 +93,16 @@ export function ProductDrawer({
   onSaved,
   onDeleted,
   canEdit,
+  hideTeamNotes = false,
+  initialName,
 }: {
   product: Product | null;
   onClose: () => void;
   onSaved: (updated: Product | null) => void;
   onDeleted: () => void;
   canEdit: boolean;
+  hideTeamNotes?: boolean;
+  initialName?: string;
 }) {
   const { toast } = useToast();
   const { user } = useCurrentUser();
@@ -123,7 +126,7 @@ export function ProductDrawer({
     user?.role === "Brand Marketing Manager";
 
   // Form state
-  const [name, setName] = useState(product?.name ?? "");
+  const [name, setName] = useState(product?.name ?? initialName ?? "");
   const [department, setDepartment] = useState<ProductDepartment | "">(product?.department ?? "");
   const [itemCode, setItemCode] = useState(product?.itemCode ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
@@ -136,6 +139,7 @@ export function ProductDrawer({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeptDropdown, setShowDeptDropdown] = useState(false);
+  const [deptRequired, setDeptRequired] = useState(false);
   const deptDropdownRef = useRef<HTMLDivElement>(null);
   const [phase, setPhase] = useState<ProductLifecyclePhase>(
     product?.lifecyclePhase ?? "live"
@@ -179,7 +183,7 @@ export function ProductDrawer({
   const [addingNote, setAddingNote] = useState(false);
 
   const { data: notesData, mutate: mutateNotes } = useSWR(
-    current ? `/api/products/${current.id}/notes` : null,
+    current && !hideTeamNotes ? `/api/products/${current.id}/notes` : null,
     fetcher
   );
   useEffect(() => { if (notesData) setNotes(notesData); }, [notesData]);
@@ -221,6 +225,8 @@ export function ProductDrawer({
     fetcher
   );
   const campaigns = historyData?.campaigns || [];
+  const upcomingShoots: { campaignId: string; campaignName: string; wfNumber: string; role: "hero" | "secondary" | null; date: string; shootName: string }[] = historyData?.upcoming || [];
+  const planningCampaigns: { campaignId: string; campaignName: string; wfNumber: string; role: "hero" | "secondary" | null }[] = historyData?.planning || [];
 
   function syncFormToProduct(p: Product | null) {
     setName(p?.name ?? "");
@@ -259,6 +265,10 @@ export function ProductDrawer({
     e.preventDefault();
     if (!name.trim()) {
       toast("error", "Product name is required");
+      return;
+    }
+    if (!department) {
+      setDeptRequired(true);
       return;
     }
     setSaving(true);
@@ -337,6 +347,7 @@ export function ProductDrawer({
 
   async function saveDepartment(dept: ProductDepartment) {
     setDepartment(dept);
+    setDeptRequired(false);
     setShowDeptDropdown(false);
     if (!current) return; // new product — just update local state
     try {
@@ -394,6 +405,7 @@ export function ProductDrawer({
           value={name}
           onChange={(e) => setName(e.target.value)}
           readOnly={!editMode}
+          autoFocus={isNew}
           placeholder="Product name"
           className={`text-lg font-semibold text-text-primary bg-transparent flex-1 min-w-0 focus:outline-none ${editMode ? "border-b border-transparent hover:border-border focus:border-primary pb-0.5" : "pointer-events-none truncate"}`}
         />
@@ -401,7 +413,7 @@ export function ProductDrawer({
           <div ref={deptDropdownRef} className="relative">
             <button
               type="button"
-              onClick={() => !isNew && setShowDeptDropdown((v) => !v)}
+              onClick={() => editMode && setShowDeptDropdown((v) => !v)}
               className={`text-xs font-medium rounded-full px-2 py-0.5 inline-flex items-center gap-1 transition-opacity hover:opacity-80 ${department ? (DEPT_COLORS[department] || DEPT_COLORS.Other) : "bg-surface-secondary text-text-tertiary"}`}
               title="Change department"
             >
@@ -425,7 +437,7 @@ export function ProductDrawer({
               </div>
             )}
           </div>
-          <div ref={phaseDropdownRef} className="relative">
+          {!hideTeamNotes && <div ref={phaseDropdownRef} className="relative">
             <button
               type="button"
               onClick={() => canChangePhase && !isNew && setShowPhaseDropdown((v) => !v)}
@@ -456,7 +468,7 @@ export function ProductDrawer({
                 ))}
               </div>
             )}
-          </div>
+          </div>}
           <input
             type="text"
             value={itemCode}
@@ -547,6 +559,9 @@ export function ProductDrawer({
                 className="w-full bg-transparent text-sm text-primary placeholder:text-text-tertiary italic focus:outline-none" />
             </div>
           </div>
+          {deptRequired && (
+            <p className="text-xs text-amber-600 text-right">Select a department before adding</p>
+          )}
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="ghost" onClick={handleCancelEdit} className="flex-1">Cancel</Button>
             <Button type="submit" loading={saving} className="flex-1">Add Product</Button>
@@ -591,20 +606,8 @@ export function ProductDrawer({
             </div>
           </div>
 
-          {/* Reference images — the standards paper trail. BMM uploads
-              references + approves RBU samples; RBU uploads samples via
-              their dept token route. See `components/products/reference-image-gallery.tsx`. */}
-          {current?.id && (
-            <div className="rounded-xl border border-border bg-surface-secondary/30 p-3">
-              <ReferenceImageGallery
-                endpointBase={`/api/products/${current.id}/reference-images`}
-                mode="portal"
-              />
-            </div>
-          )}
-
-          {/* Shooting Notes */}
-          <div>
+          {/* Shooting Notes — hidden for BMM (hideTeamNotes) to avoid exposing informal production commentary */}
+          {!hideTeamNotes && <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-2">Shooting Notes</p>
             {notes.length > 0 ? (
               <div className="space-y-2.5 mb-2">
@@ -643,7 +646,7 @@ export function ProductDrawer({
                 {addingNote ? "…" : "Add"}
               </button>
             </div>
-          </div>
+          </div>}
 
           {/* Restrictions */}
           <div>
@@ -696,6 +699,55 @@ export function ProductDrawer({
               </div>
             </div>
           </div>
+
+          {/* Upcoming Shoots — campaigns with a planned production date */}
+          {!editMode && upcomingShoots.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-2">Upcoming Shoots</p>
+              <div className="space-y-1.5">
+                {upcomingShoots.map((u) => {
+                  const d = new Date(u.date + "T00:00:00");
+                  const dateLabel = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+                  return (
+                    <Link
+                      key={`${u.campaignId}-${u.date}-${u.shootName}`}
+                      href={`/campaigns/${u.campaignId}`}
+                      className="flex items-center gap-2 rounded-lg bg-surface-secondary p-2.5 text-sm hover:bg-surface-tertiary transition-colors"
+                    >
+                      <span className="text-text-tertiary text-xs w-20 shrink-0">{dateLabel}</span>
+                      <span className="text-text-tertiary text-xs">{u.wfNumber || "—"}</span>
+                      <span className="text-text-primary font-medium truncate">{u.campaignName}</span>
+                      {u.role && (
+                        <span className="ml-auto text-[10px] uppercase tracking-wider text-text-tertiary">{u.role}</span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* In Planning — linked as hero/secondary, no scheduled date yet */}
+          {!editMode && planningCampaigns.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-2">In Planning</p>
+              <div className="space-y-1.5">
+                {planningCampaigns.map((c) => (
+                  <Link
+                    key={c.campaignId}
+                    href={`/campaigns/${c.campaignId}`}
+                    className="flex items-center gap-2 rounded-lg bg-surface-secondary p-2.5 text-sm hover:bg-surface-tertiary transition-colors"
+                  >
+                    <span className="text-text-tertiary text-xs">{c.wfNumber || "—"}</span>
+                    <span className="text-text-primary font-medium truncate">{c.campaignName}</span>
+                    {c.role && (
+                      <span className="ml-auto text-[10px] uppercase tracking-wider text-text-tertiary">{c.role}</span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Campaign History (view only) */}
           {!editMode && campaigns.length > 0 && (
