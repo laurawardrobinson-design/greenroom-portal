@@ -72,13 +72,13 @@ export function LinkProductDrawer({
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 h-10 text-xs font-medium text-white hover:bg-primary/90 transition-colors whitespace-nowrap"
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 h-10 text-xs font-medium text-white hover:bg-primary/90 transition-colors whitespace-nowrap mr-[3px]"
             >
               <Plus className="h-3 w-3" />
               New
             </button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 pr-[3px]">
             {products.map((p: { id: string; name: string; department: string }) => (
               <button
                 key={p.id}

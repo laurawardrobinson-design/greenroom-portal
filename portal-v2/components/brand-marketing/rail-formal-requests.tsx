@@ -50,7 +50,7 @@ export function RailFormalRequests() {
 
         {items.length === 0 ? (
           <div className="px-3.5 py-4 text-sm text-text-tertiary">
-            Nothing submitted yet. When a Producer submits a request, it lands here.
+            No requests waiting. New product requests will appear here for your review.
           </div>
         ) : (
           <div className="divide-y divide-border">

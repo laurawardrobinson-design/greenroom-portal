@@ -26,6 +26,7 @@ function toCampaign(row: Record<string, unknown>): Campaign {
     cta: (row.cta as string) || "",
     disclaimer: (row.disclaimer as string) || "",
     legal: (row.legal as string) || "",
+    brandOwnerId: (row.brand_owner_id as string) || null,
     createdBy: (row.created_by as string) || "",
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -58,6 +59,7 @@ export async function listCampaigns(filters?: {
   userId?: string;
   role?: string;
   createdBy?: string;
+  ownedBy?: string;
 }): Promise<CampaignListItem[]> {
   const db = createAdminClient();
 
@@ -89,6 +91,9 @@ export async function listCampaigns(filters?: {
   }
   if (filters?.createdBy) {
     results = results.filter((r) => r.created_by === filters.createdBy);
+  }
+  if (filters?.ownedBy) {
+    results = results.filter((r) => r.brand_owner_id === filters.ownedBy);
   }
 
   // Vendor: only see campaigns they're assigned to
@@ -270,7 +275,8 @@ export async function getDeliverables(
 // --- Create campaign ---
 export async function createCampaign(
   input: CreateCampaignInput,
-  userId: string
+  userId: string,
+  brandOwnerId?: string | null
 ): Promise<Campaign> {
   const db = createAdminClient();
 
@@ -300,6 +306,7 @@ export async function createCampaign(
       assets_delivery_date: input.assetsDeliveryDate,
       notes: input.notes,
       created_by: userId,
+      ...(brandOwnerId ? { brand_owner_id: brandOwnerId } : {}),
     })
     .select()
     .single();

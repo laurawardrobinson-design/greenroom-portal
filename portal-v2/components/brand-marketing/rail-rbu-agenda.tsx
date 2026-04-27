@@ -170,7 +170,7 @@ function AgendaRow({
   return (
     <li className="relative">
       <Link
-        href={`/campaigns/${row.campaignId}`}
+        href={`/brand-marketing/campaigns/${row.campaignId}`}
         className={`flex items-center gap-3 px-4 py-2 hover:bg-surface-secondary transition-colors ${accent}`}
       >
         <div className="w-20 shrink-0">

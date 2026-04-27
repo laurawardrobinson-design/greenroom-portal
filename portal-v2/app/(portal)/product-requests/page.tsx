@@ -18,7 +18,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import type { PRDoc, PRDeptSection } from "@/types/domain";
 import { PR_DEPARTMENT_LABELS, PR_DEPARTMENTS } from "@/types/domain";
 
-type FilterId = "needs" | "submitted" | "fulfilled";
+type FilterId = "needs" | "submitted" | "forwarded" | "confirmed" | "fulfilled";
 
 async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -43,8 +43,11 @@ function formatCompactDate(iso: string) {
 }
 
 function formatTime(hhmm: string) {
-  if (!hhmm || !/^\d{1,2}:\d{2}/.test(hhmm)) return hhmm;
+  if (!hhmm) return hhmm;
+  if (/[AaPp][Mm]/.test(hhmm)) return hhmm; // already formatted
+  if (!/^\d{1,2}:\d{2}/.test(hhmm)) return hhmm;
   const [h, m] = hhmm.split(":").map((n) => Number(n));
+  if (isNaN(h) || isNaN(m)) return hhmm;
   const period = h >= 12 ? "PM" : "AM";
   const hour = ((h + 11) % 12) + 1;
   return `${hour}:${m.toString().padStart(2, "0")} ${period}`;
@@ -114,12 +117,14 @@ function summarizeDoc(doc: PRDoc): SubmissionSummary {
   };
 }
 
-type WorkflowBucket = "needs" | "submitted" | "fulfilled" | "cancelled";
+type WorkflowBucket = "needs" | "submitted" | "forwarded" | "confirmed" | "fulfilled" | "cancelled";
 
 function workflowBucket(doc: PRDoc, summary: SubmissionSummary): WorkflowBucket {
   if (doc.status === "cancelled") return "cancelled";
   if (doc.status === "fulfilled") return "fulfilled";
-  if (doc.status === "submitted" || doc.status === "forwarded") return "submitted";
+  if (doc.status === "confirmed") return "confirmed";
+  if (doc.status === "forwarded") return "forwarded";
+  if (doc.status === "submitted") return "submitted";
   return "needs";
 }
 
@@ -329,6 +334,8 @@ export default function ProductRequestsPage() {
     const byBucket: Record<WorkflowBucket, PRDoc[]> = {
       needs: [],
       submitted: [],
+      forwarded: [],
+      confirmed: [],
       fulfilled: [],
       cancelled: [],
     };
@@ -341,14 +348,15 @@ export default function ProductRequestsPage() {
       counts: {
         needs: byBucket.needs.length,
         submitted: byBucket.submitted.length,
+        forwarded: byBucket.forwarded.length,
+        confirmed: byBucket.confirmed.length,
         fulfilled: byBucket.fulfilled.length,
       },
     };
   }, [docs]);
 
-  // Default filter per persona:
-  //   BMM/Admin → Submitted (what's waiting on them to forward)
-  //   Everyone else → Planning (their drafts that need work)
+  // BMM defaults to Submitted (PRs waiting on them to send to RBU)
+  // Everyone else defaults to drafts that need work
   const defaultFilter: FilterId = isBMM ? "submitted" : "needs";
   const [filter, setFilter] = useState<FilterId>(defaultFilter);
 
@@ -373,12 +381,12 @@ export default function ProductRequestsPage() {
         campaignId,
         name: group.name,
         wfNumber: group.wfNumber,
-        docs: [...group.docs].sort((a, b) => b.shootDate.localeCompare(a.shootDate)),
+        docs: [...group.docs].sort((a, b) => a.shootDate.localeCompare(b.shootDate)),
       }))
       .sort((a, b) => {
-        const aLatest = a.docs[0]?.shootDate ?? "";
-        const bLatest = b.docs[0]?.shootDate ?? "";
-        return bLatest.localeCompare(aLatest);
+        const aEarliest = a.docs[0]?.shootDate ?? "";
+        const bEarliest = b.docs[0]?.shootDate ?? "";
+        return aEarliest.localeCompare(bEarliest);
       });
   }, [visibleDocs]);
 
@@ -434,28 +442,51 @@ export default function ProductRequestsPage() {
         )}
       />
 
-      {!isLoading && (counts.needs + counts.submitted + counts.fulfilled) > 0 && (
+      {!isLoading && (counts.needs + counts.submitted + counts.forwarded + counts.confirmed + counts.fulfilled) > 0 && (
         <div className="flex flex-wrap gap-2">
-          {!isBMM && (
-            <FilterPill
-              active={filter === "needs"}
-              onClick={() => setFilter("needs")}
-              label="Planning"
-              count={counts.needs}
-            />
+          {isBMM ? (
+            <>
+              <FilterPill
+                active={filter === "submitted"}
+                onClick={() => setFilter("submitted")}
+                label="Submitted"
+                count={counts.submitted}
+              />
+              <FilterPill
+                active={filter === "forwarded"}
+                onClick={() => setFilter("forwarded")}
+                label="Sent for RBU Confirmation"
+                count={counts.forwarded}
+              />
+              <FilterPill
+                active={filter === "confirmed"}
+                onClick={() => setFilter("confirmed")}
+                label="Confirmed"
+                count={counts.confirmed}
+              />
+            </>
+          ) : (
+            <>
+              <FilterPill
+                active={filter === "needs"}
+                onClick={() => setFilter("needs")}
+                label="Planning"
+                count={counts.needs}
+              />
+              <FilterPill
+                active={filter === "submitted"}
+                onClick={() => setFilter("submitted")}
+                label="Submitted"
+                count={counts.submitted}
+              />
+              <FilterPill
+                active={filter === "fulfilled"}
+                onClick={() => setFilter("fulfilled")}
+                label="Fulfilled"
+                count={counts.fulfilled}
+              />
+            </>
           )}
-          <FilterPill
-            active={filter === "submitted"}
-            onClick={() => setFilter("submitted")}
-            label={isBMM ? "Awaiting forward" : "Submitted"}
-            count={counts.submitted}
-          />
-          <FilterPill
-            active={filter === "fulfilled"}
-            onClick={() => setFilter("fulfilled")}
-            label="Needs Review"
-            count={counts.fulfilled}
-          />
         </div>
       )}
 
@@ -467,7 +498,7 @@ export default function ProductRequestsPage() {
         </div>
       )}
 
-      {!isLoading && (counts.needs + counts.submitted + counts.fulfilled) === 0 && (
+      {!isLoading && (counts.needs + counts.submitted + counts.forwarded + counts.confirmed + counts.fulfilled) === 0 && (
         <Card padding="none">
           <EmptyState
             icon={<PackageSearch className="h-5 w-5" />}

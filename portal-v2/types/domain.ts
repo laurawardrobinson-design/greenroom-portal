@@ -137,6 +137,7 @@ export interface Campaign {
   cta: string;
   disclaimer: string;
   legal: string;
+  brandOwnerId: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -2033,7 +2034,7 @@ export interface AuditLogEvent {
 
 // --- Product Request Documents (v2) ---
 
-export type PRDocStatus = "draft" | "submitted" | "forwarded" | "fulfilled" | "cancelled";
+export type PRDocStatus = "draft" | "submitted" | "forwarded" | "confirmed" | "fulfilled" | "cancelled";
 
 export type PRDepartment = "Bakery" | "Produce" | "Deli" | "Meat-Seafood" | "Grocery";
 
@@ -2093,6 +2094,7 @@ export interface PRDoc {
   submittedAt: string | null;
   forwardedBy: string | null;
   forwardedAt: string | null;
+  confirmedAt: string | null;
   fulfilledAt: string | null;
   notes: string;
   createdAt: string;
@@ -2117,6 +2119,7 @@ export const PR_STATUS_LABELS: Record<PRDocStatus, string> = {
   draft: "Draft",
   submitted: "Submitted",
   forwarded: "Sent",
+  confirmed: "Confirmed",
   fulfilled: "Fulfilled",
   cancelled: "Cancelled",
 };

@@ -236,22 +236,69 @@ export async function unlinkProductFromCampaign(id: string): Promise<void> {
 
 export async function getProductCampaignHistory(
   productId: string
-): Promise<{ campaignId: string; campaignName: string; wfNumber: string }[]> {
+): Promise<{ campaignId: string; campaignName: string; wfNumber: string; role: "hero" | "secondary" | null }[]> {
   const db = createAdminClient();
   const { data, error } = await db
     .from("campaign_products")
-    .select("campaign_id, campaigns(name, wf_number)")
+    .select("campaign_id, role, campaigns(name, wf_number)")
     .eq("product_id", productId);
 
   if (error) throw error;
   return (data || []).map((r) => {
     const campaign = (r as Record<string, unknown>).campaigns as Record<string, unknown>;
+    const role = (r as Record<string, unknown>).role as string | null;
     return {
       campaignId: r.campaign_id,
       campaignName: (campaign?.name as string) || "",
       wfNumber: (campaign?.wf_number as string) || "",
+      role: role === "hero" || role === "secondary" ? role : null,
     };
   });
+}
+
+export async function getProductShootSchedule(productId: string): Promise<{
+  upcoming: { campaignId: string; campaignName: string; wfNumber: string; role: "hero" | "secondary" | null; date: string; shootName: string }[];
+  planning: { campaignId: string; campaignName: string; wfNumber: string; role: "hero" | "secondary" | null }[];
+}> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("campaign_products")
+    .select("campaign_id, role, campaigns(id, name, wf_number, shoots(name, shoot_dates(shoot_date)))")
+    .eq("product_id", productId);
+  if (error) throw error;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming: Awaited<ReturnType<typeof getProductShootSchedule>>["upcoming"] = [];
+  const planning: Awaited<ReturnType<typeof getProductShootSchedule>>["planning"] = [];
+
+  for (const r of data || []) {
+    const campaign = (r as Record<string, unknown>).campaigns as Record<string, unknown> | null;
+    if (!campaign) continue;
+    const roleRaw = (r as Record<string, unknown>).role as string | null;
+    const role = roleRaw === "hero" || roleRaw === "secondary" ? roleRaw : null;
+    const base = {
+      campaignId: r.campaign_id as string,
+      campaignName: (campaign.name as string) || "",
+      wfNumber: (campaign.wf_number as string) || "",
+      role,
+    };
+    const shoots = (campaign.shoots as Array<Record<string, unknown>>) || [];
+    const futureDates: { date: string; shootName: string }[] = [];
+    for (const s of shoots) {
+      const dates = (s.shoot_dates as Array<{ shoot_date: string }>) || [];
+      for (const d of dates) {
+        if (d.shoot_date >= today) futureDates.push({ date: d.shoot_date, shootName: (s.name as string) || "" });
+      }
+    }
+    if (futureDates.length > 0) {
+      for (const fd of futureDates) upcoming.push({ ...base, date: fd.date, shootName: fd.shootName });
+    } else {
+      planning.push(base);
+    }
+  }
+
+  upcoming.sort((a, b) => a.date.localeCompare(b.date));
+  return { upcoming, planning };
 }
 
 // --- Campaign Gear (link gear items to campaigns) ---

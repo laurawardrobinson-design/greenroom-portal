@@ -55,7 +55,7 @@ export function RailInMarket({ campaigns }: RailInMarketProps) {
             return (
               <li key={c.id}>
                 <Link
-                  href={`/campaigns/${c.id}`}
+                  href={`/brand-marketing/campaigns/${c.id}`}
                   className="flex items-center gap-4 px-4 py-3 hover:bg-surface-secondary transition-colors"
                 >
                   <div className="w-16 shrink-0">

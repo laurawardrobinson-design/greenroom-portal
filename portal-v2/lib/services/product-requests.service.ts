@@ -105,6 +105,7 @@ function toDoc(
     submittedAt: (row.submitted_at as string) || null,
     forwardedBy: (row.forwarded_by as string) || null,
     forwardedAt: (row.forwarded_at as string) || null,
+    confirmedAt: (row.confirmed_at as string) || null,
     fulfilledAt: (row.fulfilled_at as string) || null,
     notes: (row.notes as string) || "",
     createdAt: row.created_at as string,
@@ -379,6 +380,7 @@ export async function transitionPRDoc(
     update.forwarded_by = actorId;
     update.forwarded_at = new Date().toISOString();
   }
+  if (toStatus === "confirmed") update.confirmed_at = new Date().toISOString();
   if (toStatus === "fulfilled") update.fulfilled_at = new Date().toISOString();
 
   const { error: updateErr } = await db

@@ -32,7 +32,6 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { PageHeader } from "@/components/ui/page-header";
-import { Drawer } from "@/components/ui/drawer";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -114,7 +113,7 @@ export default function WardrobePage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<WardrobeCategory | "">("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [drawerItem, setDrawerItem] = useState<WardrobeItem | typeof NEW_ITEM | null>(null);
+  const [itemModal, setItemModal] = useState<WardrobeItem | typeof NEW_ITEM | null>(null);
   const [checkoutItem, setCheckoutItem] = useState<WardrobeItem | null>(null);
   const [checkinItem, setCheckinItem] = useState<WardrobeItem | null>(null);
 
@@ -266,7 +265,7 @@ export default function WardrobePage() {
               <div className="ml-auto flex items-center gap-1">
                 {canEdit && (
                   <button
-                    onClick={() => setDrawerItem(NEW_ITEM)}
+                    onClick={() => setItemModal(NEW_ITEM)}
                     className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
                   >
                     <Plus className="h-4 w-4" />
@@ -297,12 +296,12 @@ export default function WardrobePage() {
               icon={<Shirt className="h-5 w-5" />}
               title={search || categoryFilter ? "No items match your filters" : "No wardrobe items yet"}
               description={search || categoryFilter ? "Try adjusting your search or category filter." : "Start building your wardrobe directory by adding Publix uniforms used in shoots."}
-              action={canEdit && !search && !categoryFilter ? <Button size="sm" onClick={() => setDrawerItem(NEW_ITEM)}><Plus className="h-3.5 w-3.5" />Add Item</Button> : undefined}
+              action={canEdit && !search && !categoryFilter ? <Button size="sm" onClick={() => setItemModal(NEW_ITEM)}><Plus className="h-3.5 w-3.5" />Add Item</Button> : undefined}
             />
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {items.map((item) => (
-                <button key={item.id} onClick={() => setDrawerItem(item)} className="flex flex-col rounded-xl border border-border bg-surface p-4 text-left hover:bg-surface-secondary transition-colors">
+                <button key={item.id} onClick={() => setItemModal(item)} className="flex flex-col rounded-xl border border-border bg-surface p-4 text-left hover:bg-surface-secondary transition-colors">
                   <div className="flex items-start gap-3">
                     {item.imageUrl ? (
                       <img src={item.imageUrl} alt={item.name} className="h-14 w-14 rounded-lg object-cover shrink-0" />
@@ -327,7 +326,7 @@ export default function WardrobePage() {
                 <div>Name</div><div>Category</div><div>Condition</div><div>Status</div>
               </div>
               {items.map((item) => (
-                <div key={item.id} onClick={() => setDrawerItem(item)} className="grid grid-cols-1 sm:grid-cols-[1fr_140px_120px_100px] px-4 py-3 border-b border-border-light last:border-b-0 hover:bg-surface-secondary cursor-pointer transition-colors">
+                <div key={item.id} onClick={() => setItemModal(item)} className="grid grid-cols-1 sm:grid-cols-[1fr_140px_120px_100px] px-4 py-3 border-b border-border-light last:border-b-0 hover:bg-surface-secondary cursor-pointer transition-colors">
                   <div className="flex items-center gap-2 min-w-0">
                     {item.imageUrl && <img src={item.imageUrl} alt="" className="h-7 w-7 rounded object-cover shrink-0" />}
                     <span className="text-sm font-medium text-text-primary truncate">{item.name}</span>
@@ -352,13 +351,20 @@ export default function WardrobePage() {
         <ReservationsTab items={items} canEdit={canEdit} onMutate={mutate} />
       )}
 
-      {/* ── Modals & Drawers ── */}
-      {drawerItem !== null && (
-        <WardrobeDrawer
-          item={drawerItem === NEW_ITEM ? null : drawerItem}
-          onClose={() => setDrawerItem(null)}
-          onSaved={(updated) => { mutate(); updated ? setDrawerItem(updated) : setDrawerItem(null); }}
-          onDeleted={() => { setDrawerItem(null); mutate(); }}
+      {/* ── Modals ── */}
+      {itemModal !== null && (
+        <WardrobeItemModal
+          item={itemModal === NEW_ITEM ? null : itemModal}
+          onClose={() => setItemModal(null)}
+          onSaved={(updated) => {
+            mutate();
+            if (updated) {
+              setItemModal(updated);
+            } else {
+              setItemModal(null);
+            }
+          }}
+          onDeleted={() => { setItemModal(null); mutate(); }}
           canEdit={canEdit}
         />
       )}
@@ -445,9 +451,9 @@ export default function WardrobePage() {
   );
 }
 
-// ── Wardrobe Drawer ───────────────────────────────────────────────────────────
+// ── Wardrobe Item Modal ───────────────────────────────────────────────────────
 
-function WardrobeDrawer({ item, onClose, onSaved, onDeleted, canEdit }: {
+function WardrobeItemModal({ item, onClose, onSaved, onDeleted, canEdit }: {
   item: WardrobeItem | null;
   onClose: () => void;
   onSaved: (updated: WardrobeItem | null) => void;
@@ -512,7 +518,7 @@ function WardrobeDrawer({ item, onClose, onSaved, onDeleted, canEdit }: {
   }
 
   return (
-    <Drawer open={true} onClose={onClose} title={!item ? "Add Item" : editing ? "Edit Item" : item.name} size="lg">
+    <Modal open={true} onClose={onClose} title={!item ? "Add Item" : editing ? "Edit Item" : item.name} size="lg">
       {editing ? (
         <form onSubmit={handleSave} className="space-y-4">
           <ImageUpload value={imageUrl} onFileSelected={(f) => { imageFileRef.current = f; }} onRemove={() => { imageFileRef.current = null; setImageUrl(null); }} />
@@ -578,7 +584,7 @@ function WardrobeDrawer({ item, onClose, onSaved, onDeleted, canEdit }: {
           )}
         </div>
       )}
-    </Drawer>
+    </Modal>
   );
 }
 

@@ -15,12 +15,17 @@ interface Props {
   onAddProps: () => void;
   onAddGear: () => void;
   onMutate?: () => void;
+  /** Lock to a single tab and hide the tab switcher */
+  onlyTab?: Tab;
+  hideTeamNotes?: boolean;
+  /** Optional action rendered in the tile header (e.g. Add button) */
+  headerAction?: React.ReactNode;
 }
 
 type Tab = "products" | "props" | "gear";
 
-export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddProduct, onAddProps, onAddGear, onMutate }: Props) {
-  const [tab, setTab] = useState<Tab>("products");
+export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddProduct, onAddProps, onAddGear, onMutate, onlyTab, hideTeamNotes, headerAction }: Props) {
+  const [tab, setTab] = useState<Tab>(onlyTab ?? "products");
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const { toast } = useToast();
   const { user } = useCurrentUser();
@@ -64,23 +69,26 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
       {/* Header */}
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border shrink-0">
         <ShoppingBasket className="h-4 w-4 shrink-0 text-primary" />
-        <span className="text-sm font-semibold uppercase tracking-wider text-text-primary flex-1">Inventory</span>
-        <div className="flex items-center gap-1">
-          {tabs.map(({ key, label, count }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setTab(key)}
-              className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider transition-colors ${
-                tab === key
-                  ? "bg-primary text-white"
-                  : "text-text-tertiary hover:text-text-primary"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <span className="text-sm font-semibold uppercase tracking-wider text-text-primary flex-1">{onlyTab === "products" ? "Products" : "Inventory"}</span>
+        {headerAction}
+        {!onlyTab && (
+          <div className="flex items-center gap-1">
+            {tabs.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+                  tab === key
+                    ? "bg-primary text-white"
+                    : "text-text-tertiary hover:text-text-primary"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Body */}
@@ -88,7 +96,13 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
         {tab === "products" && (
           <div className="mx-auto w-full max-w-2xl space-y-1.5">
             {campaignProducts.length === 0 ? (
-              <p className="text-sm text-text-tertiary py-1">No products added.</p>
+              <button
+                type="button"
+                onClick={onAddProduct}
+                className="w-full rounded-md border border-dashed border-border py-4 text-sm text-text-tertiary hover:border-primary/40 hover:text-primary transition-colors"
+              >
+                + Add a product
+              </button>
             ) : (
               campaignProducts.map((cp) => (
                 <div
@@ -234,6 +248,7 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
         <ProductDrawer
           product={viewProduct}
           canEdit={false}
+          hideTeamNotes={hideTeamNotes}
           onClose={() => setViewProduct(null)}
           onSaved={() => setViewProduct(null)}
           onDeleted={() => setViewProduct(null)}

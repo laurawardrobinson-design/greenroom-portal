@@ -6,7 +6,6 @@ import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { X, ExternalLink, AlertTriangle } from "lucide-react";
 import type { Product } from "@/types/domain";
-import { ReferenceImageGallery } from "@/components/products/reference-image-gallery";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error(); return r.json(); });
 
@@ -28,7 +27,7 @@ export function ProductDetailModal({ productId, open, onClose }: Props) {
     open ? `/api/products/${productId}?history=true` : null,
     fetcher
   );
-  const campaigns: Array<{ campaignId: string; campaignName: string; wfNumber: string }> = historyData?.campaigns || [];
+  const campaigns: Array<{ campaignId: string; campaignName: string; wfNumber: string; role: "hero" | "secondary" | null }> = historyData?.campaigns || [];
 
   // Notes
   const { data: notesData, mutate: mutateNotes } = useSWR<Array<{ id: string; text: string; authorName: string; createdAt: string }>>(
@@ -97,14 +96,6 @@ export function ProductDetailModal({ productId, open, onClose }: Props) {
             )}
           </div>
         )}
-
-        {/* Reference images — standards + RBU samples for this product */}
-        <div className="rounded-lg border border-border bg-surface-secondary/30 p-3">
-          <ReferenceImageGallery
-            endpointBase={`/api/products/${productId}/reference-images`}
-            mode="portal"
-          />
-        </div>
 
         {/* Shooting notes */}
         {product.shootingNotes && (
@@ -200,6 +191,12 @@ export function ProductDetailModal({ productId, open, onClose }: Props) {
                   className="flex items-center gap-2 rounded-md bg-surface-secondary px-3 py-1.5 text-xs hover:bg-surface-tertiary transition-colors">
                   {c.wfNumber && <span className="text-text-tertiary">{c.wfNumber}</span>}
                   <span className="font-medium text-text-primary">{c.campaignName}</span>
+                  {c.role === "hero" && (
+                    <span className="ml-auto rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-800">Hero</span>
+                  )}
+                  {c.role === "secondary" && (
+                    <span className="ml-auto rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-700">Secondary</span>
+                  )}
                 </a>
               ))}
             </div>

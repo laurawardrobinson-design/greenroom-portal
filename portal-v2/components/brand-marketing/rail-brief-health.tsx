@@ -57,7 +57,7 @@ export function RailBriefHealth({ briefHealth }: RailBriefHealthProps) {
                         {c.wfNumber}
                       </span>
                       <Link
-                        href={`/campaigns/${c.id}`}
+                        href={`/brand-marketing/campaigns/${c.id}`}
                         className="text-text-primary hover:text-primary truncate"
                       >
                         {c.name}

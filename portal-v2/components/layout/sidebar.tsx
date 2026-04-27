@@ -77,6 +77,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: Sparkles,
         roles: ["Admin", "Brand Marketing Manager"],
       },
+      {
+        label: "Campaigns",
+        href: "/brand-marketing/campaigns",
+        icon: Film,
+        roles: ["Brand Marketing Manager"],
+      },
       // Review was its own sidebar item but it's really a sub-area of
       // /brand-marketing (flags + coming-soon / planning products). Surface
       // it from inside the home instead so the sidebar hierarchy isn't lying.

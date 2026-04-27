@@ -13,6 +13,7 @@ export async function GET(request: Request) {
     const status = searchParams.get("status") as CampaignStatus | null;
     const search = searchParams.get("search") || undefined;
     const mine = searchParams.get("mine") === "true";
+    const ownedBy = searchParams.get("ownedBy") || undefined;
 
     const campaigns = await listCampaigns({
       status: status || undefined,
@@ -21,6 +22,7 @@ export async function GET(request: Request) {
       userId: user.id,
       role: user.role,
       createdBy: mine ? user.id : undefined,
+      ownedBy,
     });
 
     return NextResponse.json(campaigns);
@@ -32,10 +34,12 @@ export async function GET(request: Request) {
 // POST /api/campaigns — create a campaign
 export async function POST(request: Request) {
   try {
-    const user = await requireRole(["Admin", "Producer", "Post Producer"]);
+    const user = await requireRole(["Admin", "Producer", "Post Producer", "Brand Marketing Manager"]);
     const body = await request.json();
     const parsed = createCampaignSchema.parse(body);
-    const campaign = await createCampaign(parsed, user.id);
+    // BMM auto-becomes the brand owner of campaigns they create
+    const brandOwnerId = user.role === "Brand Marketing Manager" ? user.id : null;
+    const campaign = await createCampaign(parsed, user.id, brandOwnerId);
     return NextResponse.json(campaign, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.name === "ZodError") {

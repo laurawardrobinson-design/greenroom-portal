@@ -278,13 +278,6 @@ export function GearDetailModal({
 
   return (
     <Modal open={open} onClose={onClose} title={item.name} size="md">
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-lg text-text-tertiary hover:bg-surface-secondary hover:text-text-primary transition-colors"
-      >
-        <X className="h-4 w-4" />
-      </button>
-
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* ── Image ── always h-40, edit mode adds click-to-change overlay */}
         <div className="relative">

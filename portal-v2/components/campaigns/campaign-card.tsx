@@ -9,6 +9,7 @@ import { format, parseISO, isPast, differenceInDays } from "date-fns";
 interface CampaignCardProps {
   campaign: CampaignListItem;
   hideFinancials?: boolean;
+  href?: string;
 }
 
 // Shoot-type dot is categorical, not semantic state — keep distinct hues via tokens.
@@ -39,7 +40,7 @@ function formatShootDates(dates: string[]): string {
     (sorted.length > 2 ? ` +${sorted.length - 2}` : "");
 }
 
-export function CampaignCard({ campaign, hideFinancials }: CampaignCardProps) {
+export function CampaignCard({ campaign, hideFinancials, href }: CampaignCardProps) {
   const pillStyle = campaignStatusStyle(campaign.status);
 
   const today = new Date();
@@ -61,7 +62,7 @@ export function CampaignCard({ campaign, hideFinancials }: CampaignCardProps) {
   const shootsToShow = campaign.shootsSummary.slice(0, 3);
 
   return (
-    <Link href={`/campaigns/${campaign.id}`}>
+    <Link href={href ?? `/campaigns/${campaign.id}`}>
       <div className="group flex flex-col rounded-xl bg-surface border border-transparent shadow-sm hover:shadow-md hover:border-border transition-all duration-200 p-5 h-full">
         {/* WF# above name */}
         <div className="flex items-center justify-between mb-1">

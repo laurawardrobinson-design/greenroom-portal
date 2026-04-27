@@ -89,10 +89,10 @@ function ShootRow({ row, today }: { row: BmmShootRow; today: string }) {
     : "";
 
   return (
-    <li className="relative">
+    <li className={`relative flex items-center gap-4 px-4 py-3 hover:bg-surface-secondary transition-colors ${accent}`}>
       <Link
-        href={`/campaigns/${row.campaignId}`}
-        className={`flex items-center gap-4 px-4 py-3 hover:bg-surface-secondary transition-colors ${accent}`}
+        href={`/brand-marketing/campaigns/${row.campaignId}`}
+        className="flex items-center gap-4 flex-1 min-w-0"
       >
         <div className="w-16 shrink-0">
           <div className="text-sm font-semibold text-text-primary">
@@ -125,18 +125,26 @@ function ShootRow({ row, today }: { row: BmmShootRow; today: string }) {
               ))}
           </div>
         </div>
-
-        <div className="shrink-0">
-          {row.prStatus === "none" ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-warning ring-1 ring-inset ring-amber-200">
-              <AlertTriangle className="h-3 w-3" />
-              No PR
-            </span>
-          ) : (
-            <PRStatusPill status={row.prStatus} />
-          )}
-        </div>
       </Link>
+
+      <div className="shrink-0">
+        {row.prStatus === "none" ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-warning ring-1 ring-inset ring-amber-200">
+            <AlertTriangle className="h-3 w-3" />
+            No PR
+          </span>
+        ) : row.prDocId ? (
+          <Link
+            href={`/product-requests/${row.prDocId}`}
+            className="inline-block rounded-full hover:opacity-80 transition-opacity"
+            aria-label="Open product request"
+          >
+            <PRStatusPill status={row.prStatus} />
+          </Link>
+        ) : (
+          <PRStatusPill status={row.prStatus} />
+        )}
+      </div>
     </li>
   );
 }

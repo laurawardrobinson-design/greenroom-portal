@@ -91,20 +91,12 @@ export function BrandMarketingHome({ user }: BrandMarketingHomeProps) {
       ) : (
         <>
           {/* Horizon 1 — Imminent shoots (next 2 business weeks) */}
-          <HorizonSection
-            eyebrow="Next 2 weeks"
-            title="Shoots coming up"
-            hint="What's being shot soon, and whether RBU has the product locked."
-          >
+          <HorizonSection eyebrow="Next 2 weeks" title="Shoots coming up">
             <RailUpcomingShoots />
           </HorizonSection>
 
-          {/* Horizon 2 — Producer inbox (now, awaiting your move) */}
-          <HorizonSection
-            eyebrow="Now"
-            title="Producer inbox"
-            hint="Requests on your desk to review and forward to RBU."
-          >
+          {/* Horizon 2 — Incoming requests awaiting BMM review */}
+          <HorizonSection eyebrow="Now" title="Request inbox">
             <RailFormalRequests />
           </HorizonSection>
 
@@ -112,7 +104,6 @@ export function BrandMarketingHome({ user }: BrandMarketingHomeProps) {
           <HorizonSection
             eyebrow="Next few months"
             title="RBU weekly agenda"
-            hint="Shoots on the horizon. Pre-brief RBU so the product is up to standard before the shoot date."
             action={
               <Link
                 href={
@@ -131,11 +122,7 @@ export function BrandMarketingHome({ user }: BrandMarketingHomeProps) {
           </HorizonSection>
 
           {/* Portfolio context — secondary, but useful for a pulse check */}
-          <HorizonSection
-            eyebrow="Portfolio"
-            title="Your campaigns"
-            hint="Every active campaign you own, and where they stand on briefs."
-          >
+          <HorizonSection eyebrow="Portfolio" title="Your campaigns">
             <div className="grid gap-6 lg:grid-cols-2">
               <RailInFlight campaigns={portfolio?.inFlight ?? []} />
               <RailInMarket campaigns={portfolio?.nextInMarket ?? []} />
@@ -157,13 +144,11 @@ export function BrandMarketingHome({ user }: BrandMarketingHomeProps) {
 function HorizonSection({
   eyebrow,
   title,
-  hint,
   action,
   children,
 }: {
   eyebrow: string;
   title: string;
-  hint: string;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -174,10 +159,7 @@ function HorizonSection({
           {eyebrow}
         </p>
         <div className="mt-0.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
-            <p className="text-sm text-text-tertiary">{hint}</p>
-          </div>
+          <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
           {action}
         </div>
       </div>

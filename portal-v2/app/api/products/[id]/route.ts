@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireRole, authErrorResponse } from "@/lib/auth/guards";
-import { getProduct, updateProduct, deleteProduct, getProductCampaignHistory } from "@/lib/services/products.service";
+import { getProduct, updateProduct, deleteProduct, getProductCampaignHistory, getProductShootSchedule } from "@/lib/services/products.service";
 import { updateProductSchema } from "@/lib/validation/products.schema";
 
 export async function GET(
@@ -20,8 +20,11 @@ export async function GET(
     }
 
     if (includeHistory) {
-      const history = await getProductCampaignHistory(id);
-      return NextResponse.json({ product, campaigns: history });
+      const [history, schedule] = await Promise.all([
+        getProductCampaignHistory(id),
+        getProductShootSchedule(id),
+      ]);
+      return NextResponse.json({ product, campaigns: history, upcoming: schedule.upcoming, planning: schedule.planning });
     }
 
     return NextResponse.json(product);

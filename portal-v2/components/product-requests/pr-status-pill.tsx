@@ -8,6 +8,7 @@ const VARIANT: Record<PRDocStatus, StatusVariant> = {
   draft: "draft",
   submitted: "pending",
   forwarded: "info",
+  confirmed: "approved",
   fulfilled: "approved",
   cancelled: "draft",
 };

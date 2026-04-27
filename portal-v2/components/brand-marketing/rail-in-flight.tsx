@@ -48,7 +48,7 @@ export function RailInFlight({ campaigns }: RailInFlightProps) {
             return (
               <li key={c.id}>
                 <Link
-                  href={`/campaigns/${c.id}`}
+                  href={`/brand-marketing/campaigns/${c.id}`}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-surface-secondary transition-colors"
                 >
                   <div className="flex-1 min-w-0">
