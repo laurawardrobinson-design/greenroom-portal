@@ -155,6 +155,10 @@ function workflowVariant(bucket: WorkflowBucket): StatusVariant {
       return "pending";
     case "submitted":
       return "submitted";
+    case "forwarded":
+      return "info";
+    case "confirmed":
+      return "approved";
     case "fulfilled":
       return "approved";
     case "cancelled":

@@ -276,7 +276,7 @@ export async function getProductShootSchedule(productId: string): Promise<{
     if (!campaign) continue;
     const roleRaw = (r as Record<string, unknown>).role as string | null;
     const role = roleRaw === "hero" || roleRaw === "secondary" ? roleRaw : null;
-    const base = {
+    const base: Awaited<ReturnType<typeof getProductShootSchedule>>["planning"][number] = {
       campaignId: r.campaign_id as string,
       campaignName: (campaign.name as string) || "",
       wfNumber: (campaign.wf_number as string) || "",

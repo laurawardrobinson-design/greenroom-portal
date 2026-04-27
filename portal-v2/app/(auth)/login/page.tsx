@@ -22,7 +22,7 @@ const LOGIN_NOTIFICATIONS = [
   // Add new login page updates here. Viewers cannot edit these.
   {
     date: "April 27, 2026",
-    text: "Major upgrades! New roles for Brand Marketing / RBU for visibility of product inventory and requests. Design overhaul and cybersecurity SOC-2 audits completed.",
+    text: "Major upgrades! Brand Marketing and RBU roles are now live, with better visibility into product inventory and requests. We've also completed a design overhaul and SOC 2 cybersecurity readiness audit.",
   },
   {
     date: "April 20, 2026",
