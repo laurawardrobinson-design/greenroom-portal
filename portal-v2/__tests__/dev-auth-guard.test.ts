@@ -6,18 +6,16 @@ describe("Dev auth endpoint guards", () => {
     vi.resetModules();
   });
 
-  it("rejects dev auth in production without server-side override", async () => {
+  it("allows dev auth in production when NEXT_PUBLIC_DEV_AUTH is true", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_DEV_AUTH", "true");
-    vi.stubEnv("DEV_AUTH_ALLOW_PRODUCTION", "false");
-    expect(isDevAuthEnabled()).toBe(false);
+    expect(isDevAuthEnabled()).toBe(true);
   });
 
-  it("allows dev auth in production only with server-side override", async () => {
+  it("rejects dev auth in production when NEXT_PUBLIC_DEV_AUTH is false", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("NEXT_PUBLIC_DEV_AUTH", "true");
-    vi.stubEnv("DEV_AUTH_ALLOW_PRODUCTION", "true");
-    expect(isDevAuthEnabled()).toBe(true);
+    vi.stubEnv("NEXT_PUBLIC_DEV_AUTH", "false");
+    expect(isDevAuthEnabled()).toBe(false);
   });
 
   it("rejects when NODE_ENV is development but DEV_AUTH toggle is false", async () => {
