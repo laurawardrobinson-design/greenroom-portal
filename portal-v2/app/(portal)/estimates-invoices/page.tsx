@@ -9,8 +9,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { VendorLifecycleModal } from "@/components/campaigns/vendor-lifecycle-modal";
+import { LifecycleProgress } from "@/components/budget/vendor-financials-tab";
 import { formatCurrency } from "@/lib/utils/format";
-import { FileText, Receipt, ClipboardList } from "lucide-react";
+import { FileText, Receipt, ClipboardList, LayoutList, Tag } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Failed"); return r.json(); });
 
@@ -89,49 +90,140 @@ function DocRow({ row, onOpen }: { row: PendingRow; onOpen: () => void }) {
   const isUnder = diff < 0;
 
   return (
-    <div className="px-3.5 py-2.5 flex items-center gap-4">
-      {/* Vendor + campaign */}
-      <div className="min-w-0 w-48 shrink-0">
-        <p className="text-sm font-semibold text-text-primary truncate">
-          {row.vendor?.companyName || "Unknown Vendor"}
-        </p>
-        <p className="text-xs text-text-tertiary truncate">
-          {row.wfNumber && `${row.wfNumber} — `}{row.campaignName}
-        </p>
-      </div>
+    <div className="px-3.5 py-2.5 space-y-2">
+      <div className="flex items-center gap-4">
+        {/* Vendor + campaign */}
+        <div className="min-w-0 w-48 shrink-0">
+          <p className="text-sm font-semibold text-text-primary truncate">
+            {row.vendor?.companyName || "Unknown Vendor"}
+          </p>
+          <p className="text-xs text-text-tertiary truncate">
+            {row.wfNumber && `${row.wfNumber} — `}{row.campaignName}
+          </p>
+        </div>
 
-      {/* Amounts */}
-      <div className="flex gap-4 text-xs flex-1">
-        {row.estimateTotal > 0 && (
-          <span className="text-text-tertiary">Est: <span className="font-medium text-text-primary">{formatCurrency(row.estimateTotal)}</span></span>
-        )}
-        {row.invoiceTotal > 0 && (
-          <span className="text-text-tertiary flex items-center gap-1">
-            Inv:{" "}
-            <span className="font-medium text-text-primary">{formatCurrency(row.invoiceTotal)}</span>
-            {isOver && (
-              <span className="text-[10px] font-semibold text-warning">+{formatCurrency(diff)}</span>
-            )}
-            {isUnder && (
-              <span className="text-[10px] font-semibold text-success">{formatCurrency(diff)}</span>
-            )}
+        {/* Amounts */}
+        <div className="flex gap-4 text-xs flex-1">
+          {row.estimateTotal > 0 && (
+            <span className="text-text-tertiary">Est: <span className="font-medium text-text-primary">{formatCurrency(row.estimateTotal)}</span></span>
+          )}
+          {row.invoiceTotal > 0 && (
+            <span className="text-text-tertiary flex items-center gap-1">
+              Inv:{" "}
+              <span className="font-medium text-text-primary">{formatCurrency(row.invoiceTotal)}</span>
+              {isOver && (
+                <span className="text-[10px] font-semibold text-warning">+{formatCurrency(diff)}</span>
+              )}
+              {isUnder && (
+                <span className="text-[10px] font-semibold text-success">{formatCurrency(diff)}</span>
+              )}
+            </span>
+          )}
+          {row.paymentAmount > 0 && (
+            <span className="text-text-tertiary">Paid: <span className="font-medium text-success">{formatCurrency(row.paymentAmount)}</span></span>
+          )}
+        </div>
+
+        {/* Instructional badge (e.g. Upload PO, Sent to Finance) */}
+        {label && (
+          <span className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${style}`}>
+            {label}
           </span>
         )}
-        {row.paymentAmount > 0 && (
-          <span className="text-text-tertiary">Paid: <span className="font-medium text-success">{formatCurrency(row.paymentAmount)}</span></span>
-        )}
+
+        <Button size="sm" variant="secondary" onClick={onOpen}>
+          Review
+        </Button>
       </div>
 
-      {/* Instructional badge (e.g. Upload PO, Sent to Finance) */}
-      {label && (
-        <span className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${style}`}>
-          {label}
-        </span>
-      )}
+      {/* Lifecycle progress bar */}
+      <LifecycleProgress status={row.status} />
+    </div>
+  );
+}
 
-      <Button size="sm" variant="secondary" onClick={onOpen}>
-        Review
-      </Button>
+// ── Group-by toggle ───────────────────────────────────────────────────────────
+
+type GroupBy = "status" | "campaign";
+
+function GroupByToggle({ value, onChange }: { value: GroupBy; onChange: (v: GroupBy) => void }) {
+  return (
+    <div className="flex gap-0.5 rounded-md bg-surface-secondary p-0.5">
+      <button
+        type="button"
+        onClick={() => onChange("status")}
+        className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+          value === "status"
+            ? "bg-white text-text-primary shadow-sm"
+            : "text-text-tertiary hover:text-text-secondary"
+        }`}
+      >
+        <Tag className="h-3 w-3" />
+        Status
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("campaign")}
+        className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+          value === "campaign"
+            ? "bg-white text-text-primary shadow-sm"
+            : "text-text-tertiary hover:text-text-secondary"
+        }`}
+      >
+        <LayoutList className="h-3 w-3" />
+        Campaign
+      </button>
+    </div>
+  );
+}
+
+// ── Campaign-grouped view ─────────────────────────────────────────────────────
+
+const ACTIVE_STATUSES = new Set<CampaignVendorStatus>([
+  "Estimate Submitted",
+  "Estimate Approved",
+  "Invoice Submitted",
+]);
+
+function CampaignView({ rows, onOpen }: { rows: PendingRow[]; onOpen: (row: PendingRow) => void }) {
+  const campaignMap = new Map<string, { campaignName: string; wfNumber: string; rows: PendingRow[] }>();
+  for (const row of rows) {
+    const key = row.campaignId;
+    if (!campaignMap.has(key)) {
+      campaignMap.set(key, { campaignName: row.campaignName, wfNumber: row.wfNumber, rows: [] });
+    }
+    campaignMap.get(key)!.rows.push(row);
+  }
+
+  // Campaigns with active items first, then alphabetically by WF + name
+  const campaigns = Array.from(campaignMap.values()).sort((a, b) => {
+    const aActive = a.rows.some((r) => ACTIVE_STATUSES.has(r.status));
+    const bActive = b.rows.some((r) => ACTIVE_STATUSES.has(r.status));
+    if (aActive !== bActive) return aActive ? -1 : 1;
+    return [a.wfNumber, a.campaignName].join(" ").localeCompare([b.wfNumber, b.campaignName].join(" "));
+  });
+
+  if (campaigns.length === 0) {
+    return <EmptyState title="No documents" description="Estimates, POs, and invoices will appear here." />;
+  }
+
+  return (
+    <div className="space-y-4">
+      {campaigns.map(({ campaignName, wfNumber, rows: campaignRows }) => (
+        <Card key={`${wfNumber}-${campaignName}`} padding="none">
+          <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border">
+            <LayoutList className="h-4 w-4 shrink-0 text-primary" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+              {[wfNumber, campaignName].filter(Boolean).join(" ")}
+            </span>
+          </div>
+          <div className="divide-y divide-border">
+            {campaignRows.map((row) => (
+              <DocRow key={row.id} row={row} onOpen={() => onOpen(row)} />
+            ))}
+          </div>
+        </Card>
+      ))}
     </div>
   );
 }
@@ -141,6 +233,7 @@ function DocRow({ row, onOpen }: { row: PendingRow; onOpen: () => void }) {
 export default function EstimatesInvoicesPage() {
   const { user, isLoading: loadingUser } = useCurrentUser();
   const [managingRow, setManagingRow] = useState<PendingRow | null>(null);
+  const [groupBy, setGroupBy] = useState<GroupBy>("status");
 
   const [estimateTab, setEstimateTab] = useState<"active" | "past">("active");
   const [poTab, setPoTab] = useState<"active" | "past">("active");
@@ -198,8 +291,14 @@ export default function EstimatesInvoicesPage() {
     <div className="max-w-2xl space-y-4">
       <h1 className="text-2xl font-bold text-text-primary">Estimates & Invoices</h1>
 
+      <div className="flex justify-end">
+        <GroupByToggle value={groupBy} onChange={setGroupBy} />
+      </div>
+
       {loadingPending ? (
         <DashboardSkeleton />
+      ) : groupBy === "campaign" ? (
+        <CampaignView rows={all} onOpen={setManagingRow} />
       ) : (
         <div className="space-y-4">
 

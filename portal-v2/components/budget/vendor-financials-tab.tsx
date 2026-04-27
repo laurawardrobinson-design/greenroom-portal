@@ -107,7 +107,7 @@ const LIFECYCLE_STAGES: Array<{ label: string; reachedAt: string }> = [
   { label: "Paid", reachedAt: "Paid" },
 ];
 
-function LifecycleProgress({ status }: { status: string }) {
+export function LifecycleProgress({ status }: { status: string }) {
   const currentIdx = STATUS_ORDER.indexOf(status);
   // The "current" stage is the last one whose reachedAt has been hit but whose
   // next stage has not — that's the ring highlight.
