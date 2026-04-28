@@ -670,7 +670,7 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
             <div className="text-center mb-6">
               <div className="flex justify-center mb-2">
                 {selectedProductData
-                  ? <img src={selectedProductData.icon} alt={selectedProductData.name} className="h-14 w-14 object-contain" />
+                  ? <img src={selectedProductData.icon} alt={selectedProductData.name} className="h-14 w-14" />
                   : <Utensils className="h-14 w-14 text-primary" />}
               </div>
               <h2 className="text-lg font-bold text-text-primary">Looking good!</h2>
@@ -712,7 +712,7 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
               <div className="border-t border-border pt-3 space-y-1.5 text-sm">
                 {selectedProduct && selectedProductData && (
                   <div className="flex items-center gap-2 text-text-secondary">
-                    <img src={selectedProductData.icon} alt={selectedProductData.name} className="h-4 w-4 shrink-0 object-contain" />
+                    <img src={selectedProductData.icon} alt={selectedProductData.name} className="h-4 w-4 shrink-0" />
                     <span>{selectedProduct}</span>
                   </div>
                 )}
