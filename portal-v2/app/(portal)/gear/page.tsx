@@ -61,6 +61,12 @@ import {
   Mic,
   Triangle,
   Cable,
+  Utensils,
+  Shirt,
+  ChefHat,
+  Sparkles,
+  Armchair,
+  Grid2x2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -73,6 +79,12 @@ const GEAR_CATEGORY_ICONS: Record<GearCategory, LucideIcon> = {
   Grip: Wrench,
   Accessories: Cable,
   Other: Package,
+  "Surfaces & Backgrounds": Grid2x2,
+  Tableware: Utensils,
+  "Linens & Textiles": Shirt,
+  "Cookware & Small Wares": ChefHat,
+  "Decorative Items": Sparkles,
+  Furniture: Armchair,
 };
 
 const GEAR_CATEGORY_LABELS: Record<GearCategory, string> = {
@@ -84,6 +96,12 @@ const GEAR_CATEGORY_LABELS: Record<GearCategory, string> = {
   Grip: "Grip",
   Accessories: "Accessories",
   Other: "Other",
+  "Surfaces & Backgrounds": "Surfaces",
+  Tableware: "Tableware",
+  "Linens & Textiles": "Linens",
+  "Cookware & Small Wares": "Cookware",
+  "Decorative Items": "Decorative",
+  Furniture: "Furniture",
 };
 import { PageTabs } from "@/components/ui/page-tabs";
 import {
