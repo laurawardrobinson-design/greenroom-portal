@@ -11,15 +11,13 @@ export function isDevAuthEnabled(): boolean {
   return isTrue(process.env.NEXT_PUBLIC_DEV_AUTH);
 }
 
-// Reset endpoint stays available in local development by default.
-// Outside local dev, require explicit public toggle. In production, an
-// additional server-only opt-in (RESET_ALLOW_PRODUCTION) is required.
+// Reset endpoint follows dev-auth: wherever dev-login is enabled (local dev
+// and the demo Vercel deployment), reset is enabled too. The endpoint only
+// touches the two demo accounts (admin@test.local, producer@test.local), so
+// gating it behind dev-auth is sufficient — if dev-login is off, there are
+// no demo accounts to reset anyway.
 export function isResetEnabled(): boolean {
   if (process.env.NODE_ENV === "development") return true;
-  if (!isTrue(process.env.NEXT_PUBLIC_RESET_ENABLED)) return false;
-  if (process.env.NODE_ENV === "production") {
-    return isTrue(process.env.RESET_ALLOW_PRODUCTION);
-  }
-  return true;
+  return isDevAuthEnabled();
 }
 
