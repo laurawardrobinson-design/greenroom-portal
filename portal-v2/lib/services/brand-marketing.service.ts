@@ -188,13 +188,16 @@ export interface BmmShootsResponse {
 }
 
 /**
- * Fetch every upcoming shoot date across the BMM's portfolio.
- * Returns everything >= today; the home page splits it into
- * horizons by date.
+ * Fetch shoot dates across the BMM's portfolio.
+ *
+ * Default behaviour: everything >= today (drives the horizon rails on the
+ * home page).  Pass `range` to fetch a specific window — used by the
+ * calendar dashboard which needs past dates in the current month too.
  */
 export async function getBmmShoots(
   userId: string,
-  deskDepartment: PRDepartment | null
+  deskDepartment: PRDepartment | null,
+  range?: { from: string; to?: string }
 ): Promise<BmmShootsResponse> {
   const db = createAdminClient();
 
@@ -231,13 +234,16 @@ export async function getBmmShoots(
     return { today: todayIso, deskDepartment, shoots: [] };
   }
 
-  // 3. Future shoot dates only.
-  const { data: dateRows, error: dateErr } = await db
+  // 3. Shoot dates in the requested window. Default = future only.
+  const fromIso = range?.from ?? todayIso;
+  let dateQuery = db
     .from("shoot_dates")
     .select("id, shoot_id, shoot_date, call_time, location")
     .in("shoot_id", shootIds)
-    .gte("shoot_date", todayIso)
+    .gte("shoot_date", fromIso)
     .order("shoot_date", { ascending: true });
+  if (range?.to) dateQuery = dateQuery.lte("shoot_date", range.to);
+  const { data: dateRows, error: dateErr } = await dateQuery;
   if (dateErr) throw dateErr;
 
   const dates = dateRows ?? [];

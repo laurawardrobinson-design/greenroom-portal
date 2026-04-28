@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
-import { BrandMarketingHome } from "@/components/brand-marketing/brand-marketing-home";
+import { BmmDashboard } from "@/components/dashboard/bmm-dashboard";
 
 const ALLOWED_ROLES = ["Admin", "Brand Marketing Manager"] as const;
 
@@ -21,5 +21,5 @@ export default function BrandMarketingPage() {
   if (isLoading || !user) return <DashboardSkeleton />;
   if (!ALLOWED_ROLES.includes(user.role as any)) return null;
 
-  return <BrandMarketingHome user={user} />;
+  return <BmmDashboard user={user} />;
 }
