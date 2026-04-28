@@ -181,7 +181,7 @@ export function TodayView({ userRole, onReserveSpace }: TodayViewProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-text-primary">
-                          {shoot.campaign?.wfNumber} — {shoot.campaign?.name || shoot.shootName}
+                          {[shoot.campaign?.wfNumber, shoot.campaign?.name || shoot.shootName].filter(Boolean).join(" ")}
                         </span>
                         <Badge
                           variant="custom"
@@ -269,7 +269,7 @@ export function TodayView({ userRole, onReserveSpace }: TodayViewProps) {
                     </p>
                     {res ? (
                       <p className="text-[10px] text-text-secondary truncate">
-                        {res.campaign?.wfNumber} — {res.campaign?.name}
+                        {[res.campaign?.wfNumber, res.campaign?.name].filter(Boolean).join(" ")}
                         {res.startTime && ` · ${res.startTime}`}
                         {res.endTime && `–${res.endTime}`}
                       </p>
@@ -338,7 +338,7 @@ export function TodayView({ userRole, onReserveSpace }: TodayViewProps) {
                   return (
                     <div key={campaignId} className="space-y-1.5">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
-                        {firstMeal.campaign?.wfNumber} — {firstMeal.campaign?.name}
+                        {[firstMeal.campaign?.wfNumber, firstMeal.campaign?.name].filter(Boolean).join(" ")}
                       </p>
                       {campaignMeals.map((meal) => (
                         <MealCard

@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import type { AppUser } from "@/types/domain";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { HighlightsCard } from "@/components/dashboard/highlights-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -59,9 +60,7 @@ export function VendorDashboard({ user }: Props) {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-text-primary">
-        Welcome back, {user.name.split(" ")[0]}
-      </h1>
+      <PageHeader title={`Welcome back, ${user.name.split(" ")[0]}`} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-10">
       <div className="lg:col-span-7 space-y-6">

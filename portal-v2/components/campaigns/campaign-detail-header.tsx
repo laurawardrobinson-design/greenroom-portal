@@ -140,7 +140,6 @@ export function CampaignDetailHeader({
         breadcrumb="Campaigns"
         hideBreadcrumbLabel
         breadcrumbHref="/campaigns"
-        showDivider={false}
         title={
           editingField === "name" ? (
             <div className="space-y-2">

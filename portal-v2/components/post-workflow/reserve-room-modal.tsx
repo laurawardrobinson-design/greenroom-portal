@@ -84,7 +84,7 @@ export function ReserveRoomModal({ open, onClose, rooms, campaigns, defaultRoomI
 
   const campaignOptions = [
     { value: "", label: "No campaign" },
-    ...campaigns.map((c) => ({ value: c.id, label: `${c.wfNumber} — ${c.name}` })),
+    ...campaigns.map((c) => ({ value: c.id, label: [c.wfNumber, c.name].filter(Boolean).join(" ") })),
   ];
 
   return (

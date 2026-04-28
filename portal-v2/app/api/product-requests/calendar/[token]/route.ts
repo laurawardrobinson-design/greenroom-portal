@@ -3,7 +3,7 @@ import { getDeptCalendarByToken } from "@/lib/services/product-requests.service"
 
 // GET /api/product-requests/calendar/[token]
 // Public, token-gated. Returns a department's calendar view —
-// all forwarded/fulfilled PR sections in that department. No auth
+// all forwarded/confirmed PR sections in that department. No auth
 // required; knowing the token is the capability.
 export async function GET(
   _request: Request,

@@ -18,7 +18,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import type { PRDoc, PRDeptSection } from "@/types/domain";
 import { PR_DEPARTMENT_LABELS, PR_DEPARTMENTS } from "@/types/domain";
 
-type FilterId = "needs" | "submitted" | "forwarded" | "confirmed" | "fulfilled";
+type FilterId = "needs" | "submitted" | "forwarded" | "confirmed";
 
 async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -117,11 +117,10 @@ function summarizeDoc(doc: PRDoc): SubmissionSummary {
   };
 }
 
-type WorkflowBucket = "needs" | "submitted" | "forwarded" | "confirmed" | "fulfilled" | "cancelled";
+type WorkflowBucket = "needs" | "submitted" | "forwarded" | "confirmed" | "cancelled";
 
 function workflowBucket(doc: PRDoc, summary: SubmissionSummary): WorkflowBucket {
   if (doc.status === "cancelled") return "cancelled";
-  if (doc.status === "fulfilled") return "fulfilled";
   if (doc.status === "confirmed") return "confirmed";
   if (doc.status === "forwarded") return "forwarded";
   if (doc.status === "submitted") return "submitted";
@@ -136,7 +135,7 @@ function workflowLabel(doc: PRDoc, summary: SubmissionSummary): string {
   }
   if (doc.status === "submitted") return "Submitted";
   if (doc.status === "forwarded") return "Sent";
-  if (doc.status === "fulfilled") return "Fulfilled";
+  if (doc.status === "confirmed") return "Confirmed";
   return "Cancelled";
 }
 
@@ -158,8 +157,6 @@ function workflowVariant(bucket: WorkflowBucket): StatusVariant {
     case "forwarded":
       return "info";
     case "confirmed":
-      return "approved";
-    case "fulfilled":
       return "approved";
     case "cancelled":
       return "draft";
@@ -337,7 +334,6 @@ export default function ProductRequestsPage() {
       submitted: [],
       forwarded: [],
       confirmed: [],
-      fulfilled: [],
       cancelled: [],
     };
     for (const doc of list) {
@@ -351,7 +347,6 @@ export default function ProductRequestsPage() {
         submitted: byBucket.submitted.length,
         forwarded: byBucket.forwarded.length,
         confirmed: byBucket.confirmed.length,
-        fulfilled: byBucket.fulfilled.length,
       },
     };
   }, [docs]);
@@ -422,7 +417,6 @@ export default function ProductRequestsPage() {
       <div className="space-y-0">
         <PageHeader
           title="Product Requests"
-          showDivider={false}
           actions={(
             <div className="flex flex-wrap items-center gap-2">
               {isBMM && (
@@ -445,7 +439,7 @@ export default function ProductRequestsPage() {
           )}
         />
 
-        {!isLoading && (counts.needs + counts.submitted + counts.forwarded + counts.confirmed + counts.fulfilled) > 0 && (
+        {!isLoading && (counts.needs + counts.submitted + counts.forwarded + counts.confirmed) > 0 && (
           <div className="border-b border-border">
             <nav className="ui-tabs" role="tablist" aria-label="Product request workflow">
               {isBMM ? (
@@ -458,7 +452,7 @@ export default function ProductRequestsPage() {
                 <>
                   <FilterTab active={filter === "needs"} onClick={() => setFilter("needs")} label="Planning" count={counts.needs} />
                   <FilterTab active={filter === "submitted"} onClick={() => setFilter("submitted")} label="Submitted" count={counts.submitted} />
-                  <FilterTab active={filter === "fulfilled"} onClick={() => setFilter("fulfilled")} label="Fulfilled" count={counts.fulfilled} />
+                  <FilterTab active={filter === "confirmed"} onClick={() => setFilter("confirmed")} label="Confirmed" count={counts.confirmed} />
                 </>
               )}
             </nav>
@@ -474,7 +468,7 @@ export default function ProductRequestsPage() {
         </div>
       )}
 
-      {!isLoading && (counts.needs + counts.submitted + counts.forwarded + counts.confirmed + counts.fulfilled) === 0 && (
+      {!isLoading && (counts.needs + counts.submitted + counts.forwarded + counts.confirmed) === 0 && (
         <Card padding="none">
           <EmptyState
             icon={<PackageSearch className="h-5 w-5" />}
@@ -493,7 +487,7 @@ export default function ProductRequestsPage() {
         </Card>
       )}
 
-      {!isLoading && campaignGroups.length === 0 && (counts.needs + counts.submitted + counts.fulfilled) > 0 && (
+      {!isLoading && campaignGroups.length === 0 && (counts.needs + counts.submitted + counts.confirmed) > 0 && (
         <Card padding="none">
           <EmptyState
             icon={<PackageSearch className="h-5 w-5" />}

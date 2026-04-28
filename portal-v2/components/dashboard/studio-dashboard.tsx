@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import type { AppUser } from "@/types/domain";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { HighlightsCard } from "@/components/dashboard/highlights-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -58,19 +59,17 @@ export function StudioDashboard({ user }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">
-            Welcome back, {user.name.split(" ")[0]}
-          </h1>
-        </div>
-        <Link href="/gear/scan">
-          <Button size="md" variant="secondary">
-            <QrCode className="h-4 w-4" />
-            Scan Gear
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        title={`Welcome back, ${user.name.split(" ")[0]}`}
+        actions={
+          <Link href="/gear/scan">
+            <Button size="md" variant="secondary">
+              <QrCode className="h-4 w-4" />
+              Scan Gear
+            </Button>
+          </Link>
+        }
+      />
 
       {/* Quick stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

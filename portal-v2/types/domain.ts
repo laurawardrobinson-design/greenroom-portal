@@ -179,8 +179,20 @@ export interface ShootCrew {
   user?: AppUser;
 }
 
+export type LineOfBusiness = "Bakery" | "Deli" | "Produce" | "Meat & Seafood" | "Grocery";
+
+export const LINES_OF_BUSINESS: LineOfBusiness[] = [
+  "Bakery",
+  "Deli",
+  "Produce",
+  "Meat & Seafood",
+  "Grocery",
+];
+
 // Extended type for campaign list cards
 export interface CampaignListItem extends Campaign {
+  lineOfBusiness: LineOfBusiness | null;
+  prDepartments: string[];
   nextShootDate: string | null;
   shootCount: number;
   vendorCount: number;
@@ -2033,7 +2045,7 @@ export interface AuditLogEvent {
 
 // --- Product Request Documents (v2) ---
 
-export type PRDocStatus = "draft" | "submitted" | "forwarded" | "confirmed" | "fulfilled" | "cancelled";
+export type PRDocStatus = "draft" | "submitted" | "forwarded" | "confirmed" | "cancelled";
 
 export type PRDepartment = "Bakery" | "Produce" | "Deli" | "Meat-Seafood" | "Grocery";
 
@@ -2094,7 +2106,6 @@ export interface PRDoc {
   forwardedBy: string | null;
   forwardedAt: string | null;
   confirmedAt: string | null;
-  fulfilledAt: string | null;
   notes: string;
   createdAt: string;
   updatedAt: string;
@@ -2119,7 +2130,6 @@ export const PR_STATUS_LABELS: Record<PRDocStatus, string> = {
   submitted: "Submitted",
   forwarded: "Sent",
   confirmed: "Confirmed",
-  fulfilled: "Fulfilled",
   cancelled: "Cancelled",
 };
 

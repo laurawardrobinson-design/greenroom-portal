@@ -5,6 +5,7 @@ import Link from "next/link";
 import { format, parseISO, addDays } from "date-fns";
 import type { AppUser, PostWorkflowSummary } from "@/types/domain";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Clapperboard,
   HardDrive,
@@ -89,9 +90,7 @@ export function PostProducerDashboard({ user }: Props) {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-text-primary">
-        Welcome back, {user.name.split(" ")[0]}
-      </h1>
+      <PageHeader title={`Welcome back, ${user.name.split(" ")[0]}`} />
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

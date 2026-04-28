@@ -24,13 +24,45 @@ const TEST_USERS: Record<
 
 const TEST_PASSWORD = process.env.DEV_AUTH_TEST_PASSWORD ?? "testpass123456";
 
+const BMM_PORTFOLIO_CAMPAIGNS = [
+  { id: "6e5bfb11-91f6-4472-a298-b98f925b6b6b", lineOfBusiness: "Produce" },
+  { id: "a1b2c3d4-1111-4aaa-bbbb-000000000001", lineOfBusiness: "Meat & Seafood" },
+  { id: "a1b2c3d4-2222-4aaa-bbbb-000000000002", lineOfBusiness: "Grocery" },
+  { id: "a1b2c3d4-3333-4aaa-bbbb-000000000003", lineOfBusiness: "Bakery" },
+  { id: "7318c8f3-aba4-48df-89ac-819141aece0f", lineOfBusiness: "Bakery" },
+];
+const LEGACY_NICOLE_BMM_ID = "19e8a840-2935-4c41-bd4d-4b8d1c51aff0";
+
+async function seedBmmPortfolio(admin: ReturnType<typeof createAdminClient>, userId: string) {
+  await admin
+    .from("users")
+    .update({ desk_department: "Bakery" })
+    .eq("id", userId)
+    .eq("role", "Brand Marketing Manager");
+
+  await admin
+    .from("campaigns")
+    .update({ brand_owner_id: userId })
+    .eq("brand_owner_id", LEGACY_NICOLE_BMM_ID);
+
+  for (const campaign of BMM_PORTFOLIO_CAMPAIGNS) {
+    await admin
+      .from("campaigns")
+      .update({
+        brand_owner_id: userId,
+        line_of_business: campaign.lineOfBusiness,
+      })
+      .eq("id", campaign.id);
+  }
+}
+
 export async function POST(request: Request) {
   if (!isDevAuthEnabled()) {
     return NextResponse.json({ error: "Dev auth disabled" }, { status: 403 });
   }
 
   const { role, vendor_id } = await request.json();
-  let testUser = TEST_USERS[role as string];
+  const testUser = TEST_USERS[role as string];
   if (!testUser) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
@@ -79,6 +111,10 @@ export async function POST(request: Request) {
         },
         { onConflict: "id" }
       );
+
+      if (testUser.role === "Brand Marketing Manager") {
+        await seedBmmPortfolio(admin, session.session.user.id);
+      }
     }
     return NextResponse.json({ success: true, role: testUser.role, vendor_id });
   }
@@ -109,6 +145,10 @@ export async function POST(request: Request) {
       },
       { onConflict: "id" }
     );
+
+    if (testUser.role === "Brand Marketing Manager") {
+      await seedBmmPortfolio(admin, created.user.id);
+    }
   }
 
   // Now sign in

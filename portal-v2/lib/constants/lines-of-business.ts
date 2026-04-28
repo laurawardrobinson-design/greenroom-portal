@@ -8,8 +8,6 @@ export const LINES_OF_BUSINESS = [
   "Produce",
   "Meat & Seafood",
   "Grocery",
-  "Health & Wellness",
-  "Pharmacy",
 ] as const;
 
 export type LineOfBusiness = (typeof LINES_OF_BUSINESS)[number];
@@ -32,6 +30,4 @@ export const LOB_CHIP_STYLES: Record<LineOfBusiness, string> = {
   Produce: NEUTRAL_CHIP,
   "Meat & Seafood": NEUTRAL_CHIP,
   Grocery: NEUTRAL_CHIP,
-  "Health & Wellness": NEUTRAL_CHIP,
-  Pharmacy: NEUTRAL_CHIP,
 };

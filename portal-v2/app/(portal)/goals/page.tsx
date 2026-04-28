@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
 import type { UserGoal, GoalMilestone, GoalHighlight, GoalStakeholder, UserRole } from "@/types/domain";
 import {
@@ -99,28 +100,9 @@ export default function GoalsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-text-primary">{isAdmin ? "Team Goals" : "My Goals"}</h1>
-
-      {!isAdmin && !hasOwnGoal && !isLoading && (
-        <div className="rounded-xl border border-border bg-surface-secondary/50 px-4 py-3">
-          <p className="text-sm text-text-secondary">
-            Want to set a career goal? Talk to your manager to get started.
-          </p>
-        </div>
-      )}
-
-      {isAdmin && (
-        <div className="space-y-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or goal..."
-              className="w-full h-10 rounded-lg border border-border bg-surface pl-10 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors"
-            />
-          </div>
+      {isAdmin ? (
+        <div className="space-y-0">
+          <PageHeader title="Team Goals" />
           <div className="border-b border-border"><nav className="ui-tabs">
             <button type="button" onClick={() => setRoleFilter("")} data-state={!roleFilter ? "active" : "inactive"} className="ui-tab">
               All{!roleFilter && <span className="ui-tab-underline" />}
@@ -131,6 +113,29 @@ export default function GoalsPage() {
               </button>
             ))}
           </nav></div>
+        </div>
+      ) : (
+        <PageHeader title="My Goals" />
+      )}
+
+      {!isAdmin && !hasOwnGoal && !isLoading && (
+        <div className="rounded-xl border border-border bg-surface-secondary/50 px-4 py-3">
+          <p className="text-sm text-text-secondary">
+            Want to set a career goal? Talk to your manager to get started.
+          </p>
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name or goal..."
+            className="w-full h-10 rounded-lg border border-border bg-surface pl-10 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors"
+          />
         </div>
       )}
 

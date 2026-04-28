@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useRef } from "react";
+import { use, useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useCampaign } from "@/hooks/use-campaigns";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -201,6 +201,14 @@ export default function CampaignDetailPage({
     }
   }
 
+  // Brand Marketing Managers see their own campaign view, not the production overview.
+  useEffect(() => {
+    if (user?.role === "Brand Marketing Manager") {
+      router.replace(`/brand-marketing/campaigns/${id}`);
+    }
+  }, [user?.role, id, router]);
+
+  if (user?.role === "Brand Marketing Manager") return <DashboardSkeleton />;
   if (isLoading) return <DashboardSkeleton />;
   if (!campaign) {
     return (

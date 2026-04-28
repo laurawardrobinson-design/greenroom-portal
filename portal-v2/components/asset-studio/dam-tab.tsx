@@ -186,7 +186,7 @@ export function DamTab({ user, lockedCampaignId }: Props) {
       }
       toast(
         "success",
-        `Linked to ${selectedCampaign?.wfNumber ? `${selectedCampaign.wfNumber} · ` : ""}${selectedCampaign?.name ?? "campaign"}`
+        `Linked to ${selectedCampaign?.wfNumber ? `${selectedCampaign.wfNumber} ` : ""}${selectedCampaign?.name ?? "campaign"}`
       );
     });
   }
@@ -217,7 +217,7 @@ export function DamTab({ user, lockedCampaignId }: Props) {
       }
       toast(
         "success",
-        `Unlinked from ${selectedCampaign?.wfNumber ? `${selectedCampaign.wfNumber} · ` : ""}${selectedCampaign?.name ?? "campaign"}`
+        `Unlinked from ${selectedCampaign?.wfNumber ? `${selectedCampaign.wfNumber} ` : ""}${selectedCampaign?.name ?? "campaign"}`
       );
     });
   }

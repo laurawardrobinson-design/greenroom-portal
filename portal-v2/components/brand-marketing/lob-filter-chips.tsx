@@ -1,49 +1,95 @@
 "use client";
 
-import { LINES_OF_BUSINESS, type LineOfBusiness } from "@/lib/constants/lines-of-business";
+import {
+  Apple,
+  Beef,
+  Cookie,
+  LayoutGrid,
+  Sandwich,
+  ShoppingBasket,
+  type LucideIcon,
+} from "lucide-react";
+import {
+  LINES_OF_BUSINESS,
+  type LineOfBusiness,
+} from "@/lib/constants/lines-of-business";
 
 interface LobFilterChipsProps {
   value: LineOfBusiness | null;
   onChange: (value: LineOfBusiness | null) => void;
-  availableLobs?: LineOfBusiness[]; // if provided, only these chips show "populated"
+  availableLobs?: LineOfBusiness[]; // if provided, others render muted
 }
 
-export function LobFilterChips({ value, onChange, availableLobs }: LobFilterChipsProps) {
-  const all = LINES_OF_BUSINESS;
+const LOB_ICONS: Record<LineOfBusiness, LucideIcon> = {
+  Bakery: Cookie,
+  Deli: Sandwich,
+  Produce: Apple,
+  "Meat & Seafood": Beef,
+  Grocery: ShoppingBasket,
+};
 
+export function LobFilterChips({
+  value,
+  onChange,
+  availableLobs,
+}: LobFilterChipsProps) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <button
-        type="button"
+    <div
+      role="tablist"
+      aria-label="Lines of business"
+      className="grid grid-cols-3 gap-2 sm:grid-cols-6"
+    >
+      <Cube
+        icon={LayoutGrid}
+        label="All"
+        active={value === null}
         onClick={() => onChange(null)}
-        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium tracking-wide ring-1 ring-inset transition-colors ${
-          value === null
-            ? "bg-primary/5 text-primary ring-primary"
-            : "bg-transparent text-text-secondary ring-border hover:bg-surface-secondary"
-        }`}
-      >
-        All departments
-      </button>
-      {all.map((lob) => {
+      />
+      {LINES_OF_BUSINESS.map((lob) => {
         const active = value === lob;
         const muted = availableLobs && !availableLobs.includes(lob);
         return (
-          <button
+          <Cube
             key={lob}
-            type="button"
+            icon={LOB_ICONS[lob]}
+            label={lob}
+            active={active}
+            muted={muted}
             onClick={() => onChange(active ? null : lob)}
-            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium tracking-wide ring-1 ring-inset transition-colors ${
-              active
-                ? "bg-primary/5 text-primary ring-primary"
-                : muted
-                  ? "bg-transparent text-text-tertiary ring-border/60 hover:text-text-secondary"
-                  : "bg-transparent text-text-secondary ring-border hover:bg-surface-secondary"
-            }`}
-          >
-            {lob}
-          </button>
+          />
         );
       })}
     </div>
+  );
+}
+
+function Cube({
+  icon: Icon,
+  label,
+  active,
+  muted,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  active: boolean;
+  muted?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center gap-1.5 rounded-lg border px-2 py-3 text-[12px] font-medium leading-tight transition-colors ${
+        active
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border bg-surface text-text-secondary hover:bg-surface-secondary"
+      } ${muted && !active ? "opacity-60" : ""}`}
+    >
+      <Icon className="h-4 w-4" />
+      <span className="text-center">{label}</span>
+    </button>
   );
 }

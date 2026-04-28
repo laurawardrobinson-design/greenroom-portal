@@ -3,7 +3,7 @@ import { getAuthUser, authErrorResponse } from "@/lib/auth/guards";
 import { listPRDocs, createPRDoc } from "@/lib/services/product-requests.service";
 import type { PRDocStatus } from "@/types/domain";
 
-const VALID_STATUSES: PRDocStatus[] = ["draft", "submitted", "forwarded", "confirmed", "fulfilled", "cancelled"];
+const VALID_STATUSES: PRDocStatus[] = ["draft", "submitted", "forwarded", "confirmed", "cancelled"];
 
 // GET /api/product-requests?campaignId=...&status=draft,submitted
 export async function GET(request: Request) {

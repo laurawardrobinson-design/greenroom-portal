@@ -1,10 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import useSWR from "swr";
 import {
-  ArrowLeft,
   Apple,
   Beef,
   CalendarDays,
@@ -240,29 +238,8 @@ export default function ProductRequestsCalendarPage() {
   const selectedDocId = selectedKey;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <Link
-            href="/product-requests"
-            className="inline-flex items-center gap-1 text-[12px] text-text-tertiary hover:text-text-primary transition-colors mb-1"
-          >
-            <ArrowLeft className="h-3 w-3" />
-            All requests
-          </Link>
-          <PageHeader title="Product Request Calendar" />
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {PR_DEPARTMENTS.map((d) => (
-            <DeptToggle
-              key={d}
-              department={d}
-              active={activeDepts.has(d)}
-              onToggle={() => toggleDept(d)}
-            />
-          ))}
-        </div>
-      </div>
+    <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
+      <PageHeader title="Product Request Calendar" />
 
       {isLoading && (
         <div className="h-[28rem] rounded-xl bg-surface-secondary animate-pulse" />

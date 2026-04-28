@@ -9,6 +9,7 @@ import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { VendorLifecycleModal } from "@/components/campaigns/vendor-lifecycle-modal";
 import { formatCurrency } from "@/lib/utils/format";
 import { FileText, Receipt, ClipboardList } from "lucide-react";
@@ -82,7 +83,7 @@ function AssignmentRow({ cv, onOpen }: { cv: any; onOpen: () => void }) {
   const needsAction = needsVendorAction(cv.status);
   const subLabel = getSubLabel(cv.status);
   const campaignLabel = cv.wfNumber
-    ? `${cv.wfNumber} — ${cv.campaignName}`
+    ? `${cv.wfNumber} ${cv.campaignName}`
     : cv.campaignName || "Campaign";
 
   return (
@@ -168,12 +169,7 @@ export default function VendorWorkflowPage() {
 
   return (
     <div className="max-w-2xl space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">Estimates & Invoices</h1>
-        <p className="text-sm text-text-secondary mt-1">
-          Submit estimates, sign POs, and upload invoices here.
-        </p>
-      </div>
+      <PageHeader title="Estimates & Invoices" />
 
       {loadingAssignments ? (
         <DashboardSkeleton />

@@ -8,7 +8,6 @@ import {
   Beef,
   CalendarDays,
   Check,
-  CheckCircle,
   ClipboardList,
   Clock,
   Cookie,
@@ -705,7 +704,6 @@ export function PRDocContent({
   const editable =
     !!doc &&
     isProducerEditor &&
-    doc.status !== "fulfilled" &&
     doc.status !== "cancelled";
   const isBMM = user?.role === "Brand Marketing Manager" || user?.role === "Admin";
   const isStudio = user?.role === "Studio";
@@ -830,13 +828,10 @@ export function PRDocContent({
     <div className="space-y-4">
       {/* Header */}
       <header className="pb-4 border-b border-border/70">
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0 space-y-0.5">
-            {doc.campaign?.wfNumber && (
-              <p className="text-xs font-medium text-text-tertiary tracking-wide">{doc.campaign.wfNumber}</p>
-            )}
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <h2 className="text-xl font-semibold text-text-primary leading-tight">
-              {doc.campaign?.name ?? "Product Request"}
+              {[doc.campaign?.wfNumber, doc.campaign?.name].filter(Boolean).join(" ") || "Product Request"}
             </h2>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -868,20 +863,10 @@ export function PRDocContent({
               <button
                 onClick={() => transition("forwarded")}
                 disabled={transitioning}
-                className="flex items-center gap-1.5 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50 transition-colors"
               >
                 <Forward className="h-4 w-4" />
-                Mark Sent
-              </button>
-            )}
-            {doc.status === "forwarded" && (isBMM || isStudio) && (
-              <button
-                onClick={() => transition("fulfilled")}
-                disabled={transitioning}
-                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-              >
-                <CheckCircle className="h-4 w-4" />
-                Mark Fulfilled
+                Send to RBU
               </button>
             )}
             {(doc.status === "submitted" || doc.status === "forwarded") && isBMM && (

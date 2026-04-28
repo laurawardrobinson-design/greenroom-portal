@@ -11,7 +11,7 @@ const DEV_ROLES = [
   { key: "studio", label: "Studio", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
   { key: "vendor", label: "Vendor", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
   { key: "artdirector", label: "Art Director", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
-  { key: "creativedirector", label: "Creative/Design Director", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
+  { key: "creativedirector", label: "Creative Director", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
   { key: "postproducer", label: "Post Producer", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
   { key: "designer", label: "Designer", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
   { key: "bmm", label: "Brand Marketing Mgr", color: "bg-white/10 text-white border-white/20 hover:bg-white/15" },
@@ -22,7 +22,7 @@ const LOGIN_NOTIFICATIONS = [
   // Add new login page updates here. Viewers cannot edit these.
   {
     date: "April 27, 2026",
-    text: "Major upgrades! Brand Marketing and RBU roles are now live, with better visibility into product inventory and requests. We've also completed a design overhaul and SOC 2 cybersecurity readiness audit.",
+    text: "Brand Marketing and RBU roles now live. Design overhaul and SOC 2 readiness audit complete.",
   },
   {
     date: "April 20, 2026",

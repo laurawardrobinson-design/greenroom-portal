@@ -148,7 +148,7 @@
   --ui-tab-icon-size: 0.875rem;
   --ui-tab-underline-height: 0.125rem;
   --ui-page-title-size: clamp(1.5rem, 1.35rem + 0.3vw, 1.75rem);
-  --ui-page-title-line-height: 1.2;
+  --ui-page-title-line-height: 1;
   --ui-page-title-weight: 700;
   --ui-page-header-padding-bottom: var(--density-page-header-pb);
 
@@ -353,7 +353,7 @@ body {
 .ui-page-header-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--density-page-header-row-gap);
 }

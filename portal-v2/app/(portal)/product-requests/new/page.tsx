@@ -50,7 +50,7 @@ export default function NewProductRequestPage() {
   };
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-xl mx-auto px-4 py-6 space-y-4">
       <button
         onClick={() => router.back()}
         className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors"
@@ -77,7 +77,7 @@ export default function NewProductRequestPage() {
               <option value="">Select a campaign…</option>
               {campaigns.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.wfNumber} — {c.name}
+                  {[c.wfNumber, c.name].filter(Boolean).join(" ")}
                 </option>
               ))}
             </select>

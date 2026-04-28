@@ -47,7 +47,7 @@ export async function POST(
         .single();
       if (!doc) throw new AuthError("PR not found", 404);
       const status = (doc as { status: string }).status;
-      if (status === "fulfilled" || status === "cancelled") {
+      if (status === "cancelled") {
         throw new AuthError("Pickup contact is locked for closed requests", 403);
       }
     }

@@ -138,11 +138,13 @@ export default function BrandMarketingReviewPage({
   if (!dept) {
     return (
       <div className="space-y-4">
-        <PageHeader title="Review" />
+        <div className="space-y-0">
+          <PageHeader title="Review" />
+          <DeptPills active={null} onChange={(d) => router.push(`/brand-marketing/review/${d}`)} />
+        </div>
         <p className="text-[13px] text-text-tertiary">
           Pick a department to start.
         </p>
-        <DeptPills active={null} onChange={(d) => router.push(`/brand-marketing/review/${d}`)} />
       </div>
     );
   }
@@ -151,12 +153,10 @@ export default function BrandMarketingReviewPage({
 
   return (
     <div className="space-y-4">
-      <div>
-        <div className="inline-flex items-center gap-1 text-[12px] text-text-tertiary mb-1">
-          <Sparkles className="h-3 w-3" />
-          Brand Marketing
-        </div>
+      <div className="space-y-0">
         <PageHeader
+          breadcrumb="Brand Marketing"
+          breadcrumbHref="/brand-marketing"
           title={
             <span className="inline-flex items-center gap-2">
               <DeptIcon className="h-5 w-5 text-primary" />
@@ -164,16 +164,16 @@ export default function BrandMarketingReviewPage({
             </span>
           }
         />
-        <p className="text-[13px] text-text-tertiary mt-1">
-          Everything flagged, pending, or in planning for {dept} — sync point
-          before the next shoot.
-        </p>
+        <DeptPills
+          active={dept}
+          onChange={(d) => router.push(`/brand-marketing/review/${d}`)}
+        />
       </div>
 
-      <DeptPills
-        active={dept}
-        onChange={(d) => router.push(`/brand-marketing/review/${d}`)}
-      />
+      <p className="text-[13px] text-text-tertiary">
+        Everything flagged, pending, or in planning for {dept} — sync point
+        before the next shoot.
+      </p>
 
       <div className="border-b border-border"><nav className="ui-tabs">
         <TabButton label="Flags" count={flags.length} active={tab === "flags"} onClick={() => setTab("flags")} />

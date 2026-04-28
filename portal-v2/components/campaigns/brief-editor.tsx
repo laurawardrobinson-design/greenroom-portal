@@ -27,42 +27,24 @@ const FIELDS: Array<{
   label: string;
   placeholder: string;
   rows: number;
-  hint: string;
 }> = [
   {
     key: "objective",
     label: "Objective",
     placeholder: "What does success look like for this campaign?",
     rows: 2,
-    hint: "One sentence. The shape of the win.",
   },
   {
     key: "audience",
     label: "Audience + insight",
     placeholder: "Who are we talking to, and what do we know about them right now?",
     rows: 2,
-    hint: "Who + a sharp insight, not demographics.",
-  },
-  {
-    key: "proposition",
-    label: "Single-minded proposition",
-    placeholder: "The one thing we want them to walk away with.",
-    rows: 2,
-    hint: "If they only remember one thing...",
   },
   {
     key: "mandatories",
     label: "Mandatories",
     placeholder: "Claims, legal, brand must-haves, disclaimers.",
     rows: 2,
-    hint: "The non-negotiables.",
-  },
-  {
-    key: "successMeasure",
-    label: "How we'll measure it",
-    placeholder: "The KPI(s) that tell us it worked.",
-    rows: 1,
-    hint: "Metrics or a qualitative read we'll look for.",
   },
 ];
 
@@ -194,10 +176,7 @@ export function BriefEditor({ campaignId, canEdit }: BriefEditorProps) {
               const value = draft[f.key] as string;
               return (
                 <div key={f.key} className="space-y-1">
-                  <div className="flex items-baseline justify-between">
-                    <label className="text-sm font-medium text-text-primary">{f.label}</label>
-                    <span className="text-[11px] text-text-tertiary">{f.hint}</span>
-                  </div>
+                  <label className="text-sm font-medium text-text-primary">{f.label}</label>
                   {f.rows <= 1 ? (
                     <Input
                       value={value}
@@ -220,9 +199,6 @@ export function BriefEditor({ campaignId, canEdit }: BriefEditorProps) {
 
             <div className="space-y-1">
               <label className="text-sm font-medium text-text-primary">References</label>
-              <p className="text-[11px] text-text-tertiary">
-                Inspiration, prior work, or source links the team should see.
-              </p>
               {draft.references.length > 0 && (
                 <ul className="space-y-1 pt-1">
                   {draft.references.map((url, idx) => (

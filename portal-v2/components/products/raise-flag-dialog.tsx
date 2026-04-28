@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Flag, X } from "lucide-react";
+import {
+  Apple,
+  Beef,
+  Cookie,
+  Flag,
+  Sandwich,
+  ShoppingBasket,
+  type LucideIcon,
+} from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -14,6 +22,14 @@ const RBU_DEPTS: PRDepartment[] = [
   "Meat-Seafood",
   "Grocery",
 ];
+
+const DEPT_ICONS: Record<PRDepartment, LucideIcon> = {
+  Bakery: Cookie,
+  Produce: Apple,
+  Deli: Sandwich,
+  "Meat-Seafood": Beef,
+  Grocery: ShoppingBasket,
+};
 
 function defaultDeptFor(
   productDept: ProductDepartment | null | undefined
@@ -79,47 +95,37 @@ export function RaiseFlagDialog({
   }
 
   return (
-    <Modal open={true} onClose={onClose} size="md">
-      <div className="flex items-start justify-between gap-2 mb-3 pb-3 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Flag className="h-4 w-4 text-primary" />
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
-              Flag for BMM + RBU review
-            </h2>
-            <p className="text-[11px] text-text-tertiary mt-0.5 truncate max-w-xs">
-              {productName}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          className="rounded-md p-1 text-text-secondary hover:bg-surface-secondary transition-colors"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
+    <Modal
+      open={true}
+      onClose={onClose}
+      size="md"
+      title={`Flag ${productName}`}
+    >
       <div className="space-y-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1">
             Department to review
           </p>
-          <div className="flex flex-wrap gap-1">
-            {RBU_DEPTS.map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setDept(d)}
-                className={`rounded-full px-2.5 py-1 text-[12px] font-medium transition-colors ${
-                  dept === d
-                    ? "bg-primary text-white"
-                    : "bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
-                }`}
-              >
-                {d}
-              </button>
-            ))}
+          <div className="grid grid-cols-5 gap-1.5">
+            {RBU_DEPTS.map((d) => {
+              const Icon = DEPT_ICONS[d];
+              const selected = dept === d;
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setDept(d)}
+                  className={`flex flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2.5 text-[11px] font-medium transition-colors ${
+                    selected
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-surface text-text-secondary hover:bg-surface-secondary"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {d}
+                </button>
+              );
+            })}
           </div>
           <p className="text-[11px] text-text-tertiary mt-1.5">
             BMM + the {dept ?? "…"} team will see this and can comment.

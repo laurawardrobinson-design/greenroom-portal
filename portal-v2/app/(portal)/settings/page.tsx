@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Settings,
   Shield,
@@ -455,7 +456,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-text-primary">Settings</h1>
+      <PageHeader title="Settings" />
 
       {/* My Card */}
       {user && (

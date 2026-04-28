@@ -56,6 +56,16 @@ The outermost page wrapper `div` must always use `space-y-4`. Never use `space-y
 - Do NOT change `space-y-*` on inner content sections (cards, tiles, lists, columns) — only the outermost wrapper
 - Do NOT change intentional `space-y-0` wrappers that collapse `<PageHeader>` + `<PageTabs>` together
 
+## No Explanation / Hint / Fluff Lines
+
+Do NOT add coaching, instruction, or explanation lines next to form fields, labels, or sections. The label and the placeholder are the spec — nothing else.
+
+- No tertiary "hint" text next to labels (e.g., "One sentence. The shape of the win.", "If they only remember one thing...", "The non-negotiables.", "Metrics or a qualitative read we'll look for.").
+- No helper paragraphs under section headers explaining what the section is for.
+- No tooltip-style descriptors describing the obvious.
+- If a field needs guidance, put it in the placeholder — once.
+- Trust the user. They know what an "Objective" field is for.
+
 ## Page Header Rules
 
 Every page follows this exact structure — no exceptions:
@@ -65,6 +75,7 @@ Every page follows this exact structure — no exceptions:
 3. **Wrap `<PageHeader>` + tab container in `<div className="space-y-0">`** so they collapse flush with no gap between the header border and the tab row.
 4. **If a page has no tabs**, `<PageHeader>` with default `showDivider={true}` gives the single line below the title — no tab container needed.
 5. **`CampaignSectionTabs` always uses default `showDivider` (true)** — never pass `showDivider={false}` to it.
+6. **Title and actions are vertically centered.** The `.ui-page-header-row` flex container uses `align-items: center`. Never override with `items-end` / `items-start` / `items-baseline` on header rows or any container that places a heading next to action buttons. The title and the buttons must sit on a shared horizontal centerline — never with the heading visually hanging below or above the actions.
 
 ## Minimum Text Size
 

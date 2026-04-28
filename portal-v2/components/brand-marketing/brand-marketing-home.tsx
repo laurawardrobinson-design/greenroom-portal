@@ -61,24 +61,14 @@ export function BrandMarketingHome({ user }: BrandMarketingHomeProps) {
     : null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <PageHeader
-          title={
-            <div>
-              <h1 className="text-2xl font-bold text-text-primary">
-                Brand Marketing — {user.name.split(" ")[0]}
-              </h1>
-            </div>
-          }
+    <div className="space-y-4">
+      <div className="space-y-0">
+        <PageHeader title={`Welcome back, ${user.name.split(" ")[0]}`} />
+        <LobFilterChips
+          value={lobFilter}
+          onChange={setLobFilter}
+          availableLobs={availableLobs}
         />
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <LobFilterChips
-            value={lobFilter}
-            onChange={setLobFilter}
-            availableLobs={availableLobs}
-          />
-        </div>
       </div>
 
       {isLoading && !portfolio ? (

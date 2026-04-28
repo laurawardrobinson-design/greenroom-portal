@@ -92,7 +92,7 @@ export function ShootDayBlock({
               {format(parseISO(shootDate), "EEE, MMM d")}
             </span>
             <span className="text-xs text-text-tertiary">
-              {wfNumber} — {campaignName}
+              {[wfNumber, campaignName].filter(Boolean).join(" ")}
             </span>
           </div>
         </div>

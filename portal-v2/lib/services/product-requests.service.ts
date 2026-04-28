@@ -106,7 +106,6 @@ function toDoc(
     forwardedBy: (row.forwarded_by as string) || null,
     forwardedAt: (row.forwarded_at as string) || null,
     confirmedAt: (row.confirmed_at as string) || null,
-    fulfilledAt: (row.fulfilled_at as string) || null,
     notes: (row.notes as string) || "",
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -428,7 +427,6 @@ export async function transitionPRDoc(
     update.forwarded_at = new Date().toISOString();
   }
   if (toStatus === "confirmed") update.confirmed_at = new Date().toISOString();
-  if (toStatus === "fulfilled") update.fulfilled_at = new Date().toISOString();
 
   const { error: updateErr } = await db
     .from("product_request_docs")
@@ -747,7 +745,7 @@ export async function getPRSectionByToken(
 
 // Statuses that should appear on a calendar shared with vendors.
 // Submitted PRs are internal (producer → BMM), so not included.
-const CALENDAR_STATUSES: PRDocStatus[] = ["forwarded", "fulfilled"];
+const CALENDAR_STATUSES: PRDocStatus[] = ["forwarded", "confirmed"];
 
 async function loadCalendarEntries(
   department?: PRDepartment

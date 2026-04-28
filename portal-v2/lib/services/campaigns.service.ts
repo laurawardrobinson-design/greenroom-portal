@@ -36,6 +36,8 @@ function toCampaign(row: Record<string, unknown>): Campaign {
 function toCampaignListItem(row: Record<string, unknown>): CampaignListItem {
   return {
     ...toCampaign(row),
+    lineOfBusiness: (row.line_of_business as CampaignListItem["lineOfBusiness"]) || null,
+    prDepartments: Array.isArray(row.pr_departments) ? (row.pr_departments as string[]) : [],
     nextShootDate: (row.next_shoot_date as string) || null,
     shootCount: Number(row.shoot_count) || 0,
     vendorCount: Number(row.vendor_count) || 0,
@@ -64,7 +66,7 @@ export async function listCampaigns(filters?: {
   const db = createAdminClient();
 
   // Use enriched RPC for extra fields, but let the database do the filtering
-  let query = db.rpc("get_campaigns_enriched");
+  const query = db.rpc("get_campaigns_enriched");
 
   // Note: The RPC function returns all campaigns. To truly optimize, we'd need to
   // modify the RPC to accept filter parameters. For now, we apply filters client-side,
@@ -93,7 +95,15 @@ export async function listCampaigns(filters?: {
     results = results.filter((r) => r.created_by === filters.createdBy);
   }
   if (filters?.ownedBy) {
-    results = results.filter((r) => r.brand_owner_id === filters.ownedBy);
+    const { data: ownedRows, error: ownedErr } = await db
+      .from("campaigns")
+      .select("id")
+      .eq("brand_owner_id", filters.ownedBy)
+      .is("deleted_at", null);
+    if (ownedErr) throw ownedErr;
+
+    const ownedIds = new Set((ownedRows || []).map((r) => r.id as string));
+    results = results.filter((r) => ownedIds.has(r.id as string));
   }
 
   // Vendor: only see campaigns they're assigned to
@@ -550,4 +560,3 @@ export async function getCampaignFinancials(
     remaining: budget - totalCommitted,
   };
 }
-

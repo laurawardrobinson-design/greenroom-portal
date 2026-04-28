@@ -97,7 +97,7 @@ export default function CampaignCopyPage({
   }
 
   return (
-    <div className="space-y-2 -mt-3">
+    <div className="space-y-4">
       <CampaignDetailHeader
         campaign={campaign}
         canEdit={canEdit}

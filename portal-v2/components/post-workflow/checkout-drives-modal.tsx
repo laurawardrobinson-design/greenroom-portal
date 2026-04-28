@@ -131,7 +131,7 @@ export function CheckoutDrivesModal({ open, onClose, campaigns, onSuccess }: Pro
 
   const campaignOptions = [
     { value: "", label: "No campaign" },
-    ...campaigns.map((c) => ({ value: c.id, label: `${c.wfNumber} — ${c.name}` })),
+    ...campaigns.map((c) => ({ value: c.id, label: [c.wfNumber, c.name].filter(Boolean).join(" ") })),
   ];
 
   const sizeOptions = DRIVE_SIZES.map((s) => ({ value: s, label: s }));
@@ -281,7 +281,7 @@ export function CheckoutDrivesModal({ open, onClose, campaigns, onSuccess }: Pro
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Campaign</p>
                 <p className="mt-0.5 text-sm font-medium text-text-primary">
-                  {selectedCampaign.wfNumber} — {selectedCampaign.name}
+                  {[selectedCampaign.wfNumber, selectedCampaign.name].filter(Boolean).join(" ")}
                 </p>
               </div>
             )}

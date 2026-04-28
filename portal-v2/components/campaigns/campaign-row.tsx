@@ -218,11 +218,10 @@ export function CampaignRow({ campaign, onMutate, hideFinancials, readOnly }: Pr
       {/* Inventory (vendor-only, replaces budget/funds columns) */}
       {hideFinancials && (
         <div className="w-36 shrink-0 text-right" onClick={(e) => e.stopPropagation()}>
-          {(campaign.foodCount > 0 || campaign.propsCount > 0 || campaign.gearCount > 0) ? (
+          {(campaign.foodCount > 0 || campaign.gearCount > 0) ? (
             <span className="text-xs text-text-secondary">
               {[
-                campaign.foodCount > 0 ? `${campaign.foodCount} food` : null,
-                campaign.propsCount > 0 ? `${campaign.propsCount} props` : null,
+                campaign.foodCount > 0 ? `${campaign.foodCount} items` : null,
                 campaign.gearCount > 0 ? `${campaign.gearCount} gear` : null,
               ].filter(Boolean).join(" · ")}
             </span>

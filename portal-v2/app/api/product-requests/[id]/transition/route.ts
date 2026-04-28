@@ -6,9 +6,8 @@ import type { PRDocStatus } from "@/types/domain";
 const ALLOWED_TRANSITIONS: Record<PRDocStatus, PRDocStatus[]> = {
   draft:     ["submitted", "cancelled"],
   submitted: ["forwarded", "cancelled"],
-  forwarded: ["confirmed", "fulfilled", "cancelled"],
-  confirmed: ["fulfilled"],
-  fulfilled: [],
+  forwarded: ["confirmed", "cancelled"],
+  confirmed: [],
   cancelled: [],
 };
 

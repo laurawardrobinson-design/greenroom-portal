@@ -10,7 +10,7 @@ export default function PRDocPage({ params }: { params: Promise<{ id: string }> 
   const router = useRouter();
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
       <button
         onClick={() => router.back()}
         className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors"

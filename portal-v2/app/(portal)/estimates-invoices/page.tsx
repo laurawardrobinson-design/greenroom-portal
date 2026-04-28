@@ -99,7 +99,7 @@ function DocRow({ row, onOpen }: { row: PendingRow; onOpen: () => void }) {
             {row.vendor?.companyName || "Unknown Vendor"}
           </p>
           <p className="text-xs text-text-tertiary truncate">
-            {row.wfNumber && `${row.wfNumber} — `}{row.campaignName}
+            {row.wfNumber && `${row.wfNumber} `}{row.campaignName}
           </p>
         </div>
 

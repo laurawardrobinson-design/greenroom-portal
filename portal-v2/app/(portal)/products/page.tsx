@@ -18,12 +18,10 @@ import {
   Plus,
   Search,
   ShoppingBasket,
-  ClipboardList,
   LayoutGrid,
   List,
 } from "lucide-react";
 import Link from "next/link";
-import { PageTabs } from "@/components/ui/page-tabs";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -31,13 +29,11 @@ const fetcher = (url: string) =>
     return r.json();
   });
 
-type Tab = "items" | "product-requests";
 const NEW_PRODUCT = "NEW" as const;
 
 export default function ProductDirectoryPage() {
   const { toast } = useToast();
   const { user } = useCurrentUser();
-  const [tab, setTab] = useState<Tab>("items");
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState<ProductDepartment | "">("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -80,21 +76,7 @@ export default function ProductDirectoryPage() {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-0">
-        <PageHeader title="Products" />
-
-        <PageTabs
-          tabs={[
-            { key: "items", label: "Items" },
-            { key: "product-requests", label: "Product Requests" },
-          ]}
-          activeTab={tab}
-          onTabChange={(key) => setTab(key as Tab)}
-        />
-      </div>
-
-      {tab === "items" && (
-        <>
+      <PageHeader title="Products" />
           {/* Search + filter bar */}
           <div className="space-y-2">
             <div className="flex items-center gap-3">
@@ -295,16 +277,6 @@ export default function ProductDirectoryPage() {
               ))}
             </div>
           )}
-        </>
-      )}
-
-      {tab === "product-requests" && (
-        <EmptyState
-          icon={<ClipboardList className="h-5 w-5" />}
-          title="No product requests yet"
-          description="Product requests from shoots will appear here."
-        />
-      )}
 
       {/* Unified Product Drawer */}
       {drawerProduct !== null && (

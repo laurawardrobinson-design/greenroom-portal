@@ -55,7 +55,6 @@ const PR_STATUS_DOT: Record<PRDocStatus | "none", string> = {
   submitted: "bg-amber-400",
   forwarded: "bg-sky-400",
   confirmed: "bg-emerald-400",
-  fulfilled: "bg-emerald-500",
   cancelled: "bg-text-tertiary",
   none: "bg-rose-400",
 };
@@ -65,7 +64,6 @@ const PR_STATUS_LABEL: Record<PRDocStatus | "none", string> = {
   submitted: "Awaiting your review",
   forwarded: "Forwarded to RBU",
   confirmed: "Confirmed by RBU",
-  fulfilled: "Fulfilled",
   cancelled: "Cancelled",
   none: "No PR yet",
 };

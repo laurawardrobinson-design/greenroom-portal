@@ -211,7 +211,7 @@ export function ReserveGearModal({
                         type="button"
                         onClick={() => {
                           setCampaignId(c.id);
-                          setCampaignSearch(`${c.wfNumber} — ${c.name}`);
+                          setCampaignSearch([c.wfNumber, c.name].filter(Boolean).join(" "));
                           setShowCampaignDropdown(false);
                         }}
                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-secondary transition-colors"

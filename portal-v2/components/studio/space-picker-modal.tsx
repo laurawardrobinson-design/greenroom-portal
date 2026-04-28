@@ -89,7 +89,7 @@ export function SpacePickerModal({
         {campaignName && (
           <div className="rounded-lg bg-surface-secondary border border-border px-3 py-2.5">
             <p className="text-xs text-text-tertiary">Reserving for</p>
-            <p className="text-sm font-semibold text-text-primary">{wfNumber} — {campaignName}</p>
+            <p className="text-sm font-semibold text-text-primary">{[wfNumber, campaignName].filter(Boolean).join(" ")}</p>
           </div>
         )}
 

@@ -114,7 +114,7 @@ export function CheckoutDetailsModal({
                 <optgroup label="— Upcoming shoots —">
                   {upcoming.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.wfNumber ? `${c.wfNumber} — ` : ""}{c.name}{shootDateLabel(c.nextShootDate)}
+                      {c.wfNumber ? `${c.wfNumber} ` : ""}{c.name}{shootDateLabel(c.nextShootDate)}
                     </option>
                   ))}
                 </optgroup>
@@ -123,7 +123,7 @@ export function CheckoutDetailsModal({
                 <optgroup label="— Other campaigns —">
                   {other.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.wfNumber ? `${c.wfNumber} — ` : ""}{c.name}
+                      {c.wfNumber ? `${c.wfNumber} ` : ""}{c.name}
                     </option>
                   ))}
                 </optgroup>

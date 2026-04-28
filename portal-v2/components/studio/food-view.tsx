@@ -243,7 +243,7 @@ export function FoodView({ userRole }: FoodViewProps) {
             <div key={group.campaignId} className="space-y-3">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-text-primary">
-                  {group.wfNumber} — {group.campaignName}
+                  {[group.wfNumber, group.campaignName].filter(Boolean).join(" ")}
                 </h3>
                 <div className="flex-1 h-px bg-border" />
               </div>

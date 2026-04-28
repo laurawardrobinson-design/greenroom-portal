@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Film, Palette, ArrowUpRight, ListChecks } from "lucide-react";
 import type { AppUser, Campaign } from "@/types/domain";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/loading-skeleton";
 import { CampaignStatusBadge } from "@/components/campaigns/campaign-status-badge";
 
@@ -40,9 +41,7 @@ export function DesignerDashboard({ user }: { user: AppUser }) {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-text-primary">
-        Welcome back, {user.name?.split(" ")[0] || "there"}
-      </h1>
+      <PageHeader title={`Welcome back, ${user.name?.split(" ")[0] || "there"}`} />
 
       <Card padding="none" className="overflow-hidden">
         <TileHeader

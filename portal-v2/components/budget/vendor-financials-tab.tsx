@@ -508,7 +508,7 @@ export function VendorFinancialsTab() {
           <option value="all">All campaigns</option>
           {campaignOptions.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.wfNumber} — {c.name}
+              {[c.wfNumber, c.name].filter(Boolean).join(" ")}
             </option>
           ))}
         </select>

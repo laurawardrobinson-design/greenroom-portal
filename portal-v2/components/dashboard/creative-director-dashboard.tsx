@@ -15,6 +15,7 @@ import {
 import type { AppUser } from "@/types/domain";
 import type { PendingBatch } from "@/lib/services/pending-batches.service";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/loading-skeleton";
@@ -103,9 +104,7 @@ export function CreativeDirectorDashboard({ user }: { user: AppUser }) {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-text-primary">
-        Welcome back, {user.name?.split(" ")[0] || "there"}
-      </h1>
+      <PageHeader title={`Welcome back, ${user.name?.split(" ")[0] || "there"}`} />
 
       <Card padding="none" className="overflow-hidden">
         <TileHeader

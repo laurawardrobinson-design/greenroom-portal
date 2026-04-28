@@ -165,7 +165,7 @@ function ReserveModal({ space, date, existingReservation, userRole, userId, onCl
             <div className="rounded-lg bg-surface-secondary p-3 space-y-1.5">
               <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider">Reserved for</p>
               <p className="text-sm font-semibold text-text-primary">
-                {existingReservation.campaign?.wfNumber} — {existingReservation.campaign?.name}
+                {[existingReservation.campaign?.wfNumber, existingReservation.campaign?.name].filter(Boolean).join(" ")}
               </p>
               {(existingReservation.startTime || existingReservation.endTime) && (
                 <p className="text-xs text-text-secondary">
@@ -193,14 +193,14 @@ function ReserveModal({ space, date, existingReservation, userRole, userId, onCl
                 <option value="">Select a campaign...</option>
                 {activeCampaigns.mine.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.wfNumber} — {c.name}
+                    {[c.wfNumber, c.name].filter(Boolean).join(" ")}
                   </option>
                 ))}
                 {activeCampaigns.others.length > 0 && (
                   <optgroup label="Other campaigns">
                     {activeCampaigns.others.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.wfNumber} — {c.name}
+                        {[c.wfNumber, c.name].filter(Boolean).join(" ")}
                       </option>
                     ))}
                   </optgroup>
@@ -595,7 +595,7 @@ function SpacesView({ userRole, userId }: SpacesViewProps) {
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-0.5">Booking for</p>
               <p className="text-sm font-semibold text-text-primary truncate">
-                {activeShoot.campaign.wfNumber} — {activeShoot.campaign.name}
+                {[activeShoot.campaign.wfNumber, activeShoot.campaign.name].filter(Boolean).join(" ")}
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -746,7 +746,7 @@ function ShootPrepView({ userRole, userId }: ShootPrepViewProps) {
                   href={`/campaigns/${campaignId}`}
                   className="text-xs text-text-tertiary hover:text-primary transition-colors"
                 >
-                  {shoot.campaign?.wfNumber} — {shoot.campaign?.name}
+                  {[shoot.campaign?.wfNumber, shoot.campaign?.name].filter(Boolean).join(" ")}
                 </Link>
               </div>
 

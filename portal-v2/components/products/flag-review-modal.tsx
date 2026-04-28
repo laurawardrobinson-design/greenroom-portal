@@ -10,7 +10,6 @@ import {
   Cookie,
   Edit2,
   ExternalLink,
-  Flag,
   RotateCcw,
   Sandwich,
   ShoppingBasket,
@@ -206,46 +205,12 @@ export function FlagReviewModal({
   const prodDept = product?.department ?? flag.product?.department ?? "Other";
 
   return (
-    <Modal open={true} onClose={onClose} size="xl">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-4 pb-3 border-b border-border">
-        <div className="flex items-center gap-2 min-w-0">
-          <Flag className="h-4 w-4 text-primary shrink-0" />
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-text-primary truncate">
-              Product Flag
-            </h2>
-            <p className="text-[11px] text-text-tertiary mt-0.5">
-              {formatRelative(flag.createdAt)}
-            </p>
-          </div>
-        </div>
-        <span
-          className="text-[10px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 border"
-          style={
-            flag.status === "open"
-              ? {
-                  color: "var(--status-pending-fg)",
-                  backgroundColor: "var(--status-pending-tint)",
-                  borderColor: "var(--status-pending-border)",
-                }
-              : {
-                  color: "var(--status-approved-fg)",
-                  backgroundColor: "var(--status-approved-tint)",
-                  borderColor: "var(--status-approved-border)",
-                }
-          }
-        >
-          {flag.status}
-        </span>
-        <button
-          onClick={onClose}
-          className="rounded-md p-1 text-text-secondary hover:bg-surface-secondary transition-colors shrink-0"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
+    <Modal
+      open={true}
+      onClose={onClose}
+      size="xl"
+      title="Product flag"
+    >
       {/* Flag context */}
       <div className="rounded-xl border border-border bg-surface-secondary p-3 mb-4">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-text-tertiary">
@@ -266,6 +231,26 @@ export function FlagReviewModal({
             }}
           >
             {reasonLabel(flag.reason)}
+          </span>
+          <span>·</span>
+          <span>{formatRelative(flag.createdAt)}</span>
+          <span
+            className="ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider border"
+            style={
+              flag.status === "open"
+                ? {
+                    color: "var(--status-pending-fg)",
+                    backgroundColor: "var(--status-pending-tint)",
+                    borderColor: "var(--status-pending-border)",
+                  }
+                : {
+                    color: "var(--status-approved-fg)",
+                    backgroundColor: "var(--status-approved-tint)",
+                    borderColor: "var(--status-approved-border)",
+                  }
+            }
+          >
+            {flag.status}
           </span>
         </div>
         {flag.comment && (

@@ -89,7 +89,7 @@ export function ProcessReturnModal({ open, onClose, session, item, onSuccess }: 
         <div className="mb-4 rounded-lg border border-border bg-surface-secondary p-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Campaign</p>
           <p className="mt-0.5 text-sm font-semibold text-text-primary">
-            {session.campaign.wfNumber} — {session.campaign.name}
+            {[session.campaign.wfNumber, session.campaign.name].filter(Boolean).join(" ")}
           </p>
           {session.shootDate && (
             <p className="mt-0.5 text-xs text-text-secondary">

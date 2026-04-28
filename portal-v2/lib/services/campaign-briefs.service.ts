@@ -25,9 +25,7 @@ export type CampaignBriefInput = Omit<
 const SCORED_FIELDS: (keyof CampaignBriefInput)[] = [
   "objective",
   "audience",
-  "proposition",
   "mandatories",
-  "successMeasure",
 ];
 
 export function briefCompleteness(brief: Partial<CampaignBriefInput> | null | undefined) {
