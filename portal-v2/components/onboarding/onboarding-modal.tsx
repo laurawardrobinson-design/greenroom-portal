@@ -23,18 +23,18 @@ import {
 // Publix product catalog — image icon + display name
 // -------------------------------------------------------
 export const PUBLIX_PRODUCTS: { name: string; icon: string }[] = [
-  { name: "Pub Sub", icon: "/icons/products/pub-sub.svg" },
-  { name: "Fried Chicken", icon: "/icons/products/fried-chicken.svg" },
-  { name: "Chantilly Cake", icon: "/icons/products/chantilly-cake.svg" },
-  { name: "Tea", icon: "/icons/products/sweet-tea.svg" },
-  { name: "Key Lime Pie", icon: "/icons/products/key-lime-pie.svg" },
-  { name: "Deli Potato Wedges", icon: "/icons/products/potato-wedges.svg" },
-  { name: "Publix Ice Cream", icon: "/icons/products/ice-cream.svg" },
-  { name: "Sushi", icon: "/icons/products/sushi.svg" },
-  { name: "Cookies", icon: "/icons/products/sprinkle-cookie.svg" },
-  { name: "Fresh Flowers", icon: "/icons/products/fresh-flowers.svg" },
-  { name: "Premium Meat", icon: "/icons/products/premium-meat.svg" },
-  { name: "Grab & Go Salad", icon: "/icons/products/salad.svg" },
+  { name: "Pub Sub", icon: "/icons/products/pub-sub.png" },
+  { name: "Fried Chicken", icon: "/icons/products/fried-chicken.png" },
+  { name: "Chantilly Cake", icon: "/icons/products/chantilly-cake.png" },
+  { name: "Tea", icon: "/icons/products/sweet-tea.png" },
+  { name: "Key Lime Pie", icon: "/icons/products/key-lime-pie.png" },
+  { name: "Deli Potato Wedges", icon: "/icons/products/potato-wedges.png" },
+  { name: "Publix Ice Cream", icon: "/icons/products/ice-cream.png" },
+  { name: "Sushi", icon: "/icons/products/sushi.png" },
+  { name: "Cookies", icon: "/icons/products/sprinkle-cookie.png" },
+  { name: "Fresh Flowers", icon: "/icons/products/fresh-flowers.png" },
+  { name: "Premium Meat", icon: "/icons/products/premium-meat.png" },
+  { name: "Grab & Go Salad", icon: "/icons/products/salad.png" },
 ];
 
 export function getProductIcon(productName: string): string | null {
