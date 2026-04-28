@@ -221,12 +221,10 @@ export default function WardrobePage() {
         <PageHeader
           title="Wardrobe"
           actions={
-            tab === "backstock" ? (
-              <Button variant="secondary" onClick={() => { setShowScanner(true); setScannerActive(true); }}>
-                <ScanLine className="h-4 w-4" />
-                Scan Units
-              </Button>
-            ) : undefined
+            <Button variant="secondary" onClick={() => { setShowScanner(true); setScannerActive(true); }}>
+              <ScanLine className="h-4 w-4" />
+              Scan Units
+            </Button>
           }
         />
 
@@ -239,6 +237,36 @@ export default function WardrobePage() {
           ]}
           activeTab={tab}
           onTabChange={(key) => setTab(key as Tab)}
+          rightSlot={
+            tab === "items" ? (
+              <>
+                <div className="relative w-56">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+                  <input
+                    type="text"
+                    placeholder="Search wardrobe..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
+                  />
+                </div>
+                {canEdit && (
+                  <button
+                    onClick={() => setItemModal(NEW_ITEM)}
+                    className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                )}
+                <button onClick={() => setViewMode("grid")} className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}>
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                <button onClick={() => setViewMode("list")} className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}>
+                  <List className="h-4 w-4" />
+                </button>
+              </>
+            ) : undefined
+          }
         />
       </div>
 
@@ -251,34 +279,6 @@ export default function WardrobePage() {
       {tab === "items" && (
         <>
           <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="relative min-w-[180px] max-w-xs flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-                <input
-                  type="text"
-                  placeholder="Search wardrobe..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
-                />
-              </div>
-              <div className="ml-auto flex items-center gap-1">
-                {canEdit && (
-                  <button
-                    onClick={() => setItemModal(NEW_ITEM)}
-                    className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                )}
-                <button onClick={() => setViewMode("grid")} className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}>
-                  <LayoutGrid className="h-4 w-4" />
-                </button>
-                <button onClick={() => setViewMode("list")} className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}>
-                  <List className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
             <div className="border-b border-border"><nav className="ui-tabs">
               <button type="button" onClick={() => setCategoryFilter("")} data-state={categoryFilter === "" ? "active" : "inactive"} className="ui-tab">All{categoryFilter === "" && <span className="ui-tab-underline" />}</button>
               {WARDROBE_CATEGORIES.map((cat) => (
@@ -577,9 +577,19 @@ function WardrobeItemModal({ item, onClose, onSaved, onDeleted, canEdit }: {
             </a>
           )}
           {canEdit && (
-            <div className="flex gap-2 pt-2 border-t border-border">
-              <Button variant="secondary" onClick={() => setEditing(true)} className="flex-1"><Edit2 className="h-3.5 w-3.5" />Edit</Button>
-              <Button variant="danger" onClick={handleDelete} loading={deleting}><Trash2 className="h-3.5 w-3.5" />Delete</Button>
+            <div className="flex items-center gap-2 pt-2 border-t border-border">
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                title="Delete item"
+                className="rounded-md p-1.5 text-text-tertiary hover:text-error hover:bg-red-50 transition-colors disabled:opacity-40"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+              <div className="ml-auto">
+                <Button variant="secondary" onClick={() => setEditing(true)}><Edit2 className="h-3.5 w-3.5" />Edit</Button>
+              </div>
             </div>
           )}
         </div>

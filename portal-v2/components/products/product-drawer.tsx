@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import type { Product, ProductDepartment, ProductLifecyclePhase } from "@/types/domain";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { PRODUCT_DEPARTMENTS } from "@/lib/constants/products";
@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { RaiseFlagDialog } from "@/components/products/raise-flag-dialog";
+import { InlineFlagSection } from "@/components/products/inline-flag-section";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -106,11 +106,12 @@ export function ProductDrawer({
 }) {
   const { toast } = useToast();
   const { user } = useCurrentUser();
+  const { mutate: globalMutate } = useSWRConfig();
   const isNew = product === null;
   const [editMode, setEditMode] = useState(isNew);
   const [current, setCurrent] = useState<Product | null>(product);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const [showRaiseFlag, setShowRaiseFlag] = useState(false);
+  const [flagPanelOpen, setFlagPanelOpen] = useState(false);
 
   const canRaiseFlag =
     !!current &&
@@ -224,6 +225,11 @@ export function ProductDrawer({
     current ? `/api/products/${current.id}?history=true` : null,
     fetcher
   );
+  const { data: flagCounts } = useSWR<Record<string, number>>(
+    current ? "/api/product-flags/counts" : null,
+    fetcher
+  );
+  const productFlagCount = current ? (flagCounts?.[current.id] ?? 0) : 0;
   const campaigns = historyData?.campaigns || [];
   const upcomingShoots: { campaignId: string; campaignName: string; wfNumber: string; role: "hero" | "secondary" | null; date: string; shootName: string }[] = historyData?.upcoming || [];
   const planningCampaigns: { campaignId: string; campaignName: string; wfNumber: string; role: "hero" | "secondary" | null }[] = historyData?.planning || [];
@@ -632,9 +638,7 @@ export function ProductDrawer({
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-sm text-text-tertiary italic mb-2">No notes yet</p>
-            )}
+            ) : null}
             <div className="flex gap-2">
               <input type="text" value={newNote} onChange={(e) => setNewNote(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddNote(); } }}
@@ -765,38 +769,63 @@ export function ProductDrawer({
             </div>
           )}
 
+          {flagPanelOpen && current && canRaiseFlag && (
+            <InlineFlagSection
+              productId={current.id}
+              productDept={current.department}
+              onChanged={() => {
+                globalMutate("/api/product-flags/counts");
+              }}
+            />
+          )}
+
           {/* Actions */}
           {(canEdit || canRaiseFlag) && (
-            <div className="flex gap-2 pt-1 border-t border-border">
+            <div className="flex items-center gap-2 pt-1 border-t border-border">
               {editMode ? (
-                <>
-                  <Button type="button" variant="ghost" onClick={handleCancelEdit} className="flex-1">Cancel</Button>
-                  <Button type="submit" loading={saving} className="flex-1">Save Changes</Button>
-                </>
+                <div className="ml-auto flex gap-2">
+                  <Button type="button" size="sm" variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
+                  <Button type="submit" size="sm" loading={saving}>Save Changes</Button>
+                </div>
               ) : (
                 <>
                   {canEdit && (
-                    <Button type="button" variant="secondary" onClick={() => setEditMode(true)} className="flex-1">
-                      <Edit2 className="h-3.5 w-3.5" />Edit
-                    </Button>
-                  )}
-                  {canRaiseFlag && (
-                    <Button
+                    <button
                       type="button"
-                      variant="secondary"
-                      onClick={() => setShowRaiseFlag(true)}
-                      className={canEdit ? "" : "flex-1"}
-                      title="Flag for BMM + RBU review"
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      title="Delete product"
+                      className="rounded-md p-1.5 text-text-tertiary hover:text-error hover:bg-red-50 transition-colors disabled:opacity-40"
                     >
-                      <Flag className="h-3.5 w-3.5" />
-                      Flag
-                    </Button>
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   )}
-                  {canEdit && (
-                    <Button type="button" variant="danger" onClick={handleDelete} loading={deleting}>
-                      <Trash2 className="h-3.5 w-3.5" />Delete
-                    </Button>
-                  )}
+                  <div className="ml-auto flex gap-2">
+                    {canEdit && (
+                      <Button type="button" size="sm" variant="secondary" onClick={() => setEditMode(true)}>
+                        <Edit2 className="h-3.5 w-3.5" />Edit
+                      </Button>
+                    )}
+                    {canRaiseFlag && !flagPanelOpen && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          const next = !flagPanelOpen;
+                          setFlagPanelOpen(next);
+                          if (next && productFlagCount > 0 && canEdit) {
+                            setEditMode(true);
+                          }
+                        }}
+                        className={productFlagCount > 0 ? "border-amber-300 bg-amber-50 text-warning hover:bg-amber-100" : ""}
+                        title={productFlagCount > 0 ? "Review open flags" : "Flag for BMM + RBU review"}
+                      >
+                        <Flag className="h-3.5 w-3.5" />
+                        {productFlagCount > 0 ? "Flagged" : "Flag"}
+                      </Button>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -804,16 +833,6 @@ export function ProductDrawer({
         </form>
       ) : null}
 
-      {/* Raise flag dialog */}
-      {showRaiseFlag && current && (
-        <RaiseFlagDialog
-          productId={current.id}
-          productName={current.name}
-          productDept={current.department}
-          onClose={() => setShowRaiseFlag(false)}
-          onCreated={() => { /* toast handled inside dialog */ }}
-        />
-      )}
 
       {/* Lightbox */}
       {lightboxUrl && (

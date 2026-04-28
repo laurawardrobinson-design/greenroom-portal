@@ -38,6 +38,7 @@ export interface ProductFlagComment {
   authorLabel: string;
   body: string;
   createdAt: string;
+  editedAt: string | null;
 }
 
 function toFlag(row: Record<string, unknown>): ProductFlag {
@@ -82,7 +83,30 @@ function toComment(row: Record<string, unknown>): ProductFlagComment {
     authorLabel: (row.author_label as string) || "",
     body: row.body as string,
     createdAt: row.created_at as string,
+    editedAt: (row.edited_at as string) || null,
   };
+}
+
+export async function updateProductFlagComment(input: {
+  commentId: string;
+  authorUserId: string;
+  body: string;
+}): Promise<ProductFlagComment> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("product_flag_comments")
+    .update({
+      body: input.body,
+      edited_at: new Date().toISOString(),
+    })
+    .eq("id", input.commentId)
+    .eq("author_user_id", input.authorUserId)
+    .select(
+      "*, author_user:users!product_flag_comments_author_user_id_fkey(name)"
+    )
+    .single();
+  if (error) throw error;
+  return toComment(data as Record<string, unknown>);
 }
 
 export async function createProductFlag(input: {
@@ -115,6 +139,7 @@ export async function createProductFlag(input: {
 export async function listProductFlags(opts?: {
   status?: ProductFlagStatus;
   dept?: PRDepartment;
+  productId?: string;
 }): Promise<ProductFlag[]> {
   const db = createAdminClient();
   let q = db
@@ -125,6 +150,7 @@ export async function listProductFlags(opts?: {
     .order("created_at", { ascending: false });
   if (opts?.status) q = q.eq("status", opts.status);
   if (opts?.dept) q = q.eq("flagged_by_dept", opts.dept);
+  if (opts?.productId) q = q.eq("product_id", opts.productId);
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []).map((r) => toFlag(r as Record<string, unknown>));

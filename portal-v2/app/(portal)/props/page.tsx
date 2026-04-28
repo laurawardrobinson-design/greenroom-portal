@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { useSearchParams } from "next/navigation";
 import type { GearItem, GearStatus, GearCondition } from "@/types/domain";
-import { PROPS_CATEGORIES } from "@/lib/constants/categories";
+import { PROPS_CATEGORIES, type PropsCategory } from "@/lib/constants/categories";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +32,34 @@ import {
   QrCode,
   Package,
   StopCircle,
+  Frame,
+  UtensilsCrossed,
+  Shirt,
+  CookingPot,
+  Sparkles,
+  Armchair,
+  type LucideIcon,
 } from "lucide-react";
+
+const PROPS_CATEGORY_ICONS: Record<PropsCategory, LucideIcon> = {
+  "Surfaces & Backgrounds": Frame,
+  Tableware: UtensilsCrossed,
+  "Linens & Textiles": Shirt,
+  "Cookware & Small Wares": CookingPot,
+  "Decorative Items": Sparkles,
+  Furniture: Armchair,
+  Other: Package,
+};
+
+const PROPS_CATEGORY_LABELS: Record<PropsCategory, string> = {
+  "Surfaces & Backgrounds": "Surfaces",
+  Tableware: "Tableware",
+  "Linens & Textiles": "Linens",
+  "Cookware & Small Wares": "Cookware",
+  "Decorative Items": "Decor",
+  Furniture: "Furniture",
+  Other: "Other",
+};
 import { PageTabs } from "@/components/ui/page-tabs";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -225,29 +252,23 @@ export default function PropsPage() {
           ]}
           activeTab={tab}
           onTabChange={(key) => setTab(key as Tab)}
-        />
-      </div>
-
-      {tab === "items" && (
-        <>
-          {/* Search + filter bar */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="relative min-w-[180px] max-w-xs flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-                <input
-                  type="text"
-                  placeholder="Search props..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
-                />
-              </div>
-              <div className="ml-auto flex items-center gap-1">
+          rightSlot={
+            tab === "items" ? (
+              <>
+                <div className="relative w-56">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+                  <input
+                    type="text"
+                    placeholder="Search props..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
+                  />
+                </div>
                 {canEdit && (
                   <button
                     onClick={() => setShowAdd(true)}
-                    className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+                    className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
                     title="Add prop"
                   >
                     <Plus className="h-4 w-4" />
@@ -255,40 +276,49 @@ export default function PropsPage() {
                 )}
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
+                  className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
                   title="Grid view"
                 >
                   <LayoutGrid className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
+                  className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
                   title="List view"
                 >
                   <List className="h-4 w-4" />
                 </button>
-              </div>
-            </div>
-            <div className="flex gap-1.5 flex-wrap">
-              <button
-                onClick={() => setCategoryFilter("")}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                  !categoryFilter ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
-                }`}
-              >
-                All
-              </button>
-              {PROPS_CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategoryFilter(categoryFilter === cat ? "" : cat)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                    categoryFilter === cat ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+              </>
+            ) : undefined
+          }
+        />
+      </div>
+
+      {tab === "items" && (
+        <>
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
+              {PROPS_CATEGORIES.map((cat) => {
+                const Icon = PROPS_CATEGORY_ICONS[cat];
+                const active = categoryFilter === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategoryFilter(active ? "" : cat)}
+                    title={cat}
+                    aria-label={cat}
+                    className={`shrink-0 h-28 w-28 flex flex-col items-center justify-center gap-2 rounded-2xl border transition-colors ${
+                      active
+                        ? "border-primary text-primary bg-primary/5"
+                        : "border-border text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
+                    }`}
+                  >
+                    <Icon className="h-7 w-7 text-primary" />
+                    <span className="text-sm font-medium leading-none">{PROPS_CATEGORY_LABELS[cat]}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

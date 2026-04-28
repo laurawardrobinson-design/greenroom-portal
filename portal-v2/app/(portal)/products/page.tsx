@@ -20,8 +20,32 @@ import {
   ShoppingBasket,
   LayoutGrid,
   List,
+  Cookie,
+  Sandwich,
+  Apple,
+  Beef,
+  Package,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+
+const DEPT_ICONS: Record<(typeof PRODUCT_DEPARTMENTS)[number], LucideIcon> = {
+  Deli: Sandwich,
+  Bakery: Cookie,
+  "Meat-Seafood": Beef,
+  Produce: Apple,
+  Grocery: ShoppingBasket,
+  Other: Package,
+};
+
+const DEPT_LABELS: Record<(typeof PRODUCT_DEPARTMENTS)[number], string> = {
+  Deli: "Deli",
+  Bakery: "Bakery",
+  "Meat-Seafood": "Meat",
+  Produce: "Produce",
+  Grocery: "Grocery",
+  Other: "Other",
+};
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -36,6 +60,7 @@ export default function ProductDirectoryPage() {
   const { user } = useCurrentUser();
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState<ProductDepartment | "">("");
+  const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [drawerProduct, setDrawerProduct] = useState<Product | typeof NEW_PRODUCT | null>(null);
 
@@ -48,7 +73,7 @@ export default function ProductDirectoryPage() {
     `/api/products${qs ? `?${qs}` : ""}`,
     fetcher
   );
-  const products: Product[] = Array.isArray(rawProducts) ? rawProducts : [];
+  const allProducts: Product[] = Array.isArray(rawProducts) ? rawProducts : [];
 
   const { data: flagCounts } = useSWR<Record<string, number>>(
     "/api/product-flags/counts",
@@ -58,6 +83,9 @@ export default function ProductDirectoryPage() {
   const openFlagTotal = flagCounts
     ? Object.values(flagCounts).reduce((a, b) => a + b, 0)
     : 0;
+  const products = flaggedOnly
+    ? allProducts.filter((p) => (flagCounts?.[p.id] ?? 0) > 0)
+    : allProducts;
 
   // BMM can create + edit products so they can spin up "coming-soon" /
   // "planning" entries for things the team wants to shoot — and attach
@@ -133,30 +161,50 @@ export default function ProductDirectoryPage() {
                 </button>
               </div>
             </div>
-            <div className="flex gap-1.5 flex-wrap">
-              <button
-                onClick={() => setDeptFilter("")}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                  deptFilter === ""
-                    ? "border border-primary text-primary bg-primary/5"
-                    : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
-                }`}
-              >
-                All
-              </button>
-              {PRODUCT_DEPARTMENTS.map((dept) => (
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
+              {PRODUCT_DEPARTMENTS.map((dept) => {
+                const Icon = DEPT_ICONS[dept];
+                const active = deptFilter === dept;
+                return (
+                  <button
+                    key={dept}
+                    type="button"
+                    onClick={() => setDeptFilter(active ? "" : dept)}
+                    title={dept}
+                    aria-label={dept}
+                    className={`shrink-0 h-28 w-28 flex flex-col items-center justify-center gap-2 rounded-2xl border transition-colors ${
+                      active
+                        ? "border-primary text-primary bg-primary/5"
+                        : "border-border text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
+                    }`}
+                  >
+                    <Icon className="h-7 w-7 text-primary" />
+                    <span className="text-sm font-medium leading-none">{DEPT_LABELS[dept]}</span>
+                  </button>
+                );
+              })}
+              {canSeeFlags && (
                 <button
-                  key={dept}
-                  onClick={() => setDeptFilter(deptFilter === dept ? "" : dept)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                    deptFilter === dept
-                      ? "border border-primary text-primary bg-primary/5"
-                      : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
+                  type="button"
+                  onClick={() => setFlaggedOnly((v) => !v)}
+                  title="Flagged"
+                  aria-label="Flagged"
+                  aria-pressed={flaggedOnly}
+                  className={`relative shrink-0 h-28 w-28 flex flex-col items-center justify-center gap-2 rounded-2xl border transition-colors ${
+                    flaggedOnly
+                      ? "border-primary text-primary bg-primary/5"
+                      : "border-border text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
                   }`}
                 >
-                  {dept}
+                  {openFlagTotal > 0 && (
+                    <span className="absolute top-2 right-2 inline-flex items-center justify-center rounded-full bg-warning text-white text-[10px] font-semibold min-w-[18px] h-[18px] px-1">
+                      {openFlagTotal}
+                    </span>
+                  )}
+                  <Flag className="h-7 w-7 text-primary" />
+                  <span className="text-sm font-medium leading-none">Flagged</span>
                 </button>
-              ))}
+              )}
             </div>
           </div>
 
@@ -194,12 +242,12 @@ export default function ProductDirectoryPage() {
                   key={product.id}
                   onClick={() => setDrawerProduct(product)}
                   className={`relative flex h-full flex-col rounded-xl border bg-surface p-4 text-left transition-colors ${
-                    flagCount > 0
+                    flagCount > 0 && !flaggedOnly
                       ? "border-amber-300 hover:bg-amber-50/40"
                       : "border-border hover:bg-surface-secondary"
                   }`}
                 >
-                  {flagCount > 0 && (
+                  {flagCount > 0 && !flaggedOnly && (
                     <span
                       className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-amber-50 text-warning border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium"
                       title={`${flagCount} open flag${flagCount === 1 ? "" : "s"}`}

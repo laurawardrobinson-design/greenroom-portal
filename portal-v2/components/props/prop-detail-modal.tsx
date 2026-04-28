@@ -312,11 +312,15 @@ export function PropDetailModal({
           ) : (
             canEdit && (
               <div className="flex items-center justify-between w-full">
-                <Button type="button" variant="ghost" size="sm" onClick={handleDelete} loading={deleting}
-                  className="text-red-500 hover:text-error hover:bg-red-50">
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete
-                </Button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  title="Delete item"
+                  className="rounded-md p-1.5 text-text-tertiary hover:text-error hover:bg-red-50 transition-colors disabled:opacity-40"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
                 {onSaved && (
                   <Button type="button" size="sm" onClick={() => setEditMode(true)}>
                     <Pencil className="h-3.5 w-3.5" />

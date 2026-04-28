@@ -55,7 +55,36 @@ import {
   Layers,
   Star,
   ChevronDown,
+  Camera,
+  Aperture,
+  Lightbulb,
+  Mic,
+  Triangle,
+  Cable,
+  type LucideIcon,
 } from "lucide-react";
+
+const GEAR_CATEGORY_ICONS: Record<GearCategory, LucideIcon> = {
+  Camera: Camera,
+  Lens: Aperture,
+  Lighting: Lightbulb,
+  Audio: Mic,
+  "Tripod / Support": Triangle,
+  Grip: Wrench,
+  Accessories: Cable,
+  Other: Package,
+};
+
+const GEAR_CATEGORY_LABELS: Record<GearCategory, string> = {
+  Camera: "Camera",
+  Lens: "Lens",
+  Lighting: "Lighting",
+  Audio: "Audio",
+  "Tripod / Support": "Tripod",
+  Grip: "Grip",
+  Accessories: "Accessories",
+  Other: "Other",
+};
 import { PageTabs } from "@/components/ui/page-tabs";
 import {
   format,
@@ -434,31 +463,24 @@ export default function InventoryPage() {
           ]}
           activeTab={tab}
           onTabChange={(key) => setTab(key as Tab)}
-        />
-      </div>
-
-      {/* Items tab */}
-      {tab === "items" && (
-        <>
-          {/* Search + filter bar */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="relative min-w-[180px] max-w-xs flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-                <input
-                  type="text"
-                  placeholder="Search gear..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
-                />
-              </div>
-              <div className="ml-auto flex items-center gap-1">
+          rightSlot={
+            tab === "items" ? (
+              <>
+                <div className="relative w-56">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+                  <input
+                    type="text"
+                    placeholder="Search gear..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="h-7 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
+                  />
+                </div>
                 {canEdit && (
                   <div className="relative">
                     <button
                       onClick={() => setShowAddMenu((v) => !v)}
-                      className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+                      className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
                       title="Add gear item"
                     >
                       <Plus className="h-4 w-4" />
@@ -488,14 +510,14 @@ export default function InventoryPage() {
                 )}
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
+                  className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
                   title="Grid view"
                 >
                   <LayoutGrid className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
+                  className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
                   title="List view"
                 >
                   <List className="h-4 w-4" />
@@ -505,33 +527,43 @@ export default function InventoryPage() {
                     const allIds = items.map((i) => i.id).join(",");
                     window.open(`/gear/print?ids=${allIds}`, "_blank");
                   }}
-                  className="flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-text-tertiary hover:text-text-secondary transition-colors"
+                  className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-text-tertiary hover:text-text-secondary transition-colors"
                   title="Print labels"
                 >
                   <Printer className="h-3.5 w-3.5" />
                 </button>
-              </div>
-            </div>
-            <div className="flex gap-1.5 flex-wrap">
-              <button
-                onClick={() => setCategoryFilter("")}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                  !categoryFilter ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
-                }`}
-              >
-                All
-              </button>
-              {GEAR_CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategoryFilter(categoryFilter === cat ? "" : cat)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                    categoryFilter === cat ? "border border-primary text-primary bg-primary/5" : "border border-transparent bg-surface-secondary text-text-secondary hover:bg-surface-tertiary"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+              </>
+            ) : undefined
+          }
+        />
+      </div>
+
+      {/* Items tab */}
+      {tab === "items" && (
+        <>
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
+              {GEAR_CATEGORIES.map((cat) => {
+                const Icon = GEAR_CATEGORY_ICONS[cat];
+                const active = categoryFilter === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategoryFilter(active ? "" : cat)}
+                    title={cat}
+                    aria-label={cat}
+                    className={`shrink-0 h-28 w-28 flex flex-col items-center justify-center gap-2 rounded-2xl border transition-colors ${
+                      active
+                        ? "border-primary text-primary bg-primary/5"
+                        : "border-border text-text-secondary hover:text-text-primary hover:bg-surface-secondary"
+                    }`}
+                  >
+                    <Icon className="h-7 w-7 text-primary" />
+                    <span className="text-sm font-medium leading-none">{GEAR_CATEGORY_LABELS[cat]}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

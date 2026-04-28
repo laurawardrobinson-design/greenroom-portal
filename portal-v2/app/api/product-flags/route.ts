@@ -18,9 +18,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") || undefined;
     const dept = searchParams.get("dept") || undefined;
+    const productId = searchParams.get("productId") || undefined;
     const flags = await listProductFlags({
       status: status ? (status as ProductFlagStatus) : undefined,
       dept: dept ? (dept as PRDepartment) : undefined,
+      productId,
     });
     return NextResponse.json(flags);
   } catch (error) {

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ElementType } from "react";
+import type { ElementType, ReactNode } from "react";
 
 export interface PageTab {
   key: string;
@@ -14,12 +14,13 @@ interface PageTabsProps {
   activeTab: string;
   onTabChange: (key: string) => void;
   ariaLabel?: string;
+  rightSlot?: ReactNode;
 }
 
-export function PageTabs({ tabs, activeTab, onTabChange, ariaLabel = "Sections" }: PageTabsProps) {
+export function PageTabs({ tabs, activeTab, onTabChange, ariaLabel = "Sections", rightSlot }: PageTabsProps) {
   return (
-    <div className="border-b border-border">
-      <nav className="ui-tabs" role="tablist" aria-label={ariaLabel}>
+    <div className="border-b border-border flex items-center">
+      <nav className="ui-tabs flex-1 scrollbar-hide" role="tablist" aria-label={ariaLabel}>
         {tabs.map(({ key, label, icon: Icon, count }) => {
           const active = activeTab === key;
           const hasCount = count !== undefined;
@@ -46,6 +47,7 @@ export function PageTabs({ tabs, activeTab, onTabChange, ariaLabel = "Sections" 
           );
         })}
       </nav>
+      {rightSlot && <div className="flex items-center gap-1 pr-1">{rightSlot}</div>}
     </div>
   );
 }
