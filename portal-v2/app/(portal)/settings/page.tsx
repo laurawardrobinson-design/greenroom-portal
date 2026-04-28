@@ -80,7 +80,7 @@ function ProductRowItem({ productName }: { productName: string }) {
   const iconSrc = getProductIcon(productName);
   return (
     <div className="flex items-center gap-1.5 text-sm text-text-secondary">
-      {iconSrc && <img src={iconSrc} alt={productName} className="h-4 w-4 shrink-0" />}
+      {iconSrc && <img src={iconSrc} alt={productName} className="h-4 w-4 shrink-0 object-contain" />}
       <span>{productName}</span>
     </div>
   );
@@ -259,7 +259,7 @@ function PreferencesForm({
                   : "border-border hover:border-primary/40 hover:bg-surface-secondary"
               }`}
             >
-              <img src={product.icon} alt={product.name} className="h-6 w-6" />
+              <img src={product.icon} alt={product.name} className="h-6 w-6 object-contain" />
               <span className="text-[10px] font-medium text-text-secondary leading-tight">
                 {product.name}
               </span>

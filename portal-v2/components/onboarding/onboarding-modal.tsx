@@ -360,7 +360,7 @@ export function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
                       : "border-border hover:border-primary/40 hover:bg-surface-secondary"
                   }`}
                 >
-                  <img src={product.icon} alt={product.name} className="h-7 w-7" />
+                  <img src={product.icon} alt={product.name} className="h-7 w-7 object-contain" />
                   <span className="text-[10px] font-medium text-text-secondary leading-tight">
                     {product.name}
                   </span>
