@@ -445,7 +445,7 @@ export default function ProductRequestsPage() {
               {isBMM ? (
                 <>
                   <FilterTab active={filter === "submitted"} onClick={() => setFilter("submitted")} label="Submitted" count={counts.submitted} />
-                  <FilterTab active={filter === "forwarded"} onClick={() => setFilter("forwarded")} label="Sent for RBU Confirmation" count={counts.forwarded} />
+                  <FilterTab active={filter === "forwarded"} onClick={() => setFilter("forwarded")} label="Sent to RBU" count={counts.forwarded} />
                   <FilterTab active={filter === "confirmed"} onClick={() => setFilter("confirmed")} label="Confirmed" count={counts.confirmed} />
                 </>
               ) : (
