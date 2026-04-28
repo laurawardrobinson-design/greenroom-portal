@@ -2,9 +2,42 @@ import { NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 
+const SITE_GATE_COOKIE = "site_unlocked";
+
+async function expectedGateDigest(password: string): Promise<string> {
+  const buf = new TextEncoder().encode(password);
+  const hash = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export async function proxy(request: NextRequest) {
-  const { user, response } = await updateSession(request);
   const pathname = request.nextUrl.pathname;
+
+  // Site-wide gate. Runs before anything else so bots can't even hit the
+  // login page, rate limiter, or Supabase. Cookie value is sha256(password)
+  // so rotating SITE_PASSWORD invalidates every issued cookie.
+  const gatePassword = process.env.SITE_PASSWORD;
+  const gateDisabled = process.env.SITE_GATE_DISABLED === "true";
+  if (gatePassword && !gateDisabled) {
+    const isUnlockPath =
+      pathname === "/unlock" || pathname === "/api/site-gate";
+    if (!isUnlockPath) {
+      const cookie = request.cookies.get(SITE_GATE_COOKIE)?.value;
+      const expected = await expectedGateDigest(gatePassword);
+      if (cookie !== expected) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/unlock";
+        const next = pathname + request.nextUrl.search;
+        url.search =
+          next && next !== "/" ? `?next=${encodeURIComponent(next)}` : "";
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
+  const { user, response } = await updateSession(request);
 
   // Rate-limit API routes before any further processing
   if (pathname.startsWith("/api")) {
@@ -13,7 +46,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Public routes that don't require authentication
-  const publicRoutes = ["/login", "/", "/laurai", "/rbu"];
+  const publicRoutes = ["/login", "/", "/laurai", "/rbu", "/unlock"];
   const publicPrefixes = ["/pr/"]; // tokenized PR views + dept calendars
   const isPublicRoute =
     publicRoutes.includes(pathname) ||
