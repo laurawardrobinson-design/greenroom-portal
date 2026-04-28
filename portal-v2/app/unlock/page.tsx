@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function UnlockPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/";
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +23,7 @@ export default function UnlockPage() {
         setError("Incorrect password.");
         return;
       }
-      router.replace(next);
+      router.replace("/login");
       router.refresh();
     } catch {
       setError("Something went wrong. Try again.");

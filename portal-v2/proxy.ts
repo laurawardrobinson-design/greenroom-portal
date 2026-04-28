@@ -62,7 +62,9 @@ export async function proxy(request: NextRequest) {
   // (e.g. to pick an RBU department).
   const referer = request.headers.get("referer") || "";
   const cameFromPublic =
-    referer.includes("/rbu") || referer.includes("/pr/");
+    referer.includes("/rbu") ||
+    referer.includes("/pr/") ||
+    referer.includes("/unlock");
   if (pathname === "/login" && user && !cameFromPublic) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
