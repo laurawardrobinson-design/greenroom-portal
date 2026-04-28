@@ -29,6 +29,7 @@ function toProduct(row: Record<string, unknown>): Product {
     shootingNotes: (row.shooting_notes as string) || "",
     restrictions: (row.restrictions as string) || "",
     pcomLink: (row.pcom_link as string) || null,
+    pcomLinkBrokenAt: (row.pcom_link_broken_at as string) || null,
     rpGuideUrl: (row.rp_guide_url as string) || null,
     imageUrl: (row.image_url as string) || null,
     lifecyclePhase:

@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { mirrorProductImage, shouldMirror } from "@/lib/products/mirror-image";
 import type {
   Product,
   ProductDepartment,
@@ -9,6 +10,24 @@ import type {
   GearItem,
 } from "@/types/domain";
 import type { CreateProductInput, UpdateProductInput } from "@/lib/validation/products.schema";
+
+async function resolveImageForSave(
+  imageUrl: string | null | undefined,
+  pathKey: string
+): Promise<{ image_url: string | null; source_image_url: string | null } | null> {
+  if (imageUrl === undefined) return null;
+  if (!imageUrl) return { image_url: null, source_image_url: null };
+  if (!shouldMirror(imageUrl)) return { image_url: imageUrl, source_image_url: null };
+  try {
+    const m = await mirrorProductImage(imageUrl, pathKey);
+    return { image_url: m.imageUrl, source_image_url: m.sourceImageUrl };
+  } catch {
+    // Mirror failed (timeout, 404, etc.) — fall back to the external URL
+    // rather than blocking the save. source_image_url retains the original
+    // so a later backfill can retry.
+    return { image_url: imageUrl, source_image_url: imageUrl };
+  }
+}
 
 // --- Mapping helpers ---
 
@@ -22,6 +41,7 @@ function toProduct(row: Record<string, unknown>): Product {
     shootingNotes: row.shooting_notes as string,
     restrictions: row.restrictions as string,
     pcomLink: (row.pcom_link as string) || null,
+    pcomLinkBrokenAt: (row.pcom_link_broken_at as string) || null,
     rpGuideUrl: (row.rp_guide_url as string) || null,
     imageUrl: (row.image_url as string) || null,
     lifecyclePhase:
@@ -116,6 +136,8 @@ export async function getProduct(id: string): Promise<Product | null> {
 
 export async function createProduct(input: CreateProductInput, userId: string): Promise<Product> {
   const db = createAdminClient();
+  const pathKey = input.itemCode || input.name;
+  const resolved = await resolveImageForSave(input.imageUrl, pathKey);
   const { data, error } = await db
     .from("products")
     .insert({
@@ -127,7 +149,8 @@ export async function createProduct(input: CreateProductInput, userId: string): 
       restrictions: input.restrictions,
       pcom_link: input.pcomLink,
       rp_guide_url: input.rpGuideUrl,
-      image_url: input.imageUrl,
+      image_url: resolved ? resolved.image_url : input.imageUrl,
+      source_image_url: resolved?.source_image_url ?? null,
       lifecycle_phase: input.lifecyclePhase ?? "live",
       created_by: userId,
     })
@@ -147,9 +170,31 @@ export async function updateProduct(id: string, input: UpdateProductInput): Prom
   if (input.description !== undefined) update.description = input.description;
   if (input.shootingNotes !== undefined) update.shooting_notes = input.shootingNotes;
   if (input.restrictions !== undefined) update.restrictions = input.restrictions;
-  if (input.pcomLink !== undefined) update.pcom_link = input.pcomLink;
+  if (input.pcomLink !== undefined) {
+    update.pcom_link = input.pcomLink;
+    update.pcom_link_broken_at = null;
+  }
   if (input.rpGuideUrl !== undefined) update.rp_guide_url = input.rpGuideUrl;
-  if (input.imageUrl !== undefined) update.image_url = input.imageUrl;
+  if (input.imageUrl !== undefined) {
+    const existing = await db
+      .from("products")
+      .select("name, item_code")
+      .eq("id", id)
+      .single();
+    const pathKey =
+      input.itemCode ||
+      (existing.data?.item_code as string | null) ||
+      input.name ||
+      (existing.data?.name as string | null) ||
+      id;
+    const resolved = await resolveImageForSave(input.imageUrl, pathKey);
+    if (resolved) {
+      update.image_url = resolved.image_url;
+      update.source_image_url = resolved.source_image_url;
+    } else {
+      update.image_url = input.imageUrl;
+    }
+  }
   if (input.lifecyclePhase !== undefined) update.lifecycle_phase = input.lifecyclePhase;
 
   const { data, error } = await db
@@ -167,6 +212,18 @@ export async function deleteProduct(id: string): Promise<void> {
   const db = createAdminClient();
   const { error } = await db.from("products").delete().eq("id", id);
   if (error) throw error;
+}
+
+export async function markPcomLinkBroken(id: string): Promise<Product> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("products")
+    .update({ pcom_link_broken_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return toProduct(data as Record<string, unknown>);
 }
 
 // --- Campaign Products (link products to campaigns) ---

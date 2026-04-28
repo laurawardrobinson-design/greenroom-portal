@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { X, ExternalLink, AlertTriangle } from "lucide-react";
 import type { Product } from "@/types/domain";
+import { resolvePublixLink } from "@/lib/products/publix-link";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error(); return r.json(); });
 
@@ -61,6 +62,12 @@ export function ProductDetailModal({ productId, open, onClose }: Props) {
   }, [newNote, productId, mutateNotes, toast]);
 
   if (!product) return null;
+
+  const publix = resolvePublixLink({
+    pcomLink: product.pcomLink,
+    itemCode: product.itemCode,
+    pcomLinkBrokenAt: product.pcomLinkBrokenAt,
+  });
 
   return (
     <Modal open={open} onClose={onClose} size="md">
@@ -156,15 +163,15 @@ export function ProductDetailModal({ productId, open, onClose }: Props) {
         )}
 
         {/* Links */}
-        {(product.pcomLink || product.rpGuideUrl) && (
+        {(publix || product.rpGuideUrl) && (
           <div className="flex gap-6">
-            {product.pcomLink && (
+            {publix && (
               <div>
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary mb-0.5">Pcom Link</h3>
-                <a href={product.pcomLink} target="_blank" rel="noreferrer"
+                <a href={publix.href} target="_blank" rel="noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
                   <ExternalLink className="h-3 w-3" />
-                  View on Publix.com
+                  {publix.label}
                 </a>
               </div>
             )}

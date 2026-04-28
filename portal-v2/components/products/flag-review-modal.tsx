@@ -25,6 +25,7 @@ import type {
 } from "@/lib/services/product-flags.service";
 import type { PRDepartment, Product } from "@/types/domain";
 import { DEPT_COLORS } from "@/components/products/product-drawer";
+import { ProductImage } from "@/components/products/product-image";
 import { UserAvatar } from "@/components/ui/user-avatar";
 
 const DEPT_ICONS: Record<PRDepartment, LucideIcon> = {
@@ -300,18 +301,13 @@ export function FlagReviewModal({
         </div>
 
         <div className="flex items-start gap-3">
-          {prodImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={prodImage}
-              alt={prodName}
-              className="h-16 w-16 rounded-lg object-cover shrink-0 bg-surface-tertiary"
-            />
-          ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-surface-tertiary shrink-0">
-              <ShoppingBasket className="h-5 w-5 text-text-tertiary" />
-            </div>
-          )}
+          <ProductImage
+            src={prodImage}
+            alt={prodName}
+            className="h-16 w-16 rounded-lg object-cover shrink-0 bg-surface-tertiary"
+            fallbackClassName="flex h-16 w-16 items-center justify-center rounded-lg bg-surface-tertiary shrink-0"
+            iconClassName="h-5 w-5 text-text-tertiary"
+          />
           <div className="flex-1 min-w-0">
             {editMode ? (
               <input

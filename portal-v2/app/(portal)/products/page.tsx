@@ -12,6 +12,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { useToast } from "@/components/ui/toast";
 import { PRODUCT_DEPARTMENTS } from "@/lib/constants/products";
 import { ProductDrawer, DEPT_COLORS } from "@/components/products/product-drawer";
+import { ProductImage } from "@/components/products/product-image";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   Flag,
@@ -257,17 +258,11 @@ export default function ProductDirectoryPage() {
                     </span>
                   )}
                   <div className="flex items-start gap-3">
-                    {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="h-14 w-14 rounded-lg object-cover shrink-0"
-                      />
-                    ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-surface-tertiary shrink-0">
-                        <ShoppingBasket className="h-6 w-6 text-text-tertiary" />
-                      </div>
-                    )}
+                    <ProductImage
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="h-14 w-14 rounded-lg object-cover shrink-0"
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-text-primary truncate">
                         {product.name}
@@ -304,7 +299,13 @@ export default function ProductDirectoryPage() {
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     {product.imageUrl ? (
-                      <img src={product.imageUrl} alt="" className="h-7 w-7 rounded object-cover shrink-0" />
+                      <ProductImage
+                        src={product.imageUrl}
+                        alt=""
+                        className="h-7 w-7 rounded object-cover shrink-0"
+                        fallbackClassName="h-7 w-7 rounded bg-surface-tertiary shrink-0"
+                        iconClassName="h-3 w-3 text-text-tertiary m-auto mt-2"
+                      />
                     ) : null}
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-text-primary truncate block">{product.name}</span>

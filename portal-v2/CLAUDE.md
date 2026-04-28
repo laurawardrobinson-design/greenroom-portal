@@ -1,5 +1,13 @@
 @AGENTS.md
 
+## No Invented Data
+
+Never invent, fabricate, or guess data values — item codes, image URLs, product IDs, prices, SKUs, RIO codes, or any other real-world identifiers.
+
+- If the correct value is derivable from existing data (e.g., item code is the trailing number in a `pcom_link` URL), derive it — do not guess.
+- If the correct value is not derivable, say so and ask. Do not substitute a plausible-sounding number.
+- No excuses when wrong. State what happened, what the correct value is, and fix it.
+
 ## Release Workflow
 
 For any shipping/release/deploy task, follow [`RELEASE_PLAYBOOK.md`](./RELEASE_PLAYBOOK.md).

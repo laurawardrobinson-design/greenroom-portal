@@ -12,6 +12,7 @@ export interface RBUProduct {
   imageUrl: string | null;
   rpGuideUrl: string | null;
   pcomLink: string | null;
+  pcomLinkBrokenAt: string | null;
   openFlagCount: number;
 }
 
@@ -51,7 +52,7 @@ export async function GET(
     const { data, error } = await db
       .from("products")
       .select(
-        "id, item_code, name, description, restrictions, image_url, rp_guide_url, pcom_link"
+        "id, item_code, name, description, restrictions, image_url, rp_guide_url, pcom_link, pcom_link_broken_at"
       )
       .eq("department", department)
       .order("name", { ascending: true });
@@ -73,6 +74,7 @@ export async function GET(
         imageUrl: (r.image_url as string) || null,
         rpGuideUrl: (r.rp_guide_url as string) || null,
         pcomLink: (r.pcom_link as string) || null,
+        pcomLinkBrokenAt: (r.pcom_link_broken_at as string) || null,
         openFlagCount: flagCounts.get(r.id as string) ?? 0,
       };
     });

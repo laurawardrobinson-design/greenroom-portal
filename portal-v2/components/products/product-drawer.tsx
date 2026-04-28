@@ -16,6 +16,7 @@ import {
   Trash2,
   ExternalLink,
   Link2,
+  Link2Off,
   Loader2,
   CheckCircle2,
   X,
@@ -23,6 +24,7 @@ import {
 import Link from "next/link";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { InlineFlagSection } from "@/components/products/inline-flag-section";
+import { resolvePublixLink } from "@/lib/products/publix-link";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -145,6 +147,7 @@ export function ProductDrawer({
   const [phase, setPhase] = useState<ProductLifecyclePhase>(
     product?.lifecyclePhase ?? "live"
   );
+  const [imageBroken, setImageBroken] = useState(false);
   const [showPhaseDropdown, setShowPhaseDropdown] = useState(false);
   const phaseDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -348,6 +351,22 @@ export function ProductDrawer({
       onSaved(saved);
     } catch {
       toast("error", "Failed to update phase");
+    }
+  }
+
+  async function reportBrokenLink() {
+    if (!current) return;
+    try {
+      const res = await fetch(`/api/products/${current.id}/report-broken-link`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed");
+      const saved: Product = await res.json();
+      setCurrent(saved);
+      onSaved(saved);
+      toast("success", "Link flagged. Showing search fallback.");
+    } catch {
+      toast("error", "Couldn't flag link");
     }
   }
 
@@ -555,7 +574,20 @@ export function ProductDrawer({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Pcom Link</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Pcom Link</p>
+                {name.trim() && (
+                  <a
+                    href={`https://www.publix.com/search?search=${encodeURIComponent(name.trim())}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] italic text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Find on Publix
+                  </a>
+                )}
+              </div>
               <input type="url" value={pcomLink} onChange={(e) => setPcomLink(e.target.value)} placeholder="Paste any product link..."
                 className="w-full bg-transparent text-sm text-primary placeholder:text-text-tertiary italic focus:outline-none" />
             </div>
@@ -589,11 +621,12 @@ export function ProductDrawer({
                 }}
                 onImageClick={(url) => setLightboxUrl(url)}
               />
-            ) : current.imageUrl ? (
+            ) : current.imageUrl && !imageBroken ? (
               <img
                 src={current.imageUrl}
                 alt={current.name}
                 onClick={() => setLightboxUrl(current.imageUrl)}
+                onError={() => setImageBroken(true)}
                 className="h-50 w-50 rounded-xl object-cover shrink-0 cursor-zoom-in"
               />
             ) : (
@@ -668,90 +701,123 @@ export function ProductDrawer({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1">Pcom Link</p>
-              <div className="flex items-center gap-1.5">
-                {!editMode && pcomLink && (
-                  <a href={pcomLink} target="_blank" rel="noopener noreferrer" className="shrink-0 text-primary">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                )}
+              {!editMode ? (
+                (() => {
+                  const resolved = resolvePublixLink({
+                    pcomLink: current?.pcomLink ?? pcomLink ?? null,
+                    itemCode: current?.itemCode ?? itemCode ?? null,
+                    pcomLinkBrokenAt: current?.pcomLinkBrokenAt,
+                  });
+                  if (!resolved) {
+                    return <span className="text-sm italic text-text-tertiary">No link</span>;
+                  }
+                  return (
+                    <div className="flex items-center gap-2">
+                      <a href={resolved.href} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm italic text-primary hover:underline">
+                        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                        {resolved.label}
+                      </a>
+                      {!resolved.isFallback && canEdit && (
+                        <button
+                          type="button"
+                          onClick={reportBrokenLink}
+                          title="Report this link as broken — we'll fall back to a Publix search"
+                          className="inline-flex items-center gap-1 text-[11px] italic text-text-tertiary hover:text-warning"
+                        >
+                          <Link2Off className="h-3 w-3" />
+                          Broken?
+                        </button>
+                      )}
+                      {resolved.isFallback && (
+                        <span className="text-[11px] italic text-text-tertiary">
+                          (link reported broken)
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()
+              ) : (
                 <input
                   type="url"
-                  value={editMode ? pcomLink : (pcomLink ? "View on Publix.com" : "")}
+                  value={pcomLink}
                   onChange={(e) => setPcomLink(e.target.value)}
-                  readOnly={!editMode}
-                  placeholder={editMode ? "Paste any product link..." : "No link"}
-                  className={`w-full bg-transparent text-sm placeholder:text-text-tertiary italic focus:outline-none ${!editMode ? "pointer-events-none text-primary" : "text-primary"} ${!editMode && !pcomLink ? "text-text-tertiary" : ""}`}
+                  placeholder="Paste any product link..."
+                  className="w-full bg-transparent text-sm text-primary placeholder:text-text-tertiary italic focus:outline-none"
                 />
-              </div>
+              )}
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1">R&P Guide</p>
-              <div className="flex items-center gap-1.5">
-                {!editMode && rpGuideUrl && (
-                  <a href={rpGuideUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-primary">
-                    <ExternalLink className="h-3.5 w-3.5" />
+              {!editMode ? (
+                rpGuideUrl ? (
+                  <a href={rpGuideUrl} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm italic text-primary hover:underline">
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                    View Guide
                   </a>
-                )}
+                ) : (
+                  <span className="text-sm italic text-text-tertiary">No document</span>
+                )
+              ) : (
                 <input
                   type="url"
-                  value={editMode ? rpGuideUrl : (rpGuideUrl ? "View Guide" : "")}
+                  value={rpGuideUrl}
                   onChange={(e) => setRpGuideUrl(e.target.value)}
-                  readOnly={!editMode}
-                  placeholder={editMode ? "https://..." : "No document"}
-                  className={`w-full bg-transparent text-sm placeholder:text-text-tertiary italic focus:outline-none ${!editMode ? "pointer-events-none text-primary" : "text-primary"} ${!editMode && !rpGuideUrl ? "text-text-tertiary" : ""}`}
+                  placeholder="https://..."
+                  className="w-full bg-transparent text-sm text-primary placeholder:text-text-tertiary italic focus:outline-none"
                 />
-              </div>
+              )}
             </div>
           </div>
 
-          {/* Upcoming Shoots — campaigns with a planned production date */}
-          {!editMode && upcomingShoots.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-2">Upcoming Shoots</p>
-              <div className="space-y-1.5">
-                {upcomingShoots.map((u) => {
-                  const d = new Date(u.date + "T00:00:00");
-                  const dateLabel = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-                  return (
+          {/* Upcoming — scheduled shoots (with date) + planning campaigns (no date yet) */}
+          {!editMode && (upcomingShoots.length > 0 || planningCampaigns.length > 0) && (() => {
+            const byCampaign = new Map<string, typeof upcomingShoots[number]>();
+            for (const u of upcomingShoots) {
+              const existing = byCampaign.get(u.campaignId);
+              if (!existing || u.date < existing.date) byCampaign.set(u.campaignId, u);
+            }
+            const shootingRows = Array.from(byCampaign.values()).sort((a, b) => a.date.localeCompare(b.date));
+            return (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-2">Upcoming</p>
+                <div className="space-y-1.5">
+                  {shootingRows.map((u) => {
+                    const [y, m, d] = u.date.split("-").map(Number);
+                    const formatted = new Date(y, (m || 1) - 1, d || 1).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    return (
+                      <Link
+                        key={u.campaignId}
+                        href={`/campaigns/${u.campaignId}`}
+                        className="flex items-center gap-2 rounded-lg bg-surface-secondary p-2.5 text-sm hover:bg-surface-tertiary transition-colors"
+                      >
+                        <span className="text-text-tertiary text-xs">{u.wfNumber || "—"}</span>
+                        <span className="text-text-primary font-medium truncate">{u.campaignName}</span>
+                        <span className="ml-auto text-xs text-text-secondary">Shooting {formatted}</span>
+                        {u.role && (
+                          <span className="text-[10px] uppercase tracking-wider text-text-tertiary">{u.role}</span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                  {planningCampaigns.map((c) => (
                     <Link
-                      key={`${u.campaignId}-${u.date}-${u.shootName}`}
-                      href={`/campaigns/${u.campaignId}`}
+                      key={c.campaignId}
+                      href={`/campaigns/${c.campaignId}`}
                       className="flex items-center gap-2 rounded-lg bg-surface-secondary p-2.5 text-sm hover:bg-surface-tertiary transition-colors"
                     >
-                      <span className="text-text-tertiary text-xs w-20 shrink-0">{dateLabel}</span>
-                      <span className="text-text-tertiary text-xs">{u.wfNumber || "—"}</span>
-                      <span className="text-text-primary font-medium truncate">{u.campaignName}</span>
-                      {u.role && (
-                        <span className="ml-auto text-[10px] uppercase tracking-wider text-text-tertiary">{u.role}</span>
+                      <span className="text-text-tertiary text-xs">{c.wfNumber || "—"}</span>
+                      <span className="text-text-primary font-medium truncate">{c.campaignName}</span>
+                      {c.role && (
+                        <span className="ml-auto text-[10px] uppercase tracking-wider text-text-tertiary">{c.role}</span>
                       )}
                     </Link>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* In Planning — linked as hero/secondary, no scheduled date yet */}
-          {!editMode && planningCampaigns.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-2">In Planning</p>
-              <div className="space-y-1.5">
-                {planningCampaigns.map((c) => (
-                  <Link
-                    key={c.campaignId}
-                    href={`/campaigns/${c.campaignId}`}
-                    className="flex items-center gap-2 rounded-lg bg-surface-secondary p-2.5 text-sm hover:bg-surface-tertiary transition-colors"
-                  >
-                    <span className="text-text-tertiary text-xs">{c.wfNumber || "—"}</span>
-                    <span className="text-text-primary font-medium truncate">{c.campaignName}</span>
-                    {c.role && (
-                      <span className="ml-auto text-[10px] uppercase tracking-wider text-text-tertiary">{c.role}</span>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Campaign History (view only) */}
           {!editMode && campaigns.length > 0 && (

@@ -16,6 +16,7 @@ import type { PRDepartment } from "@/types/domain";
 import { PR_DEPARTMENT_LABELS } from "@/types/domain";
 import type { RBUProduct } from "@/app/api/rbu/[token]/products/route";
 import { ReferenceImageGallery } from "@/components/products/reference-image-gallery";
+import { resolvePublixLink } from "@/lib/products/publix-link";
 
 interface Response {
   department: PRDepartment;
@@ -251,17 +252,25 @@ function ProductTile({
               <ExternalLink className="h-2.5 w-2.5" />
             </a>
           )}
-          {p.pcomLink && (
-            <a
-              href={p.pcomLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-0.5 text-neutral-500 hover:underline"
-            >
-              Publix.com
-              <ExternalLink className="h-2.5 w-2.5" />
-            </a>
-          )}
+          {(() => {
+            const r = resolvePublixLink({
+              pcomLink: p.pcomLink,
+              itemCode: p.itemCode,
+              pcomLinkBrokenAt: p.pcomLinkBrokenAt,
+            });
+            if (!r) return null;
+            return (
+              <a
+                href={r.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-0.5 text-neutral-500 hover:underline"
+              >
+                {r.isFallback ? "Publix search" : "Publix.com"}
+                <ExternalLink className="h-2.5 w-2.5" />
+              </a>
+            );
+          })()}
         </div>
         <button
           onClick={(e) => {
@@ -691,7 +700,14 @@ function ProductDetailModal({
           </div>
         )}
 
-        {(p.rpGuideUrl || p.pcomLink) && (
+        {(() => {
+          const publix = resolvePublixLink({
+            pcomLink: p.pcomLink,
+            itemCode: p.itemCode,
+            pcomLinkBrokenAt: p.pcomLinkBrokenAt,
+          });
+          if (!p.rpGuideUrl && !publix) return null;
+          return (
           <div className="flex items-center gap-3 text-[12px]">
             {p.rpGuideUrl && (
               <a
@@ -704,19 +720,20 @@ function ProductDetailModal({
                 <ExternalLink className="h-3 w-3" />
               </a>
             )}
-            {p.pcomLink && (
+            {publix && (
               <a
-                href={p.pcomLink}
+                href={publix.href}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-neutral-500 hover:underline"
               >
-                Publix.com
+                {publix.isFallback ? "Publix search" : "Publix.com"}
                 <ExternalLink className="h-3 w-3" />
               </a>
             )}
           </div>
-        )}
+          );
+        })()}
 
         <div className="pt-2 border-t border-neutral-200">
           <ReferenceImageGallery

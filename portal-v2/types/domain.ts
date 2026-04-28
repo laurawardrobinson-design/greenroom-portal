@@ -686,6 +686,7 @@ export interface Product {
   shootingNotes: string;
   restrictions: string;
   pcomLink: string | null;
+  pcomLinkBrokenAt: string | null;
   rpGuideUrl: string | null;
   imageUrl: string | null;
   lifecyclePhase: ProductLifecyclePhase;
