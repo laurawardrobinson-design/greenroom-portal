@@ -678,7 +678,7 @@ function ContactDetailModal({
                           : "border-transparent hover:border-primary/40 hover:bg-surface-secondary"
                       }`}
                     >
-                      <img src={product.icon} alt={product.name} className="h-6 w-6 object-contain" />
+                      <img src={product.icon} alt={product.name} className="h-6 w-6" />
                       <span className="text-[10px] font-medium text-text-secondary leading-tight truncate w-full">
                         {product.name}
                       </span>
