@@ -2157,6 +2157,8 @@ export interface PRSectionPublicView {
   shoot: { date: string; callTime: string; location: string };
   notes: string;
   section: PRDeptSection;
+  rbuApprovedAt: string | null;
+  rbuApprovedByName: string | null;
 }
 
 // --- Department calendar (one tokenized calendar per dept + master) ---
@@ -2176,6 +2178,8 @@ export interface DeptCalendarEntry {
   shootCallTime: string;
   shootLocation: string;
   sectionToken: string;
+  rbuApprovedAt: string | null;
+  rbuApprovedByName: string | null;
 }
 
 export interface DeptCalendarView {

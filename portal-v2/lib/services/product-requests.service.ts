@@ -739,7 +739,51 @@ export async function getPRSectionByToken(
     },
     notes: (docData.notes as string) || "",
     section,
+    rbuApprovedAt: (sectionRecord.rbu_approved_at as string | null) || null,
+    rbuApprovedByName: (sectionRecord.rbu_approved_by_name as string | null) || null,
   };
+}
+
+// RBU approves the section via the public token. We stamp the approval
+// columns and bump the doc to "confirmed" so dashboard tabs flip.
+export async function approvePRSectionByToken(
+  token: string,
+  approverName: string
+): Promise<{ approvedAt: string; approvedByName: string } | null> {
+  const db = createAdminClient();
+  const { data: sectionRow, error: findErr } = await db
+    .from("product_request_dept_sections")
+    .select("id, doc_id, rbu_approved_at, rbu_approved_by_name")
+    .eq("public_token", token)
+    .maybeSingle();
+  if (findErr) throw findErr;
+  if (!sectionRow) return null;
+
+  const sec = sectionRow as Record<string, unknown>;
+  // Idempotent — return the existing stamp if already approved.
+  if (sec.rbu_approved_at) {
+    return {
+      approvedAt: sec.rbu_approved_at as string,
+      approvedByName: (sec.rbu_approved_by_name as string) || approverName,
+    };
+  }
+
+  const approvedAt = new Date().toISOString();
+  const { error: updErr } = await db
+    .from("product_request_dept_sections")
+    .update({
+      rbu_approved_at: approvedAt,
+      rbu_approved_by_name: approverName,
+    })
+    .eq("id", sec.id as string);
+  if (updErr) throw updErr;
+
+  // Approval is per-section, not per-doc. The dashboard's Pending/Approved
+  // toggle reads `rbu_approved_at` on each section, so we don't touch the
+  // parent doc's status here — sibling departments stay Pending until they
+  // approve their own section.
+
+  return { approvedAt, approvedByName: approverName };
 }
 
 // --- Department calendar (tokenized + master) ---
@@ -757,7 +801,7 @@ async function loadCalendarEntries(
     .from("product_request_dept_sections")
     .select(
       `id, department, date_needed, time_needed, pickup_person, pickup_phone, public_token,
-       doc_id,
+       rbu_approved_at, rbu_approved_by_name, doc_id,
        product_request_docs!inner(id, doc_number, status, shoot_date, campaign_id,
          campaigns(id, name, wf_number, brand))`
     )
@@ -836,6 +880,8 @@ async function loadCalendarEntries(
       shootCallTime: shoot?.callTime ?? "",
       shootLocation: shoot?.location ?? "",
       sectionToken: (r.public_token as string) || "",
+      rbuApprovedAt: (r.rbu_approved_at as string | null) || null,
+      rbuApprovedByName: (r.rbu_approved_by_name as string | null) || null,
     };
   });
 

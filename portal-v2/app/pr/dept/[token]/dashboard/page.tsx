@@ -59,11 +59,11 @@ export default function RBUDeptDashboard({
     [data, today]
   );
   const pendingEntries = useMemo(
-    () => upcoming.filter((e) => e.status !== "confirmed"),
+    () => upcoming.filter((e) => !e.rbuApprovedAt),
     [upcoming]
   );
   const approvedEntries = useMemo(
-    () => upcoming.filter((e) => e.status === "confirmed"),
+    () => upcoming.filter((e) => !!e.rbuApprovedAt),
     [upcoming]
   );
   const visibleEntries =

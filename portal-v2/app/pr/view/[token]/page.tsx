@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import useSWR from "swr";
 import {
   Printer,
@@ -11,6 +11,8 @@ import {
   Phone,
   FileText,
   ExternalLink,
+  Check,
+  CheckCircle2,
 } from "lucide-react";
 import type { PRSectionPublicView } from "@/types/domain";
 import { PR_DEPARTMENT_LABELS } from "@/types/domain";
@@ -49,10 +51,41 @@ export default function PRViewPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = use(params);
-  const { data, error } = useSWR(
+  const { data, error, mutate } = useSWR(
     token ? `/api/product-requests/view/${token}` : null,
     fetcher
   );
+  const [approving, setApproving] = useState(false);
+
+  async function handleApprove() {
+    setApproving(true);
+    try {
+      const r = await fetch(`/api/product-requests/view/${token}/approve`, {
+        method: "POST",
+      });
+      if (!r.ok) throw new Error(await r.text());
+      await mutate();
+    } catch (e) {
+      console.error(e);
+      alert("Could not approve — please try again.");
+    } finally {
+      setApproving(false);
+    }
+  }
+
+  function formatApprovalStamp(iso: string): string {
+    const d = new Date(iso);
+    const date = d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+    const time = d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    return `${date} · ${time}`;
+  }
 
   if (error) {
     return (
@@ -78,7 +111,8 @@ export default function PRViewPage({
     );
   }
 
-  const { docNumber, campaign, shoot, notes, section } = data;
+  const { docNumber, campaign, shoot, notes, section, rbuApprovedAt, rbuApprovedByName } = data;
+  const approved = !!rbuApprovedAt;
   const deptLabel = PR_DEPARTMENT_LABELS[section.department];
   const pickupDate = section.dateNeeded || shoot.date;
   const pickupTime = section.timeNeeded || shoot.callTime;
@@ -112,18 +146,44 @@ export default function PRViewPage({
           <span className="text-[13px] text-neutral-500">
             Product Request - {docNumber}
           </span>
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-1.5 rounded-md bg-neutral-900 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-neutral-800 transition-colors"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            Print
-          </button>
+          <div className="flex items-center gap-2">
+            {approved ? (
+              <span className="flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-[13px] font-medium text-primary">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Approved
+              </span>
+            ) : (
+              <button
+                onClick={handleApprove}
+                disabled={approving}
+                className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[13px] font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-60"
+              >
+                <Check className="h-3.5 w-3.5" />
+                {approving ? "Approving…" : "Approve"}
+              </button>
+            )}
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-1.5 rounded-md bg-neutral-900 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-neutral-800 transition-colors"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              Print
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Printable page */}
       <div className="max-w-[8.5in] mx-auto my-6 bg-white border border-neutral-200 shadow-sm print-page">
+        {approved && rbuApprovedAt && (
+          <div className="flex items-center gap-2 border-b border-primary/30 bg-primary/[0.06] px-10 py-3 text-[13px] text-primary">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>
+              Request approved {formatApprovalStamp(rbuApprovedAt)}
+              {rbuApprovedByName ? ` by ${rbuApprovedByName}` : ""}
+            </span>
+          </div>
+        )}
         {/* Letterhead */}
         <header className="px-10 pt-10 pb-6 border-b-2 border-neutral-900">
           <div className="flex items-start justify-between gap-6">
