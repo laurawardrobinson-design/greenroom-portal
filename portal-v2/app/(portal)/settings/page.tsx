@@ -248,7 +248,7 @@ function PreferencesForm({
       {/* Publix icon */}
       <div>
         <p className="text-sm font-medium text-text-primary mb-2">Your Publix icon</p>
-        <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto overscroll-contain pr-1">
+        <div className="grid grid-cols-4 gap-2">
           {PUBLIX_PRODUCTS.map((product) => (
             <button
               key={product.name}
@@ -259,7 +259,16 @@ function PreferencesForm({
                   : "border-border hover:border-primary/40 hover:bg-surface-secondary"
               }`}
             >
-              <img src={product.icon} alt={product.name} className="h-6 w-6" />
+              <img
+                src={product.icon}
+                alt={product.name}
+                className="h-9 w-9 object-contain"
+                style={
+                  product.scale || product.scaleX
+                    ? { transform: `scale(${(product.scale ?? 1) * (product.scaleX ?? 1)}, ${product.scale ?? 1})` }
+                    : undefined
+                }
+              />
               <span className="text-[10px] font-medium text-text-secondary leading-tight">
                 {product.name}
               </span>

@@ -3,7 +3,7 @@
 // this same component; activeTab is derived from the pathname so the URL is
 // always canonical.
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import type { Product, ProductDepartment } from "@/types/domain";
 import { Button } from "@/components/ui/button";
@@ -107,20 +107,35 @@ export function ProductsPage() {
   // workflow tab for both). Other portal roles default to Directory.
   const rbuToken = rbuTokenFromPathname(pathname);
   const fromPath = tabFromPathname(pathname);
+  const searchParams = useSearchParams();
+  // Allow `?tab=directory` (etc.) to override the default landing tab —
+  // used by the RBU dashboard's "Catalog → View products" tile, which
+  // should jump straight to Directory even though RBU normally defaults
+  // to Review.
+  const tabParam = searchParams?.get("tab") as Tab | null;
+  const tabParamValid: Tab | null =
+    tabParam === "directory" || tabParam === "review" || tabParam === "flags"
+      ? tabParam
+      : null;
   const reviewDefault = !!rbuToken || user?.role === "Brand Marketing Manager";
-  const defaultTab: Tab = fromPath ?? (reviewDefault ? "review" : "directory");
+  const defaultTab: Tab =
+    fromPath ?? tabParamValid ?? (reviewDefault ? "review" : "directory");
   const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
 
   useEffect(() => {
     const t = tabFromPathname(pathname);
     if (t) {
       setActiveTab(t);
-    } else if (reviewDefault) {
-      setActiveTab("review");
+    } else if (tabParamValid) {
+      setActiveTab(tabParamValid);
     } else {
+      // Bare `/products` means Directory. The BMM/RBU "default to Review"
+      // rule only applies on initial mount (handled in useState init) — not
+      // on every pathname change, otherwise clicking Directory snaps back
+      // to Review for those users.
       setActiveTab("directory");
     }
-  }, [pathname, reviewDefault]);
+  }, [pathname, tabParamValid]);
 
   function switchTab(tab: Tab) {
     setActiveTab(tab);

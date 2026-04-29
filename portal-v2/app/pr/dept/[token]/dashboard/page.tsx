@@ -108,7 +108,7 @@ export default function RBUDeptDashboard({
         </Card>
 
         <Link
-          href={`/pr/dept/${token}/products`}
+          href={`/pr/dept/${token}/products?tab=directory`}
           className="rounded-xl border border-border bg-surface p-5 hover:border-text-tertiary transition-colors flex items-start justify-between gap-3 group"
         >
           <div>

@@ -22,8 +22,8 @@ import {
 // -------------------------------------------------------
 // Publix product catalog — image icon + display name
 // -------------------------------------------------------
-export const PUBLIX_PRODUCTS: { name: string; icon: string }[] = [
-  { name: "Pub Sub", icon: "/icons/products/pub-sub.png" },
+export const PUBLIX_PRODUCTS: { name: string; icon: string; scale?: number; scaleX?: number }[] = [
+  { name: "Pub Sub", icon: "/icons/products/pub-sub.png", scale: 1.25 },
   { name: "Fried Chicken", icon: "/icons/products/fried-chicken.png" },
   { name: "Chantilly Cake", icon: "/icons/products/chantilly-cake.png" },
   { name: "Tea", icon: "/icons/products/sweet-tea.png" },
@@ -32,7 +32,7 @@ export const PUBLIX_PRODUCTS: { name: string; icon: string }[] = [
   { name: "Publix Ice Cream", icon: "/icons/products/ice-cream.png" },
   { name: "Sushi", icon: "/icons/products/sushi.png" },
   { name: "Cookies", icon: "/icons/products/sprinkle-cookie.png" },
-  { name: "Fresh Flowers", icon: "/icons/products/fresh-flowers.png" },
+  { name: "Fresh Flowers", icon: "/icons/products/fresh-flowers.png", scaleX: 0.9 },
   { name: "Premium Meat", icon: "/icons/products/premium-meat.png" },
   { name: "Grab & Go Salad", icon: "/icons/products/salad.png" },
 ];
