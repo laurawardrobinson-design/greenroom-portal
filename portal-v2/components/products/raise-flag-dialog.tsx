@@ -49,12 +49,15 @@ export function RaiseFlagDialog({
   productDept,
   onClose,
   onCreated,
+  rbuToken = null,
 }: {
   productId: string;
   productName: string;
   productDept: ProductDepartment | null | undefined;
   onClose: () => void;
   onCreated: () => void;
+  // When set, post via the token-gated RBU endpoint (no auth session).
+  rbuToken?: string | null;
 }) {
   const { toast } = useToast();
   const [dept, setDept] = useState<PRDepartment | null>(
@@ -73,15 +76,16 @@ export function RaiseFlagDialog({
     }
     setSubmitting(true);
     try {
-      const res = await fetch("/api/product-flags/internal", {
+      const url = rbuToken
+        ? `/api/rbu/${rbuToken}/products/${productId}/flag`
+        : "/api/product-flags/internal";
+      const body = rbuToken
+        ? { dept, reason, comment: comment.trim() }
+        : { productId, dept, reason, comment: comment.trim() };
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId,
-          dept,
-          reason,
-          comment: comment.trim(),
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(await res.text());
       toast("success", `Flag sent to ${dept} team + BMM`);

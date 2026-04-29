@@ -2,12 +2,13 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
-import Image from "next/image";
 import { Printer, CalendarDays, ChevronRight } from "lucide-react";
 import type { DeptCalendarView, DeptCalendarEntry } from "@/types/domain";
-import { PR_DEPARTMENT_LABELS } from "@/types/domain";
 import { PRMonthCalendar } from "@/components/product-requests/pr-calendar";
 import { PRSectionPreview } from "@/components/product-requests/pr-section-preview";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 
 async function fetcher(url: string): Promise<DeptCalendarView> {
   const r = await fetch(url);
@@ -24,12 +25,17 @@ function formatLongDate(iso: string) {
   });
 }
 
-function formatTime(hhmm: string) {
-  if (!hhmm || !/^\d{1,2}:\d{2}/.test(hhmm)) return hhmm;
-  const [h, m] = hhmm.split(":").map((n) => Number(n));
+function formatTime(value: string) {
+  if (!value) return "";
+  // Already has an AM/PM marker — trust the upstream string.
+  if (/[ap]m/i.test(value)) return value.toUpperCase().replace(/\s+/g, " ");
+  const m = /^(\d{1,2}):(\d{2})/.exec(value);
+  if (!m) return value;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
   const period = h >= 12 ? "PM" : "AM";
   const hour = ((h + 11) % 12) + 1;
-  return `${hour}:${m.toString().padStart(2, "0")} ${period}`;
+  return `${hour}:${min.toString().padStart(2, "0")} ${period}`;
 }
 
 function entryKey(e: DeptCalendarEntry) {
@@ -57,7 +63,6 @@ export default function DeptCalendarPage({
     [data]
   );
 
-  // Default to the first upcoming shoot when data arrives.
   useEffect(() => {
     if (!selectedKey && upcoming.length > 0) {
       setSelectedKey(entryKey(upcoming[0]));
@@ -72,12 +77,12 @@ export default function DeptCalendarPage({
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center space-y-2">
-          <h1 className="text-xl font-semibold text-neutral-900">
+          <h1 className="text-xl font-semibold text-text-primary">
             This calendar is not available
           </h1>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-text-tertiary">
             The link may have expired. Please ask the sender for an updated link.
           </p>
         </div>
@@ -87,13 +92,11 @@ export default function DeptCalendarPage({
 
   if (!data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-700" />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-text-secondary" />
       </div>
     );
   }
-
-  const deptLabel = PR_DEPARTMENT_LABELS[data.department];
 
   return (
     <>
@@ -112,79 +115,43 @@ export default function DeptCalendarPage({
         }
       `}</style>
 
-      {/* Sticky toolbar */}
-      <div className="no-print sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-neutral-200">
-        <div className="max-w-[11in] mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="text-[13px] text-neutral-500">
-            <span className="font-medium text-neutral-900">{deptLabel}</span>{" "}
-            calendar
-          </div>
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-1.5 rounded-md bg-neutral-900 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-neutral-800 transition-colors"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            Print
-          </button>
-        </div>
-      </div>
+      <div className="space-y-4">
+        <PageHeader
+          title="Calendar"
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => window.print()}
+            >
+              <Printer className="h-4 w-4" />
+              Print
+            </Button>
+          }
+        />
 
-      <div className="max-w-[11in] w-full mx-auto px-6 py-6 space-y-5">
-        {/* Letterhead */}
-        <header className="bg-white border border-neutral-200 rounded-xl px-6 py-4 flex items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/greenroom-logo.png"
-              alt="Greenroom"
-              width={36}
-              height={36}
-              className="h-9 w-auto"
-            />
-            <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-neutral-500">
-                Department Calendar
-              </div>
-              <div className="text-[18px] font-semibold text-neutral-900 leading-tight">
-                {deptLabel}
-              </div>
-            </div>
-          </div>
-          <div className="text-right text-[11px] text-neutral-500">
-            <span>
-              {upcoming.length} upcoming{" "}
-              {upcoming.length === 1 ? "shoot" : "shoots"}
-            </span>
-            <div className="text-neutral-400 mt-0.5 max-w-[18rem]">
-              Read-only · updates are reflected automatically
-            </div>
-          </div>
-        </header>
-
-        {/* Side-by-side: left stack (calendar + list) | right preview */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Left column */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {/* Left column — calendar + upcoming list */}
           <div className="space-y-4 min-w-0">
-            <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-              <PRMonthCalendar
-                entries={data.entries}
-                onEntryClick={(e) => setSelectedKey(entryKey(e))}
-                selectedKey={selectedKey ?? undefined}
-              />
-            </div>
+            <PRMonthCalendar
+              entries={data.entries}
+              onEntryClick={(e) => setSelectedKey(entryKey(e))}
+              selectedKey={selectedKey ?? undefined}
+            />
 
-            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-neutral-200 flex items-center gap-2">
-                <CalendarDays className="h-3.5 w-3.5 text-neutral-500" />
-                <h3 className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+            <Card padding="none">
+              <CardHeader>
+                <CardTitle>
+                  <CalendarDays />
                   Upcoming shoots
-                </h3>
-              </div>
+                </CardTitle>
+              </CardHeader>
               {upcoming.length === 0 ? (
-                <p className="px-4 py-4 text-[12px] text-neutral-400 italic">
-                  No upcoming shoots for {deptLabel}.
+                <p className="px-4 py-4 text-sm text-text-tertiary italic">
+                  No upcoming shoots.
                 </p>
               ) : (
-                <ul className="divide-y divide-neutral-100">
+                <ul className="divide-y divide-border-light">
                   {upcoming.map((e) => {
                     const k = entryKey(e);
                     const active = selectedKey === k;
@@ -195,26 +162,25 @@ export default function DeptCalendarPage({
                           className={`group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
                             active
                               ? "bg-primary/[0.06]"
-                              : "hover:bg-neutral-50"
+                              : "hover:bg-surface-secondary"
                           }`}
                         >
                           <div className="min-w-0 flex-1">
                             <div className="flex items-baseline gap-2">
-                              <span className="text-[13px] font-semibold text-neutral-900">
+                              <span className="text-sm font-semibold text-text-primary">
                                 {formatLongDate(e.shootDate)}
                               </span>
-                              <span className="text-[11px] text-neutral-500">
+                              <span className="text-xs text-text-tertiary">
                                 {e.campaign.wfNumber}
                               </span>
                             </div>
-                            <div className="text-[12px] text-neutral-600 truncate">
+                            <div className="text-xs text-text-secondary truncate">
                               {e.campaign.name}
                             </div>
-                            <div className="text-[11px] text-neutral-500 mt-0.5">
-                              {e.pickupPerson || "Pickup TBD"}
+                            <div className="text-xs text-text-tertiary mt-0.5">
                               {e.pickupTime
-                                ? ` · ${formatTime(e.pickupTime)}`
-                                : ""}
+                                ? `Pickup: ${formatTime(e.pickupTime)}`
+                                : "Pickup: TBD"}
                               {" · "}
                               {e.itemCount}{" "}
                               {e.itemCount === 1 ? "item" : "items"}
@@ -224,7 +190,7 @@ export default function DeptCalendarPage({
                             className={`h-3.5 w-3.5 shrink-0 transition-colors ${
                               active
                                 ? "text-primary"
-                                : "text-neutral-400 group-hover:text-neutral-700"
+                                : "text-text-tertiary group-hover:text-text-secondary"
                             }`}
                           />
                         </button>
@@ -233,11 +199,14 @@ export default function DeptCalendarPage({
                   })}
                 </ul>
               )}
-            </div>
+            </Card>
           </div>
 
           {/* Right column — preview */}
-          <div className="bg-white border border-neutral-200 rounded-xl min-h-[24rem] min-w-0 overflow-hidden">
+          <Card
+            padding="none"
+            className="min-h-[24rem] min-w-0 overflow-hidden"
+          >
             {selectedEntry?.sectionToken ? (
               <PRSectionPreview
                 key={selectedEntry.sectionToken}
@@ -245,18 +214,13 @@ export default function DeptCalendarPage({
               />
             ) : (
               <div className="h-full flex items-center justify-center px-6 py-12 text-center">
-                <p className="text-[13px] text-neutral-400">
+                <p className="text-sm text-text-tertiary">
                   Select a shoot on the left to preview it here.
                 </p>
               </div>
             )}
-          </div>
+          </Card>
         </div>
-
-        <footer className="text-center text-[10px] text-neutral-400 pt-2">
-          Generated by Greenroom · Read-only · any edits must be requested from
-          the producer
-        </footer>
       </div>
     </>
   );

@@ -53,22 +53,35 @@ function reasonLabel(reason: ProductFlag["reason"]) {
   return reason === "inaccurate" ? "Inaccurate" : "About to change";
 }
 
-export function FlagsTab() {
+export function FlagsTab({
+  rbuToken = null,
+}: {
+  // Token-gated RBU surface — flags are listed and discussed via the
+  // /api/rbu/[token]/product-flags endpoints. RBU users can view + comment
+  // but not resolve/edit (matches BMM permissions).
+  rbuToken?: string | null;
+}) {
   const { user } = useCurrentUser();
   const [tab, setTab] = useState<ProductFlagStatus>("open");
   const [activeFlagId, setActiveFlagId] = useState<string | null>(null);
 
+  const flagsUrl = rbuToken
+    ? `/api/rbu/${rbuToken}/product-flags?status=${tab}`
+    : `/api/product-flags?status=${tab}`;
   const { data, isLoading, mutate } = useSWR<ProductFlag[]>(
-    `/api/product-flags?status=${tab}`,
+    flagsUrl,
     fetcher,
     { refreshInterval: 30000 }
   );
 
   const canResolve =
-    user?.role === "Producer" ||
-    user?.role === "Post Producer" ||
-    user?.role === "Admin";
-  const canEdit = canResolve || user?.role === "Art Director" || user?.role === "Studio";
+    !rbuToken &&
+    (user?.role === "Producer" ||
+      user?.role === "Post Producer" ||
+      user?.role === "Admin");
+  const canEdit =
+    !rbuToken &&
+    (canResolve || user?.role === "Art Director" || user?.role === "Studio");
 
   const flags = useMemo(() => data ?? [], [data]);
   const openCount = useMemo(
@@ -138,6 +151,7 @@ export function FlagsTab() {
           canResolve={canResolve && activeFlag.status === "open"}
           canReopen={canResolve && activeFlag.status === "resolved"}
           canEdit={canEdit}
+          rbuToken={rbuToken}
           onClose={() => setActiveFlagId(null)}
           onChanged={refresh}
         />

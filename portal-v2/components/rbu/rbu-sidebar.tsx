@@ -4,13 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   CalendarDays,
-  Home,
+  LayoutDashboard,
   LogOut,
   Package,
   type LucideIcon,
 } from "lucide-react";
 import type { PRDepartment } from "@/types/domain";
-import { DEPT_COLORS } from "@/components/product-requests/pr-calendar";
 
 const NAV_ITEMS: {
   key: string;
@@ -18,22 +17,19 @@ const NAV_ITEMS: {
   icon: LucideIcon;
   segment: string;
 }[] = [
-  { key: "dashboard", label: "Dashboard", icon: Home, segment: "dashboard" },
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, segment: "dashboard" },
   { key: "calendar", label: "Calendar", icon: CalendarDays, segment: "" },
   { key: "products", label: "Products", icon: Package, segment: "products" },
 ];
 
 export function RBUSidebar({
   token,
-  department,
-  deptLabel,
 }: {
   token: string;
-  department: PRDepartment;
-  deptLabel: string;
+  department?: PRDepartment;
+  deptLabel?: string;
 }) {
   const pathname = usePathname();
-  const color = DEPT_COLORS[department];
   const base = `/pr/dept/${token}`;
 
   const handleLogout = () => {
@@ -106,14 +102,12 @@ export function RBUSidebar({
         {/* Identity + logout */}
         <div className="border-t border-white/10 p-3">
           <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
-            <span
-              className={`h-8 w-8 shrink-0 rounded-full ${color.bg} ${color.border} border flex items-center justify-center ring-1 ring-white/10`}
-            >
-              <span className={`h-2 w-2 rounded-full ${color.dot}`} />
+            <span className="h-8 w-8 shrink-0 rounded-full bg-primary/20 ring-1 ring-white/10 flex items-center justify-center text-sm font-semibold text-primary">
+              G
             </span>
             <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-medium">{deptLabel}</p>
-              <p className="text-xs text-white/50">RBU · Department view</p>
+              <p className="truncate text-sm font-medium">Grant</p>
+              <p className="text-xs text-white/50">RBU reviewer</p>
             </div>
             <button
               onClick={handleLogout}

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import {
@@ -8,10 +8,10 @@ import {
   CalendarDays,
   Clock,
   Package,
-  User,
 } from "lucide-react";
 import type { DeptCalendarView } from "@/types/domain";
-import { PR_DEPARTMENT_LABELS } from "@/types/domain";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 
 async function fetcher(url: string): Promise<DeptCalendarView> {
   const r = await fetch(url);
@@ -28,12 +28,16 @@ function formatLongDate(iso: string) {
   });
 }
 
-function formatTime(hhmm: string) {
-  if (!hhmm || !/^\d{1,2}:\d{2}/.test(hhmm)) return hhmm;
-  const [h, m] = hhmm.split(":").map((n) => Number(n));
+function formatTime(value: string) {
+  if (!value) return "";
+  if (/[ap]m/i.test(value)) return value.toUpperCase().replace(/\s+/g, " ");
+  const m = /^(\d{1,2}):(\d{2})/.exec(value);
+  if (!m) return value;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
   const period = h >= 12 ? "PM" : "AM";
   const hour = ((h + 11) % 12) + 1;
-  return `${hour}:${m.toString().padStart(2, "0")} ${period}`;
+  return `${hour}:${min.toString().padStart(2, "0")} ${period}`;
 }
 
 export default function RBUDeptDashboard({
@@ -47,13 +51,23 @@ export default function RBUDeptDashboard({
     fetcher
   );
 
+  const [statusTab, setStatusTab] = useState<"pending" | "approved">("pending");
+
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = useMemo(
-    () =>
-      (data?.entries ?? []).filter((e) => e.shootDate >= today),
+    () => (data?.entries ?? []).filter((e) => e.shootDate >= today),
     [data, today]
   );
-  const next = upcoming[0];
+  const pendingEntries = useMemo(
+    () => upcoming.filter((e) => e.status !== "confirmed"),
+    [upcoming]
+  );
+  const approvedEntries = useMemo(
+    () => upcoming.filter((e) => e.status === "confirmed"),
+    [upcoming]
+  );
+  const visibleEntries =
+    statusTab === "pending" ? pendingEntries : approvedEntries;
   const thisWeekCount = useMemo(() => {
     const in7 = new Date();
     in7.setDate(in7.getDate() + 7);
@@ -61,142 +75,154 @@ export default function RBUDeptDashboard({
     return upcoming.filter((e) => e.shootDate <= cutoff).length;
   }, [upcoming]);
 
-  const deptLabel = data ? PR_DEPARTMENT_LABELS[data.department] : "";
-
   return (
-    <div className="max-w-[11in] w-full mx-auto px-6 py-6 space-y-5">
-      <header className="bg-white border border-neutral-200 rounded-xl px-6 py-5">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-neutral-500">
-          Welcome back
-        </div>
-        <h1 className="mt-1 text-[24px] font-semibold text-neutral-900 leading-tight">
-          {deptLabel || "Department"} Dashboard
-        </h1>
-        <p className="mt-1 text-[13px] text-neutral-500">
-          Upcoming product requests and quick access to your catalog.
-        </p>
-      </header>
+    <div className="space-y-4">
+      <PageHeader title="Welcome back, Grant" />
 
       {/* KPI row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-white border border-neutral-200 rounded-xl px-5 py-4">
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-            <CalendarDays className="h-3 w-3" />
+        <Card padding="md">
+          <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-text-primary">
+            <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
             Upcoming
           </div>
-          <div className="mt-1.5 text-[28px] font-semibold text-neutral-900 leading-none">
+          <div className="mt-2 text-[28px] font-semibold text-text-primary leading-none">
             {data ? upcoming.length : "—"}
           </div>
-          <div className="mt-0.5 text-[11px] text-neutral-500">
+          <div className="mt-1 text-xs text-text-tertiary">
             total shoots queued
           </div>
-        </div>
-        <div className="bg-white border border-neutral-200 rounded-xl px-5 py-4">
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-            <Clock className="h-3 w-3" />
-            This week
+        </Card>
+
+        <Card padding="md">
+          <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-text-primary">
+            <Clock className="h-4 w-4 shrink-0 text-primary" />
+            This Week
           </div>
-          <div className="mt-1.5 text-[28px] font-semibold text-neutral-900 leading-none">
+          <div className="mt-2 text-[28px] font-semibold text-text-primary leading-none">
             {data ? thisWeekCount : "—"}
           </div>
-          <div className="mt-0.5 text-[11px] text-neutral-500">
+          <div className="mt-1 text-xs text-text-tertiary">
             shoots in the next 7 days
           </div>
-        </div>
+        </Card>
+
         <Link
           href={`/pr/dept/${token}/products`}
-          className="group bg-white border border-neutral-200 rounded-xl px-5 py-4 hover:border-neutral-400 transition-colors flex items-start justify-between gap-3"
+          className="rounded-xl border border-border bg-surface p-5 hover:border-text-tertiary transition-colors flex items-start justify-between gap-3 group"
         >
           <div>
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-              <Package className="h-3 w-3" />
+            <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-text-primary">
+              <Package className="h-4 w-4 shrink-0 text-primary" />
               Catalog
             </div>
-            <div className="mt-1.5 text-[14px] font-semibold text-neutral-900 leading-tight">
-              View {deptLabel || "department"} products
+            <div className="mt-2 text-sm font-semibold text-text-primary leading-tight">
+              View products
             </div>
-            <div className="mt-0.5 text-[11px] text-neutral-500">
+            <div className="mt-1 text-xs text-text-tertiary">
               Item numbers, restrictions, R&amp;P guides
             </div>
           </div>
-          <ArrowRight className="h-4 w-4 text-neutral-400 shrink-0 mt-1 group-hover:text-neutral-900 group-hover:translate-x-0.5 transition-all" />
+          <ArrowRight className="h-4 w-4 text-text-tertiary shrink-0 mt-1 group-hover:text-text-primary group-hover:translate-x-0.5 transition-all" />
         </Link>
       </div>
 
-      {/* Next shoot */}
-      <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-neutral-200 flex items-center justify-between">
-          <h3 className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-            Next shoot
-          </h3>
+      {/* Upcoming requests — all departments */}
+      <Card padding="none" className="overflow-hidden">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2.5">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+              Product requests
+            </h3>
+          </div>
           <Link
             href={`/pr/dept/${token}`}
-            className="text-[11px] text-[#004C2A] hover:underline"
+            className="text-xs text-primary hover:underline"
           >
             View full calendar →
           </Link>
         </div>
+        <div className="px-3.5 pt-3 pb-2">
+          <div className="flex items-center gap-1 rounded-lg border border-border p-0.5 bg-surface w-fit">
+            {(
+              [
+                { key: "pending" as const, label: "Pending", count: pendingEntries.length },
+                { key: "approved" as const, label: "Approved", count: approvedEntries.length },
+              ]
+            ).map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setStatusTab(t.key)}
+                className={`px-3 py-1 rounded-md text-[12px] font-medium transition-colors ${
+                  statusTab === t.key
+                    ? "bg-surface-secondary text-text-primary"
+                    : "text-text-tertiary hover:text-text-secondary"
+                }`}
+              >
+                {t.label}
+                {t.count > 0 && <span className="ml-1">({t.count})</span>}
+              </button>
+            ))}
+          </div>
+        </div>
         {!data ? (
           <div className="px-5 py-8 flex items-center justify-center">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-700" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-text-secondary" />
           </div>
-        ) : !next ? (
-          <p className="px-5 py-8 text-center text-[13px] text-neutral-400 italic">
-            No upcoming shoots for {deptLabel}.
+        ) : visibleEntries.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-text-tertiary italic">
+            {statusTab === "pending"
+              ? "No pending product requests."
+              : "No approved product requests."}
           </p>
         ) : (
-          <div className="px-5 py-4">
-            <div className="text-[15px] font-semibold text-neutral-900">
-              {formatLongDate(next.shootDate)}
-            </div>
-            <div className="text-[13px] text-neutral-600 mt-0.5">
-              {next.campaign.name}
-              {next.campaign.wfNumber && (
-                <span className="text-neutral-400">
-                  {" · "}
-                  {next.campaign.wfNumber}
-                </span>
-              )}
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[12px] text-neutral-700">
-              {(next.pickupDate || next.pickupTime) && (
-                <span className="flex items-center gap-1.5">
-                  <Clock className="h-3 w-3 text-neutral-500" />
-                  Pickup{" "}
-                  {next.pickupDate
-                    ? formatLongDate(next.pickupDate)
-                    : formatLongDate(next.shootDate)}
-                  {next.pickupTime ? ` · ${formatTime(next.pickupTime)}` : ""}
-                </span>
-              )}
-              {next.pickupPerson && (
-                <span className="flex items-center gap-1.5">
-                  <User className="h-3 w-3 text-neutral-500" />
-                  {next.pickupPerson}
-                  {next.pickupPhone && (
-                    <span className="text-neutral-500">
-                      · {next.pickupPhone}
+          <ul className="divide-y divide-border-light">
+            {visibleEntries.map((e) => (
+              <li key={`${e.docId}:${e.department}`} className="px-5 py-4">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <div className="text-base font-semibold text-text-primary">
+                    {formatLongDate(e.shootDate)}
+                  </div>
+                  <div className="text-xs font-medium text-text-tertiary uppercase tracking-wider">
+                    {e.department}
+                  </div>
+                </div>
+                <div className="text-sm text-text-secondary mt-0.5">
+                  {e.campaign.wfNumber
+                    ? `${e.campaign.wfNumber} ${e.campaign.name}`
+                    : e.campaign.name}
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-text-secondary">
+                  {(e.pickupDate || e.pickupTime) && (
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-text-tertiary" />
+                      Pickup{" "}
+                      {e.pickupDate
+                        ? formatLongDate(e.pickupDate)
+                        : formatLongDate(e.shootDate)}
+                      {e.pickupTime ? ` · ${formatTime(e.pickupTime)}` : ""}
                     </span>
                   )}
-                </span>
-              )}
-              <span className="flex items-center gap-1.5">
-                <Package className="h-3 w-3 text-neutral-500" />
-                {next.itemCount} {next.itemCount === 1 ? "item" : "items"}
-              </span>
-            </div>
-            {next.sectionToken && (
-              <Link
-                href={`/pr/view/${next.sectionToken}`}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-neutral-900 px-3 py-1.5 text-[12px] font-medium text-white hover:bg-neutral-800 transition-colors"
-              >
-                Open request
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            )}
-          </div>
+                  <span className="flex items-center gap-1.5">
+                    <Package className="h-3.5 w-3.5 text-text-tertiary" />
+                    {e.itemCount} {e.itemCount === 1 ? "item" : "items"}
+                  </span>
+                </div>
+                {e.sectionToken && (
+                  <Link
+                    href={`/pr/view/${e.sectionToken}`}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-text-primary px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity"
+                  >
+                    Review
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

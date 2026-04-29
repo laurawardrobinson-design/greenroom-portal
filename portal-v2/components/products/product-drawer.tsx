@@ -98,6 +98,7 @@ export function ProductDrawer({
   hideTeamNotes = false,
   initialName,
   reviewMode = false,
+  rbuToken = null,
 }: {
   product: Product | null;
   onClose: () => void;
@@ -111,6 +112,9 @@ export function ProductDrawer({
   // doesn't slip past the producer team. Approval itself happens from the
   // tile in the Review list, not in this drawer.
   reviewMode?: boolean;
+  // RBU token surface: fetch history through the token-gated endpoint
+  // since RBU users have no auth session.
+  rbuToken?: string | null;
 }) {
   const { toast } = useToast();
   const { user } = useCurrentUser();
@@ -253,11 +257,15 @@ export function ProductDrawer({
   }, [current, mutateNotes, toast]);
 
   const { data: historyData } = useSWR(
-    current ? `/api/products/${current.id}?history=true` : null,
+    current
+      ? rbuToken
+        ? `/api/rbu/${rbuToken}/products/${current.id}?history=true`
+        : `/api/products/${current.id}?history=true`
+      : null,
     fetcher
   );
   const { data: flagCounts } = useSWR<Record<string, number>>(
-    current ? "/api/product-flags/counts" : null,
+    current && !rbuToken ? "/api/product-flags/counts" : null,
     fetcher
   );
   const productFlagCount = current ? (flagCounts?.[current.id] ?? 0) : 0;

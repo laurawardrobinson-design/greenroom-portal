@@ -28,12 +28,16 @@ function formatLongDate(iso: string) {
   });
 }
 
-function formatTime(hhmm: string) {
-  if (!hhmm || !/^\d{1,2}:\d{2}/.test(hhmm)) return hhmm;
-  const [h, m] = hhmm.split(":").map((n) => Number(n));
+function formatTime(value: string) {
+  if (!value) return "";
+  if (/[ap]m/i.test(value)) return value.toUpperCase().replace(/\s+/g, " ");
+  const m = /^(\d{1,2}):(\d{2})/.exec(value);
+  if (!m) return value;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
   const period = h >= 12 ? "PM" : "AM";
   const hour = ((h + 11) % 12) + 1;
-  return `${hour}:${m.toString().padStart(2, "0")} ${period}`;
+  return `${hour}:${min.toString().padStart(2, "0")} ${period}`;
 }
 
 // Read-only preview of a PR section, used as a side panel in the

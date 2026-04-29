@@ -68,6 +68,7 @@ export function FlagReviewModal({
   canEdit,
   onClose,
   onChanged,
+  rbuToken = null,
 }: {
   flag: ProductFlag;
   canResolve: boolean;
@@ -75,21 +76,32 @@ export function FlagReviewModal({
   canEdit: boolean;
   onClose: () => void;
   onChanged: () => void;
+  // Token-gated RBU surface: product + comments fetches + comment POST
+  // route through /api/rbu/[token]/... instead of the auth-only routes.
+  rbuToken?: string | null;
 }) {
   const { toast } = useToast();
   const DeptIcon = DEPT_ICONS[flag.flaggedByDept];
 
   // Live product data for inline edit
+  const productUrl = flag.product
+    ? rbuToken
+      ? `/api/rbu/${rbuToken}/products/${flag.product.id}`
+      : `/api/products/${flag.product.id}`
+    : null;
   const { data: productData, mutate: mutateProduct } = useSWR<Product>(
-    flag.product ? `/api/products/${flag.product.id}` : null,
+    productUrl,
     fetcher
   );
   const product = productData ?? null;
 
   // Comments thread
+  const commentsUrl = rbuToken
+    ? `/api/rbu/${rbuToken}/product-flags/${flag.id}/comments`
+    : `/api/product-flags/${flag.id}/comments`;
   const { data: commentsData, mutate: mutateComments } = useSWR<
     ProductFlagComment[]
-  >(`/api/product-flags/${flag.id}/comments`, fetcher, {
+  >(commentsUrl, fetcher, {
     refreshInterval: 20000,
   });
   const comments = commentsData ?? [];
@@ -100,7 +112,7 @@ export function FlagReviewModal({
     if (!newComment.trim()) return;
     setPostingComment(true);
     try {
-      const res = await fetch(`/api/product-flags/${flag.id}/comments`, {
+      const res = await fetch(commentsUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body: newComment }),

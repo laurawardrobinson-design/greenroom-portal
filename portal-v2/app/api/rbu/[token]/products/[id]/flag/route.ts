@@ -26,11 +26,11 @@ export async function POST(
     if (!calRow) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    const department = (calRow as Record<string, unknown>)
-      .department as PRDepartment;
 
-    // Ensure the product belongs to this dept (RBU can only flag
-    // within their own inventory).
+    // Grant is the unified RBU reviewer — can flag products in any
+    // department. The flag is recorded against the product's own dept
+    // (or an explicit body.dept if provided), so the right dept team
+    // sees it in their queue.
     const { data: productRow } = await db
       .from("products")
       .select("department")
@@ -39,13 +39,13 @@ export async function POST(
     if (!productRow) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
-    if ((productRow as Record<string, unknown>).department !== department) {
-      return NextResponse.json({ error: "Not allowed" }, { status: 403 });
-    }
+    const productDept = (productRow as Record<string, unknown>)
+      .department as PRDepartment;
 
     const body = (await request.json()) as {
       reason?: ProductFlagReason;
       comment?: string;
+      dept?: PRDepartment;
     };
     const reason = body.reason;
     if (reason !== "inaccurate" && reason !== "about_to_change") {
@@ -54,7 +54,7 @@ export async function POST(
 
     const flag = await createProductFlag({
       productId: id,
-      flaggedByDept: department,
+      flaggedByDept: body.dept ?? productDept,
       reason,
       comment: (body.comment ?? "").trim(),
     });

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   Apple,
   Beef,
+  Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
   Cookie,
@@ -152,18 +153,13 @@ export function PRMonthCalendar({
 
   return (
     <div className="rounded-xl border border-border bg-surface overflow-hidden">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <div className="flex items-center gap-3">
-          <h2 className="text-base font-semibold text-text-primary">
-            {MONTH_LABEL[month]} {year}
-          </h2>
-          <button
-            onClick={gotoToday}
-            className="text-[12px] text-text-tertiary hover:text-text-primary transition-colors no-print"
-          >
-            Today
-          </button>
+      {/* Toolbar — tile-header pattern (matches producer-dashboard) */}
+      <div className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2.5">
+        <div className="flex items-center gap-2">
+          <CalendarIcon className="h-4 w-4 shrink-0 text-primary" />
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+            Calendar
+          </h3>
         </div>
         <div className="flex items-center gap-1 no-print">
           <button
@@ -173,12 +169,21 @@ export function PRMonthCalendar({
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
+          <span className="w-32 text-center text-sm font-medium text-text-primary">
+            {MONTH_LABEL[month]} {year}
+          </span>
           <button
             onClick={gotoNext}
             className="rounded-md p-1 text-text-tertiary hover:bg-surface-secondary hover:text-text-primary transition-colors"
             aria-label="Next month"
           >
             <ChevronRight className="h-4 w-4" />
+          </button>
+          <button
+            onClick={gotoToday}
+            className="ml-1 rounded-md px-2 py-1 text-xs text-text-tertiary hover:bg-surface-secondary hover:text-text-primary transition-colors"
+          >
+            Today
           </button>
         </div>
       </div>
@@ -255,7 +260,7 @@ function DayCellChips({
 }) {
   if (!groupByCampaign) {
     return (
-      <div className="flex flex-wrap gap-0.5">
+      <div className="space-y-0.5">
         {dayEntries.map((e) => {
           const c = DEPT_COLORS[e.department];
           const key = `${e.docId}:${e.department}`;
@@ -264,14 +269,12 @@ function DayCellChips({
             <button
               key={key}
               onClick={() => onEntryClick(e)}
-              className={`flex items-center gap-0.5 rounded border ${c.border} ${c.bg} px-1 py-0.5 text-[10px] ${c.text} hover:shadow-sm transition-all ${
-                selected ? "ring-2 ring-primary ring-offset-1" : ""
+              className={`block w-full truncate rounded ${c.bg} ${c.text} px-1.5 py-0.5 text-[10px] font-medium leading-tight text-left transition-opacity hover:opacity-80 ${
+                selected ? "ring-1 ring-primary" : ""
               }`}
-              title={`${e.campaign.name} · ${e.itemCount} items${e.pickupTime ? ` · ${e.pickupTime}` : ""}`}
+              title={`${e.department} · ${e.campaign.name} · ${e.itemCount} ${e.itemCount === 1 ? "item" : "items"}${e.pickupTime ? ` · ${e.pickupTime}` : ""}`}
             >
-              <span className="font-medium leading-none">
-                {e.campaign.wfNumber || "Request"}
-              </span>
+              {e.campaign.wfNumber || "Request"}
             </button>
           );
         })}

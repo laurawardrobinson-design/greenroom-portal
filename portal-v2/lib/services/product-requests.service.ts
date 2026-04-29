@@ -856,7 +856,10 @@ export async function getDeptCalendarByToken(
   if (!calendarRow) return null;
   const department = (calendarRow as Record<string, unknown>)
     .department as PRDepartment;
-  const entries = await loadCalendarEntries(department);
+  // RBU surface (Grant) sees every department — the token is just the
+  // capability gate. Department on the view is the token's home dept,
+  // kept for back-compat; entries span all departments.
+  const entries = await loadCalendarEntries();
   return { department, entries };
 }
 

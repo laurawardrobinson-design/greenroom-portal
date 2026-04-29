@@ -103,23 +103,24 @@ export function ProductsPage() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // BMM lands on /products → default to Review (the cross-product list is
-  // their primary use case). Other roles default to Directory.
+  // BMM and RBU both land on Review (the cross-product list is the primary
+  // workflow tab for both). Other portal roles default to Directory.
+  const rbuToken = rbuTokenFromPathname(pathname);
   const fromPath = tabFromPathname(pathname);
-  const defaultTab: Tab =
-    fromPath ?? (user?.role === "Brand Marketing Manager" ? "review" : "directory");
+  const reviewDefault = !!rbuToken || user?.role === "Brand Marketing Manager";
+  const defaultTab: Tab = fromPath ?? (reviewDefault ? "review" : "directory");
   const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
 
   useEffect(() => {
     const t = tabFromPathname(pathname);
     if (t) {
       setActiveTab(t);
-    } else if (user?.role === "Brand Marketing Manager") {
+    } else if (reviewDefault) {
       setActiveTab("review");
     } else {
       setActiveTab("directory");
     }
-  }, [pathname, user?.role]);
+  }, [pathname, reviewDefault]);
 
   function switchTab(tab: Tab) {
     setActiveTab(tab);
@@ -131,8 +132,6 @@ export function ProductsPage() {
   const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [drawerProduct, setDrawerProduct] = useState<Product | typeof NEW_PRODUCT | null>(null);
-
-  const rbuToken = rbuTokenFromPathname(pathname);
 
   const params = new URLSearchParams();
   if (search) params.set("search", search);
@@ -170,7 +169,9 @@ export function ProductsPage() {
     : directoryProducts;
 
   const { data: flagCounts } = useSWR<Record<string, number>>(
-    rbuToken ? null : "/api/product-flags/counts",
+    rbuToken
+      ? `/api/rbu/${rbuToken}/product-flags/counts`
+      : "/api/product-flags/counts",
     fetcher,
     { refreshInterval: 30000 }
   );
@@ -195,11 +196,11 @@ export function ProductsPage() {
       user?.role === "Studio" ||
       user?.role === "Brand Marketing Manager");
   const canSeeFlags =
-    !rbuToken &&
-    (user?.role === "Admin" ||
-      user?.role === "Producer" ||
-      user?.role === "Post Producer" ||
-      user?.role === "Brand Marketing Manager");
+    !!rbuToken ||
+    user?.role === "Admin" ||
+    user?.role === "Producer" ||
+    user?.role === "Post Producer" ||
+    user?.role === "Brand Marketing Manager";
 
   const TABS: { key: Tab; label: string; count?: number }[] = (() => {
     const base: { key: Tab; label: string; count?: number }[] = [
@@ -437,7 +438,7 @@ export function ProductsPage() {
         />
       )}
 
-      {activeTab === "flags" && canSeeFlags && <FlagsTab />}
+      {activeTab === "flags" && canSeeFlags && <FlagsTab rbuToken={rbuToken} />}
 
       {/* Unified Product Drawer */}
       {drawerProduct !== null && (
@@ -451,7 +452,8 @@ export function ProductsPage() {
           }}
           onDeleted={() => { setDrawerProduct(null); mutate(); }}
           canEdit={canEdit}
-          hideTeamNotes={user?.role === "Brand Marketing Manager"}
+          hideTeamNotes={!!rbuToken || user?.role === "Brand Marketing Manager"}
+          rbuToken={rbuToken}
         />
       )}
     </div>

@@ -49,6 +49,10 @@ export function ReviewTab({
   // unwrap accordingly.
   rbuToken?: string | null;
 }) {
+  // RBU users have no auth session, but they're the primary reviewers —
+  // approve + flag are their core actions, so they get the same buttons
+  // BMM/Producers see, just routed through token-gated endpoints.
+  const canReview = canEdit || !!rbuToken;
   const reviewUrl = rbuToken
     ? `/api/rbu/${rbuToken}/products/review`
     : "/api/products/review";
@@ -74,7 +78,10 @@ export function ReviewTab({
 
   async function openDrawer(row: ProductReviewRow) {
     try {
-      const res = await fetch(`/api/products/${row.product.id}`);
+      const url = rbuToken
+        ? `/api/rbu/${rbuToken}/products/${row.product.id}`
+        : `/api/products/${row.product.id}`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error();
       const full = (await res.json()) as Product;
       setDrawer({ row, product: full });
@@ -107,10 +114,10 @@ export function ReviewTab({
       { revalidate: false }
     );
     try {
-      const res = await fetch(
-        `/api/products/review/${row.campaignProductId}/approve`,
-        { method: "POST" }
-      );
+      const url = rbuToken
+        ? `/api/rbu/${rbuToken}/products/review/${row.campaignProductId}/approve`
+        : `/api/products/review/${row.campaignProductId}/approve`;
+      const res = await fetch(url, { method: "POST" });
       if (!res.ok) throw new Error();
       toast("success", "Approved as accurate");
       mutate();
@@ -131,10 +138,10 @@ export function ReviewTab({
       { revalidate: false }
     );
     try {
-      const res = await fetch(
-        `/api/products/review/${row.campaignProductId}/approve`,
-        { method: "DELETE" }
-      );
+      const url = rbuToken
+        ? `/api/rbu/${rbuToken}/products/review/${row.campaignProductId}/approve`
+        : `/api/products/review/${row.campaignProductId}/approve`;
+      const res = await fetch(url, { method: "DELETE" });
       if (!res.ok) throw new Error();
       toast("success", "Moved back to pending");
       mutate();
@@ -203,8 +210,8 @@ export function ReviewTab({
                 row={r}
                 flagCount={flagCounts?.[r.product.id] ?? 0}
                 onOpen={() => openDrawer(r)}
-                onApprove={canEdit ? () => approve(r) : null}
-                onFlag={canEdit ? () => setFlagFor(r) : null}
+                onApprove={canReview ? () => approve(r) : null}
+                onFlag={canReview ? () => setFlagFor(r) : null}
               />
             ))}
           </Section>
@@ -219,8 +226,8 @@ export function ReviewTab({
                 row={r}
                 flagCount={flagCounts?.[r.product.id] ?? 0}
                 onOpen={() => openDrawer(r)}
-                onApprove={canEdit ? () => approve(r) : null}
-                onFlag={canEdit ? () => setFlagFor(r) : null}
+                onApprove={canReview ? () => approve(r) : null}
+                onFlag={canReview ? () => setFlagFor(r) : null}
               />
             ))}
           </Section>
@@ -239,7 +246,7 @@ export function ReviewTab({
               row={r}
               flagCount={flagCounts?.[r.product.id] ?? 0}
               onOpen={() => openDrawer(r)}
-              onUndo={canEdit ? () => unapprove(r) : null}
+              onUndo={canReview ? () => unapprove(r) : null}
             />
           ))}
         </div>
@@ -250,6 +257,7 @@ export function ReviewTab({
           productId={flagFor.product.id}
           productName={flagFor.product.name}
           productDept={flagFor.product.department}
+          rbuToken={rbuToken}
           onClose={() => setFlagFor(null)}
           onCreated={() => {
             setFlagFor(null);
@@ -270,6 +278,7 @@ export function ReviewTab({
           canEdit={canEdit}
           hideTeamNotes={hideTeamNotes}
           reviewMode={!drawer.row.rbuApprovedAt}
+          rbuToken={rbuToken}
         />
       )}
     </>

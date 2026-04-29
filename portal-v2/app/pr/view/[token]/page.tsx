@@ -2,7 +2,6 @@
 
 import { use } from "react";
 import useSWR from "swr";
-import Image from "next/image";
 import {
   Printer,
   CalendarDays,
@@ -31,12 +30,17 @@ function formatLongDate(iso: string) {
   });
 }
 
-function formatTime(hhmm: string) {
-  if (!hhmm || !/^\d{1,2}:\d{2}/.test(hhmm)) return hhmm;
-  const [h, m] = hhmm.split(":").map((n) => Number(n));
+function formatTime(value: string) {
+  if (!value) return "";
+  // Already has an AM/PM marker — trust the upstream string.
+  if (/[ap]m/i.test(value)) return value.toUpperCase().replace(/\s+/g, " ");
+  const m = /^(\d{1,2}):(\d{2})/.exec(value);
+  if (!m) return value;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
   const period = h >= 12 ? "PM" : "AM";
   const hour = ((h + 11) % 12) + 1;
-  return `${hour}:${m.toString().padStart(2, "0")} ${period}`;
+  return `${hour}:${min.toString().padStart(2, "0")} ${period}`;
 }
 
 export default function PRViewPage({
@@ -105,18 +109,9 @@ export default function PRViewPage({
       {/* Toolbar — hidden in print */}
       <div className="no-print sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-neutral-200">
         <div className="max-w-[8.5in] mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/greenroom-logo.png"
-              alt="Greenroom"
-              width={28}
-              height={28}
-              className="h-7 w-auto"
-            />
-            <span className="text-[13px] text-neutral-500">
-              Read-only product request — {docNumber}
-            </span>
-          </div>
+          <span className="text-[13px] text-neutral-500">
+            Product Request - {docNumber}
+          </span>
           <button
             onClick={() => window.print()}
             className="flex items-center gap-1.5 rounded-md bg-neutral-900 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-neutral-800 transition-colors"
@@ -132,21 +127,12 @@ export default function PRViewPage({
         {/* Letterhead */}
         <header className="px-10 pt-10 pb-6 border-b-2 border-neutral-900">
           <div className="flex items-start justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <Image
-                src="/greenroom-logo.png"
-                alt="Greenroom"
-                width={44}
-                height={44}
-                className="h-11 w-auto"
-              />
-              <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-neutral-500">
-                  Product Request
-                </div>
-                <div className="text-[20px] font-semibold text-neutral-900 leading-tight">
-                  {deptLabel}
-                </div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-neutral-500">
+                Product Request
+              </div>
+              <div className="text-[20px] font-semibold text-neutral-900 leading-tight">
+                {deptLabel}
               </div>
             </div>
             <div className="text-right">
@@ -261,14 +247,17 @@ export default function PRViewPage({
                 <th className="py-2 pr-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 w-20">
                   Item #
                 </th>
-                <th className="py-2 pr-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-                  Product
-                </th>
-                <th className="py-2 pr-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 w-20 text-right">
+                <th className="py-2 pr-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 w-16 text-right">
                   Qty
                 </th>
                 <th className="py-2 pr-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 w-24">
                   Size
+                </th>
+                <th className="py-2 pr-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 w-44">
+                  Product
+                </th>
+                <th className="py-2 pr-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+                  Notes
                 </th>
                 <th className="py-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 w-20">
                   R&amp;P
@@ -284,21 +273,19 @@ export default function PRViewPage({
                   <td className="py-2.5 pr-3 text-neutral-500">
                     {item.product?.itemCode || "—"}
                   </td>
-                  <td className="py-2.5 pr-3">
-                    <div className="text-neutral-900">
-                      {item.product?.name ?? "(no product)"}
-                    </div>
-                    {item.specialInstructions && (
-                      <div className="mt-0.5 text-[12px] text-neutral-600 italic">
-                        {item.specialInstructions}
-                      </div>
-                    )}
-                  </td>
                   <td className="py-2.5 pr-3 text-right text-neutral-900">
                     {item.quantity}
                   </td>
                   <td className="py-2.5 pr-3 text-neutral-700">
                     {item.size || "—"}
+                  </td>
+                  <td className="py-2.5 pr-3 text-neutral-900">
+                    {item.product?.name ?? "(no product)"}
+                  </td>
+                  <td className="py-2.5 pr-3 text-[12px] text-neutral-600 italic">
+                    {item.specialInstructions || (
+                      <span className="text-neutral-300 not-italic">—</span>
+                    )}
                   </td>
                   <td className="py-2.5 text-[12px]">
                     {item.product?.rpGuideUrl ? (
@@ -320,7 +307,7 @@ export default function PRViewPage({
               {section.items.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="py-6 text-center text-neutral-400 italic"
                   >
                     No items in this section.
