@@ -318,7 +318,7 @@ export default function CampaignDetailPage({
 
       <div className="flex flex-col gap-1 md:flex-row md:flex-wrap md:items-center">
         {/* Top-right actions collapse first on mobile, then align right on desktop */}
-        <div className="order-1 flex w-full flex-wrap items-center gap-2 md:order-2 md:ml-auto md:w-auto md:justify-end md:shrink-0 md:absolute md:right-0 md:bottom-0">
+        <div className="order-1 flex w-full flex-wrap items-center gap-2 md:order-2 md:ml-auto md:w-auto md:justify-end md:shrink-0 md:absolute md:right-0 md:top-0">
           <div className="flex flex-col items-end gap-0">
             <div className="flex gap-0">
               <button
