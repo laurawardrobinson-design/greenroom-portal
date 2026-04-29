@@ -31,7 +31,7 @@ export function UserAvatar({ name, favoriteProduct, size = "md", variant = "ligh
   const iconSrc = favoriteProduct ? getProductIcon(favoriteProduct) : null;
   const config = sizeConfig[size];
 
-  const bg = variant === "dark" ? "bg-emerald-400/20" : (iconSrc ? "bg-primary/15" : "bg-primary/10");
+  const bg = variant === "dark" ? "bg-emerald-400/20" : (iconSrc ? "bg-primary/5" : "bg-primary/10");
   const textColor = variant === "dark" ? "text-white" : "text-primary";
 
   return (
