@@ -124,7 +124,6 @@ export default function PRViewPage({
     Grocery: "G",
     Bakery: "B",
     Deli: "D",
-    Other: "O",
   };
   const sectionNumber = `${docNumber}-${DEPT_CODE[section.department] ?? "X"}`;
   const pickupDate = section.dateNeeded || shoot.date;
