@@ -85,9 +85,6 @@ const NAV_GROUPS: NavGroup[] = [
         icon: Film,
         roles: ["Brand Marketing Manager"],
       },
-      // Review was its own sidebar item but it's really a sub-area of
-      // /brand-marketing (flags + coming-soon / planning products). Surface
-      // it from inside the home instead so the sidebar hierarchy isn't lying.
       {
         label: "Product Requests",
         href: "/product-requests",
@@ -135,6 +132,9 @@ const NAV_GROUPS: NavGroup[] = [
         icon: Utensils,
         roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director", "Brand Marketing Manager"],
       },
+      // Product Review lives as a tab inside /products — no dedicated
+      // sidebar entry. BMM and Admin reach it via the Review tab; RBU
+      // reaches it via the Review tab on the dept page.
       {
         label: "Gear",
         href: "/gear",

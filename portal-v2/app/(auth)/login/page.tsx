@@ -53,14 +53,6 @@ const RBU_DEPT_ORDER = [
   "Grocery",
 ] as const;
 
-const RBU_DEPT_LABELS: Record<string, string> = {
-  Bakery: "Bakery",
-  Produce: "Produce",
-  Deli: "Deli",
-  "Meat-Seafood": "Meat & Seafood",
-  Grocery: "Grocery",
-};
-
 export default function LoginPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
@@ -69,8 +61,6 @@ export default function LoginPage() {
   const [vendorError, setVendorError] = useState<string | null>(null);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetMessage, setResetMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [rbuTokens, setRbuTokens] = useState<RBUToken[]>([]);
-  const [rbuLoading, setRbuLoading] = useState(false);
   const [rbuError, setRbuError] = useState<string | null>(null);
 
   // Fetch demo vendors when vendor role is selected
@@ -80,15 +70,12 @@ export default function LoginPage() {
     }
   }, [selectedRole, vendors.length]);
 
-  // Fetch RBU dept tokens when RBU role is selected
-  useEffect(() => {
-    if (selectedRole === "rbu" && rbuTokens.length === 0) {
-      fetchRbuTokens();
-    }
-  }, [selectedRole, rbuTokens.length]);
-
-  async function fetchRbuTokens() {
-    setRbuLoading(true);
+  // RBU is a unified demo login — clicking the role fetches the first
+  // available dept token and jumps straight into the RBU surface. Since
+  // all RBU dept views see the same full catalog, the choice of token
+  // doesn't affect what they can see.
+  async function handleRbuLogin() {
+    setLoading("rbu");
     setRbuError(null);
     try {
       const res = await fetch("/api/rbu/tokens");
@@ -101,11 +88,13 @@ export default function LoginPage() {
         (a, b) =>
           (order.get(a.department) ?? 99) - (order.get(b.department) ?? 99)
       );
-      setRbuTokens(data);
+      const first = data[0];
+      if (!first) throw new Error("no tokens");
+      window.location.href = `/pr/dept/${first.publicToken}`;
     } catch {
-      setRbuError("Failed to load departments. Try again.");
+      setRbuError("Failed to load RBU. Try again.");
+      setLoading(null);
     }
-    setRbuLoading(false);
   }
 
   async function fetchDemoVendors() {
@@ -208,52 +197,8 @@ export default function LoginPage() {
             <>
               <p className="mb-4 text-center text-xs text-white/50">Click any role to sign in instantly</p>
 
-              {/* RBU selector (shown when RBU is selected) */}
-              {selectedRole === "rbu" ? (
-                <>
-                  <div className="mb-4">
-                    <label className="block text-xs font-medium text-white/70 mb-2">
-                      Select Department
-                    </label>
-                    {rbuLoading ? (
-                      <div className="text-center py-4 text-sm text-white/50">Loading departments...</div>
-                    ) : rbuError ? (
-                      <div className="text-center py-4 space-y-2">
-                        <p className="text-sm text-red-300">{rbuError}</p>
-                        <button
-                          onClick={fetchRbuTokens}
-                          className="text-xs text-white/70 underline hover:text-white"
-                        >
-                          Retry
-                        </button>
-                      </div>
-                    ) : rbuTokens.length === 0 ? (
-                      <div className="text-center py-4 text-sm text-white/50">No departments found</div>
-                    ) : (
-                      <div className="space-y-2">
-                        {rbuTokens.map((t) => (
-                          <a
-                            key={t.department}
-                            href={`/pr/dept/${t.publicToken}`}
-                            className="block w-full text-left rounded-lg border border-white/20 bg-white/5 px-3 py-2.5 text-xs text-white hover:bg-white/10 transition-all"
-                          >
-                            <span className="font-medium">
-                              {RBU_DEPT_LABELS[t.department] ?? t.department}
-                            </span>
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setSelectedRole(null)}
-                    className="w-full mt-2 text-xs text-white/50 hover:text-white/70 transition-colors"
-                  >
-                    ← Back to roles
-                  </button>
-                </>
-              ) : /* Vendor selector (shown when vendor is selected) */
-              selectedRole === "vendor" ? (
+              {/* Vendor selector (shown when vendor is selected) */}
+              {selectedRole === "vendor" ? (
                 <>
                   <div className="mb-4">
                     <label className="block text-xs font-medium text-white/70 mb-2">
@@ -304,28 +249,35 @@ export default function LoginPage() {
                   </button>
                 </>
               ) : (
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  {DEV_ROLES.map((r) => (
-                    <button
-                      key={r.key}
-                      onClick={() => {
-                        if (r.key === "vendor" || r.key === "rbu") {
-                          setSelectedRole(r.key);
-                        } else {
-                          handleDevLogin(r.key);
-                        }
-                      }}
-                      disabled={loading !== null}
-                      className={`rounded-lg border px-3 py-2.5 text-xs font-medium transition-all disabled:opacity-50 ${r.color}`}
-                    >
-                      {loading === r.key ? (
-                        <div className="mx-auto h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                      ) : (
-                        r.label
-                      )}
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {DEV_ROLES.map((r) => (
+                      <button
+                        key={r.key}
+                        onClick={() => {
+                          if (r.key === "vendor") {
+                            setSelectedRole(r.key);
+                          } else if (r.key === "rbu") {
+                            handleRbuLogin();
+                          } else {
+                            handleDevLogin(r.key);
+                          }
+                        }}
+                        disabled={loading !== null}
+                        className={`rounded-lg border px-3 py-2.5 text-xs font-medium transition-all disabled:opacity-50 ${r.color}`}
+                      >
+                        {loading === r.key ? (
+                          <div className="mx-auto h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                        ) : (
+                          r.label
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {rbuError && (
+                    <p className="mb-2 text-center text-xs text-red-300">{rbuError}</p>
+                  )}
+                </>
               )}
             </>
           )}

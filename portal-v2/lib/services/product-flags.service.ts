@@ -20,6 +20,7 @@ export interface ProductFlag {
   resolvedAt: string | null;
   resolutionNote: string;
   createdAt: string;
+  editedAt: string | null;
   product?: {
     id: string;
     name: string;
@@ -60,6 +61,7 @@ function toFlag(row: Record<string, unknown>): ProductFlag {
     resolvedAt: (row.resolved_at as string) || null,
     resolutionNote: (row.resolution_note as string) || "",
     createdAt: row.created_at as string,
+    editedAt: (row.edited_at as string) || null,
     product: product
       ? {
           id: product.id as string,
@@ -107,6 +109,28 @@ export async function updateProductFlagComment(input: {
     .single();
   if (error) throw error;
   return toComment(data as Record<string, unknown>);
+}
+
+export async function updateProductFlagBody(input: {
+  flagId: string;
+  raisedByUserId: string;
+  comment: string;
+}): Promise<ProductFlag> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("product_flags")
+    .update({
+      comment: input.comment,
+      edited_at: new Date().toISOString(),
+    })
+    .eq("id", input.flagId)
+    .eq("raised_by_user_id", input.raisedByUserId)
+    .select(
+      "*, products(id, name, item_code, department, image_url), resolved_by_user:users!product_flags_resolved_by_fkey(name), raised_by_user:users!product_flags_raised_by_user_id_fkey(name)"
+    )
+    .single();
+  if (error) throw error;
+  return toFlag(data as Record<string, unknown>);
 }
 
 export async function createProductFlag(input: {

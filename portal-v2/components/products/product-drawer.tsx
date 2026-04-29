@@ -97,6 +97,7 @@ export function ProductDrawer({
   canEdit,
   hideTeamNotes = false,
   initialName,
+  reviewMode = false,
 }: {
   product: Product | null;
   onClose: () => void;
@@ -105,12 +106,17 @@ export function ProductDrawer({
   canEdit: boolean;
   hideTeamNotes?: boolean;
   initialName?: string;
+  // When opened from the Review tab: start in edit mode and auto-flag
+  // producers if the user saves any changes — so a quick edit during review
+  // doesn't slip past the producer team. Approval itself happens from the
+  // tile in the Review list, not in this drawer.
+  reviewMode?: boolean;
 }) {
   const { toast } = useToast();
   const { user } = useCurrentUser();
   const { mutate: globalMutate } = useSWRConfig();
   const isNew = product === null;
-  const [editMode, setEditMode] = useState(isNew);
+  const [editMode, setEditMode] = useState(isNew || (reviewMode && canEdit));
   const [current, setCurrent] = useState<Product | null>(product);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [flagPanelOpen, setFlagPanelOpen] = useState(false);
@@ -150,6 +156,28 @@ export function ProductDrawer({
   const [imageBroken, setImageBroken] = useState(false);
   const [showPhaseDropdown, setShowPhaseDropdown] = useState(false);
   const phaseDropdownRef = useRef<HTMLDivElement>(null);
+  // Snapshot used to detect actual edits during a reviewMode session — only
+  // captured once per opened product so it survives Save → re-edit cycles.
+  const reviewSnapshotRef = useRef<{
+    name: string; itemCode: string; description: string; shootingNotes: string;
+    restrictions: string; pcomLink: string; rpGuideUrl: string;
+    imageUrl: string | null; department: ProductDepartment | "";
+    phase: ProductLifecyclePhase;
+  } | null>(null);
+  if (reviewMode && reviewSnapshotRef.current === null && product) {
+    reviewSnapshotRef.current = {
+      name: product.name ?? "",
+      itemCode: product.itemCode ?? "",
+      description: product.description ?? "",
+      shootingNotes: product.shootingNotes ?? "",
+      restrictions: product.restrictions ?? "",
+      pcomLink: product.pcomLink ?? "",
+      rpGuideUrl: product.rpGuideUrl ?? "",
+      imageUrl: product.imageUrl ?? null,
+      department: product.department,
+      phase: product.lifecyclePhase ?? "live",
+    };
+  }
 
   // Close dept dropdown on outside click
   useEffect(() => {
@@ -236,6 +264,7 @@ export function ProductDrawer({
   const campaigns = historyData?.campaigns || [];
   const upcomingShoots: { campaignId: string; campaignName: string; wfNumber: string; role: "hero" | "secondary" | null; date: string; shootName: string }[] = historyData?.upcoming || [];
   const planningCampaigns: { campaignId: string; campaignName: string; wfNumber: string; role: "hero" | "secondary" | null }[] = historyData?.planning || [];
+  const lastApproval: { at: string; by: string | null; campaignId: string; campaignName: string; wfNumber: string } | null = historyData?.lastApproval || null;
 
   function syncFormToProduct(p: Product | null) {
     setName(p?.name ?? "");
@@ -310,15 +339,70 @@ export function ProductDrawer({
       if (!res.ok) throw new Error("Failed");
       const saved: Product = await res.json();
       toast("success", current ? "Product updated" : "Product added");
+
+      // Review-mode auto-flag: if the BMM/RBU edited anything while reviewing,
+      // raise a "about to change" flag so producers see the update before the
+      // shoot. Only meaningful for existing products with a real RBU dept.
+      if (reviewMode && current && reviewSnapshotRef.current) {
+        const snap = reviewSnapshotRef.current;
+        const changed =
+          snap.name !== body.name ||
+          snap.itemCode !== (body.itemCode ?? "") ||
+          snap.description !== body.description ||
+          snap.shootingNotes !== body.shootingNotes ||
+          snap.restrictions !== body.restrictions ||
+          snap.pcomLink !== (body.pcomLink ?? "") ||
+          snap.rpGuideUrl !== (body.rpGuideUrl ?? "") ||
+          snap.imageUrl !== (body.imageUrl ?? null) ||
+          snap.department !== body.department ||
+          snap.phase !== body.lifecyclePhase;
+        const dept = body.department;
+        const flaggable =
+          dept === "Bakery" ||
+          dept === "Produce" ||
+          dept === "Deli" ||
+          dept === "Meat-Seafood" ||
+          dept === "Grocery";
+        if (changed && flaggable) {
+          try {
+            await fetch("/api/product-flags/internal", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                productId: current.id,
+                dept,
+                reason: "about_to_change",
+                comment: "Edited during RBU review — please confirm before shoot.",
+              }),
+            });
+            globalMutate("/api/product-flags/counts");
+          } catch {
+            // Non-fatal — the save succeeded; the flag is a nice-to-have.
+          }
+          // Refresh the snapshot so a follow-up save without further changes
+          // doesn't re-flag.
+          reviewSnapshotRef.current = {
+            name: body.name, itemCode: body.itemCode ?? "", description: body.description,
+            shootingNotes: body.shootingNotes, restrictions: body.restrictions,
+            pcomLink: body.pcomLink ?? "", rpGuideUrl: body.rpGuideUrl ?? "",
+            imageUrl: body.imageUrl ?? null, department: body.department, phase: body.lifecyclePhase,
+          };
+        }
+      }
+
       setCurrent(saved);
       setEditMode(false);
       onSaved(saved);
+      // Review-mode flow: after saving, close the modal so the user goes
+      // straight back to the Review list to approve from the tile.
+      if (reviewMode) onClose();
     } catch {
       toast("error", "Failed to save product");
     } finally {
       setSaving(false);
     }
   }
+
 
   async function handleDelete() {
     if (!current) return;
@@ -771,8 +855,19 @@ export function ProductDrawer({
             </div>
           </div>
 
+          {/* Last approved by RBU (across any campaign) */}
+          {(!editMode || reviewMode) && lastApproval && (
+            <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-xs text-text-secondary">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
+              <span>
+                Last approved {new Date(lastApproval.at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                {lastApproval.by ? ` by ${lastApproval.by}` : ""}
+              </span>
+            </div>
+          )}
+
           {/* Upcoming — scheduled shoots (with date) + planning campaigns (no date yet) */}
-          {!editMode && (upcomingShoots.length > 0 || planningCampaigns.length > 0) && (() => {
+          {(!editMode || reviewMode) && (upcomingShoots.length > 0 || planningCampaigns.length > 0) && (() => {
             const byCampaign = new Map<string, typeof upcomingShoots[number]>();
             for (const u of upcomingShoots) {
               const existing = byCampaign.get(u.campaignId);
@@ -820,7 +915,7 @@ export function ProductDrawer({
           })()}
 
           {/* Campaign History (view only) */}
-          {!editMode && campaigns.length > 0 && (
+          {(!editMode || reviewMode) && campaigns.length > 0 && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-2">Campaign History</p>
               <div className="space-y-1.5">
@@ -835,7 +930,7 @@ export function ProductDrawer({
             </div>
           )}
 
-          {flagPanelOpen && current && canRaiseFlag && (
+          {(flagPanelOpen || productFlagCount > 0) && current && canRaiseFlag && (
             <InlineFlagSection
               productId={current.id}
               productDept={current.department}
@@ -872,7 +967,7 @@ export function ProductDrawer({
                         <Edit2 className="h-3.5 w-3.5" />Edit
                       </Button>
                     )}
-                    {canRaiseFlag && !flagPanelOpen && (
+                    {canRaiseFlag && !flagPanelOpen && productFlagCount === 0 && (
                       <Button
                         type="button"
                         size="sm"

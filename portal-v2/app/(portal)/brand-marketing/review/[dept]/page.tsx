@@ -224,6 +224,7 @@ export default function BrandMarketingReviewPage({
         <ProductDrawer
           product={activeProduct}
           canEdit={canEdit}
+          hideTeamNotes={true}
           onClose={() => setActiveProduct(null)}
           onSaved={() => refreshAll()}
           onDeleted={() => {

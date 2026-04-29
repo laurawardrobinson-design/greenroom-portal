@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { PR_DEPARTMENT_LABELS } from "@/types/domain";
 import type { PRDepartment } from "@/types/domain";
 import { RBUSidebar } from "@/components/rbu/rbu-sidebar";
+import { ToastProvider } from "@/components/ui/toast";
 
 export const dynamic = "force-dynamic";
 
@@ -31,15 +32,21 @@ export default async function RBUDeptLayout({
   const deptLabel = PR_DEPARTMENT_LABELS[department];
 
   return (
-    <div className="min-h-screen bg-neutral-100 print:bg-white">
-      <RBUSidebar
-        token={token}
-        department={department}
-        deptLabel={deptLabel}
-      />
-      <div className="lg:pl-[245px] min-h-screen flex flex-col">
-        {children}
+    <ToastProvider>
+      <div className="flex h-full min-h-screen bg-surface print:bg-white">
+        <RBUSidebar
+          token={token}
+          department={department}
+          deptLabel={deptLabel}
+        />
+        <div className="flex min-w-0 flex-1 flex-col lg:pl-[245px]">
+          <main className="flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-7xl px-[var(--density-page-content-px)] py-[var(--density-page-content-py)] lg:px-[var(--density-page-content-px-lg)]">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </ToastProvider>
   );
 }

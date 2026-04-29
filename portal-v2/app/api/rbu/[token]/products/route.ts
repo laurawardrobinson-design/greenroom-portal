@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOpenFlagCounts } from "@/lib/services/product-flags.service";
-import type { PRDepartment } from "@/types/domain";
+import type {
+  PRDepartment,
+  Product,
+  ProductDepartment,
+  ProductLifecyclePhase,
+} from "@/types/domain";
 
-export interface RBUProduct {
-  id: string;
-  itemCode: string | null;
-  name: string;
-  description: string;
-  restrictions: string;
-  imageUrl: string | null;
-  rpGuideUrl: string | null;
-  pcomLink: string | null;
-  pcomLinkBrokenAt: string | null;
+// RBU-facing list extends the full Product shape so the same client-side
+// directory view used by BMM can render these rows directly. We keep
+// `openFlagCount` as an extra field for the flag badge.
+export interface RBUProduct extends Product {
   openFlagCount: number;
 }
 
@@ -48,13 +47,13 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    // RBU users get the same full-catalog view BMM does (matching the
+    // /api/products endpoint), not a department-scoped slice. The token
+    // proves the user is an RBU rep — it doesn't restrict what they see.
     const db = createAdminClient();
     const { data, error } = await db
       .from("products")
-      .select(
-        "id, item_code, name, description, restrictions, image_url, rp_guide_url, pcom_link, pcom_link_broken_at"
-      )
-      .eq("department", department)
+      .select("*")
       .order("name", { ascending: true });
     if (error) throw error;
 
@@ -67,14 +66,24 @@ export async function GET(
       const r = row as Record<string, unknown>;
       return {
         id: r.id as string,
-        itemCode: (r.item_code as string) || null,
         name: r.name as string,
+        department: r.department as ProductDepartment,
+        itemCode: (r.item_code as string) || null,
         description: (r.description as string) || "",
+        // shooting_notes is intentionally omitted from RBU view — it's
+        // internal production direction RBU shouldn't see. The BMM view
+        // hides it via hideTeamNotes when rendered for RBU.
+        shootingNotes: "",
         restrictions: (r.restrictions as string) || "",
-        imageUrl: (r.image_url as string) || null,
-        rpGuideUrl: (r.rp_guide_url as string) || null,
         pcomLink: (r.pcom_link as string) || null,
         pcomLinkBrokenAt: (r.pcom_link_broken_at as string) || null,
+        rpGuideUrl: (r.rp_guide_url as string) || null,
+        imageUrl: (r.image_url as string) || null,
+        lifecyclePhase:
+          ((r.lifecycle_phase as ProductLifecyclePhase) ?? "live") as ProductLifecyclePhase,
+        createdBy: (r.created_by as string) || null,
+        createdAt: r.created_at as string,
+        updatedAt: r.updated_at as string,
         openFlagCount: flagCounts.get(r.id as string) ?? 0,
       };
     });

@@ -169,14 +169,21 @@ function OpenFlagsPanel({
         </button>
       </div>
       {flags.map((flag) => (
-        <FlagItem key={flag.id} flag={flag} />
+        <FlagItem key={flag.id} flag={flag} onChanged={onChanged} />
       ))}
     </div>
   );
 }
 
-function FlagItem({ flag }: { flag: ProductFlag }) {
+function FlagItem({
+  flag,
+  onChanged,
+}: {
+  flag: ProductFlag;
+  onChanged: () => void;
+}) {
   const { toast } = useToast();
+  const { user } = useCurrentUser();
   const DeptIcon = DEPT_ICONS[flag.flaggedByDept];
 
   const { data: commentsData, mutate: mutateComments } = useSWR<
@@ -186,6 +193,30 @@ function FlagItem({ flag }: { flag: ProductFlag }) {
 
   const [newComment, setNewComment] = useState("");
   const [posting, setPosting] = useState(false);
+
+  const canEditBody = !!user && !!flag.raisedByUserId && user.id === flag.raisedByUserId;
+  const [editingBody, setEditingBody] = useState(false);
+  const [bodyDraft, setBodyDraft] = useState(flag.comment);
+  const [savingBody, setSavingBody] = useState(false);
+
+  async function saveBody() {
+    if (!bodyDraft.trim()) return;
+    setSavingBody(true);
+    try {
+      const res = await fetch(`/api/product-flags/${flag.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comment: bodyDraft }),
+      });
+      if (!res.ok) throw new Error();
+      setEditingBody(false);
+      onChanged();
+    } catch {
+      toast("error", "Couldn't save edit");
+    } finally {
+      setSavingBody(false);
+    }
+  }
 
   async function postComment() {
     if (!newComment.trim()) return;
@@ -218,14 +249,67 @@ function FlagItem({ flag }: { flag: ProductFlag }) {
         </span>
       </div>
 
-      {flag.comment && (
-        <p className="text-[13px] text-text-primary whitespace-pre-wrap">
-          {flag.comment}
-        </p>
+      {editingBody ? (
+        <div className="space-y-1.5">
+          <textarea
+            value={bodyDraft}
+            onChange={(e) => setBodyDraft(e.target.value)}
+            rows={2}
+            className="w-full rounded-md border border-border bg-surface px-2 py-1.5 text-[13px] text-text-primary focus:outline-none focus:border-primary resize-none"
+          />
+          <div className="flex gap-1.5 justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setBodyDraft(flag.comment);
+                setEditingBody(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={saveBody}
+              loading={savingBody}
+              disabled={!bodyDraft.trim() || bodyDraft.trim() === flag.comment.trim()}
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+      ) : (
+        flag.comment && (
+          <div className="group flex items-start gap-1.5">
+            <p className="text-[13px] text-text-primary whitespace-pre-wrap flex-1">
+              {flag.comment}
+            </p>
+            {canEditBody && (
+              <button
+                type="button"
+                onClick={() => {
+                  setBodyDraft(flag.comment);
+                  setEditingBody(true);
+                }}
+                className="opacity-0 group-hover:opacity-100 text-text-tertiary hover:text-text-primary transition-opacity shrink-0 mt-0.5"
+                title="Edit comment"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        )
       )}
-      {flag.raisedByName && (
+      {flag.raisedByName && !editingBody && (
         <p className="text-[11px] text-text-tertiary">
           Flagged by {flag.raisedByName}
+          {flag.editedAt && (
+            <span className="italic" title={`Edited ${formatRelative(flag.editedAt)}`}>
+              {" · edited"}
+            </span>
+          )}
         </p>
       )}
 

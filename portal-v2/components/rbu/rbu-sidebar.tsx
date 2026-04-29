@@ -16,7 +16,7 @@ const NAV_ITEMS: {
   key: string;
   label: string;
   icon: LucideIcon;
-  segment: "" | "dashboard" | "products";
+  segment: string;
 }[] = [
   { key: "dashboard", label: "Dashboard", icon: Home, segment: "dashboard" },
   { key: "calendar", label: "Calendar", icon: CalendarDays, segment: "" },
@@ -40,10 +40,21 @@ export function RBUSidebar({
     window.location.href = "/login";
   };
 
-  const isActive = (segment: "" | "dashboard" | "products") => {
+  // Two products entries share a prefix (`products` and `products/review`),
+  // so when both could match we hand the active state to the most specific
+  // one — otherwise both light up on /products/review.
+  const isActive = (segment: string) => {
     const href = segment ? `${base}/${segment}` : base;
     if (!segment) return pathname === href;
-    return pathname === href || pathname.startsWith(href + "/");
+    const matches = pathname === href || pathname.startsWith(href + "/");
+    if (!matches) return false;
+    const moreSpecific = NAV_ITEMS.some((other) => {
+      if (!other.segment || other.segment === segment) return false;
+      const otherHref = `${base}/${other.segment}`;
+      if (!otherHref.startsWith(href + "/")) return false;
+      return pathname === otherHref || pathname.startsWith(otherHref + "/");
+    });
+    return !moreSpecific;
   };
 
   return (

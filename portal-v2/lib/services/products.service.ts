@@ -358,6 +358,161 @@ export async function getProductShootSchedule(productId: string): Promise<{
   return { upcoming, planning };
 }
 
+// --- Cross-product review (every product's future intended use) ---
+
+export type ProductReviewRow = {
+  // campaign_products link id — primary key for approve / unapprove actions.
+  campaignProductId: string;
+  product: {
+    id: string;
+    name: string;
+    itemCode: string | null;
+    imageUrl: string | null;
+    department: ProductDepartment;
+  };
+  campaignId: string;
+  campaignName: string;
+  wfNumber: string;
+  role: "hero" | "secondary" | null;
+  // earliest future shoot date for this (product × campaign), or null when
+  // the campaign exists but has no future shoot dates yet ("Planning").
+  date: string | null;
+  shootName: string | null;
+  // ISO timestamp once an RBU member has approved this link as accurate.
+  rbuApprovedAt: string | null;
+  rbuApprovedBy: string | null;
+};
+
+// One row per (product × campaign) pair that has any future intended use.
+// Mirrors the per-product Upcoming section in ProductDrawer; date logic
+// matches getProductShootSchedule() — a campaign with no future shoot
+// dates falls into planning (date=null), exactly like the drawer.
+export async function listProductsWithUpcomingUse(opts?: {
+  department?: ProductDepartment;
+}): Promise<ProductReviewRow[]> {
+  const db = createAdminClient();
+  let query = db
+    .from("products")
+    .select(
+      "id, name, item_code, image_url, department, campaign_products(id, campaign_id, role, rbu_approved_at, rbu_approved_by, campaigns(id, name, wf_number, shoots(name, shoot_dates(shoot_date))))"
+    );
+  if (opts?.department) query = query.eq("department", opts.department);
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const rows: ProductReviewRow[] = [];
+
+  for (const productRow of data || []) {
+    const p = productRow as Record<string, unknown>;
+    const product = {
+      id: p.id as string,
+      name: p.name as string,
+      itemCode: (p.item_code as string) || null,
+      imageUrl: (p.image_url as string) || null,
+      department: p.department as ProductDepartment,
+    };
+    const links = (p.campaign_products as Array<Record<string, unknown>>) || [];
+
+    // Per campaign: find the earliest future shoot date. If none exist, treat
+    // as planning (mirrors getProductShootSchedule). Skip campaigns with only
+    // past dates so closed campaigns don't pollute the review list.
+    for (const link of links) {
+      const campaign = link.campaigns as Record<string, unknown> | null;
+      if (!campaign) continue;
+      const roleRaw = link.role as string | null;
+      const role: "hero" | "secondary" | null =
+        roleRaw === "hero" || roleRaw === "secondary" ? roleRaw : null;
+      const shoots = (campaign.shoots as Array<Record<string, unknown>>) || [];
+      let earliest: { date: string; shootName: string } | null = null;
+      let hasAnyDate = false;
+      for (const s of shoots) {
+        const dates = (s.shoot_dates as Array<{ shoot_date: string }>) || [];
+        for (const d of dates) {
+          hasAnyDate = true;
+          if (d.shoot_date >= today) {
+            if (!earliest || d.shoot_date < earliest.date) {
+              earliest = { date: d.shoot_date, shootName: (s.name as string) || "" };
+            }
+          }
+        }
+      }
+      const base = {
+        campaignProductId: link.id as string,
+        product,
+        campaignId: link.campaign_id as string,
+        campaignName: (campaign.name as string) || "",
+        wfNumber: (campaign.wf_number as string) || "",
+        role,
+        rbuApprovedAt: (link.rbu_approved_at as string) || null,
+        rbuApprovedBy: (link.rbu_approved_by as string) || null,
+      };
+      if (earliest) {
+        rows.push({ ...base, date: earliest.date, shootName: earliest.shootName });
+      } else if (!hasAnyDate) {
+        rows.push({ ...base, date: null, shootName: null });
+      }
+    }
+  }
+
+  rows.sort((a, b) => {
+    if (a.date && b.date) return a.date.localeCompare(b.date);
+    if (a.date) return -1;
+    if (b.date) return 1;
+    return a.product.name.localeCompare(b.product.name);
+  });
+
+  return rows;
+}
+
+// --- Most recent RBU approval across any campaign for a product ---
+
+export async function getProductLastApproval(
+  productId: string
+): Promise<{ at: string; by: string | null; campaignId: string; campaignName: string; wfNumber: string } | null> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("campaign_products")
+    .select("rbu_approved_at, rbu_approved_by, campaign_id, campaigns(name, wf_number)")
+    .eq("product_id", productId)
+    .not("rbu_approved_at", "is", null)
+    .order("rbu_approved_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+
+  const userId = (data.rbu_approved_by as string | null) || null;
+  let by: string | null = null;
+  if (userId) {
+    const { data: user } = await db.from("users").select("name").eq("id", userId).maybeSingle();
+    by = (user?.name as string | undefined) || null;
+  }
+  const campaign =
+    (data.campaigns as unknown as Record<string, unknown> | null) || null;
+  return {
+    at: data.rbu_approved_at as string,
+    by,
+    campaignId: data.campaign_id as string,
+    campaignName: (campaign?.name as string) || "",
+    wfNumber: (campaign?.wf_number as string) || "",
+  };
+}
+
+// --- RBU accuracy approval on campaign_products ---
+
+export async function setCampaignProductRbuApproval(
+  id: string,
+  approved: boolean,
+  userId: string | null
+): Promise<void> {
+  const db = createAdminClient();
+  const update = approved
+    ? { rbu_approved_at: new Date().toISOString(), rbu_approved_by: userId }
+    : { rbu_approved_at: null, rbu_approved_by: null };
+  const { error } = await db.from("campaign_products").update(update).eq("id", id);
+  if (error) throw error;
+}
+
 // --- Campaign Gear (link gear items to campaigns) ---
 
 export async function listCampaignGear(campaignId: string): Promise<CampaignGearLink[]> {

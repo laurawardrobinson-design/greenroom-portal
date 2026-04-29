@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireRole, authErrorResponse } from "@/lib/auth/guards";
-import { getProduct, updateProduct, deleteProduct, getProductCampaignHistory, getProductShootSchedule } from "@/lib/services/products.service";
+import { getProduct, updateProduct, deleteProduct, getProductCampaignHistory, getProductShootSchedule, getProductLastApproval } from "@/lib/services/products.service";
 import { updateProductSchema } from "@/lib/validation/products.schema";
 
 export async function GET(
@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio", "Vendor"]);
+    await requireRole(["Admin", "Producer", "Post Producer", "Art Director", "Studio", "Vendor", "Brand Marketing Manager"]);
     const { id } = await params;
 
     const { searchParams } = new URL(request.url);
@@ -20,11 +20,12 @@ export async function GET(
     }
 
     if (includeHistory) {
-      const [history, schedule] = await Promise.all([
+      const [history, schedule, lastApproval] = await Promise.all([
         getProductCampaignHistory(id),
         getProductShootSchedule(id),
+        getProductLastApproval(id),
       ]);
-      return NextResponse.json({ product, campaigns: history, upcoming: schedule.upcoming, planning: schedule.planning });
+      return NextResponse.json({ product, campaigns: history, upcoming: schedule.upcoming, planning: schedule.planning, lastApproval });
     }
 
     return NextResponse.json(product);
