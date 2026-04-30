@@ -77,7 +77,7 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Dashboard",
         href: "/brand-marketing",
         icon: LayoutDashboard,
-        roles: ["Admin", "Brand Marketing Manager"],
+        roles: ["Brand Marketing Manager"],
       },
       {
         label: "Campaigns",
@@ -191,7 +191,7 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Estimates & Invoices",
         href: "/estimates-invoices",
         icon: FileText,
-        roles: ["Admin", "Producer", "Post Producer"],
+        roles: ["Producer", "Post Producer"],
       },
       {
         label: "Estimates & Invoices",
