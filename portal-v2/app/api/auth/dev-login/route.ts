@@ -119,7 +119,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, role: testUser.role, vendor_id });
   }
 
-  // Sign-in failed — user probably doesn't exist, create them
+  // Sign-in failed. Try to create the user; if they already exist (left over
+  // from a prior dev setup with a different password), resolve their ID via
+  // generateLink and reset the password.
+  let userId: string;
   const { data: created, error: createErr } =
     await admin.auth.admin.createUser({
       email: testUser.email,
@@ -128,27 +131,45 @@ export async function POST(request: Request) {
       user_metadata: { full_name: vendorContactName },
     });
 
-  if (createErr) {
-    return NextResponse.json({ error: createErr.message }, { status: 500 });
+  if (created?.user) {
+    userId = created.user.id;
+  } else {
+    // User already exists. generateLink returns the existing user object.
+    const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
+      type: "magiclink",
+      email: testUser.email,
+    });
+    if (linkErr || !link?.user) {
+      return NextResponse.json(
+        { error: linkErr?.message || createErr?.message || "Failed to resolve user" },
+        { status: 500 }
+      );
+    }
+    const { error: resetErr } = await admin.auth.admin.updateUserById(
+      link.user.id,
+      { password: TEST_PASSWORD, email_confirm: true }
+    );
+    if (resetErr) {
+      return NextResponse.json({ error: resetErr.message }, { status: 500 });
+    }
+    userId = link.user.id;
   }
 
-  // Create public.users row
-  if (created.user) {
-    await admin.from("users").upsert(
-      {
-        id: created.user.id,
-        email: testUser.email,
-        name: vendorContactName,
-        role: testUser.role,
-        active: true,
-        vendor_id: vendor_id || null,
-      },
-      { onConflict: "id" }
-    );
+  // Upsert the public.users row
+  await admin.from("users").upsert(
+    {
+      id: userId,
+      email: testUser.email,
+      name: vendorContactName,
+      role: testUser.role,
+      active: true,
+      vendor_id: vendor_id || null,
+    },
+    { onConflict: "id" }
+  );
 
-    if (testUser.role === "Brand Marketing Manager") {
-      await seedBmmPortfolio(admin, created.user.id);
-    }
+  if (testUser.role === "Brand Marketing Manager") {
+    await seedBmmPortfolio(admin, userId);
   }
 
   // Now sign in
