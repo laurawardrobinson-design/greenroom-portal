@@ -855,7 +855,7 @@ export default function InventoryPage() {
           )}
 
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
+            <div className="flex items-center justify-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
               {GEAR_CATEGORIES.map((cat) => {
                 const Icon = GEAR_CATEGORY_ICONS[cat];
                 const active = categoryFilter === cat;
