@@ -22,6 +22,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { GEAR_CATEGORIES } from "@/lib/constants/categories";
+import { computeDueInfo, type MaintenanceDueInfo } from "@/lib/constants/maintenance-defaults";
 import { GearDetailModal } from "@/components/inventory/gear-detail-modal";
 import { AddGearModal } from "@/components/inventory/add-gear-modal";
 import { BatchAddGearModal } from "@/components/inventory/batch-add-gear-modal";
@@ -119,6 +120,81 @@ import {
   isToday,
 } from "date-fns";
 
+interface ShootCalendarEvent {
+  id: string;
+  date: string;
+  location: string;
+  callTime: string;
+  shootName: string;
+  shootType: string;
+  campaign: {
+    id: string;
+    name: string;
+    wfNumber: string;
+    status: string;
+  } | null;
+}
+
+function MaintFilterChip({
+  label,
+  count,
+  active,
+  tone,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  tone: "red" | "amber" | "purple";
+  onClick: () => void;
+}) {
+  const toneClasses = {
+    red: active
+      ? "border-error bg-red-50 text-error"
+      : "border-border text-text-secondary hover:border-error/50 hover:text-error",
+    amber: active
+      ? "border-warning bg-amber-50 text-warning"
+      : "border-border text-text-secondary hover:border-warning/50 hover:text-warning",
+    purple: active
+      ? "border-purple-500 bg-purple-50 text-purple-700"
+      : "border-border text-text-secondary hover:border-purple-400 hover:text-purple-700",
+  }[tone];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center gap-1.5 rounded-full border px-3 h-7 text-xs font-medium transition-colors ${toneClasses}`}
+    >
+      <span>{label}</span>
+      <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
+        active ? "bg-white/60" : "bg-surface-secondary"
+      }`}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
+function DueBadge({ info }: { info: MaintenanceDueInfo }) {
+  if (info.state === "overdue") {
+    const overdueBy = info.daysUntilDue == null ? "" : ` ${Math.abs(info.daysUntilDue)}d`;
+    return (
+      <Badge variant="custom" className="bg-red-50 text-error">
+        Overdue{overdueBy}
+      </Badge>
+    );
+  }
+  if (info.state === "due-soon") {
+    const inDays = info.daysUntilDue == null ? "" : ` in ${info.daysUntilDue}d`;
+    return (
+      <Badge variant="custom" className="bg-amber-50 text-warning">
+        Due{inDays}
+      </Badge>
+    );
+  }
+  return null;
+}
+
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
     if (!r.ok) throw new Error("Request failed");
@@ -160,6 +236,12 @@ export default function InventoryPage() {
   const [showBatchAdd, setShowBatchAdd] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showReserve, setShowReserve] = useState(false);
+  const [reservePrefill, setReservePrefill] = useState<{
+    startDate?: string;
+    endDate?: string;
+    campaignId?: string;
+    campaignLabel?: string;
+  }>({});
   const [selectedItem, setSelectedItem] = useState<GearItem | null>(null);
   const [detailItem, setDetailItem] = useState<GearItem | null>(null);
 
@@ -212,6 +294,38 @@ export default function InventoryPage() {
   const [resCalMonth, setResCalMonth] = useState(() => new Date());
   const [selectedReservationDate, setSelectedReservationDate] = useState<Date | null>(null);
 
+  // Shoots in displayed month — drives the campaign list under the calendar
+  const resCalMonthStr = format(resCalMonth, "yyyy-MM");
+  const { data: rawShootEvents } = useSWR<ShootCalendarEvent[]>(
+    tab === "reservations" ? `/api/calendar?month=${resCalMonthStr}` : null,
+    fetcher
+  );
+  const shootEvents: ShootCalendarEvent[] = Array.isArray(rawShootEvents) ? rawShootEvents : [];
+
+  const shootsByDate = useMemo(() => {
+    const m = new Map<string, ShootCalendarEvent[]>();
+    shootEvents.forEach((e) => {
+      if (!e.campaign) return;
+      if (!m.has(e.date)) m.set(e.date, []);
+      m.get(e.date)!.push(e);
+    });
+    return m;
+  }, [shootEvents]);
+
+  const shootDateSet = useMemo(() => new Set(shootsByDate.keys()), [shootsByDate]);
+
+  // Shoots for the selected day, or all upcoming-in-month if no day selected
+  const visibleShoots = useMemo(() => {
+    if (selectedReservationDate) {
+      const key = format(selectedReservationDate, "yyyy-MM-dd");
+      return shootsByDate.get(key) ?? [];
+    }
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    return shootEvents
+      .filter((e) => e.campaign && e.date >= todayStr)
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [selectedReservationDate, shootsByDate, shootEvents]);
+
   // Set of all date strings covered by any reservation (for calendar dots)
   const reservationDateSet = useMemo(() => {
     const set = new Set<string>();
@@ -238,10 +352,54 @@ export default function InventoryPage() {
   }, [reservations, selectedReservationDate]);
 
   const { data: rawMaintenance, mutate: mutateMaintenance } = useSWR<GearMaintenance[]>(
-    tab === "maintenance" ? "/api/gear/maintenance" : null,
+    tab === "maintenance" || tab === "items" ? "/api/gear/maintenance" : null,
     fetcher
   );
   const maintenance: GearMaintenance[] = Array.isArray(rawMaintenance) ? rawMaintenance : [];
+
+  // Aggregate maintenance records into a per-item due-state map.
+  const dueByItem = useMemo(() => {
+    const grouped = new Map<string, GearMaintenance[]>();
+    maintenance.forEach((m) => {
+      if (!grouped.has(m.gearItemId)) grouped.set(m.gearItemId, []);
+      grouped.get(m.gearItemId)!.push(m);
+    });
+    const map = new Map<string, MaintenanceDueInfo>();
+    grouped.forEach((records, id) => map.set(id, computeDueInfo(records)));
+    return map;
+  }, [maintenance]);
+
+  type MaintFilter = "" | "overdue" | "due-soon" | "under-maintenance" | "in-repair";
+  const [maintFilter, setMaintFilter] = useState<MaintFilter>("");
+
+  const maintCounts = useMemo(() => {
+    let overdue = 0;
+    let dueSoon = 0;
+    let underMaint = 0;
+    let inRepair = 0;
+    allItems.forEach((item) => {
+      const info = dueByItem.get(item.id);
+      if (info?.state === "overdue") overdue++;
+      else if (info?.state === "due-soon") dueSoon++;
+      if (item.status === "Under Maintenance") underMaint++;
+      else if (item.status === "In Repair") inRepair++;
+    });
+    return { overdue, dueSoon, underMaint, inRepair };
+  }, [allItems, dueByItem]);
+
+  // Apply the maintenance filter to the items list.
+  const visibleItems = useMemo(() => {
+    if (!maintFilter) return items;
+    return items.filter((item) => {
+      const info = dueByItem.get(item.id);
+      switch (maintFilter) {
+        case "overdue": return info?.state === "overdue";
+        case "due-soon": return info?.state === "due-soon";
+        case "under-maintenance": return item.status === "Under Maintenance";
+        case "in-repair": return item.status === "In Repair";
+      }
+    });
+  }, [items, dueByItem, maintFilter]);
 
   const { data: rawKits, mutate: mutateKits } = useSWR<GearKit[]>(
     tab === "kits" ? "/api/gear/kits" : null,
@@ -559,6 +717,47 @@ export default function InventoryPage() {
       {/* Items tab */}
       {tab === "items" && (
         <>
+          {(maintCounts.overdue > 0 || maintCounts.dueSoon > 0 || maintCounts.underMaint > 0 || maintCounts.inRepair > 0 || maintFilter) && (
+            <div className="flex flex-wrap items-center gap-2">
+              <MaintFilterChip
+                label="Overdue"
+                count={maintCounts.overdue}
+                active={maintFilter === "overdue"}
+                tone="red"
+                onClick={() => setMaintFilter(maintFilter === "overdue" ? "" : "overdue")}
+              />
+              <MaintFilterChip
+                label="Due in 30d"
+                count={maintCounts.dueSoon}
+                active={maintFilter === "due-soon"}
+                tone="amber"
+                onClick={() => setMaintFilter(maintFilter === "due-soon" ? "" : "due-soon")}
+              />
+              <MaintFilterChip
+                label="Under Maintenance"
+                count={maintCounts.underMaint}
+                active={maintFilter === "under-maintenance"}
+                tone="purple"
+                onClick={() => setMaintFilter(maintFilter === "under-maintenance" ? "" : "under-maintenance")}
+              />
+              <MaintFilterChip
+                label="In Repair"
+                count={maintCounts.inRepair}
+                active={maintFilter === "in-repair"}
+                tone="red"
+                onClick={() => setMaintFilter(maintFilter === "in-repair" ? "" : "in-repair")}
+              />
+              {maintFilter && (
+                <button
+                  onClick={() => setMaintFilter("")}
+                  className="text-xs font-medium text-text-tertiary hover:text-text-primary transition-colors"
+                >
+                  Clear filter
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
               {GEAR_CATEGORIES.map((cat) => {
@@ -590,17 +789,17 @@ export default function InventoryPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
             </div>
-          ) : items.length === 0 ? (
+          ) : visibleItems.length === 0 ? (
             <EmptyState
               icon={<Package className="h-5 w-5" />}
-              title={search || categoryFilter ? "No items match" : "No gear yet"}
+              title={search || categoryFilter || maintFilter ? "No items match" : "No gear yet"}
               description={
-                search || categoryFilter
+                search || categoryFilter || maintFilter
                   ? "Try adjusting your filters."
                   : "Add equipment to start tracking your inventory."
               }
               action={
-                canEdit && !search && !categoryFilter ? (
+                canEdit && !search && !categoryFilter && !maintFilter ? (
                   <Button size="sm" onClick={() => setShowAdd(true)}>
                     <Plus className="h-3.5 w-3.5" />
                     Add Item
@@ -610,7 +809,9 @@ export default function InventoryPage() {
             />
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {items.map((item) => (
+              {visibleItems.map((item) => {
+                const dueInfo = dueByItem.get(item.id);
+                return (
                 <Card
                   key={item.id}
                   hover
@@ -630,9 +831,14 @@ export default function InventoryPage() {
                       <h3 className="text-sm font-semibold text-text-primary">{item.name}</h3>
                       <p className="text-xs text-text-tertiary">{item.brand} {item.model}</p>
                     </div>
-                    <Badge variant="custom" className={STATUS_BADGE[item.status] || ""}>
-                      {item.status}
-                    </Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="custom" className={STATUS_BADGE[item.status] || ""}>
+                        {item.status}
+                      </Badge>
+                      {dueInfo && dueInfo.state !== "ok" && dueInfo.state !== "none" && (
+                        <DueBadge info={dueInfo} />
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-text-tertiary mt-3 pt-3 border-t border-border-light">
                     <span className="flex items-center gap-1">
@@ -642,7 +848,8 @@ export default function InventoryPage() {
                     <Badge variant="default">{item.category}</Badge>
                   </div>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="rounded-xl border border-border overflow-hidden">
@@ -654,8 +861,9 @@ export default function InventoryPage() {
                 <div className="px-1">Status</div>
                 <div />
               </div>
-              {items.map((item, idx) => {
+              {visibleItems.map((item, idx) => {
                 const isEditing = editingRow?.id === item.id;
+                const dueInfo = dueByItem.get(item.id);
                 const cellBase = "px-1 py-0.5";
                 const inputCls = "w-full rounded border border-primary/60 bg-white px-1.5 py-0.5 text-sm text-text-primary focus:outline-none";
                 const selectCls = "w-full rounded border border-primary/60 bg-white px-1 py-0.5 text-sm text-text-primary focus:outline-none";
@@ -763,9 +971,14 @@ export default function InventoryPage() {
 
                     {/* Status */}
                     <div className={cellBase}>
-                      <Badge variant="custom" className={STATUS_BADGE[item.status] || ""}>
-                        {item.status}
-                      </Badge>
+                      <div className="flex flex-col items-start gap-1">
+                        <Badge variant="custom" className={STATUS_BADGE[item.status] || ""}>
+                          {item.status}
+                        </Badge>
+                        {dueInfo && dueInfo.state !== "ok" && dueInfo.state !== "none" && (
+                          <DueBadge info={dueInfo} />
+                        )}
+                      </div>
                     </div>
 
                     {/* Actions */}
@@ -949,6 +1162,7 @@ export default function InventoryPage() {
                       const dateStr = format(day, "yyyy-MM-dd");
                       const inMonth = isSameMonth(day, resCalMonth);
                       const hasRes = reservationDateSet.has(dateStr);
+                      const hasShoot = shootDateSet.has(dateStr);
                       const isSelected = selectedReservationDate ? isSameDay(day, selectedReservationDate) : false;
                       const todayDate = isToday(day);
                       return (
@@ -966,24 +1180,82 @@ export default function InventoryPage() {
                           }`}>
                             {format(day, "d")}
                           </span>
-                          {hasRes && (
-                            <span className={`mt-0.5 h-1 w-1 rounded-full ${isSelected ? "bg-primary" : "bg-blue-400"}`} />
-                          )}
+                          <div className="mt-0.5 flex h-1 items-center gap-0.5">
+                            {hasShoot && (
+                              <span className={`h-1 w-1 rounded-full ${isSelected ? "bg-primary" : "bg-emerald-500"}`} />
+                            )}
+                            {hasRes && (
+                              <span className={`h-1 w-1 rounded-full ${isSelected ? "bg-primary" : "bg-blue-400"}`} />
+                            )}
+                          </div>
                         </button>
                       );
                     });
                   })()}
                 </div>
-                {selectedReservationDate && (
-                  <div className="border-t border-border px-3.5 py-2">
-                    <button
-                      onClick={() => setSelectedReservationDate(null)}
-                      className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
-                    >
-                      Clear filter
-                    </button>
+
+                {/* Viewing footer + shoots list */}
+                <div className="border-t border-border">
+                  <div className="px-3.5 py-2 flex items-center justify-between">
+                    <p className="text-[10px] text-text-tertiary">
+                      {selectedReservationDate ? (
+                        <>Viewing <span className="font-semibold text-text-primary">{format(selectedReservationDate, "EEE, MMM d")}</span></>
+                      ) : (
+                        <>Upcoming shoots in <span className="font-semibold text-text-primary">{format(resCalMonth, "MMMM")}</span></>
+                      )}
+                    </p>
+                    {selectedReservationDate && (
+                      <button
+                        onClick={() => setSelectedReservationDate(null)}
+                        className="text-[10px] text-text-tertiary hover:text-text-primary transition-colors"
+                      >
+                        Clear
+                      </button>
+                    )}
                   </div>
-                )}
+                  {visibleShoots.length === 0 ? (
+                    <div className="border-t border-border px-3.5 py-3">
+                      <p className="text-[11px] text-text-tertiary">No shoots scheduled.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border border-t border-border max-h-[280px] overflow-y-auto">
+                      {visibleShoots.map((shoot) => (
+                        <div
+                          key={shoot.id}
+                          className="flex items-center justify-between gap-2 px-3.5 py-2.5 hover:bg-surface-secondary transition-colors"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-[10px] text-text-tertiary">
+                              {format(parseISO(shoot.date), "MMM d")}
+                              {shoot.campaign?.wfNumber ? ` · ${shoot.campaign.wfNumber}` : ""}
+                            </p>
+                            <p className="text-xs font-medium text-text-primary truncate">
+                              {shoot.campaign?.name ?? shoot.shootName}
+                            </p>
+                          </div>
+                          {canEdit && (
+                            <button
+                              onClick={() => {
+                                setReservePrefill({
+                                  startDate: shoot.date,
+                                  endDate: shoot.date,
+                                  campaignId: shoot.campaign?.id,
+                                  campaignLabel: shoot.campaign
+                                    ? `${shoot.campaign.wfNumber ?? ""} ${shoot.campaign.name}`.trim()
+                                    : undefined,
+                                });
+                                setShowReserve(true);
+                              }}
+                              className="shrink-0 rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] font-semibold text-text-secondary hover:border-primary hover:text-primary transition-colors"
+                            >
+                              Reserve
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Reservation list */}
@@ -995,29 +1267,62 @@ export default function InventoryPage() {
                     description="Select another date or clear the filter."
                   />
                 ) : (
-                  <div className="space-y-2">
-                    {filteredReservations.map((r) => (
-                      <div
-                        key={r.id}
-                        className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4"
-                      >
-                        <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-                          <CalendarRange className="h-4 w-4" />
+                  <div className="space-y-4">
+                    {(() => {
+                      const groups = new Map<string, { startDate: string; endDate: string; campaignId: string | null; campaignName: string | null; items: typeof filteredReservations }>();
+                      filteredReservations.forEach((r) => {
+                        const start = r.startDate.slice(0, 10);
+                        const end = r.endDate.slice(0, 10);
+                        const key = `${start}|${end}|${r.campaignId ?? ""}`;
+                        let g = groups.get(key);
+                        if (!g) {
+                          g = { startDate: r.startDate, endDate: r.endDate, campaignId: r.campaignId, campaignName: r.campaignName ?? null, items: [] };
+                          groups.set(key, g);
+                        }
+                        g.items.push(r);
+                      });
+                      const sortedGroups = Array.from(groups.values()).sort((a, b) =>
+                        a.startDate.localeCompare(b.startDate)
+                      );
+                      return sortedGroups.map((g) => (
+                        <div
+                          key={`${g.startDate}|${g.endDate}|${g.campaignId ?? ""}`}
+                          className="overflow-hidden rounded-xl border border-border bg-surface"
+                        >
+                          <div className="flex items-center gap-3 border-b border-border px-4 py-2.5">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                              <CalendarRange className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+                                {format(parseISO(g.startDate), "MMM d")} — {format(parseISO(g.endDate), "MMM d, yyyy")}
+                                {g.campaignName ? ` · ${g.campaignName}` : ""}
+                              </p>
+                            </div>
+                            <span className="text-xs text-text-tertiary">
+                              {g.items.length} item{g.items.length !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                          <div className="divide-y divide-border">
+                            {g.items.map((r) => (
+                              <div key={r.id} className="flex items-center gap-4 px-4 py-3">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-text-primary">
+                                    {r.gearItem?.name || "Unknown Item"}
+                                  </p>
+                                  {r.notes && (
+                                    <p className="text-xs text-text-tertiary">{r.notes}</p>
+                                  )}
+                                </div>
+                                <Badge variant="custom" className="bg-blue-50 text-blue-700">
+                                  {r.status}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-text-primary">
-                            {r.gearItem?.name || "Unknown Item"}
-                          </p>
-                          <p className="text-xs text-text-tertiary">
-                            {format(parseISO(r.startDate), "MMM d")} — {format(parseISO(r.endDate), "MMM d, yyyy")}
-                            {r.notes && ` · ${r.notes}`}
-                          </p>
-                        </div>
-                        <Badge variant="custom" className="bg-blue-50 text-blue-700">
-                          {r.status}
-                        </Badge>
-                      </div>
-                    ))}
+                      ));
+                    })()}
                   </div>
                 )}
               </div>
@@ -1108,10 +1413,14 @@ export default function InventoryPage() {
       />
       <ReserveGearModal
         open={showReserve}
-        onClose={() => { setShowReserve(false); setSelectedItem(null); }}
+        onClose={() => { setShowReserve(false); setSelectedItem(null); setReservePrefill({}); }}
         items={items}
         preselectedItem={selectedItem}
-        onReserved={() => { mutateReservations(); setShowReserve(false); setSelectedItem(null); }}
+        initialStartDate={reservePrefill.startDate}
+        initialEndDate={reservePrefill.endDate}
+        initialCampaignId={reservePrefill.campaignId}
+        initialCampaignLabel={reservePrefill.campaignLabel}
+        onReserved={() => { mutateReservations(); setShowReserve(false); setSelectedItem(null); setReservePrefill({}); }}
       />
       <GearDetailModal
         item={detailItem}

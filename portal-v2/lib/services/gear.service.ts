@@ -657,6 +657,7 @@ export async function createMaintenance(input: {
   type: "Scheduled" | "Repair";
   description: string;
   scheduledDate?: string;
+  nextDueDate?: string;
   performedBy?: string;
   cost?: number;
   notes?: string;
@@ -667,6 +668,7 @@ export async function createMaintenance(input: {
     type: input.type,
     description: input.description,
     scheduled_date: input.scheduledDate || null,
+    next_due_date: input.nextDueDate || null,
     performed_by: input.performedBy || null,
     cost: input.cost || 0,
     notes: input.notes || "",
