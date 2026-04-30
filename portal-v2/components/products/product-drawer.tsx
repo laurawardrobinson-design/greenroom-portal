@@ -160,6 +160,14 @@ export function ProductDrawer({
   const [imageBroken, setImageBroken] = useState(false);
   const [showPhaseDropdown, setShowPhaseDropdown] = useState(false);
   const phaseDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch product reference images as fallback for imageUrl
+  const { data: refImages } = useSWR(
+    current?.id ? `/api/products/${current.id}/reference-images` : null,
+    fetcher,
+    { revalidateOnFocus: false }
+  );
+  const fallbackImageUrl = imageUrl || (refImages?.[0]?.imageUrl ?? null);
   // Snapshot used to detect actual edits during a reviewMode session — only
   // captured once per opened product so it survives Save → re-edit cycles.
   const reviewSnapshotRef = useRef<{
@@ -713,11 +721,11 @@ export function ProductDrawer({
                 }}
                 onImageClick={(url) => setLightboxUrl(url)}
               />
-            ) : current.imageUrl && !imageBroken ? (
+            ) : fallbackImageUrl && !imageBroken ? (
               <img
-                src={current.imageUrl}
+                src={fallbackImageUrl}
                 alt={current.name}
-                onClick={() => setLightboxUrl(current.imageUrl)}
+                onClick={() => setLightboxUrl(fallbackImageUrl)}
                 onError={() => setImageBroken(true)}
                 className="h-50 w-50 rounded-xl object-cover shrink-0 cursor-zoom-in"
               />

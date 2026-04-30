@@ -54,6 +54,11 @@ export async function uploadCampaignAsset(input: {
   const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `campaigns/${input.campaignId}/${timestamp}-${safeName}`;
 
+  // Log suspicious uploads (images as Reference)
+  if (/^image\//.test(input.fileType) && input.category === "Reference") {
+    console.warn(`[WARNING] Image uploaded as Reference category: ${input.fileName} (${input.fileType}) by user ${input.uploadedBy}`);
+  }
+
   // Upload to storage
   const { error: uploadError } = await db.storage
     .from("campaign-assets")
