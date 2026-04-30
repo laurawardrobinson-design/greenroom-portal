@@ -112,7 +112,7 @@ export default function NewRunPage() {
   const [csvError, setCsvError] = useState<string>("");
 
   // ── Data sources ──────────────────────────────────────────────────────────
-  const { data: templates } = useSWR<AssetTemplate[]>(
+  const { data: templates, isLoading: isLoadingTemplates } = useSWR<AssetTemplate[]>(
     "/api/asset-studio/templates?status=published",
     fetcher
   );
@@ -380,7 +380,9 @@ export default function NewRunPage() {
           {/* Step 1: Template */}
           <Card padding="lg" className="border-[var(--as-border)] bg-[var(--as-surface)]">
             <StepHeader n={1} title="Template" />
-            {!templateList.length ? (
+            {isLoadingTemplates ? (
+              <div className="h-24 animate-pulse rounded-md border border-[var(--as-border)] bg-[var(--as-surface-2)]" />
+            ) : !templateList.length ? (
               <EmptyState
                 title="No published templates"
                 description="Publish a template to use it for a run."

@@ -16,7 +16,7 @@ async function fetcher(url: string): Promise<BrandApprovalQueueItem[]> {
 }
 
 export function RailApprovalQueue() {
-  const { data: queue } = useSWR<BrandApprovalQueueItem[]>(
+  const { data: queue, isLoading } = useSWR<BrandApprovalQueueItem[]>(
     "/api/brand-approvals?assignedTo=me",
     fetcher,
     { refreshInterval: 30000 }
@@ -41,7 +41,7 @@ export function RailApprovalQueue() {
         </span>
       </CardHeader>
 
-      {items.length === 0 ? (
+      {isLoading ? null : items.length === 0 ? (
         <div className="px-4 py-10 text-center">
           <p className="text-sm text-text-primary font-medium">
             No open reviews right now.

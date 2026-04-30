@@ -217,7 +217,7 @@ export default function EstimatesInvoicesPage() {
     fetcher
   );
 
-  const { data: recent = [], mutate: mutateRecent } = useSWR<PendingRow[]>(
+  const { data: recent = [], mutate: mutateRecent, isLoading: loadingRecent } = useSWR<PendingRow[]>(
     canAccess ? "/api/recent-documents" : null,
     fetcher
   );
@@ -307,7 +307,7 @@ export default function EstimatesInvoicesPage() {
                 </div>
               )
             ) : (
-              estimatesPast.length === 0 ? (
+              loadingRecent ? null : estimatesPast.length === 0 ? (
                 <EmptyState title="No past estimates" description="Approved estimates will appear here." />
               ) : (
                 <div className="bg-surface-secondary rounded-b-xl divide-y divide-border">
@@ -339,7 +339,7 @@ export default function EstimatesInvoicesPage() {
                 </div>
               )
             ) : (
-              poPast.length === 0 ? (
+              loadingRecent ? null : poPast.length === 0 ? (
                 <EmptyState title="No past POs" description="POs from completed campaigns will appear here." />
               ) : (
                 <div className="bg-surface-secondary rounded-b-xl divide-y divide-border">
@@ -371,7 +371,7 @@ export default function EstimatesInvoicesPage() {
                 </div>
               )
             ) : (
-              invoicesPast.length === 0 ? (
+              loadingRecent ? null : invoicesPast.length === 0 ? (
                 <EmptyState title="No past invoices" description="Approved and paid invoices will appear here." />
               ) : (
                 <div className="bg-surface-secondary rounded-b-xl divide-y divide-border">

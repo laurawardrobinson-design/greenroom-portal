@@ -26,7 +26,7 @@ export function BmmPrSection({ campaignId }: Props) {
   const [openDocId, setOpenDocId] = useState<string | null>(null);
   const [sending, setSending] = useState<string | null>(null);
 
-  const { data: docs, mutate } = useSWR<PRDoc[]>(
+  const { data: docs, mutate, isLoading } = useSWR<PRDoc[]>(
     `/api/product-requests?campaignId=${campaignId}&detail=light`,
     fetcher,
     { refreshInterval: 30_000 }
@@ -68,7 +68,7 @@ export function BmmPrSection({ campaignId }: Props) {
       </div>
 
       <div className="p-3.5 space-y-2">
-        {visibleDocs.length === 0 ? (
+        {isLoading ? null : visibleDocs.length === 0 ? (
           <p className="text-sm text-text-tertiary py-2">
             No product requests yet — once a producer submits one, it will appear here.
           </p>

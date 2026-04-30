@@ -25,7 +25,7 @@ function formatShootDate(iso: string) {
 export function RailFormalRequests() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data, mutate } = useSWR<PRDoc[]>(
+  const { data, mutate, isLoading } = useSWR<PRDoc[]>(
     "/api/product-requests?status=submitted,forwarded",
     fetcher,
     { refreshInterval: 60000 }
@@ -48,7 +48,7 @@ export function RailFormalRequests() {
           </Link>
         </CardHeader>
 
-        {items.length === 0 ? (
+        {isLoading ? null : items.length === 0 ? (
           <div className="px-3.5 py-4 text-sm text-text-tertiary">
             No requests waiting. New product requests will appear here for your review.
           </div>

@@ -406,7 +406,7 @@ export default function InventoryPage() {
     });
   }, [items, dueByItem, maintFilter]);
 
-  const { data: rawKits, mutate: mutateKits } = useSWR<GearKit[]>(
+  const { data: rawKits, mutate: mutateKits, isLoading: isLoadingKits } = useSWR<GearKit[]>(
     tab === "kits" ? "/api/gear/kits" : null,
     fetcher
   );
@@ -1130,7 +1130,11 @@ export default function InventoryPage() {
             )}
           </div>
 
-          {kits.length === 0 ? (
+          {isLoadingKits ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)}
+            </div>
+          ) : kits.length === 0 ? (
             <EmptyState
               icon={<Layers className="h-5 w-5" />}
               title="No kits yet"

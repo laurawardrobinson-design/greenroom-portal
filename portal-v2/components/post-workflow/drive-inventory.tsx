@@ -73,7 +73,7 @@ export function DriveInventory({ user }: Props) {
   if (statusFilter) params.set("status", statusFilter);
   if (sizeFilter) params.set("size", sizeFilter);
 
-  const { data: drives, mutate: mutateDrives } = useSWR<MediaDrive[]>(
+  const { data: drives, mutate: mutateDrives, isLoading: isLoadingDrives } = useSWR<MediaDrive[]>(
     `/api/post-workflow/drives?${params.toString()}`,
     fetcher
   );
@@ -247,7 +247,7 @@ export function DriveInventory({ user }: Props) {
         </div>
 
         {/* Table */}
-        {driveList.length === 0 ? (
+        {isLoadingDrives ? null : driveList.length === 0 ? (
           <EmptyState title="No drives found" description="Adjust filters or add a drive." />
         ) : (
           <div className="overflow-x-auto">

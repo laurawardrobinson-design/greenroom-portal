@@ -93,7 +93,7 @@ export function BmmDashboard({ user }: Props) {
     { revalidateOnFocus: false }
   );
 
-  const { data: prInbox, mutate: mutatePrInbox } = useSWR<PRDoc[]>(
+  const { data: prInbox, mutate: mutatePrInbox, isLoading: isLoadingInbox } = useSWR<PRDoc[]>(
     "/api/product-requests?status=submitted,forwarded",
     fetcher,
     { refreshInterval: 60000 }
@@ -287,6 +287,7 @@ export function BmmDashboard({ user }: Props) {
             submitted={submittedPRs}
             forwarded={forwardedPRs}
             onSelect={setSelectedPrId}
+            isLoading={isLoadingInbox}
           />
         </div>
       </div>
@@ -455,9 +456,10 @@ interface ActionQueueProps {
   submitted: PRDoc[];
   forwarded: PRDoc[];
   onSelect: (id: string) => void;
+  isLoading?: boolean;
 }
 
-function ActionQueue({ submitted, forwarded, onSelect }: ActionQueueProps) {
+function ActionQueue({ submitted, forwarded, onSelect, isLoading }: ActionQueueProps) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-xs">
       <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
@@ -470,7 +472,7 @@ function ActionQueue({ submitted, forwarded, onSelect }: ActionQueueProps) {
         </span>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        {submitted.length === 0 && forwarded.length === 0 ? (
+        {isLoading ? null : submitted.length === 0 && forwarded.length === 0 ? (
           <p className="px-3.5 py-4 text-center text-xs text-text-tertiary">
             No requests waiting on you.
           </p>

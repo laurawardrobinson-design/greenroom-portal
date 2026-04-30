@@ -48,7 +48,7 @@ export default function DeptCalendarPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = use(params);
-  const { data, error } = useSWR(
+  const { data, error, isLoading } = useSWR(
     token ? `/api/product-requests/calendar/${token}` : null,
     fetcher
   );
@@ -146,7 +146,7 @@ export default function DeptCalendarPage({
                   Upcoming shoots
                 </CardTitle>
               </CardHeader>
-              {upcoming.length === 0 ? (
+              {isLoading ? null : upcoming.length === 0 ? (
                 <p className="px-4 py-4 text-sm text-text-tertiary italic">
                   No upcoming shoots.
                 </p>

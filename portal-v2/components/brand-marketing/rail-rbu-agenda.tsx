@@ -36,7 +36,7 @@ function formatMonthDay(iso: string): string {
 const DEPT_ORDER: PRDepartment[] = ["Bakery", "Deli", "Produce", "Meat-Seafood", "Grocery"];
 
 export function RailRbuAgenda() {
-  const { data } = useSWR<BmmShootsResponse>(
+  const { data, isLoading } = useSWR<BmmShootsResponse>(
     "/api/brand-marketing/shoots",
     fetcher,
     { revalidateOnFocus: false, refreshInterval: 60000 }
@@ -106,7 +106,7 @@ export function RailRbuAgenda() {
         </span>
       </CardHeader>
 
-      {orderedDepts.length === 0 ? (
+      {isLoading ? null : orderedDepts.length === 0 ? (
         <div className="px-4 py-10 text-center">
           <p className="text-sm font-medium text-text-primary">Nothing on the horizon.</p>
           <p className="mt-1 text-sm text-text-secondary">

@@ -170,7 +170,7 @@ function QueueSection() {
 // Pool cards expand/collapse to reveal the campaigns they fund. Matches the
 // mockup: top-down pool → campaign relationship, nested in one view.
 function ProgramSection({ isAdmin }: { isAdmin: boolean }) {
-  const { data, mutate } = useSWR<AnalysisData>("/api/budget/analysis", fetcher);
+  const { data, mutate, isLoading } = useSWR<AnalysisData>("/api/budget/analysis", fetcher);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAdd, setShowAdd] = useState(false);
   const [selectedPool, setSelectedPool] = useState<AnalysisData["poolHealth"][number] | null>(null);
@@ -208,7 +208,7 @@ function ProgramSection({ isAdmin }: { isAdmin: boolean }) {
         )}
       </div>
 
-      {pools.length === 0 ? (
+      {isLoading ? null : pools.length === 0 ? (
         <EmptyState
           icon={<DollarSign className="h-5 w-5" />}
           title="No budget pools"
@@ -573,7 +573,7 @@ function PoolDetailModal({
 
 // ─── Budget Pools Tab ───
 function BudgetPoolsTab({ isAdmin }: { isAdmin: boolean }) {
-  const { data: rawPools, mutate } = useSWR<BudgetPoolSummary[]>("/api/budget", fetcher);
+  const { data: rawPools, mutate, isLoading } = useSWR<BudgetPoolSummary[]>("/api/budget", fetcher);
   const pools: BudgetPoolSummary[] = Array.isArray(rawPools) ? rawPools : [];
   const [showAdd, setShowAdd] = useState(false);
   const [selectedPool, setSelectedPool] = useState<BudgetPoolSummary | null>(null);
@@ -592,7 +592,7 @@ function BudgetPoolsTab({ isAdmin }: { isAdmin: boolean }) {
         )}
       </div>
 
-      {pools.length === 0 ? (
+      {isLoading ? null : pools.length === 0 ? (
         <EmptyState
           icon={<DollarSign className="h-5 w-5" />}
           title="No budget pools"
@@ -672,7 +672,7 @@ function BudgetPoolsTab({ isAdmin }: { isAdmin: boolean }) {
 // ─── Campaign Budgets Tab ───
 function CampaignBudgetsTab() {
   const { toast } = useToast();
-  const { data: campaigns, mutate } = useSWR<CampaignListItem[]>("/api/campaigns", fetcher);
+  const { data: campaigns, mutate, isLoading } = useSWR<CampaignListItem[]>("/api/campaigns", fetcher);
   const { data: allUsers } = useSWR<Array<{ id: string; name: string; role: string }>>(
     "/api/users?roles=Admin,Producer",
     fetcher
@@ -826,7 +826,7 @@ function CampaignBudgetsTab() {
         )}
       </div>
 
-      {activeCampaigns.length === 0 ? (
+      {isLoading ? null : activeCampaigns.length === 0 ? (
         <EmptyState
           icon={<LayoutList className="h-5 w-5" />}
           title="No active campaigns"
