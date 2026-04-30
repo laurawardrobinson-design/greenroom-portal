@@ -53,6 +53,56 @@ export function defaultNextDueDate(
   return next.toISOString().slice(0, 10);
 }
 
+// Common maintenance tasks per category. Powers the quick-pick chips in the
+// Log Maintenance modal — click a chip to drop a templated description into
+// the field, ready to edit. Sources match the intervals above.
+export const MAINTENANCE_TASKS: Record<GearCategory, string[]> = {
+  Camera: [
+    "Sensor clean",
+    "Mount + contact clean",
+    "Firmware check",
+    "Full factory service",
+    "Shutter count check",
+  ],
+  Lens: [
+    "AF calibration",
+    "Element + rear-mount clean",
+    "Focus/zoom ring inspection",
+    "Optical alignment service",
+  ],
+  Lighting: [
+    "Cable + connector test",
+    "Cooling fan + vent dust-out",
+    "Color-temp / output calibration",
+    "Lamp/LED inspection",
+  ],
+  Audio: [
+    "Capsule + windscreen clean",
+    "Battery contact clean",
+    "Frequency coordination + firmware",
+  ],
+  "Tripod / Support": [
+    "Leg-lock + screw tightness",
+    "Head fluid/grease service",
+    "Foot/spike inspection",
+  ],
+  Grip: [
+    "Knuckle + knob torque check",
+    "Sandbag + safety chain inspection",
+  ],
+  Accessories: [
+    "Battery cycle / health check",
+    "Storage charge top-up",
+  ],
+  Other: [],
+  "Surfaces & Backgrounds": [],
+  Tableware: [],
+  "Linens & Textiles": [],
+  "Cookware & Small Wares": [],
+  "Decorative Items": [],
+  Furniture: [],
+};
+
 export type MaintenanceDueState = "overdue" | "due-soon" | "ok" | "none";
 
 export interface MaintenanceDueInfo {

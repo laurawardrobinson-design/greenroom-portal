@@ -11,6 +11,7 @@ import useSWR from "swr";
 import {
   defaultNextDueDate,
   MAINTENANCE_INTERVAL_LABELS,
+  MAINTENANCE_TASKS,
 } from "@/lib/constants/maintenance-defaults";
 
 const usersFetcher = (url: string) =>
@@ -248,6 +249,20 @@ export function LogMaintenanceModal({
 
         <div>
           <label className="block text-xs font-medium text-text-primary mb-1">Description</label>
+          {selectedItem && MAINTENANCE_TASKS[selectedItem.category]?.length > 0 && (
+            <div className="mb-1.5 flex flex-wrap gap-1">
+              {MAINTENANCE_TASKS[selectedItem.category].map((task) => (
+                <button
+                  type="button"
+                  key={task}
+                  onClick={() => setDescription(task)}
+                  className="rounded-full border border-border px-2 h-6 text-[10px] font-medium text-text-secondary hover:border-primary hover:text-primary transition-colors"
+                >
+                  {task}
+                </button>
+              ))}
+            </div>
+          )}
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
