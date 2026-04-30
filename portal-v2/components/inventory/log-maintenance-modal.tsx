@@ -20,11 +20,13 @@ export function LogMaintenanceModal({
   open,
   onClose,
   items,
+  preselectedItemId,
   onCreated,
 }: {
   open: boolean;
   onClose: () => void;
   items: GearItem[];
+  preselectedItemId?: string | null;
   onCreated: () => void;
 }) {
   const { toast } = useToast();
@@ -79,7 +81,7 @@ export function LogMaintenanceModal({
     setShowDropdown(false);
   }
 
-  // Reset when modal opens/closes
+  // Reset when modal opens/closes; honor preselected item on open.
   useEffect(() => {
     if (!open) {
       setGearItemId("");
@@ -91,8 +93,16 @@ export function LogMaintenanceModal({
       setCost("");
       setNotes("");
       setPerformedBy("");
+      return;
     }
-  }, [open]);
+    if (preselectedItemId) {
+      const found = items.find((i) => i.id === preselectedItemId);
+      if (found) {
+        setGearItemId(found.id);
+        setGearSearch(`${found.name} (${found.brand} ${found.model})`);
+      }
+    }
+  }, [open, preselectedItemId, items]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

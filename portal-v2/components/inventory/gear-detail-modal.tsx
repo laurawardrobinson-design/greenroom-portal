@@ -12,9 +12,9 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { RfidScanner } from "@/components/ui/rfid-scanner";
 import { GEAR_CATEGORIES } from "@/lib/constants/categories";
 import type { GearItem, GearCondition, GearStatus, GearMaintenance } from "@/types/domain";
-import { Camera, QrCode, Printer, X, Pencil, Radio, MessageSquare, Send, Wrench, Activity } from "lucide-react";
+import { Camera, QrCode, Printer, X, Pencil, Radio, MessageSquare, Send, Wrench, Activity, Download, ShieldAlert } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
-import { formatDistanceToNow, parseISO, format } from "date-fns";
+import { formatDistanceToNow, parseISO, format, differenceInDays } from "date-fns";
 
 const noteFetcher = (url: string) =>
   fetch(url).then((r) => { if (!r.ok) throw new Error("Failed"); return r.json(); });
@@ -64,11 +64,13 @@ export function GearDetailModal({
   open,
   onClose,
   onSaved,
+  onLogMaintenance,
 }: {
   item: GearItem | null;
   open: boolean;
   onClose: () => void;
   onSaved?: () => void;
+  onLogMaintenance?: (item: GearItem) => void;
 }) {
   const { toast } = useToast();
   const { user: currentUser } = useCurrentUser();
@@ -274,6 +276,33 @@ export function GearDetailModal({
     }
   }
 
+  function exportMaintenanceCsv() {
+    if (!item || !maintenanceLogs || maintenanceLogs.length === 0) return;
+    const header = ["Type", "Status", "Description", "Scheduled", "Completed", "Next Due", "Cost", "Notes"];
+    const rows = maintenanceLogs.map((m) => [
+      m.type,
+      m.status,
+      m.description.replace(/"/g, '""'),
+      m.scheduledDate ?? "",
+      m.completedDate ?? "",
+      m.nextDueDate ?? "",
+      m.cost ? m.cost.toFixed(2) : "",
+      (m.notes ?? "").replace(/\r?\n/g, " ").replace(/"/g, '""'),
+    ]);
+    const csv =
+      [header, ...rows]
+        .map((row) => row.map((c) => `"${c}"`).join(","))
+        .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const safeName = item.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `service-history-${safeName}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   if (!item) return null;
 
   return (
@@ -370,6 +399,27 @@ export function GearDetailModal({
           ) : (
             <Badge variant="default">{category}</Badge>
           )}
+          {(() => {
+            if (!item.warrantyExpiry) return null;
+            const days = differenceInDays(parseISO(item.warrantyExpiry), new Date());
+            if (days < 0) {
+              return (
+                <Badge variant="custom" className="bg-red-50 text-error">
+                  <ShieldAlert className="h-3 w-3" />
+                  Warranty expired
+                </Badge>
+              );
+            }
+            if (days <= 60) {
+              return (
+                <Badge variant="custom" className="bg-amber-50 text-warning">
+                  <ShieldAlert className="h-3 w-3" />
+                  Warranty in {days}d
+                </Badge>
+              );
+            }
+            return null;
+          })()}
         </div>
 
         {/* ── Detail grid — always same elements, readOnly toggles ── */}
@@ -528,6 +578,14 @@ export function GearDetailModal({
                 Maintenance History
               </span>
               <span className="text-[10px] text-text-tertiary ml-auto">{maintenanceLogs.length}</span>
+              <button
+                type="button"
+                onClick={exportMaintenanceCsv}
+                title="Export as CSV"
+                className="flex h-6 w-6 items-center justify-center rounded-md text-text-tertiary hover:bg-surface-secondary hover:text-text-primary transition-colors"
+              >
+                <Download className="h-3.5 w-3.5" />
+              </button>
             </div>
             <div className="divide-y divide-border max-h-[160px] overflow-y-auto">
               {maintenanceLogs.map((m) => {
@@ -649,6 +707,17 @@ export function GearDetailModal({
                 <Button type="button" size="sm" onClick={() => setEditMode(true)}>
                   <Pencil className="h-3.5 w-3.5" />
                   Edit
+                </Button>
+              )}
+              {onLogMaintenance && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => onLogMaintenance(item)}
+                >
+                  <Wrench className="h-3.5 w-3.5" />
+                  Log Maintenance
                 </Button>
               )}
               <Button

@@ -413,6 +413,7 @@ export default function InventoryPage() {
   const kits: GearKit[] = Array.isArray(rawKits) ? rawKits : [];
 
   const [showMaintenance, setShowMaintenance] = useState(false);
+  const [maintenancePreselectId, setMaintenancePreselectId] = useState<string | null>(null);
   const [showCreateKit, setShowCreateKit] = useState(false);
   const [editKit, setEditKit] = useState<GearKit | null>(null);
   const [expandedKit, setExpandedKit] = useState<string | null>(null);
@@ -1574,12 +1575,18 @@ export default function InventoryPage() {
         open={!!detailItem}
         onClose={() => setDetailItem(null)}
         onSaved={canEdit ? () => { mutate(); } : undefined}
+        onLogMaintenance={canEdit ? (item) => {
+          setMaintenancePreselectId(item.id);
+          setDetailItem(null);
+          setShowMaintenance(true);
+        } : undefined}
       />
       <LogMaintenanceModal
         open={showMaintenance}
-        onClose={() => setShowMaintenance(false)}
+        onClose={() => { setShowMaintenance(false); setMaintenancePreselectId(null); }}
         items={items}
-        onCreated={() => { mutateMaintenance(); setShowMaintenance(false); }}
+        preselectedItemId={maintenancePreselectId}
+        onCreated={() => { mutateMaintenance(); setShowMaintenance(false); setMaintenancePreselectId(null); }}
       />
       <CreateKitModal
         open={showCreateKit}
