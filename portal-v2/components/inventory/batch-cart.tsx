@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, ArrowUpFromLine, ArrowDownToLine, ShoppingCart, AlertTriangle } from "lucide-react";
+import { X, ArrowUpFromLine, ArrowDownToLine, ShoppingCart, AlertTriangle, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { GearItem } from "@/types/domain";
@@ -16,6 +16,8 @@ interface BatchCartProps {
   items: GearItem[];
   conflictIds?: Set<string>;
   cartMode?: "checkout" | "checkin" | null;
+  flaggedIds?: Set<string>;
+  onToggleFlag?: (id: string) => void;
   onRemove: (id: string) => void;
   onCheckOutAll: () => void;
   onCheckInAll: () => void;
@@ -27,6 +29,8 @@ export function BatchCart({
   items,
   conflictIds = new Set(),
   cartMode,
+  flaggedIds,
+  onToggleFlag,
   onRemove,
   onCheckOutAll,
   onCheckInAll,
@@ -111,6 +115,21 @@ export function BatchCart({
               <Badge variant="custom" className={STATUS_BADGE[item.status] || "bg-slate-100 text-slate-600"}>
                 {item.status}
               </Badge>
+              {cartMode === "checkin" && onToggleFlag && (
+                <button
+                  type="button"
+                  onClick={() => onToggleFlag(item.id)}
+                  title={flaggedIds?.has(item.id) ? "Flagged for service" : "Flag for service"}
+                  className={`flex items-center gap-1 rounded-md border px-2 h-6 text-[10px] font-semibold transition-colors ${
+                    flaggedIds?.has(item.id)
+                      ? "border-warning bg-amber-50 text-warning"
+                      : "border-border text-text-tertiary hover:border-warning/50 hover:text-warning"
+                  }`}
+                >
+                  <Wrench className="h-3 w-3" />
+                  {flaggedIds?.has(item.id) ? "Flagged" : "Flag"}
+                </button>
+              )}
               <button
                 onClick={() => onRemove(item.id)}
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-tertiary hover:bg-surface-secondary hover:text-text-primary transition-colors"

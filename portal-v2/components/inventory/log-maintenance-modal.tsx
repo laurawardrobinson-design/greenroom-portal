@@ -6,11 +6,15 @@ import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import type { GearItem } from "@/types/domain";
+import type { GearItem, AppUser } from "@/types/domain";
+import useSWR from "swr";
 import {
   defaultNextDueDate,
   MAINTENANCE_INTERVAL_LABELS,
 } from "@/lib/constants/maintenance-defaults";
+
+const usersFetcher = (url: string) =>
+  fetch(url).then((r) => (r.ok ? r.json() : []));
 
 export function LogMaintenanceModal({
   open,
@@ -35,7 +39,14 @@ export function LogMaintenanceModal({
   const [nextDueTouched, setNextDueTouched] = useState(false);
   const [cost, setCost] = useState("");
   const [notes, setNotes] = useState("");
+  const [performedBy, setPerformedBy] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { data: rawUsers } = useSWR<AppUser[]>(
+    open ? "/api/users" : null,
+    usersFetcher
+  );
+  const users: AppUser[] = Array.isArray(rawUsers) ? rawUsers : [];
 
   const selectedItem = useMemo(
     () => items.find((i) => i.id === gearItemId) ?? null,
@@ -79,6 +90,7 @@ export function LogMaintenanceModal({
       setNextDueTouched(false);
       setCost("");
       setNotes("");
+      setPerformedBy("");
     }
   }, [open]);
 
@@ -99,6 +111,7 @@ export function LogMaintenanceModal({
           description,
           scheduledDate: scheduledDate || undefined,
           nextDueDate: type === "Scheduled" && nextDueDate ? nextDueDate : undefined,
+          performedBy: performedBy || undefined,
           cost: cost ? Number(cost) : undefined,
           notes,
         }),
@@ -184,23 +197,44 @@ export function LogMaintenanceModal({
           </div>
         </div>
 
-        {type === "Scheduled" && (
+        <div className="grid grid-cols-2 gap-3">
+          {type === "Scheduled" ? (
+            <div>
+              <label className="block text-xs font-medium text-text-primary mb-1">
+                Next Due
+              </label>
+              <input
+                type="date"
+                value={nextDueDate}
+                onChange={(e) => {
+                  setNextDueDate(e.target.value);
+                  setNextDueTouched(true);
+                }}
+                placeholder={intervalLabel ?? ""}
+                className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary focus:outline-none"
+              />
+            </div>
+          ) : (
+            <div />
+          )}
           <div>
             <label className="block text-xs font-medium text-text-primary mb-1">
-              Next Due
+              Performed By
             </label>
-            <input
-              type="date"
-              value={nextDueDate}
-              onChange={(e) => {
-                setNextDueDate(e.target.value);
-                setNextDueTouched(true);
-              }}
-              placeholder={intervalLabel ?? ""}
+            <select
+              value={performedBy}
+              onChange={(e) => setPerformedBy(e.target.value)}
               className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-text-primary focus:outline-none"
-            />
+            >
+              <option value="">Me (default)</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
+        </div>
 
         <div>
           <label className="block text-xs font-medium text-text-primary mb-1">Description</label>

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   try {
     const user = await requireRole(["Admin", "Studio"]);
     const body = await request.json();
-    const { gearItemId, type, description, scheduledDate, nextDueDate, cost, notes } = body;
+    const { gearItemId, type, description, scheduledDate, nextDueDate, performedBy, cost, notes } = body;
 
     if (!gearItemId || !type || !description) {
       return NextResponse.json(
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       description,
       scheduledDate,
       nextDueDate,
-      performedBy: user.id,
+      performedBy: performedBy || user.id,
       cost,
       notes,
     });

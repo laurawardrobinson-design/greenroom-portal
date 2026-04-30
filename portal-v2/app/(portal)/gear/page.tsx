@@ -22,7 +22,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { GEAR_CATEGORIES } from "@/lib/constants/categories";
-import { computeDueInfo, type MaintenanceDueInfo } from "@/lib/constants/maintenance-defaults";
+import {
+  computeDueInfo,
+  defaultNextDueDate,
+  type MaintenanceDueInfo,
+} from "@/lib/constants/maintenance-defaults";
 import { GearDetailModal } from "@/components/inventory/gear-detail-modal";
 import { AddGearModal } from "@/components/inventory/add-gear-modal";
 import { BatchAddGearModal } from "@/components/inventory/batch-add-gear-modal";
@@ -253,6 +257,7 @@ export default function InventoryPage() {
   const [cartItems, setCartItems] = useState<GearItem[]>([]);
   const [cartMode, setCartMode] = useState<"checkout" | "checkin" | null>(null);
   const [conflictIds, setConflictIds] = useState<Set<string>>(new Set());
+  const [flaggedIds, setFlaggedIds] = useState<Set<string>>(new Set());
   const [showConflictConfirm, setShowConflictConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState<"checkout" | "checkin" | null>(null);
   const [showCheckoutDetails, setShowCheckoutDetails] = useState(false);
@@ -414,6 +419,71 @@ export default function InventoryPage() {
 
   const canEdit = user?.role === "Admin" || user?.role === "Studio" || user?.role === "Producer" || user?.role === "Post Producer";
 
+  // Records due within the next 7 days, plus any already overdue.
+  // Excludes Completed / Cancelled.
+  const dueThisWeek = useMemo(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const horizon = new Date(todayStart);
+    horizon.setDate(horizon.getDate() + 7);
+    return maintenance
+      .filter((m) => {
+        if (m.status === "Completed" || m.status === "Cancelled") return false;
+        const dateStr = m.nextDueDate || m.scheduledDate;
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        d.setHours(0, 0, 0, 0);
+        return d <= horizon;
+      })
+      .sort((a, b) => {
+        const da = a.nextDueDate || a.scheduledDate || "";
+        const db = b.nextDueDate || b.scheduledDate || "";
+        return da.localeCompare(db);
+      });
+  }, [maintenance]);
+
+  const [completingId, setCompletingId] = useState<string | null>(null);
+
+  async function markDoneAndReschedule(m: GearMaintenance) {
+    const gearItem = allItems.find((i) => i.id === m.gearItemId);
+    if (!gearItem) {
+      toast("error", "Gear item not found");
+      return;
+    }
+    setCompletingId(m.id);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const patch = await fetch(`/api/gear/maintenance?id=${m.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Completed", completedDate: today }),
+      });
+      if (!patch.ok) throw new Error("Failed to mark done");
+      const nextDue = defaultNextDueDate(gearItem.category, today);
+      if (nextDue) {
+        await fetch("/api/gear/maintenance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            gearItemId: m.gearItemId,
+            type: "Scheduled",
+            description: m.description,
+            scheduledDate: nextDue,
+            nextDueDate: nextDue,
+          }),
+        });
+        toast("success", `Marked done — next due ${format(parseISO(nextDue), "MMM d, yyyy")}`);
+      } else {
+        toast("success", "Marked done");
+      }
+      mutateMaintenance();
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Failed to mark done");
+    } finally {
+      setCompletingId(null);
+    }
+  }
+
   // Auto-open scanner drawer when ?scan=true
   useEffect(() => {
     if (searchParams.get("scan") === "true") {
@@ -502,6 +572,7 @@ export default function InventoryPage() {
       setCartItems([]);
       setCartMode(null);
       setConflictIds(new Set());
+      setFlaggedIds(new Set());
       mutate();
       globalMutate("/api/gear/checkouts");
     } catch (err) {
@@ -531,9 +602,33 @@ export default function InventoryPage() {
       } else {
         toast("success", `Checked in ${items.length} item(s)`);
       }
+
+      // Auto-create a Scheduled maintenance record for any items the user
+      // flagged for service during this check-in.
+      const toFlag = items.filter((i) => flaggedIds.has(i.id));
+      if (toFlag.length > 0) {
+        await Promise.all(
+          toFlag.map((item) =>
+            fetch("/api/gear/maintenance", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                gearItemId: item.id,
+                type: "Repair",
+                description: `Flagged at check-in (${item.name})`,
+                scheduledDate: new Date().toISOString().slice(0, 10),
+              }),
+            }).catch(() => null)
+          )
+        );
+        toast("success", `Flagged ${toFlag.length} item(s) for service`);
+        mutateMaintenance();
+      }
+
       setCartItems([]);
       setCartMode(null);
       setConflictIds(new Set());
+      setFlaggedIds(new Set());
       mutate();
       globalMutate("/api/gear/checkouts");
     } catch (err) {
@@ -1345,6 +1440,58 @@ export default function InventoryPage() {
               </Button>
             )}
           </div>
+
+          {dueThisWeek.length > 0 && (
+            <div className="rounded-xl border border-border bg-surface overflow-hidden">
+              <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
+                <Wrench className="h-4 w-4 shrink-0 text-primary" />
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-text-primary">
+                  DUE THIS WEEK
+                </h3>
+                <span className="ml-auto text-xs text-text-tertiary">
+                  {dueThisWeek.length} item{dueThisWeek.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="divide-y divide-border">
+                {dueThisWeek.map((m) => {
+                  const gearItem = allItems.find((i) => i.id === m.gearItemId);
+                  const dateStr = m.nextDueDate || m.scheduledDate;
+                  const due = dateStr ? new Date(dateStr) : null;
+                  if (due) due.setHours(0, 0, 0, 0);
+                  const today = new Date(); today.setHours(0, 0, 0, 0);
+                  const days = due ? Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+                  const overdue = days < 0;
+                  return (
+                    <div key={m.id} className="flex items-center gap-3 px-4 py-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-text-primary">
+                          {gearItem?.name || "Unknown Item"}
+                        </p>
+                        <p className="text-xs text-text-secondary truncate">{m.description}</p>
+                      </div>
+                      <Badge
+                        variant="custom"
+                        className={overdue ? "bg-red-50 text-error" : "bg-amber-50 text-warning"}
+                      >
+                        {overdue ? `Overdue ${Math.abs(days)}d` : days === 0 ? "Due today" : `Due in ${days}d`}
+                      </Badge>
+                      {canEdit && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          loading={completingId === m.id}
+                          onClick={() => markDoneAndReschedule(m)}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          Mark Done
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {maintenance.length === 0 ? (
             <EmptyState
               icon={<Wrench className="h-5 w-5" />}
@@ -1531,13 +1678,22 @@ export default function InventoryPage() {
             items={cartItems}
             conflictIds={conflictIds}
             cartMode={cartMode}
+            flaggedIds={flaggedIds}
+            onToggleFlag={(id) => {
+              setFlaggedIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id); else next.add(id);
+                return next;
+              });
+            }}
             onRemove={(id) => {
               setCartItems((prev) => prev.filter((i) => i.id !== id));
               setConflictIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+              setFlaggedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
             }}
             onCheckOutAll={handleBatchCheckout}
             onCheckInAll={handleBatchCheckin}
-            onClear={() => { setCartItems([]); setCartMode(null); setConflictIds(new Set()); }}
+            onClear={() => { setCartItems([]); setCartMode(null); setConflictIds(new Set()); setFlaggedIds(new Set()); }}
             processing={processing}
           />
 
