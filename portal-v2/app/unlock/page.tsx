@@ -64,7 +64,7 @@ export default function UnlockPage() {
               aria-label="Site password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-11 w-full rounded-lg border border-white/20 bg-white/5 px-3 pr-11 text-sm text-white outline-none focus:border-white/40"
+              className="h-11 w-full rounded-lg border border-white/20 bg-white/5 px-3 pr-11 text-sm text-white outline-none focus:border-white/40 autofill-dark"
             />
             <button
               type="button"

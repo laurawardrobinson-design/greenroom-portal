@@ -893,3 +893,16 @@ select:focus-visible {
   --as-handle-color:   #69A925;
   --as-handle-locked:  #F59E0B;
 }
+
+/* Mask Chrome autofill yellow/white background on dark glass inputs */
+input.autofill-dark:-webkit-autofill,
+input.autofill-dark:-webkit-autofill:hover,
+input.autofill-dark:-webkit-autofill:focus,
+input.autofill-dark:-webkit-autofill:active {
+  -webkit-text-fill-color: #fff !important;
+  caret-color: #fff;
+  -webkit-box-shadow: 0 0 0 1000px rgba(40, 60, 50, 0.55) inset !important;
+  box-shadow: 0 0 0 1000px rgba(40, 60, 50, 0.55) inset !important;
+  transition: background-color 9999s ease-in-out 0s !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
