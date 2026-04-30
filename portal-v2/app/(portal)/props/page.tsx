@@ -297,7 +297,7 @@ export default function PropsPage() {
       {tab === "items" && (
         <>
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
+            <div className="flex items-center justify-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
               {PROPS_CATEGORIES.map((cat) => {
                 const Icon = PROPS_CATEGORY_ICONS[cat];
                 const active = categoryFilter === cat;
