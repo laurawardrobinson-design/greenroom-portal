@@ -64,16 +64,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Images cannot be uploaded as document categories
-    const isImage = /^image\//.test(file.type);
-    const documentCategories = ["Shot List", "Concept Deck", "Reference", "Product Info", "Contract", "Estimate", "PO", "Invoice", "Insurance", "Legal", "Deliverable"];
-    if (isImage && documentCategories.includes(category)) {
-      return NextResponse.json(
-        { error: "Images cannot be uploaded as document categories" },
-        { status: 400 }
-      );
-    }
-
     // Enforce 50MB size limit server-side
     const MAX_FILE_SIZE = 50 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
