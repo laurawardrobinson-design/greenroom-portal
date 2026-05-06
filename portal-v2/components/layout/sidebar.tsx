@@ -68,10 +68,22 @@ const NAV_GROUPS: NavGroup[] = [
         roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director", "Designer"],
       },
       {
+        label: "Budget",
+        href: "/budget",
+        icon: DollarSign,
+        roles: ["Admin"],
+      },
+      {
         label: "Campaigns",
         href: "/campaigns",
         icon: Film,
         roles: ["Admin", "Producer", "Post Producer", "Studio", "Vendor", "Art Director", "Creative Director"],
+      },
+      {
+        label: "Studio",
+        href: "/studio",
+        icon: Building2,
+        roles: ["Admin", "Producer", "Post Producer", "Studio"],
       },
       {
         label: "Dashboard",
@@ -89,13 +101,13 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Product Requests",
         href: "/product-requests",
         icon: PackageSearch,
-        roles: ["Admin", "Producer", "Post Producer", "Brand Marketing Manager", "Studio"],
+        roles: ["Producer", "Post Producer", "Brand Marketing Manager", "Studio"],
       },
       {
         label: "Calendar",
         href: "/calendar",
         icon: CalendarDays,
-        roles: ["Admin", "Post Producer", "Studio"],
+        roles: ["Post Producer", "Studio"],
       },
     ],
   },
@@ -106,20 +118,20 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Pre-Production",
         href: "/pre-production",
         icon: ClipboardList,
-        roles: ["Admin", "Producer", "Post Producer"],
+        roles: ["Producer", "Post Producer"],
         alsoActiveFor: [(p) => /\/campaigns\/[^/]+\/pre-production/.test(p)],
       },
       {
         label: "Asset Studio",
         href: "/asset-studio",
         icon: Palette,
-        roles: ["Admin", "Producer", "Post Producer", "Designer", "Art Director", "Creative Director"],
+        roles: ["Producer", "Post Producer", "Designer", "Art Director", "Creative Director"],
       },
       {
         label: "Post Production",
         href: "/post-workflow",
         icon: Clapperboard,
-        roles: ["Admin", "Producer", "Post Producer"],
+        roles: ["Producer", "Post Producer"],
       },
     ],
   },
@@ -153,12 +165,6 @@ const NAV_GROUPS: NavGroup[] = [
         icon: Boxes,
         roles: ["Admin", "Producer", "Post Producer", "Studio", "Art Director"],
       },
-      {
-        label: "Studio",
-        href: "/studio",
-        icon: Building2,
-        roles: ["Admin", "Producer", "Post Producer", "Studio"],
-      },
     ],
   },
   {
@@ -181,12 +187,6 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Finance",
     items: [
-      {
-        label: "Budget",
-        href: "/budget",
-        icon: DollarSign,
-        roles: ["Admin"],
-      },
       {
         label: "Estimates & Invoices",
         href: "/estimates-invoices",

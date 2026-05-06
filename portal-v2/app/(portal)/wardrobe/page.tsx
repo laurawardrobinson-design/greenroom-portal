@@ -315,7 +315,7 @@ export default function WardrobePage() {
                       <Badge variant="custom" className={`mt-1 ${CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Other}`}>{item.category}</Badge>
                     </div>
                   </div>
-                  {item.shootingNotes && <p className="mt-2 text-xs text-text-secondary line-clamp-2">{item.shootingNotes}</p>}
+                  {(item.description || item.shootingNotes) && <p className="mt-2 text-xs text-text-secondary line-clamp-2">{item.description || item.shootingNotes}</p>}
                   {item.restrictions && <p className="mt-1 text-xs text-warning font-medium line-clamp-1">{item.restrictions}</p>}
                 </button>
               ))}
