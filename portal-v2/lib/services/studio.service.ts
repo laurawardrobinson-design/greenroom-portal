@@ -3,10 +3,13 @@ import type {
   StudioSpace,
   SpaceReservation,
   ShootMeal,
+  MealItem,
   MealType,
   MealLocation,
   MealStatus,
   MealHandlerRole,
+  ShootDaySummary,
+  MealCrewSuggestion,
 } from "@/types/domain";
 
 const db = () => createAdminClient();
@@ -150,7 +153,8 @@ export async function listMeals(opts: {
     .select(`
       *,
       campaign:campaigns(id, wf_number, name),
-      handler:users!shoot_meals_handler_id_fkey(id, name)
+      handler:users!shoot_meals_handler_id_fkey(id, name),
+      items:shoot_meal_items(id, meal_id, name, quantity, notes, sort_order)
     `)
     .order("shoot_date")
     .order("meal_type");
@@ -166,6 +170,51 @@ export async function listMeals(opts: {
   return (data ?? []).map(mapMeal);
 }
 
+interface MealItemInput {
+  name: string;
+  quantity?: string | null;
+  notes?: string | null;
+}
+
+async function replaceItems(mealId: string, items: MealItemInput[]): Promise<void> {
+  const client = db();
+  const { error: delError } = await client
+    .from("shoot_meal_items")
+    .delete()
+    .eq("meal_id", mealId);
+  if (delError) throw delError;
+
+  const cleaned = items
+    .map((it, idx) => ({
+      meal_id: mealId,
+      name: (it.name ?? "").trim(),
+      quantity: it.quantity?.trim() || null,
+      notes: it.notes?.trim() || null,
+      sort_order: idx,
+    }))
+    .filter((it) => it.name.length > 0);
+
+  if (cleaned.length === 0) return;
+
+  const { error: insError } = await client.from("shoot_meal_items").insert(cleaned);
+  if (insError) throw insError;
+}
+
+export async function getMeal(id: string): Promise<ShootMeal | null> {
+  const { data, error } = await db()
+    .from("shoot_meals")
+    .select(`
+      *,
+      campaign:campaigns(id, wf_number, name),
+      handler:users!shoot_meals_handler_id_fkey(id, name),
+      items:shoot_meal_items(id, meal_id, name, quantity, notes, sort_order)
+    `)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapMeal(data) : null;
+}
+
 export async function createMeal(input: {
   campaignId: string;
   shootDate: string;
@@ -179,6 +228,7 @@ export async function createMeal(input: {
   vendor?: string | null;
   deliveryTime?: string | null;
   notes?: string | null;
+  items?: MealItemInput[];
   createdBy: string;
 }): Promise<ShootMeal> {
   const { data, error } = await db()
@@ -198,20 +248,24 @@ export async function createMeal(input: {
       notes: input.notes ?? null,
       created_by: input.createdBy,
     })
-    .select(`
-      *,
-      campaign:campaigns(id, wf_number, name),
-      handler:users!shoot_meals_handler_id_fkey(id, name)
-    `)
+    .select("id")
     .single();
 
   if (error) throw error;
-  return mapMeal(data);
+  if (input.items && input.items.length > 0) {
+    await replaceItems(data.id as string, input.items);
+  }
+  const meal = await getMeal(data.id as string);
+  if (!meal) throw new Error("Meal not found after create");
+  return meal;
 }
 
 export async function updateMeal(
   id: string,
   patch: Partial<{
+    mealType: MealType;
+    location: MealLocation;
+    handlerRole: MealHandlerRole;
     headcount: number | null;
     dietaryNotes: string | null;
     preferences: string | null;
@@ -220,9 +274,13 @@ export async function updateMeal(
     notes: string | null;
     status: MealStatus;
     handlerId: string | null;
+    items: MealItemInput[];
   }>
 ): Promise<ShootMeal> {
   const updates: Record<string, unknown> = {};
+  if ("mealType"     in patch) updates.meal_type     = patch.mealType;
+  if ("location"     in patch) updates.location      = patch.location;
+  if ("handlerRole"  in patch) updates.handler_role  = patch.handlerRole;
   if ("headcount"    in patch) updates.headcount     = patch.headcount;
   if ("dietaryNotes" in patch) updates.dietary_notes = patch.dietaryNotes;
   if ("preferences"  in patch) updates.preferences   = patch.preferences;
@@ -232,19 +290,21 @@ export async function updateMeal(
   if ("status"       in patch) updates.status        = patch.status;
   if ("handlerId"    in patch) updates.handler_id    = patch.handlerId;
 
-  const { data, error } = await db()
-    .from("shoot_meals")
-    .update(updates)
-    .eq("id", id)
-    .select(`
-      *,
-      campaign:campaigns(id, wf_number, name),
-      handler:users!shoot_meals_handler_id_fkey(id, name)
-    `)
-    .single();
+  if (Object.keys(updates).length > 0) {
+    const { error } = await db()
+      .from("shoot_meals")
+      .update(updates)
+      .eq("id", id);
+    if (error) throw error;
+  }
 
-  if (error) throw error;
-  return mapMeal(data);
+  if (patch.items) {
+    await replaceItems(id, patch.items);
+  }
+
+  const meal = await getMeal(id);
+  if (!meal) throw new Error("Meal not found after update");
+  return meal;
 }
 
 export async function deleteMeal(id: string): Promise<void> {
@@ -331,41 +391,23 @@ function buildPreferences(crew: CrewProfile[]): string {
   const energy = crew.map((c) => c.energyBoost).filter(Boolean);
   if (energy.length) parts.push(`Energy: ${tallyPreferences(energy)}`);
 
-  const publix = crew.map((c) => c.favoritePublixProduct).filter(Boolean);
-  if (publix.length) parts.push(`Publix Faves: ${tallyPreferences(publix)}`);
-
   return parts.join("\n");
 }
 
-export async function autoCreateFoodPlan(
+async function gatherCrewProfiles(
   campaignId: string,
-  shootDate: string,
-  createdBy: string
-): Promise<ShootMeal | null> {
+  shootDate: string
+): Promise<CrewProfile[]> {
   const client = db();
 
-  // 1. Check if a crafty entry already exists for this campaign + date
-  const { data: existing } = await client
-    .from("shoot_meals")
-    .select("id")
-    .eq("campaign_id", campaignId)
-    .eq("shoot_date", shootDate)
-    .eq("meal_type", "crafty")
-    .limit(1);
-
-  if (existing && existing.length > 0) return null; // Already planned
-
-  // 2. Get shoots for this campaign
   const { data: shoots } = await client
     .from("shoots")
     .select("id, crew_varies_by_day")
     .eq("campaign_id", campaignId);
 
-  if (!shoots || shoots.length === 0) return null;
-
+  if (!shoots || shoots.length === 0) return [];
   const shootIds = shoots.map((s) => s.id);
 
-  // 3. Get shoot dates matching this date (to handle crew_varies_by_day)
   const { data: shootDates } = await client
     .from("shoot_dates")
     .select("id, shoot_id")
@@ -374,15 +416,13 @@ export async function autoCreateFoodPlan(
 
   const shootDateIds = (shootDates ?? []).map((sd) => sd.id);
 
-  // 4. Get crew with user profiles
   const { data: crewRows } = await client
     .from("shoot_crew")
     .select("*, users(id, name, dietary_restrictions, allergies, favorite_drinks, favorite_snacks, energy_boost, favorite_publix_product)")
     .in("shoot_id", shootIds);
 
-  if (!crewRows || crewRows.length === 0) return null;
+  if (!crewRows || crewRows.length === 0) return [];
 
-  // 5. Filter crew if varies by day — only include crew for this specific date
   const crewVariesByDay = shoots.some((s) => s.crew_varies_by_day);
   let filteredCrew = crewRows;
   if (crewVariesByDay && shootDateIds.length > 0) {
@@ -391,7 +431,6 @@ export async function autoCreateFoodPlan(
     );
   }
 
-  // 6. Deduplicate by user_id (same person on multiple shoots)
   const uniqueUsers = new Map<string, CrewProfile>();
   for (const c of filteredCrew) {
     const user = c.users as Record<string, unknown> | null;
@@ -409,31 +448,125 @@ export async function autoCreateFoodPlan(
     });
   }
 
-  const crewProfiles = [...uniqueUsers.values()];
+  return [...uniqueUsers.values()];
+}
+
+export async function suggestMealFromCrew(
+  campaignId: string,
+  shootDate: string
+): Promise<MealCrewSuggestion> {
+  const crew = await gatherCrewProfiles(campaignId, shootDate);
+  return {
+    headcount: crew.length,
+    dietaryNotes: buildDietaryNotes(crew),
+    preferences: buildPreferences(crew),
+  };
+}
+
+export async function autoCreateFoodPlan(
+  campaignId: string,
+  shootDate: string,
+  createdBy: string
+): Promise<ShootMeal | null> {
+  const client = db();
+
+  // Pull existing meal types so we only seed the ones missing.
+  const { data: existing } = await client
+    .from("shoot_meals")
+    .select("meal_type")
+    .eq("campaign_id", campaignId)
+    .eq("shoot_date", shootDate);
+
+  const haveTypes = new Set((existing ?? []).map((m) => m.meal_type as string));
+  const seedTypes: MealType[] = (["crafty", "lunch"] as MealType[]).filter(
+    (t) => !haveTypes.has(t)
+  );
+  if (seedTypes.length === 0) return null;
+
+  const crewProfiles = await gatherCrewProfiles(campaignId, shootDate);
   if (crewProfiles.length === 0) return null;
 
-  // 7. Build aggregated notes
   const dietaryNotes = buildDietaryNotes(crewProfiles);
   const preferences = buildPreferences(crewProfiles);
 
-  // 8. Create the crafty entry
-  return createMeal({
-    campaignId,
-    shootDate,
-    mealType: "crafty",
-    location: "greenroom",
-    handlerRole: "studio",
-    headcount: crewProfiles.length,
-    dietaryNotes: dietaryNotes || null,
-    preferences: preferences || null,
-    notes: `Auto-generated from ${crewProfiles.length} crew members`,
-    createdBy,
-  });
+  let lastCreated: ShootMeal | null = null;
+  for (const mealType of seedTypes) {
+    lastCreated = await createMeal({
+      campaignId,
+      shootDate,
+      mealType,
+      location: "greenroom",
+      handlerRole: "studio",
+      headcount: crewProfiles.length,
+      dietaryNotes: dietaryNotes || null,
+      preferences: preferences || null,
+      notes: `Auto-generated from ${crewProfiles.length} crew members`,
+      createdBy,
+    });
+  }
+  return lastCreated;
+}
+
+// ─────────────────────────────────────────────
+// Upcoming shoot days (for Studio meal planning)
+// ─────────────────────────────────────────────
+
+export async function listShootDays(opts: {
+  dateFrom: string;
+  dateTo: string;
+}): Promise<ShootDaySummary[]> {
+  const { data, error } = await db()
+    .from("shoot_dates")
+    .select(`
+      id,
+      shoot_date,
+      shoot:shoots!inner(
+        id,
+        campaign:campaigns!inner(id, wf_number, name)
+      )
+    `)
+    .gte("shoot_date", opts.dateFrom)
+    .lte("shoot_date", opts.dateTo)
+    .order("shoot_date");
+
+  if (error) throw error;
+
+  const seen = new Set<string>();
+  const out: ShootDaySummary[] = [];
+  for (const row of data ?? []) {
+    const r = row as Record<string, unknown>;
+    const shoot = r.shoot as { campaign: { id: string; wf_number: string; name: string } } | null;
+    const campaign = shoot?.campaign;
+    if (!campaign) continue;
+    const shootDate = r.shoot_date as string;
+    const key = `${campaign.id}:${shootDate}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      shootDateId: r.id as string,
+      shootDate,
+      campaignId: campaign.id,
+      campaignName: campaign.name,
+      wfNumber: campaign.wf_number,
+    });
+  }
+  return out;
 }
 
 function mapMeal(r: Record<string, unknown>): ShootMeal {
   const campaign = r.campaign as Record<string, unknown> | null;
   const handler = r.handler as Record<string, unknown> | null;
+  const itemRows = (r.items as Record<string, unknown>[] | null) ?? [];
+  const items: MealItem[] = itemRows
+    .map((it) => ({
+      id: it.id as string,
+      mealId: it.meal_id as string,
+      name: it.name as string,
+      quantity: (it.quantity as string | null) ?? null,
+      notes: (it.notes as string | null) ?? null,
+      sortOrder: (it.sort_order as number) ?? 0,
+    }))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
   return {
     id: r.id as string,
     campaignId: r.campaign_id as string,
@@ -452,6 +585,7 @@ function mapMeal(r: Record<string, unknown>): ShootMeal {
     createdBy: r.created_by as string,
     createdAt: r.created_at as string,
     updatedAt: r.updated_at as string,
+    items,
     campaign: campaign
       ? { id: campaign.id as string, wfNumber: campaign.wf_number as string, name: campaign.name as string }
       : undefined,

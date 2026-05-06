@@ -5,7 +5,7 @@ import useSWR from "swr";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ShootDayBlock } from "@/components/studio/shoot-day-block";
-import type { ShootMeal } from "@/types/domain";
+import type { ShootMeal, ShootDaySummary } from "@/types/domain";
 import {
   Utensils,
   AlertCircle,
@@ -56,6 +56,15 @@ export function FoodView({ userRole }: FoodViewProps) {
     fetcher
   );
 
+  // Pull all shoot days in range so empty days (no meals planned yet) still
+  // surface — Studio Manager can see what's coming up and plan ahead.
+  const { data: shootDays } = useSWR<ShootDaySummary[]>(
+    timeRange === "upcoming"
+      ? `/api/studio/shoot-days?dateFrom=${dateFrom}&dateTo=${dateTo}`
+      : null,
+    fetcher
+  );
+
   // Apply filters
   const filteredMeals = useMemo(() => {
     let result = meals ?? [];
@@ -78,9 +87,40 @@ export function FoodView({ userRole }: FoodViewProps) {
     return result;
   }, [meals, statusFilter, dateFilter, timeRange]);
 
-  // Group by campaign → shoot date
+  // Group by campaign → shoot date. Seed groups with all upcoming shoot days
+  // (so a day with no meals still appears) and overlay any meals that exist.
   const campaignGroups = useMemo<CampaignGroup[]>(() => {
     const map = new Map<string, CampaignGroup>();
+
+    if (timeRange === "upcoming") {
+      let upcomingDays = shootDays ?? [];
+      if (dateFilter === "this-week") {
+        const weekEnd = format(addDays(now, 7), "yyyy-MM-dd");
+        upcomingDays = upcomingDays.filter((d) => d.shootDate <= weekEnd);
+      } else if (dateFilter === "next-week") {
+        const weekStart = format(addDays(now, 7), "yyyy-MM-dd");
+        const weekEnd = format(addDays(now, 14), "yyyy-MM-dd");
+        upcomingDays = upcomingDays.filter(
+          (d) => d.shootDate >= weekStart && d.shootDate <= weekEnd
+        );
+      }
+      // Skip seeding empty days when filters that depend on meals are active
+      // (Pending Only / non-greenroom) — those filters imply "show me meals".
+      const seedEmpty = statusFilter === "all" && locationFilter === "all";
+      if (seedEmpty) {
+        for (const d of upcomingDays) {
+          const cg = map.get(d.campaignId) ?? {
+            campaignId: d.campaignId,
+            campaignName: d.campaignName,
+            wfNumber: d.wfNumber,
+            days: new Map<string, ShootMeal[]>(),
+          };
+          if (!cg.days.has(d.shootDate)) cg.days.set(d.shootDate, []);
+          map.set(d.campaignId, cg);
+        }
+      }
+    }
+
     filteredMeals.forEach((m) => {
       const cg = map.get(m.campaignId) ?? {
         campaignId: m.campaignId,
@@ -101,7 +141,8 @@ export function FoodView({ userRole }: FoodViewProps) {
       const bFirst = b.days.keys().next().value ?? "";
       return (aFirst as string).localeCompare(bFirst as string);
     });
-  }, [filteredMeals]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredMeals, shootDays, timeRange, dateFilter, statusFilter, locationFilter]);
 
   const totalPending = (meals ?? []).filter((m) => m.status === "pending").length;
   const uniqueHeadcounts = (meals ?? [])
@@ -234,8 +275,8 @@ export function FoodView({ userRole }: FoodViewProps) {
       ) : campaignGroups.length === 0 ? (
         <EmptyState
           icon={<Utensils className="h-5 w-5" />}
-          title={timeRange === "past" ? "No meals in the past 60 days" : "No meals in this range"}
-          description="Add meals from the campaign pre-production page or from shoot day blocks."
+          title={timeRange === "past" ? "No meals in the past 60 days" : "No upcoming shoot days"}
+          description={timeRange === "past" ? "Past meals will appear here." : "Once shoot dates are scheduled, they'll show up here for meal planning."}
         />
       ) : (
         <div className="space-y-8">

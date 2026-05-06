@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       vendor: rest.vendor ?? null,
       deliveryTime: rest.deliveryTime ?? null,
       notes: rest.notes ?? null,
+      items: Array.isArray(rest.items) ? rest.items : undefined,
       createdBy: user.id,
     });
     return NextResponse.json(meal, { status: 201 });

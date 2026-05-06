@@ -1265,6 +1265,15 @@ export type MealLocation = "greenroom" | "outside";
 export type MealStatus = "pending" | "ordered" | "confirmed" | "received" | "set";
 export type MealHandlerRole = "studio" | "producer";
 
+export interface MealItem {
+  id: string;
+  mealId: string;
+  name: string;
+  quantity: string | null;
+  notes: string | null;
+  sortOrder: number;
+}
+
 export interface ShootMeal {
   id: string;
   campaignId: string;
@@ -1283,8 +1292,23 @@ export interface ShootMeal {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  items: MealItem[];
   campaign?: { id: string; wfNumber: string; name: string };
   handler?: { id: string; name: string };
+}
+
+export interface ShootDaySummary {
+  campaignId: string;
+  campaignName: string;
+  wfNumber: string;
+  shootDate: string;
+  shootDateId: string;
+}
+
+export interface MealCrewSuggestion {
+  headcount: number;
+  dietaryNotes: string;
+  preferences: string;
 }
 
 // --- Onboarding ---

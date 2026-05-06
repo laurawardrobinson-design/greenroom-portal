@@ -119,6 +119,21 @@ export function MealCard({ meal, canEdit, compact, onEdit, onDelete, onStatusAdv
             <span className="font-medium text-text-primary">Preferences:</span> {meal.preferences}
           </p>
         )}
+        {meal.items && meal.items.length > 0 && (
+          <ul className="mt-1 space-y-0.5 rounded-md border border-border bg-surface px-2.5 py-1.5">
+            {meal.items.map((it) => (
+              <li key={it.id} className="flex items-baseline gap-2 text-xs">
+                {it.quantity && (
+                  <span className="text-text-tertiary shrink-0 w-12">{it.quantity}</span>
+                )}
+                <span className="text-text-primary font-medium">{it.name}</span>
+                {it.notes && (
+                  <span className="text-text-tertiary truncate">— {it.notes}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
         {meal.notes && (
           <p className="text-xs text-text-tertiary italic">{meal.notes}</p>
         )}
