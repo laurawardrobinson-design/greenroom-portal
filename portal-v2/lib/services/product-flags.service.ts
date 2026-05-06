@@ -4,6 +4,22 @@ import type { PRDepartment } from "@/types/domain";
 export type ProductFlagReason = "inaccurate" | "about_to_change";
 export type ProductFlagStatus = "open" | "resolved";
 export type ProductFlagSource = "rbu" | "producer";
+export type ProductFlagKind = "comment" | "edit";
+
+export const PROPOSABLE_FIELDS = [
+  "name",
+  "description",
+  "shootingNotes",
+  "restrictions",
+  "itemCode",
+  "pcomLink",
+  "rpGuideUrl",
+  "imageUrl",
+] as const;
+export type ProposableField = (typeof PROPOSABLE_FIELDS)[number];
+
+export type ProposedChange = { from: unknown; to: unknown };
+export type ProposedChanges = Partial<Record<ProposableField, ProposedChange>>;
 
 export interface ProductFlag {
   id: string;
@@ -14,6 +30,8 @@ export interface ProductFlag {
   raisedByName: string | null;
   reason: ProductFlagReason;
   comment: string;
+  kind: ProductFlagKind;
+  proposedChanges: ProposedChanges | null;
   status: ProductFlagStatus;
   resolvedBy: string | null;
   resolvedByName: string | null;
@@ -55,6 +73,8 @@ function toFlag(row: Record<string, unknown>): ProductFlag {
     raisedByName: (raiser?.name as string) || null,
     reason: row.reason as ProductFlagReason,
     comment: (row.comment as string) || "",
+    kind: ((row.kind as string) ?? "comment") as ProductFlagKind,
+    proposedChanges: (row.proposed_changes as ProposedChanges | null) ?? null,
     status: row.status as ProductFlagStatus,
     resolvedBy: (row.resolved_by as string) || null,
     resolvedByName: (resolver?.name as string) || null,
@@ -140,6 +160,8 @@ export async function createProductFlag(input: {
   comment: string;
   source?: ProductFlagSource;
   raisedByUserId?: string | null;
+  kind?: ProductFlagKind;
+  proposedChanges?: ProposedChanges | null;
 }): Promise<ProductFlag> {
   const db = createAdminClient();
   const { data, error } = await db
@@ -151,6 +173,8 @@ export async function createProductFlag(input: {
       comment: input.comment,
       source: input.source ?? "rbu",
       raised_by_user_id: input.raisedByUserId ?? null,
+      kind: input.kind ?? "comment",
+      proposed_changes: input.proposedChanges ?? null,
     })
     .select(
       "*, products(id, name, item_code, department, image_url), raised_by_user:users!product_flags_raised_by_user_id_fkey(name)"
@@ -158,6 +182,66 @@ export async function createProductFlag(input: {
     .single();
   if (error) throw error;
   return toFlag(data as Record<string, unknown>);
+}
+
+// Apply an "edit" flag's proposed changes to the underlying product
+// in a single update, then resolve the flag. Used by the Producer
+// "Accept" action on the flag review modal.
+const FIELD_TO_COLUMN: Record<ProposableField, string> = {
+  name: "name",
+  description: "description",
+  shootingNotes: "shooting_notes",
+  restrictions: "restrictions",
+  itemCode: "item_code",
+  pcomLink: "pcom_link",
+  rpGuideUrl: "rp_guide_url",
+  imageUrl: "image_url",
+};
+
+export async function acceptProductFlagProposal(
+  flagId: string,
+  resolvedBy: string,
+  note = ""
+): Promise<ProductFlag> {
+  const db = createAdminClient();
+  const { data: flagRow, error: flagErr } = await db
+    .from("product_flags")
+    .select("id, product_id, kind, proposed_changes, status")
+    .eq("id", flagId)
+    .single();
+  if (flagErr) throw flagErr;
+  const row = flagRow as Record<string, unknown>;
+  if (row.kind !== "edit") {
+    throw new Error("Flag is not an edit proposal");
+  }
+  if (row.status === "resolved") {
+    throw new Error("Flag already resolved");
+  }
+  const productId = row.product_id as string;
+  const proposed = (row.proposed_changes as ProposedChanges | null) ?? {};
+
+  const update: Record<string, unknown> = {};
+  for (const key of Object.keys(proposed) as ProposableField[]) {
+    const col = FIELD_TO_COLUMN[key];
+    if (!col) continue;
+    const change = proposed[key];
+    if (!change) continue;
+    update[col] = change.to ?? null;
+  }
+  if (Object.keys(update).length > 0) {
+    update.updated_at = new Date().toISOString();
+    const { error: updErr } = await db
+      .from("products")
+      .update(update)
+      .eq("id", productId);
+    if (updErr) throw updErr;
+  }
+
+  return resolveProductFlag(
+    flagId,
+    resolvedBy,
+    note || "Accepted proposed changes"
+  );
 }
 
 export async function listProductFlags(opts?: {

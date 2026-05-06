@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
-import { CheckCircle2, Flag, ShoppingBasket, Undo2 } from "lucide-react";
+import { CheckCircle2, Flag, LayoutGrid, List, Pencil, ShoppingBasket, Undo2 } from "lucide-react";
 import type { ProductReviewRow } from "@/lib/services/products.service";
 import type { Product } from "@/types/domain";
 import { ProductImage } from "@/components/products/product-image";
 import { ProductDrawer, DEPT_COLORS } from "@/components/products/product-drawer";
 import { RaiseFlagDialog } from "@/components/products/raise-flag-dialog";
+import { ProposeEditModal } from "@/components/products/propose-edit-modal";
 import { Badge } from "@/components/ui/badge";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -71,7 +72,17 @@ export function ReviewTab({
   );
   const [drawer, setDrawer] = useState<{ row: ProductReviewRow; product: Product } | null>(null);
   const [flagFor, setFlagFor] = useState<ProductReviewRow | null>(null);
+  const [editFor, setEditFor] = useState<ProductReviewRow | null>(null);
   const [sub, setSub] = useState<Sub>("pending");
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    if (typeof window === "undefined") return "grid";
+    return (localStorage.getItem("product-review-view") as "grid" | "list") || "grid";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("product-review-view", viewMode);
+    }
+  }, [viewMode]);
   const { toast } = useToast();
 
   const rows = Array.isArray(data) ? data : [];
@@ -178,23 +189,45 @@ export function ReviewTab({
 
   return (
     <>
-      <div className="flex items-center gap-1 rounded-lg border border-border bg-surface p-1 w-fit">
-        <SubButton active={sub === "pending"} onClick={() => setSub("pending")}>
-          Pending
-          {pending.length > 0 && (
-            <span className="ml-1.5 rounded-full bg-warning/15 text-warning px-1.5 py-px text-[10px] font-semibold">
-              {pending.length}
-            </span>
-          )}
-        </SubButton>
-        <SubButton active={sub === "approved"} onClick={() => setSub("approved")}>
-          Approved
-          {approved.length > 0 && (
-            <span className="ml-1.5 rounded-full bg-success/15 text-success px-1.5 py-px text-[10px] font-semibold">
-              {approved.length}
-            </span>
-          )}
-        </SubButton>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-surface p-1 w-fit">
+          <SubButton active={sub === "pending"} onClick={() => setSub("pending")}>
+            Pending
+            {pending.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-warning/15 text-warning px-1.5 py-px text-[10px] font-semibold">
+                {pending.length}
+              </span>
+            )}
+          </SubButton>
+          <SubButton active={sub === "approved"} onClick={() => setSub("approved")}>
+            Approved
+            {approved.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-success/15 text-success px-1.5 py-px text-[10px] font-semibold">
+                {approved.length}
+              </span>
+            )}
+          </SubButton>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setViewMode("grid")}
+            className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
+            title="Grid view"
+            aria-label="Grid view"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-secondary text-text-primary" : "text-text-tertiary hover:text-text-secondary"}`}
+            title="List view"
+            aria-label="List view"
+          >
+            <List className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {sub === "pending" ? (
@@ -203,14 +236,17 @@ export function ReviewTab({
             title="Shooting in the next 14 days"
             empty="Nothing scheduled in the next 14 days."
             rows={soon}
+            viewMode={viewMode}
           >
             {soon.map((r, i) => (
               <ReviewTile
                 key={`${r.campaignProductId}-${i}`}
                 row={r}
                 flagCount={flagCounts?.[r.product.id] ?? 0}
+                variant={viewMode}
                 onOpen={() => openDrawer(r)}
                 onApprove={canReview ? () => approve(r) : null}
+                onEdit={canReview ? () => setEditFor(r) : null}
                 onFlag={canReview ? () => setFlagFor(r) : null}
               />
             ))}
@@ -219,14 +255,17 @@ export function ReviewTab({
             title="Later & planning"
             empty="No further upcoming use."
             rows={later}
+            viewMode={viewMode}
           >
             {later.map((r, i) => (
               <ReviewTile
                 key={`${r.campaignProductId}-${i}`}
                 row={r}
                 flagCount={flagCounts?.[r.product.id] ?? 0}
+                variant={viewMode}
                 onOpen={() => openDrawer(r)}
                 onApprove={canReview ? () => approve(r) : null}
+                onEdit={canReview ? () => setEditFor(r) : null}
                 onFlag={canReview ? () => setFlagFor(r) : null}
               />
             ))}
@@ -239,12 +278,19 @@ export function ReviewTab({
           description="Items approved by the RBU as accurate move here."
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div
+          className={
+            viewMode === "grid"
+              ? "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+              : "rounded-xl border border-border overflow-hidden bg-surface"
+          }
+        >
           {approved.map((r, i) => (
             <ReviewTile
               key={`${r.campaignProductId}-${i}`}
               row={r}
               flagCount={flagCounts?.[r.product.id] ?? 0}
+              variant={viewMode}
               onOpen={() => openDrawer(r)}
               onUndo={canReview ? () => unapprove(r) : null}
             />
@@ -261,6 +307,19 @@ export function ReviewTab({
           onClose={() => setFlagFor(null)}
           onCreated={() => {
             setFlagFor(null);
+            mutate();
+          }}
+        />
+      )}
+
+      {editFor && (
+        <ProposeEditModal
+          productId={editFor.product.id}
+          productName={editFor.product.name}
+          rbuToken={rbuToken}
+          onClose={() => setEditFor(null)}
+          onCreated={() => {
+            setEditFor(null);
             mutate();
           }}
         />
@@ -289,11 +348,13 @@ function Section({
   title,
   empty,
   rows,
+  viewMode,
   children,
 }: {
   title: string;
   empty: string;
   rows: ProductReviewRow[];
+  viewMode: "grid" | "list";
   children: React.ReactNode;
 }) {
   return (
@@ -306,8 +367,12 @@ function Section({
       </div>
       {rows.length === 0 ? (
         <p className="text-xs text-text-tertiary">{empty}</p>
-      ) : (
+      ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {children}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border overflow-hidden bg-surface">
           {children}
         </div>
       )}
@@ -342,20 +407,129 @@ function SubButton({
 function ReviewTile({
   row: r,
   flagCount,
+  variant = "grid",
   onOpen,
   onApprove,
+  onEdit,
   onFlag,
   onUndo,
 }: {
   row: ProductReviewRow;
   flagCount: number;
+  variant?: "grid" | "list";
   onOpen: () => void;
   onApprove?: (() => void) | null;
+  onEdit?: (() => void) | null;
   onFlag?: (() => void) | null;
   onUndo?: (() => void) | null;
 }) {
   const campaignLine = [r.wfNumber, r.campaignName].filter(Boolean).join(" ");
   const days = r.date ? daysUntil(r.date) : null;
+  const dateLine = r.date
+    ? `Shooting ${formatDate(r.date)}${
+        days !== null && days >= 0 && days <= 14
+          ? ` · ${days === 0 ? "today" : `in ${days}d`}`
+          : ""
+      }${r.role ? ` · ${r.role}` : ""}`
+    : `Planning${r.role ? ` · ${r.role}` : ""}`;
+
+  if (variant === "list") {
+    return (
+      <div
+        onClick={onOpen}
+        className={`group flex cursor-pointer items-center gap-3 px-4 py-2.5 border-b border-border-light last:border-b-0 transition-colors ${
+          flagCount > 0 ? "bg-amber-50/30 hover:bg-amber-50/60" : "hover:bg-surface-secondary"
+        }`}
+      >
+        <ProductImage
+          src={r.product.imageUrl}
+          alt={r.product.name}
+          className="h-9 w-9 rounded-md object-cover shrink-0"
+        />
+        <div className="min-w-0 flex-[1.4]">
+          <p className="text-sm font-semibold text-text-primary truncate">{r.product.name}</p>
+          {r.product.itemCode && (
+            <p className="text-[10px] text-text-tertiary leading-tight truncate">{r.product.itemCode}</p>
+          )}
+        </div>
+        <div className="hidden sm:flex w-[140px] shrink-0">
+          <Badge
+            variant="custom"
+            className={`text-[10px] ${DEPT_COLORS[r.product.department] || DEPT_COLORS.Other}`}
+          >
+            {r.product.department}
+          </Badge>
+        </div>
+        <div className="hidden md:block min-w-0 flex-1">
+          <p className="text-xs text-text-secondary truncate">{campaignLine || "—"}</p>
+          <p className="text-[10px] text-text-tertiary truncate">{dateLine}</p>
+        </div>
+        {flagCount > 0 && (
+          <span
+            className="hidden sm:inline-flex items-center gap-1 rounded-full bg-amber-50 text-warning border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium shrink-0"
+            title={`${flagCount} open flag${flagCount === 1 ? "" : "s"}`}
+          >
+            <Flag className="h-2.5 w-2.5" />
+            {flagCount}
+          </span>
+        )}
+        <div
+          className="flex items-center gap-1.5 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {onApprove && (
+            <>
+              <button
+                type="button"
+                onClick={onApprove}
+                className="inline-flex items-center justify-center gap-1 rounded-md bg-primary text-white px-2 py-1.5 text-[11px] font-medium hover:bg-primary/90 transition-colors"
+                title="Approve"
+              >
+                <CheckCircle2 className="h-3 w-3" />
+                Approve
+              </button>
+              <button
+                type="button"
+                onClick={onEdit ?? onOpen}
+                className="inline-flex items-center justify-center gap-1 rounded-md border border-border bg-surface px-2 py-1.5 text-[11px] font-medium text-text-secondary hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors"
+                title="Suggest edit"
+              >
+                <Pencil className="h-3 w-3" />
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={onFlag ?? onOpen}
+                className="inline-flex items-center justify-center rounded-md border border-border bg-surface h-[26px] w-[26px] text-text-secondary hover:border-amber-400 hover:text-warning hover:bg-amber-50 transition-colors"
+                title="Add comment flag"
+                aria-label="Add comment flag"
+              >
+                <Flag className="h-3 w-3" />
+              </button>
+            </>
+          )}
+          {onUndo && (
+            <button
+              type="button"
+              onClick={onUndo}
+              className="inline-flex items-center justify-center gap-1 rounded-md border border-border bg-surface px-2 py-1.5 text-[11px] font-medium text-text-secondary hover:text-text-primary transition-colors"
+              title="Undo"
+            >
+              <Undo2 className="h-3 w-3" />
+              Undo
+            </button>
+          )}
+          {!onApprove && !onUndo && r.rbuApprovedAt && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-success">
+              <CheckCircle2 className="h-3 w-3" />
+              Approved
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       onClick={onOpen}
@@ -428,11 +602,21 @@ function ReviewTile({
             </button>
             <button
               type="button"
+              onClick={onEdit ?? onOpen}
+              className="inline-flex items-center justify-center gap-1 rounded-md border border-border bg-surface px-2 py-1.5 text-[11px] font-medium text-text-secondary hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors"
+              title="Suggest edit"
+            >
+              <Pencil className="h-3 w-3" />
+              Edit
+            </button>
+            <button
+              type="button"
               onClick={onFlag ?? onOpen}
-              className="inline-flex items-center justify-center gap-1 rounded-md border border-border bg-surface px-2 py-1.5 text-[11px] font-medium text-text-secondary hover:border-amber-400 hover:text-warning hover:bg-amber-50 transition-colors"
+              className="inline-flex items-center justify-center rounded-md border border-border bg-surface h-[26px] w-[26px] text-text-secondary hover:border-amber-400 hover:text-warning hover:bg-amber-50 transition-colors"
+              title="Add comment flag"
+              aria-label="Add comment flag"
             >
               <Flag className="h-3 w-3" />
-              Flag
             </button>
           </>
         )}

@@ -5,11 +5,13 @@ import Link from "next/link";
 import useSWR from "swr";
 import {
   Apple,
+  ArrowRight,
   Beef,
   Check,
   Cookie,
   Edit2,
   ExternalLink,
+  Pencil,
   RotateCcw,
   Sandwich,
   ShoppingBasket,
@@ -145,6 +147,26 @@ export function FlagReviewModal({
   const [resolveNote, setResolveNote] = useState("");
   const [resolving, setResolving] = useState(false);
   const [reopening, setReopening] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+
+  async function acceptProposal() {
+    setAccepting(true);
+    try {
+      const res = await fetch(`/api/product-flags/${flag.id}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: resolveNote }),
+      });
+      if (!res.ok) throw new Error();
+      toast("success", "Changes applied & flag cleared");
+      onChanged();
+      onClose();
+    } catch {
+      toast("error", "Couldn't apply changes");
+    } finally {
+      setAccepting(false);
+    }
+  }
 
   async function saveProduct() {
     if (!product) return;
@@ -286,6 +308,13 @@ export function FlagReviewModal({
           </div>
         )}
       </div>
+
+      {flag.kind === "edit" && flag.proposedChanges && (
+        <ProposedChangesPanel
+          proposed={flag.proposedChanges}
+          status={flag.status}
+        />
+      )}
 
       {/* Product panel */}
       <div className="mb-4">
@@ -497,31 +526,40 @@ export function FlagReviewModal({
       {flag.status === "open" && canResolve && !editMode && (
         <div className="border-t border-border pt-3 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-            Clear this flag
+            {flag.kind === "edit"
+              ? "Apply or decline these changes"
+              : "Clear this flag"}
           </p>
           <textarea
             rows={2}
             value={resolveNote}
             onChange={(e) => setResolveNote(e.target.value)}
-            placeholder="What was done? (optional)"
+            placeholder={
+              flag.kind === "edit"
+                ? "Note for the proposer (optional)"
+                : "What was done? (optional)"
+            }
             className="w-full rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none resize-none"
           />
           <div className="flex items-center justify-end gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onClose}
-            >
+            <Button type="button" variant="ghost" onClick={onClose}>
               Close
             </Button>
             <Button
               type="button"
+              variant={flag.kind === "edit" ? "secondary" : "primary"}
               onClick={clearFlag}
               loading={resolving}
             >
               <Check className="h-3.5 w-3.5" />
-              Clear flag
+              {flag.kind === "edit" ? "Decline" : "Clear flag"}
             </Button>
+            {flag.kind === "edit" && (
+              <Button type="button" onClick={acceptProposal} loading={accepting}>
+                <Pencil className="h-3.5 w-3.5" />
+                Accept changes
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -543,6 +581,64 @@ export function FlagReviewModal({
         </div>
       )}
     </Modal>
+  );
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  name: "Name",
+  description: "Description",
+  shootingNotes: "Shooting notes",
+  restrictions: "Restrictions",
+  itemCode: "Item code",
+  pcomLink: "Pcom link",
+  rpGuideUrl: "RP guide URL",
+  imageUrl: "Image",
+};
+
+function displayValue(v: unknown): string {
+  if (v === null || v === undefined || v === "") return "—";
+  return String(v);
+}
+
+function ProposedChangesPanel({
+  proposed,
+  status,
+}: {
+  proposed: Record<string, { from: unknown; to: unknown }>;
+  status: ProductFlag["status"];
+}) {
+  const entries = Object.entries(proposed);
+  if (entries.length === 0) return null;
+  return (
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 mb-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Pencil className="h-3.5 w-3.5 text-primary" />
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+          {status === "resolved" ? "Proposed changes" : "Proposed changes — review"}
+        </p>
+        <span className="text-[10px] text-text-tertiary">
+          {entries.length} field{entries.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      <ul className="space-y-2">
+        {entries.map(([field, change]) => (
+          <li key={field} className="rounded-md bg-surface border border-border-light px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1">
+              {FIELD_LABELS[field] ?? field}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-2 sm:items-center text-[13px]">
+              <p className="text-text-secondary line-through whitespace-pre-wrap break-words">
+                {displayValue(change.from)}
+              </p>
+              <ArrowRight className="hidden sm:block h-3 w-3 text-text-tertiary mx-auto" />
+              <p className="text-text-primary font-medium whitespace-pre-wrap break-words">
+                {displayValue(change.to)}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

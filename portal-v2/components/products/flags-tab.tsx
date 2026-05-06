@@ -7,6 +7,7 @@ import {
   Beef,
   Cookie,
   Flag,
+  Pencil,
   Sandwich,
   ShoppingBasket,
   type LucideIcon,
@@ -211,15 +212,26 @@ function FlagRow({
                 {flag.flaggedByDept}
               </span>
               <span>·</span>
-              <span
-                className={`font-medium ${
-                  flag.reason === "about_to_change"
-                    ? "text-sky-700"
-                    : "text-error"
-                }`}
-              >
-                {reasonLabel(flag.reason)}
-              </span>
+              {flag.kind === "edit" ? (
+                <span className="inline-flex items-center gap-1 font-medium text-primary">
+                  <Pencil className="h-3 w-3" />
+                  {Object.keys(flag.proposedChanges ?? {}).length} field
+                  {Object.keys(flag.proposedChanges ?? {}).length === 1
+                    ? ""
+                    : "s"}{" "}
+                  proposed
+                </span>
+              ) : (
+                <span
+                  className={`font-medium ${
+                    flag.reason === "about_to_change"
+                      ? "text-sky-700"
+                      : "text-error"
+                  }`}
+                >
+                  {reasonLabel(flag.reason)}
+                </span>
+              )}
               <span>·</span>
               <span>{formatRelative(flag.createdAt)}</span>
             </div>
