@@ -102,6 +102,14 @@ const GENDER_COLORS: Record<string, string> = {
   "All":     "bg-slate-100 text-slate-600",
 };
 
+function inferGenderFromName(name?: string | null): JobClassItemGender | null {
+  if (!name) return null;
+  const n = name.toLowerCase();
+  if (/\bwomen'?s\b/.test(n)) return "Women's";
+  if (/\bmen'?s\b/.test(n)) return "Men's";
+  return null;
+}
+
 const SIZE_ORDER = ["XS","S","M","L","XL","2XL","3XL","One Size","Other"] as const;
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -1235,10 +1243,12 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
     if (!selectedItemId) return;
     setAddingItem(true);
     try {
+      const picked = availableToAdd.find((i) => i.id === selectedItemId);
+      const gender = inferGenderFromName(picked?.name);
       const res = await fetch(`/api/job-classes/${jobClassId}/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wardrobeItemId: selectedItemId }),
+        body: JSON.stringify({ wardrobeItemId: selectedItemId, ...(gender ? { gender } : {}) }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
       toast("success", "Item added");
