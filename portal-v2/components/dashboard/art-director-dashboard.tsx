@@ -9,7 +9,6 @@ import {
   Clock,
   Film,
   Target,
-  TrendingUp,
 } from "lucide-react";
 import type { AppUser, CampaignStatus } from "@/types/domain";
 import { Card } from "@/components/ui/card";
@@ -293,62 +292,6 @@ export function ArtDirectorDashboard({ user }: { user: AppUser }) {
 
         {/* Right Sidebar */}
         <div className="space-y-6 lg:col-span-3">
-          {/* Growth Goal */}
-          <div className="rounded-2xl border border-border bg-surface shadow-xs overflow-hidden">
-            <TileHeader icon={TrendingUp} title="Growth Goal" />
-            <div className="px-3.5 py-3">
-              {!stats ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-full rounded" />
-                  <Skeleton className="h-4 w-2/3 rounded" />
-                </div>
-              ) : !stats.goal ? (
-                <div className="py-4 text-center">
-                  <p className="text-xs text-text-tertiary mb-2">
-                    No goal set yet
-                  </p>
-                  <Link
-                    href="/goals"
-                    className="text-xs font-medium text-primary hover:underline"
-                  >
-                    Set your growth goal
-                  </Link>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm text-text-primary leading-relaxed">
-                    {stats.goal.goalText}
-                  </p>
-                  {stats.goal.milestonesTotal > 0 && (
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
-                          Milestones
-                        </span>
-                        <span className="text-[11px] text-text-secondary">
-                          {stats.goal.milestonesCompleted} of{" "}
-                          {stats.goal.milestonesTotal}
-                        </span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-surface-secondary overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-emerald-500 transition-all"
-                          style={{
-                            width: `${Math.round(
-                              (stats.goal.milestonesCompleted /
-                                stats.goal.milestonesTotal) *
-                                100
-                            )}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-
           {/* Highlights */}
           <HighlightsCard />
         </div>
