@@ -1435,7 +1435,7 @@ function JobClassModal({ jobClassId, onClose, canEdit, allItems }: {
                 </div>
               ) : (() => {
                 const filtered = items.filter((ji) =>
-                  ji.gender === "All" || ji.gender === genderFilter
+                  genderFilter === "All" || ji.gender === "All" || ji.gender === genderFilter
                 );
                 if (filtered.length === 0) {
                   return (
