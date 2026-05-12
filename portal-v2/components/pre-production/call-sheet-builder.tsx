@@ -28,7 +28,6 @@ import {
   Users,
 } from "lucide-react";
 import { differenceInHours, format, parseISO } from "date-fns";
-import { generateCallSheetPdf } from "@/lib/utils/pdf-generator";
 import { useCallSheetDraft, type SaveState } from "@/hooks/use-call-sheet-draft";
 import type {
   Shoot,
@@ -193,9 +192,10 @@ export function CallSheetBuilder({
   };
 
   // ─── Download ──────────────────────────────────────────────────────────────
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!content || !selectedDate) return;
     const dayIdx = allDates.findIndex((d) => d.id === selectedDateId);
+    const { generateCallSheetPdf } = await import("@/lib/utils/pdf-generator");
     const doc = generateCallSheetPdf({
       campaignName,
       wfNumber,

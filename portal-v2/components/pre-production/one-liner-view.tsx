@@ -4,7 +4,6 @@ import { useState, useCallback, type DragEvent } from "react";
 import { Download, AlignJustify, GripVertical, X, Plus, Truck, Utensils, Flag } from "lucide-react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { format, parseISO } from "date-fns";
-import { generateOneLinerPdf } from "@/lib/utils/pdf-generator";
 import type { Shoot } from "@/types/domain";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -295,8 +294,9 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!data) return;
+    const { generateOneLinerPdf } = await import("@/lib/utils/pdf-generator");
 
     // PDF: first real shoot day; multi-day PDF can be added later
     const buckets = buildBuckets(data, shoots);

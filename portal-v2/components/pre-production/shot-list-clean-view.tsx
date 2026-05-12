@@ -6,7 +6,6 @@ import { AlertTriangle, Calendar, Check, Circle, Copy, Download, List, GripVerti
 import useSWR, { mutate as globalMutate } from "swr";
 import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { generateShotListPdf } from "@/lib/utils/pdf-generator";
 import { CHANNEL_TEMPLATES, SPEC_DIMENSIONS } from "@/lib/constants/channels";
 import type { ChannelTemplate } from "@/lib/constants/channels";
 import type { Shoot } from "@/types/domain";
@@ -2018,9 +2017,10 @@ export function ShotListCleanView({
   );
 
   // ─── Download PDF ──────────────────────────────────────────────────────────
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!data) return;
     const rows = buildShotListRows(data);
+    const { generateShotListPdf } = await import("@/lib/utils/pdf-generator");
     const doc = generateShotListPdf({
       campaignName,
       wfNumber,
