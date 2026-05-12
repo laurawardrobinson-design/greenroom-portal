@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 
     let query = db
       .from("shoot_dates")
-      .select("*, shoots!inner(id, name, shoot_type, campaign_id, campaigns(id, name, wf_number, status, producer_id, users!campaigns_producer_id_fkey(id, name)))")
+      .select("*, shoots!inner(id, name, shoot_type, campaign_id, campaigns(id, name, wf_number, status, producer_id, created_by, art_director_id, users!campaigns_producer_id_fkey(id, name), campaign_producers(user_id)))")
       .order("shoot_date");
 
     if (allowedCampaignIds) {
@@ -98,6 +98,11 @@ export async function GET(request: Request) {
               status: campaign.status,
               producerId: campaign.producer_id as string | null,
               producerName: producer ? (producer.name as string) : null,
+              createdBy: (campaign.created_by as string | null) ?? null,
+              artDirectorId: (campaign.art_director_id as string | null) ?? null,
+              producerIds: Array.isArray(campaign.campaign_producers)
+                ? (campaign.campaign_producers as Array<{ user_id: string }>).map((r) => r.user_id)
+                : [],
             }
           : null,
       };

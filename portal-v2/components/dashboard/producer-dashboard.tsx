@@ -71,6 +71,9 @@ interface ShootEvent {
     status: string;
     producerId: string | null;
     producerName: string | null;
+    createdBy: string | null;
+    artDirectorId: string | null;
+    producerIds: string[];
   } | null;
 }
 
@@ -152,7 +155,16 @@ export function ProducerDashboard({ user }: Props) {
   // Filter calendar events based on scope
   const events = useMemo(() => {
     if (scope === "all") return allEvents;
-    return allEvents.filter((e) => e.campaign?.producerId === user.id);
+    return allEvents.filter((e) => {
+      const c = e.campaign;
+      if (!c) return false;
+      return (
+        c.producerId === user.id ||
+        c.createdBy === user.id ||
+        c.artDirectorId === user.id ||
+        (c.producerIds || []).includes(user.id)
+      );
+    });
   }, [allEvents, scope, user.id]);
 
   const { data: stats } = useSWR<ProducerStats>(
