@@ -287,7 +287,6 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
     globalMutate(swrKey);
   };
 
-  const [addingDay, setAddingDay] = useState(false);
   const addShootDay = async () => {
     const primaryShoot = shoots[0];
     if (!primaryShoot) return;
@@ -338,7 +337,6 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
       { revalidate: false }
     );
 
-    setAddingDay(true);
     try {
       const res = await fetch(`/api/shoots/${primaryShoot.id}/dates`, {
         method: "POST",
@@ -359,8 +357,6 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
       globalMutate(swrKey);
     } catch {
       globalMutate(campaignKey);
-    } finally {
-      setAddingDay(false);
     }
   };
 
@@ -688,11 +684,10 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
           <button
             type="button"
             onClick={addShootDay}
-            disabled={addingDay}
-            className="flex w-full items-center justify-center gap-2 border-t-2 border-black bg-white px-3 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-black hover:bg-neutral-100 disabled:opacity-50 transition-colors"
+            className="flex w-full items-center justify-center gap-2 border-t-2 border-black bg-white px-3 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-black hover:bg-neutral-100 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
-            {addingDay ? "Adding…" : "Add Shoot Day"}
+            Add Shoot Day
           </button>
         )}
       </div>
