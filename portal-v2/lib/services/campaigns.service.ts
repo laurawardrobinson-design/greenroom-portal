@@ -131,18 +131,32 @@ export async function listCampaigns(filters?: {
   if (items.length > 0) {
     const campaignIds = items.map((c) => c.id);
 
-    // Fetch shoots with dates for all campaigns
-    const { data: shoots } = await db
-      .from("shoots")
-      .select("id, campaign_id, name, shoot_type, shoot_dates(shoot_date)")
-      .in("campaign_id", campaignIds);
-
-    // Fetch committed amounts (sum of estimate totals per campaign)
-    const { data: vendorTotals } = await db
-      .from("campaign_vendors")
-      .select("campaign_id, estimate_total")
-      .in("campaign_id", campaignIds)
-      .not("status", "eq", "Rejected");
+    // Run the four campaign-id-keyed queries in parallel — they're independent.
+    const [
+      { data: shoots },
+      { data: vendorTotals },
+      { data: cpRows },
+      { data: budgetReqs },
+    ] = await Promise.all([
+      db
+        .from("shoots")
+        .select("id, campaign_id, name, shoot_type, shoot_dates(shoot_date)")
+        .in("campaign_id", campaignIds),
+      db
+        .from("campaign_vendors")
+        .select("campaign_id, estimate_total")
+        .in("campaign_id", campaignIds)
+        .not("status", "eq", "Rejected"),
+      db
+        .from("campaign_producers")
+        .select("campaign_id, user_id")
+        .in("campaign_id", campaignIds)
+        .order("created_at", { ascending: true }),
+      db
+        .from("budget_requests")
+        .select("campaign_id, amount, status")
+        .in("campaign_id", campaignIds),
+    ]);
 
     // Build lookups
     const shootsByCampaign = new Map<string, typeof items[0]["shootsSummary"]>();
@@ -162,13 +176,6 @@ export async function listCampaigns(filters?: {
       const cid = v.campaign_id as string;
       committedByCampaign.set(cid, (committedByCampaign.get(cid) || 0) + (Number(v.estimate_total) || 0));
     }
-
-    // Fetch campaign_producers (multi-producer junction table)
-    const { data: cpRows } = await db
-      .from("campaign_producers")
-      .select("campaign_id, user_id")
-      .in("campaign_id", campaignIds)
-      .order("created_at", { ascending: true });
 
     const producerIdsByCampaign = new Map<string, string[]>();
     for (const row of cpRows || []) {
@@ -195,12 +202,6 @@ export async function listCampaigns(filters?: {
         userNameMap.set(u.id, u.name);
       }
     }
-
-    // Fetch budget requests (additional funds) per campaign
-    const { data: budgetReqs } = await db
-      .from("budget_requests")
-      .select("campaign_id, amount, status")
-      .in("campaign_id", campaignIds);
 
     const additionalFundsByCampaign = new Map<string, { requested: number; approved: number }>();
     for (const req of budgetReqs || []) {
