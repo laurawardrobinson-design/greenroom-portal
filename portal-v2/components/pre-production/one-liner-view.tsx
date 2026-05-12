@@ -302,15 +302,51 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
     const yyyy = base.getFullYear();
     const mm = String(base.getMonth() + 1).padStart(2, "0");
     const dd = String(base.getDate()).padStart(2, "0");
+    const newDate = `${yyyy}-${mm}-${dd}`;
+    const tempId = `tmp-${Math.random().toString(36).slice(2)}`;
+    const campaignKey = `/api/campaigns/${campaignId}`;
+
+    // Optimistic: add the date into the parent campaign cache so the new
+    // day column appears before the POST returns. The server-assigned id
+    // replaces the temp one on revalidation.
+    globalMutate(
+      campaignKey,
+      (current: { shoots?: Shoot[] } | undefined) => {
+        if (!current?.shoots) return current;
+        return {
+          ...current,
+          shoots: current.shoots.map((s) =>
+            s.id === primaryShoot.id
+              ? {
+                  ...s,
+                  dates: [
+                    ...s.dates,
+                    {
+                      id: tempId,
+                      shootId: s.id,
+                      shootDate: newDate,
+                      callTime: null,
+                      location: primaryShoot.location || "",
+                      notes: "",
+                    },
+                  ],
+                }
+              : s
+          ),
+        };
+      },
+      { revalidate: false }
+    );
+
     setAddingDay(true);
     try {
-      await fetch(`/api/shoots/${primaryShoot.id}/dates`, {
+      const res = await fetch(`/api/shoots/${primaryShoot.id}/dates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           dates: [
             {
-              shootDate: `${yyyy}-${mm}-${dd}`,
+              shootDate: newDate,
               callTime: null,
               location: primaryShoot.location || "",
               notes: "",
@@ -318,9 +354,11 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
           ],
         }),
       });
-      // Re-fetch the campaign so `shoots` updates upstream
-      globalMutate(`/api/campaigns/${campaignId}`);
+      if (!res.ok) throw new Error("create failed");
+      globalMutate(campaignKey);
       globalMutate(swrKey);
+    } catch {
+      globalMutate(campaignKey);
     } finally {
       setAddingDay(false);
     }
