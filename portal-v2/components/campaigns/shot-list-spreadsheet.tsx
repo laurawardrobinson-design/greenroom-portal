@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, Fragment } from "react";
 import { createPortal } from "react-dom";
+import { useSWRConfig } from "swr";
 import { format, parseISO } from "date-fns";
 import {
   Check, AlertTriangle, Plus, X, Download, Upload, ChevronLeft, Trash2, GripVertical, RotateCcw,
@@ -1061,15 +1062,38 @@ function ShotRow({ shot, deliverables, campaignProducts, campaignId, wfNumber, s
   onDragEnd: () => void;
 }) {
   const { toast } = useToast();
+  const { mutate: globalMutate } = useSWRConfig();
   const [viewProductId, setViewProductId] = useState<string | null>(null);
+  const campaignKey = `/api/campaigns/${campaignId}`;
 
   async function patch(u: Record<string, unknown>) {
+    // Optimistic: paint new values into the campaign cache immediately so
+    // Tab-to-save feels instant. The campaign endpoint returns camelCase
+    // already (matches the PATCH body keys), so apply `u` as-is.
+    globalMutate(
+      campaignKey,
+      (current: { setups?: ShotListSetup[] } | undefined) => {
+        if (!current?.setups) return current;
+        return {
+          ...current,
+          setups: current.setups.map((setup) => ({
+            ...setup,
+            shots: setup.shots.map((s) =>
+              s.id === shot.id ? { ...s, ...u } : s
+            ),
+          })),
+        };
+      },
+      { revalidate: false }
+    );
     try {
       await fetch(`/api/shot-list/shots/${shot.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u),
       });
+    } catch {
+      toast("error", "Failed to save");
       onMutate();
-    } catch { toast("error", "Failed to save"); }
+    }
   }
 
   async function handleDelete() {

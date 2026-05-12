@@ -6,7 +6,11 @@ export async function GET() {
   try {
     await getAuthUser();
     const classes = await listJobClasses();
-    return NextResponse.json(classes);
+    return NextResponse.json(classes, {
+      headers: {
+        "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
+      },
+    });
   } catch (error) {
     return authErrorResponse(error);
   }

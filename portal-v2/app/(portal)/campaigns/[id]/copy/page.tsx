@@ -66,15 +66,25 @@ export default function CampaignCopyPage({
   }
 
   async function handleUpdate(field: string, value: string | number | null) {
-    const res = await fetch(`/api/campaigns/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [field]: value }),
-    });
-    if (res.ok) {
-      mutate();
-    } else {
+    // Optimistic: update SWR cache locally so the field reflects the new value
+    // immediately, then fire the network call. Refetch only on error.
+    mutate(
+      (current) =>
+        current
+          ? { ...current, campaign: { ...current.campaign, [field]: value } }
+          : current,
+      { revalidate: false }
+    );
+    try {
+      const res = await fetch(`/api/campaigns/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: value }),
+      });
+      if (!res.ok) throw new Error("save failed");
+    } catch {
       toast("error", "Failed to update");
+      mutate();
     }
   }
 
