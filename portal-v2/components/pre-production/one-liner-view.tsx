@@ -4,7 +4,7 @@ import { useState, useCallback, type DragEvent } from "react";
 import { Download, AlignJustify, GripVertical, X, Plus, Truck, Utensils, Flag } from "lucide-react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { format, parseISO } from "date-fns";
-import type { Shoot } from "@/types/domain";
+import type { Shoot, ShootDate } from "@/types/domain";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -353,9 +353,35 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
         }),
       });
       if (!res.ok) throw new Error("create failed");
-      globalMutate(campaignKey);
-      globalMutate(swrKey);
+      const created = (await res.json()) as ShootDate[] | ShootDate | null;
+      const realDate = Array.isArray(created) ? created[0] : created;
+      const realId = realDate?.id;
+
+      // Swap the temp id for the server-assigned id in the cache, no refetch.
+      if (realId && realId !== tempId) {
+        globalMutate(
+          campaignKey,
+          (current: { shoots?: Shoot[] } | undefined) => {
+            if (!current?.shoots) return current;
+            return {
+              ...current,
+              shoots: current.shoots.map((s) =>
+                s.id === primaryShoot.id
+                  ? {
+                      ...s,
+                      dates: s.dates.map((d) =>
+                        d.id === tempId ? { ...d, id: realId } : d
+                      ),
+                    }
+                  : s
+              ),
+            };
+          },
+          { revalidate: false }
+        );
+      }
     } catch {
+      // Server rejected — drop the optimistic row by refetching campaign.
       globalMutate(campaignKey);
     }
   };
