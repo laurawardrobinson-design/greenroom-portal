@@ -5,6 +5,7 @@ import type { Shoot } from "@/types/domain";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { getShootDayName } from "@/components/campaigns/shoot-day-modal";
+import { resolveShootDateId } from "@/lib/optimistic-shoot-dates";
 import { X, Users, Clapperboard } from "lucide-react";
 
 interface Props {
@@ -80,7 +81,13 @@ export function ShootDayListTile({
   async function saveCallTime(dateId: string, value: string) {
     setLocalTimes((prev) => ({ ...prev, [dateId]: value }));
     try {
-      await fetch(`/api/shoot-dates/${dateId}`, {
+      const realId = await resolveShootDateId(dateId);
+      if (realId !== dateId) {
+        // Mirror the optimistic value onto the real id so the row keeps
+        // showing the new call time once SWR swaps in the real shoot.
+        setLocalTimes((prev) => ({ ...prev, [realId]: value }));
+      }
+      await fetch(`/api/shoot-dates/${realId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ call_time: value }),

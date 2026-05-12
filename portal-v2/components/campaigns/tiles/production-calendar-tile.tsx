@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import type { Shoot } from "@/types/domain";
+import { mutate as globalMutate } from "swr";
+import type { Shoot, ShootDate } from "@/types/domain";
 import { useToast } from "@/components/ui/toast";
+import { registerPendingShootDateId } from "@/lib/optimistic-shoot-dates";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,7 +44,6 @@ export function ProductionCalendarTile({
 }: Props) {
   const { toast } = useToast();
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [adding, setAdding] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<{
     shootId: string;
     dateId: string;
@@ -93,20 +94,69 @@ export function ProductionCalendarTile({
   }
 
   async function handleAddDay(dateStr: string) {
-    setAdding(true);
-    try {
-      // Compute day number for the name
-      const allDates = shoots
-        .filter((s) => s.dates.length > 0)
-        .map((s) => s.dates[0].shootDate);
-      const sortedDates = [...allDates, dateStr].sort();
-      const dayNum = sortedDates.indexOf(dateStr) + 1;
-      const dateLabel = format(parseISO(dateStr), "MMM d");
-      const shootName = wfNumber
-        ? `${dateLabel} - Day ${dayNum} of ${wfNumber}`
-        : `${dateLabel} - Day ${dayNum}`;
+    // Compute day number for the name
+    const allDates = shoots
+      .filter((s) => s.dates.length > 0)
+      .map((s) => s.dates[0].shootDate);
+    const sortedDates = [...allDates, dateStr].sort();
+    const dayNum = sortedDates.indexOf(dateStr) + 1;
+    const dateLabel = format(parseISO(dateStr), "MMM d");
+    const shootName = wfNumber
+      ? `${dateLabel} - Day ${dayNum} of ${wfNumber}`
+      : `${dateLabel} - Day ${dayNum}`;
 
-      // Create shoot
+    const tempShootId = `tmp-shoot-${Math.random().toString(36).slice(2)}`;
+    const tempDateId = `tmp-date-${Math.random().toString(36).slice(2)}`;
+    const campaignKey = `/api/campaigns/${campaignId}`;
+    const now = new Date().toISOString();
+
+    // Resolver lets sibling tiles (e.g. call-time edit) await the real
+    // shoot-date id if the user interacts before the POST completes.
+    let resolveRealId!: (id: string) => void;
+    let rejectRealId!: (e: unknown) => void;
+    registerPendingShootDateId(
+      tempDateId,
+      new Promise<string>((res, rej) => {
+        resolveRealId = res;
+        rejectRealId = rej;
+      })
+    );
+
+    // Optimistic: paint the new day into the campaign cache so both the
+    // calendar dot and the Shoot Days list update on click.
+    globalMutate(
+      campaignKey,
+      (current: { shoots?: Shoot[] } | undefined) => {
+        if (!current) return current;
+        const tempShoot: Shoot = {
+          id: tempShootId,
+          campaignId,
+          name: shootName,
+          shootType: "Photo",
+          location: "",
+          notes: "",
+          sortOrder: (current.shoots?.length ?? 0) + 1,
+          crewVariesByDay: false,
+          dates: [
+            {
+              id: tempDateId,
+              shootId: tempShootId,
+              shootDate: dateStr,
+              callTime: null,
+              location: "",
+              notes: "",
+            },
+          ],
+          crew: [],
+          createdAt: now,
+          updatedAt: now,
+        };
+        return { ...current, shoots: [...(current.shoots ?? []), tempShoot] };
+      },
+      { revalidate: false }
+    );
+
+    try {
       const shootRes = await fetch("/api/shoots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -120,20 +170,33 @@ export function ProductionCalendarTile({
       if (!shootRes.ok) throw new Error("Failed");
       const newShoot = await shootRes.json();
 
-      // Add date to it
       const dateRes = await fetch(`/api/shoots/${newShoot.id}/dates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dates: [{ shootDate: dateStr }] }),
       });
       if (!dateRes.ok) throw new Error("Failed");
+      const insertedDates = (await dateRes.json()) as ShootDate[];
+      const realDateId = insertedDates[0]?.id;
+      if (!realDateId) throw new Error("Missing date id");
+      resolveRealId(realDateId);
 
-      await new Promise((r) => setTimeout(r, 300));
       onMutate();
-    } catch {
+    } catch (err) {
+      rejectRealId(err);
+      // Roll back the optimistic insert.
+      globalMutate(
+        campaignKey,
+        (current: { shoots?: Shoot[] } | undefined) => {
+          if (!current?.shoots) return current;
+          return {
+            ...current,
+            shoots: current.shoots.filter((s) => s.id !== tempShootId),
+          };
+        },
+        { revalidate: false }
+      );
       toast("error", "Failed to add shoot day");
-    } finally {
-      setAdding(false);
     }
   }
 
@@ -196,13 +259,11 @@ export function ProductionCalendarTile({
             const isTodays = isToday(day);
             const isPast = isBefore(day, today) && !isToday(day);
             const hasShoot = shootDateSet.has(dateStr);
-            const isLoading = adding;
 
             return (
               <button
                 key={dateStr}
                 onClick={() => handleDateClick(dateStr, inMonth, isPast)}
-                disabled={isLoading && !hasShoot}
                 className={`
                   relative flex items-center justify-center h-7 w-7 mx-auto text-[11px] rounded-full transition-all
                   ${!inMonth ? "text-text-tertiary/30 cursor-default" : ""}
@@ -218,9 +279,6 @@ export function ProductionCalendarTile({
           })}
         </div>
 
-        {adding && (
-          <p className="text-[10px] text-text-tertiary text-center mt-2">Adding...</p>
-        )}
       </div>
 
       {/* Confirmation modal for removing dates with data */}
