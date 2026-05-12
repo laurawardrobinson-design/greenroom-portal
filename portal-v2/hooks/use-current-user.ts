@@ -15,7 +15,9 @@ export function useCurrentUser() {
     fetchUser,
     {
       revalidateOnFocus: false,
-      dedupingInterval: 30000,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+      dedupingInterval: 5 * 60 * 1000,
     }
   );
 
