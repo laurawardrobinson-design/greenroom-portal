@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import useSWR from "swr";
 import { ShoppingBasket, Package, Wrench, Plus, X } from "lucide-react";
 import type { CampaignProduct, CampaignGearLink, CampaignProductRole, Product } from "@/types/domain";
 import { ProductDrawer } from "@/components/products/product-drawer";
 import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
+
+const inventoryFetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface Props {
   campaignProducts: CampaignProduct[];
@@ -30,6 +33,11 @@ export function InventoryTile({ campaignProducts, campaignGear, canEdit, onAddPr
   const { toast } = useToast();
   const { user } = useCurrentUser();
   const canSetRole = user?.role === "Brand Marketing Manager" || user?.role === "Admin";
+
+  // Warm the inventory caches so Add Product / Add Props / Add Gear modals open instantly.
+  useSWR(canEdit ? "/api/products" : null, inventoryFetcher);
+  useSWR(canEdit ? "/api/gear?section=Gear" : null, inventoryFetcher);
+  useSWR(canEdit ? "/api/gear?section=Props" : null, inventoryFetcher);
 
   const setRole = useCallback(async (campaignProductId: string, campaignId: string, role: CampaignProductRole | null) => {
     try {

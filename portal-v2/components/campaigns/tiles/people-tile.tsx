@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import useSWR from "swr";
 import { Users, Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -21,6 +21,7 @@ interface Props {
   currentAd: AppUser | null;
   producers: AppUser[];
   allUsers: AppUser[];
+  initialVendors?: CampaignVendor[];
   excludeUserId?: string;
   onAddProducer: (userId: string) => Promise<void>;
   onRemoveProducer: (userId: string) => Promise<void>;
@@ -35,6 +36,7 @@ export function PeopleTile({
   currentAd,
   producers,
   allUsers,
+  initialVendors,
   excludeUserId,
   onAddProducer,
   onRemoveProducer,
@@ -74,7 +76,7 @@ export function PeopleTile({
             <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
               Vendors
             </p>
-            <VendorsTab campaignId={campaignId} canEdit={canEdit} />
+            <VendorsTab campaignId={campaignId} canEdit={canEdit} initialVendors={initialVendors} />
           </div>
         )}
       </div>
@@ -103,20 +105,8 @@ function InternalTab({
   onRemoveProducer: (userId: string) => Promise<void>;
   onAssignAD: (userId: string | null) => Promise<void>;
 }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [showAssign, setShowAssign] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
-  const pickerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!pickerOpen) return;
-    function handler(e: MouseEvent) {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        setPickerOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [pickerOpen]);
 
   const assignedIds = [...producers.map((p) => p.id), currentAd?.id].filter(Boolean) as string[];
   const available = allUsers.filter(
@@ -128,10 +118,10 @@ function InternalTab({
 
   async function assign(user: AppUser) {
     setSaving(user.id);
-    setPickerOpen(false);
     if (user.role === "Producer" || user.role === "Post Producer") await onAddProducer(user.id);
     else await onAssignAD(user.id);
     setSaving(null);
+    setShowAssign(false);
   }
 
   async function removeProducer(userId: string) {
@@ -175,48 +165,65 @@ function InternalTab({
         </div>
       ))}
 
-      {canEdit && available.length > 0 && (
-        <div className="relative" ref={pickerRef}>
-          <button
-            type="button"
-            onClick={() => setPickerOpen((o) => !o)}
-            className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-sm font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors"
-          >
-            <Plus className="h-3 w-3" />
-            Add person
-          </button>
-          {pickerOpen && (
-            <div className="absolute top-full left-0 z-20 mt-1 w-56 rounded-lg border border-border bg-surface shadow-lg overflow-hidden">
-              {available.map((u) => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => assign(u)}
-                  disabled={saving === u.id}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-text-primary hover:bg-surface-secondary transition-colors text-left disabled:opacity-50"
-                >
-                  <span className="flex-1 truncate">{u.name}</span>
-                  <span className="text-[10px] text-text-tertiary shrink-0">{u.role}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+      {canEdit && (
+        <button
+          type="button"
+          onClick={() => setShowAssign(true)}
+          className="mt-1 inline-flex items-center gap-1 rounded-md border border-dashed border-primary/40 px-3 py-1.5 text-sm font-medium text-primary hover:border-primary hover:bg-primary/5 transition-colors"
+        >
+          <Plus className="h-3 w-3" />
+          Add person
+        </button>
       )}
+
+      <Modal open={showAssign} onClose={() => setShowAssign(false)} title="Add Person" size="lg">
+        {available.length === 0 ? (
+          <EmptyState
+            title="No available people"
+            description="All eligible Producers, Post Producers, and Art Directors are already assigned."
+          />
+        ) : (
+          <div className="max-h-80 space-y-2 overflow-y-auto">
+            {available.map((u) => (
+              <div
+                key={u.id}
+                className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-surface-secondary transition-colors"
+              >
+                <div>
+                  <p className="text-sm font-medium text-text-primary">{u.name}</p>
+                  <p className="text-xs text-text-tertiary">{u.role}</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={saving === u.id}
+                  disabled={saving !== null}
+                  onClick={() => assign(u)}
+                >
+                  Add
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
 
 // ─── Vendors Tab ──────────────────────────────────────────────────────────────
 
-function VendorsTab({ campaignId, canEdit }: { campaignId: string; canEdit: boolean }) {
+function VendorsTab({ campaignId, canEdit, initialVendors }: { campaignId: string; canEdit: boolean; initialVendors?: CampaignVendor[] }) {
   const { toast } = useToast();
   const [showAssign, setShowAssign] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
   const { data: rawData, mutate } = useSWR<CampaignVendor[]>(
     `/api/campaign-vendors?campaignId=${campaignId}`,
-    fetcher
+    fetcher,
+    { fallbackData: initialVendors, revalidateOnMount: !initialVendors }
   );
+  // Warm the vendor roster cache so AssignVendorModal opens instantly.
+  useSWR<Vendor[]>(canEdit ? "/api/vendors" : null, fetcher);
   const vendors = Array.isArray(rawData) ? rawData : [];
 
   async function handleRemove(cvId: string) {

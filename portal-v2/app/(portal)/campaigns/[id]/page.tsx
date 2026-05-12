@@ -490,6 +490,7 @@ export default function CampaignDetailPage({
             currentAd={artDirector ?? null}
             producers={producers}
             allUsers={allUsers}
+            initialVendors={vendors}
             excludeUserId={user?.id}
             onAddProducer={async (userId) => {
               await fetch(`/api/campaigns/${id}/producers`, {
