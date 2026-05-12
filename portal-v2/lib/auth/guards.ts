@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppUser, PRDepartment, UserRole } from "@/types/domain";
@@ -13,8 +14,9 @@ export class AuthError extends Error {
   }
 }
 
-// Get the current authenticated user with their role from the DB
-export async function getAuthUser(): Promise<AppUser> {
+// Per-request memoized resolver. React.cache dedupes within a single request,
+// so multiple guard calls in the same handler share one auth + users round-trip.
+const resolveAuthUser = cache(async (): Promise<AppUser> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -65,6 +67,11 @@ export async function getAuthUser(): Promise<AppUser> {
     createdAt: dbUser.created_at,
     updatedAt: dbUser.updated_at,
   };
+});
+
+// Get the current authenticated user with their role from the DB
+export async function getAuthUser(): Promise<AppUser> {
+  return resolveAuthUser();
 }
 
 // Require specific role(s) — throws if not authorized

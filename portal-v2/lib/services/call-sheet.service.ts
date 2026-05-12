@@ -224,13 +224,28 @@ async function buildInitialContent(
 ): Promise<CallSheetContent> {
   const content = emptyCallSheetContent();
 
-  // Campaign + producer
-  const { data: campaign } = await db
-    .from("campaigns")
-    .select("*, users!campaigns_producer_id_fkey(name, phone, email)")
-    .eq("id", campaignId)
-    .single();
+  // Campaign + shoot date + vendors are independent — fetch in parallel.
+  const [campaignRes, shootDateRes, campaignVendorsRes] = await Promise.all([
+    db
+      .from("campaigns")
+      .select("*, users!campaigns_producer_id_fkey(name, phone, email)")
+      .eq("id", campaignId)
+      .single(),
+    shootDateId
+      ? db
+          .from("shoot_dates")
+          .select("*, shoots!inner(*)")
+          .eq("id", shootDateId)
+          .single()
+      : Promise.resolve({ data: null, error: null } as const),
+    db
+      .from("campaign_vendors")
+      .select("*, vendors(company_name, contact_name, phone, email, category)")
+      .eq("campaign_id", campaignId)
+      .not("status", "eq", "Rejected"),
+  ]);
 
+  const campaign = campaignRes.data;
   if (campaign) {
     const producer = (campaign as Record<string, unknown>).users as
       | Record<string, unknown>
@@ -246,13 +261,7 @@ async function buildInitialContent(
 
   if (!shootDateId) return content;
 
-  // Shoot date + parent shoot
-  const { data: shootDate } = await db
-    .from("shoot_dates")
-    .select("*, shoots!inner(*)")
-    .eq("id", shootDateId)
-    .single();
-
+  const shootDate = shootDateRes.data;
   if (!shootDate) return content;
 
   const shoot = (shootDate as Record<string, unknown>).shoots as Record<string, unknown>;
@@ -320,12 +329,8 @@ async function buildInitialContent(
     content.crew = crew;
   }
 
-  // Seed talent + non-talent vendors
-  const { data: campaignVendors } = await db
-    .from("campaign_vendors")
-    .select("*, vendors(company_name, contact_name, phone, email, category)")
-    .eq("campaign_id", campaignId)
-    .not("status", "eq", "Rejected");
+  // Seed talent + non-talent vendors (fetched in parallel above)
+  const campaignVendors = campaignVendorsRes.data;
 
   const talent: CallSheetTalentRow[] = [];
   const extraCrew: CallSheetCrewRow[] = [];

@@ -102,23 +102,25 @@ function toProductLink(row: Record<string, unknown>): ShotProductLink {
 export async function listSetups(campaignId: string): Promise<ShotListSetup[]> {
   const db = createAdminClient();
 
-  const { data: setups, error: setupErr } = await db
-    .from("shot_list_setups")
-    .select("*")
-    .eq("campaign_id", campaignId)
-    .order("sort_order", { ascending: true });
+  const [setupsRes, shotsRes] = await Promise.all([
+    db
+      .from("shot_list_setups")
+      .select("*")
+      .eq("campaign_id", campaignId)
+      .order("sort_order", { ascending: true }),
+    db
+      .from("shot_list_shots")
+      .select("*")
+      .eq("campaign_id", campaignId)
+      .order("sort_order", { ascending: true }),
+  ]);
 
-  if (setupErr) throw setupErr;
+  if (setupsRes.error) throw setupsRes.error;
+  const setups = setupsRes.data;
   if (!setups?.length) return [];
 
-  // Fetch all shots for this campaign
-  const { data: shots, error: shotErr } = await db
-    .from("shot_list_shots")
-    .select("*")
-    .eq("campaign_id", campaignId)
-    .order("sort_order", { ascending: true });
-
-  if (shotErr) throw shotErr;
+  if (shotsRes.error) throw shotsRes.error;
+  const shots = shotsRes.data;
 
   // Fetch all deliverable links for shots in this campaign
   const shotIds = (shots || []).map((s) => s.id);
