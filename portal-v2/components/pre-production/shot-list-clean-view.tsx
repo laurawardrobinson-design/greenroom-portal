@@ -1809,15 +1809,31 @@ export function ShotListCleanView({
   // ─── Patch a shot field ────────────────────────────────────────────────────
   const patchShot = useCallback(
     async (shotId: string, field: string, value: string) => {
+      const snakeField = field.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`);
+      // Optimistic: update local cache immediately so the UI feels instant.
+      globalMutate(
+        swrKey,
+        (current: ScheduleData | undefined) => {
+          if (!current) return current;
+          return {
+            ...current,
+            shots: current.shots.map((s) =>
+              s.id === shotId ? { ...s, [snakeField]: value } : s
+            ),
+          };
+        },
+        { revalidate: false }
+      );
       try {
         await fetch(`/api/shot-list/shots/${shotId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ [field]: value }),
         });
-        globalMutate(swrKey);
       } catch {
         toast("error", "Failed to save");
+        // Roll back by refetching the server's authoritative state.
+        globalMutate(swrKey);
       }
     },
     [swrKey, toast]
