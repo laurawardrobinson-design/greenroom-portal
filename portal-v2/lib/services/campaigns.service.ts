@@ -149,7 +149,7 @@ export async function listCampaigns(filters?: {
         .not("status", "eq", "Rejected"),
       db
         .from("campaign_producers")
-        .select("campaign_id, user_id")
+        .select("campaign_id, user_id, users(name)")
         .in("campaign_id", campaignIds)
         .order("created_at", { ascending: true }),
       db
@@ -177,10 +177,16 @@ export async function listCampaigns(filters?: {
       committedByCampaign.set(cid, (committedByCampaign.get(cid) || 0) + (Number(v.estimate_total) || 0));
     }
 
+    // Producers come with their user name joined in; no second round-trip.
     const producerIdsByCampaign = new Map<string, string[]>();
+    const userNameMap = new Map<string, string>();
     for (const row of cpRows || []) {
-      if (!producerIdsByCampaign.has(row.campaign_id)) producerIdsByCampaign.set(row.campaign_id, []);
-      producerIdsByCampaign.get(row.campaign_id)!.push(row.user_id);
+      const cid = row.campaign_id as string;
+      const uid = row.user_id as string;
+      if (!producerIdsByCampaign.has(cid)) producerIdsByCampaign.set(cid, []);
+      producerIdsByCampaign.get(cid)!.push(uid);
+      const u = (row as Record<string, unknown>).users as { name?: string } | null;
+      if (u?.name) userNameMap.set(uid, u.name);
     }
 
     for (const item of items) {
@@ -188,16 +194,15 @@ export async function listCampaigns(filters?: {
       item.producerId = item.producerIds[0] ?? null;
     }
 
-    // Fetch producer + art director names in one query
-    const allProducerIds = [...new Set((cpRows || []).map((r) => r.user_id))];
-    const adIds = items.map((c) => c.artDirectorId).filter(Boolean) as string[];
-    const userIds = [...new Set([...allProducerIds, ...adIds])];
-    const userNameMap = new Map<string, string>();
-    if (userIds.length > 0) {
+    // Art director names: fetch only the AD ids we don't already have.
+    const adIds = items
+      .map((c) => c.artDirectorId)
+      .filter((id): id is string => !!id && !userNameMap.has(id));
+    if (adIds.length > 0) {
       const { data: users } = await db
         .from("users")
         .select("id, name")
-        .in("id", userIds);
+        .in("id", [...new Set(adIds)]);
       for (const u of users || []) {
         userNameMap.set(u.id, u.name);
       }
@@ -519,13 +524,26 @@ export async function getCampaignFinancials(
 ): Promise<CampaignFinancials> {
   const db = createAdminClient();
 
-  // Vendor financials from existing RPC
-  const { data, error } = await db.rpc("get_campaign_financials", {
-    p_campaign_id: campaignId,
-  });
+  // Fan out the three independent reads in parallel. Fetch only the budget
+  // column instead of the full campaign — the route handler already loads
+  // the campaign separately.
+  const [financialsRes, budgetRes, crewBookingsRes] = await Promise.all([
+    db.rpc("get_campaign_financials", { p_campaign_id: campaignId }),
+    db
+      .from("campaigns")
+      .select("production_budget")
+      .eq("id", campaignId)
+      .maybeSingle(),
+    db
+      .from("crew_bookings")
+      .select("day_rate, status, crew_booking_dates(confirmed)")
+      .eq("campaign_id", campaignId)
+      .neq("status", "Cancelled"),
+  ]);
 
-  const campaign = await getCampaign(campaignId);
-  const budget = campaign?.productionBudget || 0;
+  const { data, error } = financialsRes;
+  const budget = Number(budgetRes.data?.production_budget) || 0;
+  const crewBookings = crewBookingsRes.data;
 
   let vendorCommitted = 0;
   let vendorSpent = 0;
@@ -533,13 +551,6 @@ export async function getCampaignFinancials(
     vendorCommitted = Number(data[0].committed) || 0;
     vendorSpent = Number(data[0].spent) || 0;
   }
-
-  // Crew labor commitments
-  const { data: crewBookings } = await db
-    .from("crew_bookings")
-    .select("day_rate, status, crew_booking_dates(confirmed)")
-    .eq("campaign_id", campaignId)
-    .neq("status", "Cancelled");
 
   let crewCommitted = 0;
   for (const booking of crewBookings || []) {

@@ -218,21 +218,53 @@ export function OneLinerView({ campaignId, campaignName, wfNumber, shoots }: Pro
   );
 
   const handleDurationChange = async (shotId: string, minutes: number) => {
-    await fetch(swrKey, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shotId, estimatedDurationMinutes: minutes }),
-    });
-    globalMutate(swrKey);
+    globalMutate(
+      swrKey,
+      (current: ScheduleData | undefined) => {
+        if (!current) return current;
+        return {
+          ...current,
+          shots: current.shots.map((s) =>
+            s.id === shotId ? { ...s, estimated_duration_minutes: minutes } : s
+          ),
+        };
+      },
+      { revalidate: false }
+    );
+    try {
+      await fetch(swrKey, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shotId, estimatedDurationMinutes: minutes }),
+      });
+    } catch {
+      globalMutate(swrKey);
+    }
   };
 
   const handleIntExtChange = async (shotId: string, intExt: string) => {
-    await fetch(swrKey, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shotId, intExt }),
-    });
-    globalMutate(swrKey);
+    globalMutate(
+      swrKey,
+      (current: ScheduleData | undefined) => {
+        if (!current) return current;
+        return {
+          ...current,
+          shots: current.shots.map((s) =>
+            s.id === shotId ? { ...s, int_ext: intExt } : s
+          ),
+        };
+      },
+      { revalidate: false }
+    );
+    try {
+      await fetch(swrKey, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shotId, intExt }),
+      });
+    } catch {
+      globalMutate(swrKey);
+    }
   };
 
   const addEvent = async (shootDateId: string, type: DayEventType) => {
