@@ -1,3 +1,6 @@
+"use client";
+
+import { SWRConfig } from "swr";
 import { AppShell } from "@/components/layout/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
 
@@ -7,8 +10,16 @@ export default function PortalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ToastProvider>
-      <AppShell>{children}</AppShell>
-    </ToastProvider>
+    <SWRConfig
+      value={{
+        revalidateOnFocus: false,
+        revalidateOnReconnect: false,
+        dedupingInterval: 15000,
+      }}
+    >
+      <ToastProvider>
+        <AppShell>{children}</AppShell>
+      </ToastProvider>
+    </SWRConfig>
   );
 }
