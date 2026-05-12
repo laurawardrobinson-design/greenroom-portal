@@ -34,7 +34,6 @@ import {
   ChevronRight,
   Clock,
   MapPin,
-  Clapperboard,
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); });
@@ -107,7 +106,6 @@ function StatCard({
 
 export function HopDashboard({ user }: Props) {
   const { data: stats } = useSWR("/api/dashboard", fetcher);
-  const { data: postStats } = useSWR("/api/post-workflow/summary", fetcher);
 
   // Calendar state
   const [calMonth, setCalMonth] = useState(() => new Date());
@@ -207,15 +205,6 @@ export function HopDashboard({ user }: Props) {
           value={stats ? String(stats.shootsThisWeek) : "—"}
           icon={Calendar}
           accent="bg-purple-50 text-purple-600"
-        />
-        <StatCard
-          label="Post Production"
-          value={postStats ? `${postStats.drivesCheckedOut} out` : "—"}
-          icon={Clapperboard}
-          accent={postStats && (postStats.drivesPastRetirement > 0)
-            ? "bg-red-50 text-error"
-            : "bg-violet-50 text-violet-600"}
-          href="/post-workflow"
         />
       </div>
 
