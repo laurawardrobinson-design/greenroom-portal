@@ -434,6 +434,8 @@ function DeliverableCell({ shot, deliverables, canEdit, onMutate }: {
   shot: ShotListShot; deliverables: CampaignDeliverable[]; canEdit: boolean; onMutate: () => void;
 }) {
   const { toast } = useToast();
+  const { mutate: globalMutate } = useSWRConfig();
+  const campaignKey = `/api/campaigns/${shot.campaignId}`;
   const { anchorRef: addRef, panelStyle, open, toggle, close } = usePortalPanel<HTMLDivElement>();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -457,7 +459,38 @@ function DeliverableCell({ shot, deliverables, canEdit, onMutate }: {
     })
     .filter(Boolean) as DraftDeliverableSel[];
 
+  function applyOptimistic(
+    updater: (current: {
+      deliverables?: CampaignDeliverable[];
+      setups?: ShotListSetup[];
+    }) => {
+      deliverables?: CampaignDeliverable[];
+      setups?: ShotListSetup[];
+    }
+  ) {
+    globalMutate(
+      campaignKey,
+      (current) => (current ? { ...current, ...updater(current) } : current),
+      { revalidate: false }
+    );
+  }
+
   async function unlink(id: string) {
+    applyOptimistic((current) => ({
+      setups: (current.setups ?? []).map((setup) => ({
+        ...setup,
+        shots: setup.shots.map((s) =>
+          s.id === shot.id
+            ? {
+                ...s,
+                deliverableLinks: s.deliverableLinks.filter(
+                  (l) => l.deliverableId !== id
+                ),
+              }
+            : s
+        ),
+      })),
+    }));
     try {
       const res = await fetch(`/api/shot-list/shots/${shot.id}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -468,7 +501,10 @@ function DeliverableCell({ shot, deliverables, canEdit, onMutate }: {
         throw new Error(errData.error || `Failed (${res.status})`);
       }
       onMutate();
-    } catch (err) { toast("error", err instanceof Error ? err.message : "Failed to remove channel"); }
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Failed to remove channel");
+      onMutate();
+    }
   }
 
   async function toggleSel(sel: DraftDeliverableSel) {
@@ -479,12 +515,64 @@ function DeliverableCell({ shot, deliverables, canEdit, onMutate }: {
       await unlink(existing.id);
       return;
     }
+    close();
+
+    const dims = SPEC_DIMENSIONS[sel.spec] ?? { width: 1080, height: 1080 };
+    const tempDeliverableId =
+      existing?.id ?? `tmp-${Math.random().toString(36).slice(2)}`;
+    const tempLinkId = `tmp-link-${Math.random().toString(36).slice(2)}`;
+
+    applyOptimistic((current) => {
+      const nextDeliverables = existing
+        ? current.deliverables ?? []
+        : [
+            ...(current.deliverables ?? []),
+            {
+              id: tempDeliverableId,
+              campaignId: shot.campaignId,
+              channel: sel.channel,
+              format: sel.spec,
+              width: dims.width,
+              height: dims.height,
+              aspectRatio: sel.spec,
+              quantity: 1,
+              notes: "",
+              assignedVendorId: null,
+              assignedDesignerId: null,
+              headlineOverride: null,
+              ctaOverride: null,
+              disclaimerOverride: null,
+              legalOverride: null,
+            } as CampaignDeliverable,
+          ];
+      return {
+        deliverables: nextDeliverables,
+        setups: (current.setups ?? []).map((setup) => ({
+          ...setup,
+          shots: setup.shots.map((s) =>
+            s.id === shot.id
+              ? {
+                  ...s,
+                  deliverableLinks: [
+                    ...s.deliverableLinks,
+                    {
+                      id: tempLinkId,
+                      shotId: shot.id,
+                      deliverableId: tempDeliverableId,
+                    },
+                  ],
+                }
+              : s
+          ),
+        })),
+      };
+    });
+
     try {
       let delId: string;
       if (existing) {
         delId = existing.id;
       } else {
-        const dims = SPEC_DIMENSIONS[sel.spec] ?? { width: 1080, height: 1080 };
         const r = await fetch("/api/deliverables", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -507,8 +595,10 @@ function DeliverableCell({ shot, deliverables, canEdit, onMutate }: {
         throw new Error(errData.error || `Link failed (${linkRes.status})`);
       }
       onMutate();
-    } catch (err) { toast("error", err instanceof Error ? err.message : "Failed to add channel"); }
-    close();
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Failed to add channel");
+      onMutate();
+    }
   }
 
   return (

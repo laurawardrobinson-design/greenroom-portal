@@ -1302,6 +1302,20 @@ function ChannelCell({
     .filter(Boolean) as DraftDeliverableSel[];
 
   async function unlink(deliverableId: string) {
+    // Optimistic: drop the link locally so the chip disappears immediately.
+    globalMutate(
+      swrKey,
+      (current: ScheduleData | undefined) => {
+        if (!current) return current;
+        return {
+          ...current,
+          links: current.links.filter(
+            (l) => !(l.shot_id === shotId && l.deliverable_id === deliverableId)
+          ),
+        };
+      },
+      { revalidate: false }
+    );
     try {
       await fetch(`/api/shot-list/shots/${shotId}`, {
         method: "POST",
@@ -1311,6 +1325,7 @@ function ChannelCell({
       globalMutate(swrKey);
     } catch {
       toast("error", "Failed to unlink");
+      globalMutate(swrKey);
     }
   }
 
@@ -1322,12 +1337,47 @@ function ChannelCell({
       await unlink(existing.id);
       return;
     }
+    close();
+
+    // Optimistic: paint the chip into the cache before the network call.
+    // For a brand-new deliverable, use a temp id that will be replaced by
+    // the authoritative one on revalidation.
+    const tempDeliverableId =
+      existing?.id ?? `tmp-${Math.random().toString(36).slice(2)}`;
+    const dims = SPEC_DIMENSIONS[sel.spec] ?? { width: 1080, height: 1080 };
+
+    globalMutate(
+      swrKey,
+      (current: ScheduleData | undefined) => {
+        if (!current) return current;
+        const deliverables = existing
+          ? current.deliverables
+          : [
+              ...current.deliverables,
+              {
+                id: tempDeliverableId,
+                channel: sel.channel,
+                format: sel.spec,
+                aspect_ratio: sel.spec,
+              } as ScheduleData["deliverables"][number],
+            ];
+        return {
+          ...current,
+          deliverables,
+          links: [
+            ...current.links,
+            { shot_id: shotId, deliverable_id: tempDeliverableId },
+          ],
+        };
+      },
+      { revalidate: false }
+    );
+
     try {
       let delId: string;
       if (existing) {
         delId = existing.id;
       } else {
-        const dims = SPEC_DIMENSIONS[sel.spec] ?? { width: 1080, height: 1080 };
         const r = await fetch("/api/deliverables", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1347,8 +1397,8 @@ function ChannelCell({
       globalMutate(swrKey);
     } catch {
       toast("error", "Failed to add channel");
+      globalMutate(swrKey);
     }
-    close();
   }
 
   return (
