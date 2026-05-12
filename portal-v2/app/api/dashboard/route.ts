@@ -157,25 +157,25 @@ export async function GET(request: Request) {
       const thirtyDaysOut = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
       const fourteenDaysOut = new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0];
 
-      // 1a. Active crew bookings for this user, joined with campaigns
-      const { data: bookingRows } = await db
-        .from("crew_bookings")
-        .select("id, campaign_id, role, day_rate, status, campaigns(id, name, wf_number, status, assets_delivery_date)")
-        .eq("user_id", user.id)
-        .not("status", "in", '("Cancelled","Completed")');
+      // 1. Crew bookings + AD campaigns — independent, run in parallel
+      const [{ data: bookingRows }, { data: adCampaignRows }] = await Promise.all([
+        db
+          .from("crew_bookings")
+          .select("id, campaign_id, role, day_rate, status, campaigns(id, name, wf_number, status, assets_delivery_date)")
+          .eq("user_id", user.id)
+          .not("status", "in", '("Cancelled","Completed")'),
+        db
+          .from("campaigns")
+          .select("id, name, wf_number, status, assets_delivery_date")
+          .eq("art_director_id", user.id)
+          .neq("status", "Complete")
+          .neq("status", "Cancelled")
+          .is("deleted_at", null),
+      ]);
 
       const bookings = bookingRows || [];
       const bookingIds = bookings.map((b: any) => b.id as string);
       const bookingCampaignIds = new Set(bookings.map((b: any) => b.campaign_id as string));
-
-      // 1b. Campaigns where this user is assigned as Art Director (even without crew bookings)
-      const { data: adCampaignRows } = await db
-        .from("campaigns")
-        .select("id, name, wf_number, status, assets_delivery_date")
-        .eq("art_director_id", user.id)
-        .neq("status", "Complete")
-        .neq("status", "Cancelled")
-        .is("deleted_at", null);
 
       const adCampaigns = (adCampaignRows || []).filter(
         (c: any) => !bookingCampaignIds.has(c.id as string)
