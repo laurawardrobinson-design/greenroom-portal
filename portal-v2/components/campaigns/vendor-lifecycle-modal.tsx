@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import useSWR from "swr";
 import type { CampaignVendor, CampaignVendorStatus, VendorEstimateItem, VendorInvoice, VendorInvoiceItem, InvoiceFlag } from "@/types/domain";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,11 @@ import { useToast } from "@/components/ui/toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatCurrency } from "@/lib/utils/format";
 import { EstimateForm } from "@/components/vendors/estimate-form";
-import { PoSignature } from "@/components/vendors/po-signature";
+
+const PoSignature = dynamic(
+  () => import("@/components/vendors/po-signature").then((m) => m.PoSignature),
+  { ssr: false }
+);
 import { PO_DOC_REF_HEIGHT } from "@/components/budget/po-field-placer";
 import {
   X, FileText, Check, CheckCircle2, Lock, Upload, AlertTriangle,
