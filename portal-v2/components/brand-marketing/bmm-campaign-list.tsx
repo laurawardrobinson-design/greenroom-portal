@@ -69,7 +69,6 @@ export function BmmCampaignList({ user }: Props) {
     : campaigns.filter(
         (c) =>
           c.brandOwnerId === user.id ||
-          c.createdBy === user.id ||
           c.producerIds.includes(user.id) ||
           c.artDirectorId === user.id
       );

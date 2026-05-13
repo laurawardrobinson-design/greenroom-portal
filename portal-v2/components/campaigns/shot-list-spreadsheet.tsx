@@ -873,8 +873,13 @@ function ProductCell({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
   const [searching, setSearching] = useState(false);
-  const [adding, setAdding] = useState(false);
   const [showNewProductModal, setShowNewProductModal] = useState(false);
+  // Optimistic chips for in-flight adds. Each entry keeps just enough info
+  // to render a pending chip; entries are cleared once the parent's
+  // `shot.productLinks` reflects the new link.
+  const [optimisticAdds, setOptimisticAdds] = useState<
+    { key: string; productId?: string; name: string; itemCode?: string }[]
+  >([]);
 
   // Existing product links resolved against campaignProducts
   const linked = (shot.productLinks || [])
@@ -887,6 +892,23 @@ function ProductCell({
   const linkedProductIds = new Set(
     linked.map((l) => l.cp.productId)
   );
+
+  // Drop optimistic entries that are now present in the real linked set.
+  useEffect(() => {
+    if (optimisticAdds.length === 0) return;
+    const realNames = new Set(
+      linked.map((l) => (l.cp.product?.name ?? "").toLowerCase())
+    );
+    const realProductIds = linkedProductIds;
+    setOptimisticAdds((prev) =>
+      prev.filter((o) => {
+        if (o.productId && realProductIds.has(o.productId)) return false;
+        if (!o.productId && realNames.has(o.name.toLowerCase())) return false;
+        return true;
+      })
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shot.productLinks, campaignProducts]);
 
   // Debounced product search
   useEffect(() => {
@@ -924,34 +946,54 @@ function ProductCell({
   }, [open, close, anchorRef]);
 
   async function addProduct(productId?: string, customName?: string) {
-    if (adding) return;
-    setAdding(true);
-    try {
-      // 1. Ensure product is linked to campaign (creates ad-hoc product if name-only)
-      const body = productId ? { productId } : { name: customName };
-      const cpRes = await fetch(`/api/campaigns/${campaignId}/products`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!cpRes.ok) throw new Error("Failed to link product to campaign");
-      const cp: CampaignProduct = await cpRes.json();
+    // Surface the chip immediately so adding feels instant. The two
+    // round-trips run in the background; we reconcile once SWR refetches.
+    const fromResults = productId
+      ? results.find((r) => r.id === productId)
+      : null;
+    const displayName = fromResults?.name ?? customName ?? "Product";
+    const itemCode = fromResults?.itemCode ?? undefined;
+    const optimisticKey = `opt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setOptimisticAdds((prev) => [
+      ...prev,
+      { key: optimisticKey, productId, name: displayName, itemCode },
+    ]);
+    setQuery("");
+    setResults([]);
 
-      // 2. Link campaign product to this shot
+    try {
+      // Skip the campaign-products POST if the product is already linked to
+      // this campaign — that's the common case when many shots share a product.
+      let cpId: string | undefined;
+      if (productId) {
+        const existing = campaignProducts.find((p) => p.productId === productId);
+        if (existing) cpId = existing.id;
+      }
+
+      if (!cpId) {
+        const body = productId ? { productId } : { name: customName };
+        const cpRes = await fetch(`/api/campaigns/${campaignId}/products`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!cpRes.ok) throw new Error("Failed to link product to campaign");
+        const cp: CampaignProduct = await cpRes.json();
+        cpId = cp.id;
+      }
+
       const linkRes = await fetch(`/api/shot-list/shots/${shot.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaignProductId: cp.id }),
+        body: JSON.stringify({ campaignProductId: cpId }),
       });
       if (!linkRes.ok) throw new Error("Failed to link product to shot");
 
       onMutate();
-      setQuery("");
-      setResults([]);
     } catch (err) {
+      // Roll back the optimistic chip and surface the error.
+      setOptimisticAdds((prev) => prev.filter((o) => o.key !== optimisticKey));
       toast("error", err instanceof Error ? err.message : "Failed to add product");
-    } finally {
-      setAdding(false);
     }
   }
 
@@ -1003,8 +1045,21 @@ function ProductCell({
         </span>
       ))}
 
+      {/* Optimistic chips for in-flight adds */}
+      {optimisticAdds.map((o) => (
+        <span
+          key={o.key}
+          className="inline-flex items-center gap-1 rounded bg-amber-50/60 border border-amber-200/70 px-1.5 py-0.5 text-xs font-medium text-warning/80 max-w-[160px]"
+        >
+          <span className="truncate">{o.name}</span>
+          {o.itemCode && (
+            <span className="text-[10px] opacity-70 shrink-0">{o.itemCode}</span>
+          )}
+        </span>
+      ))}
+
       {/* Empty state */}
-      {linked.length === 0 && !canEdit && (
+      {linked.length === 0 && optimisticAdds.length === 0 && !canEdit && (
         <span className="text-text-tertiary/40 text-sm">—</span>
       )}
 
@@ -1057,7 +1112,7 @@ function ProductCell({
                       <button
                         key={product.id}
                         type="button"
-                        disabled={alreadyLinked || adding}
+                        disabled={alreadyLinked}
                         onClick={() => { addProduct(product.id); close(); }}
                         className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors ${
                           alreadyLinked
@@ -1081,7 +1136,6 @@ function ProductCell({
               {showCustomOption && (
                 <button
                   type="button"
-                  disabled={adding}
                   onClick={() => { addProduct(undefined, trimmedQuery); close(); }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-amber-50 transition-colors border-t border-border/60"
                 >

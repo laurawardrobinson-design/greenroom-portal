@@ -160,7 +160,6 @@ export function ProducerDashboard({ user }: Props) {
       if (!c) return false;
       return (
         c.producerId === user.id ||
-        c.createdBy === user.id ||
         c.artDirectorId === user.id ||
         (c.producerIds || []).includes(user.id)
       );

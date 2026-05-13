@@ -101,7 +101,39 @@ export function CampaignRow({ campaign, onMutate, hideFinancials, readOnly }: Pr
 
   async function saveProducer(userId: string) {
     setEditingProducer(false);
-    await patchCampaign({ producerId: userId || null });
+    const currentIds = campaign.producerIds || [];
+    const newId = userId || null;
+    if (newId && currentIds.length === 1 && currentIds[0] === newId) return;
+    if (!newId && currentIds.length === 0) return;
+
+    try {
+      // Remove every existing producer that isn't the new pick. This collapses
+      // multi-producer rows down to the single chosen producer, matching the
+      // single-value UX of the row's inline edit.
+      const toRemove = currentIds.filter((id) => id !== newId);
+      for (const id of toRemove) {
+        const res = await fetch(`/api/campaigns/${campaign.id}/producers/${id}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) {
+          throw new Error((await res.text().catch(() => "")) || "Failed to remove producer");
+        }
+      }
+      // Add the new producer if it wasn't already on the campaign.
+      if (newId && !currentIds.includes(newId)) {
+        const res = await fetch(`/api/campaigns/${campaign.id}/producers`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: newId }),
+        });
+        if (!res.ok) {
+          throw new Error((await res.text().catch(() => "")) || "Failed to add producer");
+        }
+      }
+      onMutate?.();
+    } catch (e) {
+      toast("error", e instanceof Error ? e.message : "Update failed");
+    }
   }
 
   async function saveAD(userId: string) {

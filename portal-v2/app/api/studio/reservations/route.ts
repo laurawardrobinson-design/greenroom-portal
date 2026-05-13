@@ -53,12 +53,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json(reservation, { status: 201 });
   } catch (error) {
-    // Surface unique constraint violation as a readable error
-    if (
-      error instanceof Error &&
-      error.message.includes("unique") &&
-      error.message.includes("space_id")
-    ) {
+    // Supabase surfaces unique-violation as a PostgrestError (code 23505), not
+    // an `Error` instance — so check the code directly.
+    const pgCode = (error as { code?: string } | null)?.code;
+    const pgMessage = (error as { message?: string } | null)?.message ?? "";
+    if (pgCode === "23505" && pgMessage.includes("space_reservations")) {
       return NextResponse.json(
         { error: "That space is already reserved on this date." },
         { status: 409 }

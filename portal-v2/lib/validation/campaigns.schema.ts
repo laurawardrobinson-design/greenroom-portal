@@ -55,15 +55,9 @@ export const campaignStatusSchema = z.enum([
 // --- Shoot schemas ---
 
 export const shootDateSchema = z.object({
-  shootDate: z.string().refine(
-    (date) => {
-      const shootDate = new Date(date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return shootDate >= today;
-    },
-    "Shoot date must be today or in the future"
-  ),
+  // Past dates are intentionally allowed: producers regularly backfill
+  // shoots that already happened or correct data-entry mistakes.
+  shootDate: z.string(),
   callTime: z.string().nullable().optional(),
   location: z.string().default(""),
   notes: z.string().default(""),

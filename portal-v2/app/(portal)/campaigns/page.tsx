@@ -50,9 +50,11 @@ export default function CampaignsPage() {
 
   const canCreate = user?.role === "Admin" || user?.role === "Producer" || user?.role === "Post Producer";
 
-  // Default to "My Campaigns" — toggle to show all
+  // Default to "My Campaigns" — only campaigns I'm actively producing or
+  // art-directing. Createdby is intentionally excluded so handed-off
+  // campaigns don't follow the original creator around.
   const displayedCampaigns = !showAll && user
-    ? campaigns.filter((c) => c.createdBy === user.id || c.producerIds.includes(user.id) || c.artDirectorId === user.id)
+    ? campaigns.filter((c) => c.producerIds.includes(user.id) || c.artDirectorId === user.id)
     : campaigns;
 
   function toggleView(mode: "grid" | "table") {
