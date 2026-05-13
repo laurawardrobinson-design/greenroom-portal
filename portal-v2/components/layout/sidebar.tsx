@@ -31,7 +31,6 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { formatRoleLabel } from "@/lib/auth/roles";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { GatorEasterEgg } from "./gator-easter-egg";
 
 interface NavItem {
   label: string;
@@ -351,11 +350,6 @@ export function Sidebar({
           );
         })}
       </nav>
-
-      {/* Easter egg — kept directly under the nav so the hover zone stays
-          at the bottom-of-nav spot people already know, not pushed below
-          the user footer where the menu button intercepts hover. */}
-      <GatorEasterEgg />
 
       {/* User identity + account menu */}
       <SidebarUserFooter

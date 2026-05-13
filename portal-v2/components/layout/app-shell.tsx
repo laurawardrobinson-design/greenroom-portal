@@ -7,10 +7,6 @@ import { Topbar } from "./topbar";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { MenagerieProvider } from "@/components/menagerie/menagerie-provider";
-import { PeacockDetector } from "@/components/menagerie/peacock-detector";
-import { MothDetector } from "@/components/menagerie/moth-detector";
-import { RaccoonDetector } from "@/components/menagerie/raccoon-detector";
-import { TrophyCase } from "@/components/menagerie/trophy-case";
 import { OnboardingModal, getProductIcon } from "@/components/onboarding/onboarding-modal";
 import { DemoIcon } from "@/components/demo-mode/demo-icon";
 
@@ -80,12 +76,6 @@ export function AppShell({ children }: AppShellProps) {
           onComplete={() => mutate()}
         />
       )}
-
-      {/* Mutant Menagerie — creature detectors + trophy case */}
-      <PeacockDetector />
-      <MothDetector />
-      <RaccoonDetector />
-      <TrophyCase />
 
       {/* Demo Mode Icon */}
       {process.env.NEXT_PUBLIC_DEV_AUTH === "true" && <DemoIcon />}
